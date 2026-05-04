@@ -7,3 +7,7 @@
 [submodule "lib/dlms-wrapper"]
 	path = lib/dlms-wrapper
 	url = git@github.com:gvtret/dlms-wrapper.git
+[submodule "lib/dlms-apdu"]
+	path = lib/dlms-apdu
+	url = git@github.com:gvtret/dlms-apdu.git
+	branch = head/master

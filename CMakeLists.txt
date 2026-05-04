@@ -15,6 +15,10 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
     add_subdirectory(lib/dlms-hdlc)
     add_subdirectory(lib/dlms-llc)
 
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-wrapper/CMakeLists.txt")
+      add_subdirectory(lib/dlms-wrapper)
+    endif()
+
     if(DLMS_LLC_HAS_CODEC_API)
       add_subdirectory(test/integration)
     else()

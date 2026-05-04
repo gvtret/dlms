@@ -4,3 +4,6 @@
 [submodule "lib/dlms-llc"]
 	path = lib/dlms-llc
 	url = git@github.com:gvtret/dlms-llc.git
+[submodule "lib/dlms-wrapper"]
+	path = lib/dlms-wrapper
+	url = git@github.com:gvtret/dlms-wrapper.git

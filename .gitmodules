@@ -1,0 +1,6 @@
+[submodule "lib/dlms-hdlc"]
+	path = lib/dlms-hdlc
+	url = git@github.com:gvtret/dlms-hdlc.git
+[submodule "lib/dlms-llc"]
+	path = lib/dlms-llc
+	url = git@github.com:gvtret/dlms-llc.git

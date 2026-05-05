@@ -55,3 +55,18 @@ if(DLMS_APDU_HAS_CODEC_API AND TARGET dlms_apdu)
 else()
   message(STATUS "Skipping APDU stack integration tests: dlms-apdu codec API is not implemented yet")
 endif()
+if(DLMS_TRANSPORT_HAS_API AND TARGET dlms_transport)
+  add_executable(dlms_transport_profile_integration_tests
+    test_transport_profile_integration.cpp)
+
+  target_compile_features(dlms_transport_profile_integration_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_transport_profile_integration_tests
+    PRIVATE
+      dlms_transport
+      GTest::gtest_main)
+
+  gtest_discover_tests(dlms_transport_profile_integration_tests)
+else()
+  message(STATUS "Skipping transport profile integration tests: dlms-transport API is not available")
+endif()

@@ -15,6 +15,10 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
     add_subdirectory(lib/dlms-hdlc)
     add_subdirectory(lib/dlms-llc)
 
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-transport/CMakeLists.txt")
+      add_subdirectory(lib/dlms-transport)
+    endif()
+
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-apdu/CMakeLists.txt")
       add_subdirectory(lib/dlms-apdu)
     endif()

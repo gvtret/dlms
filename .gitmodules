@@ -10,4 +10,6 @@
 [submodule "lib/dlms-apdu"]
 	path = lib/dlms-apdu
 	url = git@github.com:gvtret/dlms-apdu.git
-	branch = head/master
+[submodule "lib/dlms-transport"]
+	path = lib/dlms-transport
+	url = git@github.com:gvtret/dlms-transport.git

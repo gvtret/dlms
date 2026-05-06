@@ -43,10 +43,13 @@ The following repositories already exist or are present in the current workspace
 | `lib/dlms-llc` | DLMS/COSEM LLC LPDU codec for the 3-layer HDLC-based profile |
 | `lib/dlms-wrapper` | DLMS/COSEM Wrapper WPDU codec for TCP/UDP/IP-based profiles |
 | `lib/dlms-apdu` | DLMS/COSEM application APDU codec: ACSE BER and xDLMS A-XDR |
+| `lib/dlms-transport` | Protocol-neutral TCP, UDP, serial, timer, tracing, and transport adapter primitives |
+| `lib/dlms-profile` | APDU channels over Wrapper/TCP, Wrapper/UDP, and HDLC/LLC profiles |
 
-These layers deliberately do not own transport I/O, timers, association
+Codec layers deliberately do not own transport I/O, timers, association
 orchestration, COSEM object storage, access-right decisions, or cryptographic
-execution.
+execution. `dlms-transport` owns protocol-neutral I/O only, while
+`dlms-profile` binds lower codecs and transports into opaque APDU channels.
 
 ## 4. Target Repository Map
 

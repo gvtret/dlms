@@ -16,3 +16,6 @@
 [submodule "lib/dlms-profile"]
 	path = lib/dlms-profile
 	url = git@github.com:gvtret/dlms-profile.git
+[submodule "lib/dlms-association"]
+	path = lib/dlms-association
+	url = git@github.com:gvtret/dlms-association.git

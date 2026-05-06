@@ -31,6 +31,10 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
       add_subdirectory(lib/dlms-profile)
     endif()
 
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-association/CMakeLists.txt")
+      add_subdirectory(lib/dlms-association)
+    endif()
+
     if(DLMS_LLC_HAS_CODEC_API)
       add_subdirectory(test/integration)
     else()

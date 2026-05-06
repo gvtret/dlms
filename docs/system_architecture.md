@@ -45,6 +45,7 @@ The following repositories already exist or are present in the current workspace
 | `lib/dlms-apdu` | DLMS/COSEM application APDU codec: ACSE BER and xDLMS A-XDR |
 | `lib/dlms-transport` | Protocol-neutral TCP, UDP, serial, timer, tracing, and transport adapter primitives |
 | `lib/dlms-profile` | APDU channels over Wrapper/TCP, Wrapper/UDP, and HDLC/LLC profiles |
+| `lib/dlms-association` | Client-side DLMS/COSEM Application Association state machine for no-security LN open |
 
 Codec layers deliberately do not own transport I/O, timers, association
 orchestration, COSEM object storage, access-right decisions, or cryptographic

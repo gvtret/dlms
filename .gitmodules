@@ -13,3 +13,6 @@
 [submodule "lib/dlms-transport"]
 	path = lib/dlms-transport
 	url = git@github.com:gvtret/dlms-transport.git
+[submodule "lib/dlms-profile"]
+	path = lib/dlms-profile
+	url = git@github.com:gvtret/dlms-profile.git

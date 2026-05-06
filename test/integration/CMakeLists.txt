@@ -70,3 +70,21 @@ if(DLMS_TRANSPORT_HAS_API AND TARGET dlms_transport)
 else()
   message(STATUS "Skipping transport profile integration tests: dlms-transport API is not available")
 endif()
+
+if(DLMS_PROFILE_HAS_API AND TARGET dlms_profile AND
+   DLMS_APDU_HAS_CODEC_API AND TARGET dlms_apdu)
+  add_executable(dlms_profile_integration_tests
+    test_profile_integration.cpp)
+
+  target_compile_features(dlms_profile_integration_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_profile_integration_tests
+    PRIVATE
+      dlms_profile
+      dlms_apdu
+      GTest::gtest_main)
+
+  gtest_discover_tests(dlms_profile_integration_tests)
+else()
+  message(STATUS "Skipping profile integration tests: dlms-profile or dlms-apdu API is not available")
+endif()

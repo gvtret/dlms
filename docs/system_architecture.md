@@ -824,6 +824,7 @@ The root repository should keep cross-layer tests that prove the layer contracts
 | No-security LN association opens | `dlms-association`, `dlms-apdu`, `dlms-profile` |
 | Normal GET through client service | `dlms-xdlms`, `dlms-association`, `dlms-apdu` |
 | Server GET APDU reaches COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
+| Server SET APDU writes COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Public-client GET against minimal server | `dlms-client`, `dlms-server`, `dlms-cosem`, `dlms-profile` |
 | Ciphered GET round trip | `dlms-security`, `dlms-xdlms`, `dlms-server` |
 

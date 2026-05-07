@@ -28,3 +28,6 @@
 [submodule "lib/dlms-server"]
 	path = lib/dlms-server
 	url = git@github.com:gvtret/dlms-server.git
+[submodule "lib/dlms-client"]
+	path = lib/dlms-client
+	url = git@github.com:gvtret/dlms-client.git

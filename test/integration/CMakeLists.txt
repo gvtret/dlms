@@ -88,3 +88,23 @@ if(DLMS_PROFILE_HAS_API AND TARGET dlms_profile AND
 else()
   message(STATUS "Skipping profile integration tests: dlms-profile or dlms-apdu API is not available")
 endif()
+
+if(TARGET dlms_xdlms AND TARGET dlms_association AND
+   TARGET dlms_profile AND TARGET dlms_apdu)
+  add_executable(dlms_xdlms_integration_tests
+    test_xdlms_integration.cpp)
+
+  target_compile_features(dlms_xdlms_integration_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_xdlms_integration_tests
+    PRIVATE
+      dlms_xdlms
+      dlms_association
+      dlms_profile
+      dlms_apdu
+      GTest::gtest_main)
+
+  gtest_discover_tests(dlms_xdlms_integration_tests)
+else()
+  message(STATUS "Skipping xDLMS integration tests: dlms-xdlms stack is not available")
+endif()

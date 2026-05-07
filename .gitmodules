@@ -22,3 +22,6 @@
 [submodule "lib/dlms-xdlms"]
 	path = lib/dlms-xdlms
 	url = git@github.com:gvtret/dlms-xdlms.git
+[submodule "lib/dlms-cosem"]
+	path = lib/dlms-cosem
+	url = git@github.com:gvtret/dlms-cosem.git

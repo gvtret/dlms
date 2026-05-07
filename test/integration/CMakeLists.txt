@@ -132,12 +132,13 @@ endif()
 if(TARGET dlms_client AND TARGET dlms_xdlms AND TARGET dlms_server AND
    TARGET dlms_cosem AND TARGET dlms_association AND TARGET dlms_profile AND
    TARGET dlms_apdu)
-  add_executable(dlms_client_get_integration_tests
-    test_client_get_integration.cpp)
+  add_executable(dlms_client_service_integration_tests
+    test_client_service_integration.cpp)
 
-  target_compile_features(dlms_client_get_integration_tests PRIVATE cxx_std_11)
+  target_compile_features(
+    dlms_client_service_integration_tests PRIVATE cxx_std_11)
 
-  target_link_libraries(dlms_client_get_integration_tests
+  target_link_libraries(dlms_client_service_integration_tests
     PRIVATE
       dlms_client
       dlms_xdlms
@@ -148,7 +149,7 @@ if(TARGET dlms_client AND TARGET dlms_xdlms AND TARGET dlms_server AND
       dlms_apdu
       GTest::gtest_main)
 
-  gtest_discover_tests(dlms_client_get_integration_tests)
+  gtest_discover_tests(dlms_client_service_integration_tests)
 else()
-  message(STATUS "Skipping client GET integration tests: client/server stack is not available")
+  message(STATUS "Skipping client service integration tests: client/server stack is not available")
 endif()

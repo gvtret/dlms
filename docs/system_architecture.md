@@ -64,7 +64,7 @@ lib/dlms-apdu                ACSE and xDLMS APDU codec
 lib/dlms-transport           TCP, UDP, serial, and timer abstractions
 lib/dlms-profile             HDLC and Wrapper APDU channels
 lib/dlms-association         Application Association state machine
-lib/dlms-xdlms-client        High-level GET, SET, ACTION client services
+lib/dlms-xdlms               High-level GET, SET, ACTION client/server services
 lib/dlms-security            Security contexts, ciphering, HLS, key interfaces
 lib/dlms-cosem               COSEM object model, registry, and access rights
 lib/dlms-server              Server-side APDU dispatcher over COSEM objects
@@ -83,7 +83,7 @@ flowchart TB
   Client["dlms-client<br/>High-level client facade"]
   Server["dlms-server<br/>Server dispatcher"]
 
-  XClient["dlms-xdlms-client<br/>GET / SET / ACTION / block transfer"]
+  XDlms["dlms-xdlms<br/>GET / SET / ACTION / block transfer"]
   Assoc["dlms-association<br/>AA state machine<br/>COSEM-OPEN / RELEASE / ABORT"]
   Cosem["dlms-cosem<br/>Logical devices<br/>COSEM objects<br/>Association LN<br/>SAP Assignment"]
   Security["dlms-security<br/>HLS / AES-GCM / keys<br/>Invocation counters"]
@@ -99,21 +99,22 @@ flowchart TB
   App --> Client
   App --> Server
 
-  Client --> XClient
-  XClient --> Assoc
+  Client --> XDlms
+  XDlms --> Assoc
   Server --> Assoc
+  Server --> XDlms
   Server --> Cosem
 
   Assoc --> Security
-  XClient --> Security
+  XDlms --> Security
   Server --> Security
 
   Assoc --> Apdu
-  XClient --> Apdu
+  XDlms --> Apdu
   Server --> Apdu
 
   Assoc --> Profile
-  XClient --> Profile
+  XDlms --> Profile
   Server --> Profile
 
   Profile --> Wrapper
@@ -145,7 +146,7 @@ flowchart LR
   Profile["dlms-profile"]
   Security["dlms-security"]
   Association["dlms-association"]
-  XClient["dlms-xdlms-client"]
+  XDlms["dlms-xdlms"]
   Cosem["dlms-cosem"]
   Server["dlms-server"]
   Client["dlms-client"]
@@ -165,9 +166,9 @@ flowchart LR
   Profile --> Association
   Security --> Association
 
-  APDU --> XClient
-  Association --> XClient
-  Security --> XClient
+  APDU --> XDlms
+  Association --> XDlms
+  Security --> XDlms
 
   APDU --> Cosem
   Security --> Cosem
@@ -176,7 +177,8 @@ flowchart LR
   Association --> Server
   Profile --> Server
 
-  XClient --> Client
+  XDlms --> Server
+  XDlms --> Client
   Association --> Client
   Profile --> Client
 ```
@@ -426,24 +428,24 @@ MVP success criteria:
 - AARE with xDLMS InitiateResponse.
 - Clean rejection of unsupported contexts.
 
-### 7.5 `dlms-xdlms-client`
+### 7.5 `dlms-xdlms`
 
-Provides high-level client-side xDLMS service calls over an established
-association.
+Provides high-level xDLMS service orchestration over an established
+association. The layer owns client request flows and the matching server-side
+service dispatch boundary for GET, SET, ACTION, and block transfer.
 
 In scope:
 
-- normal GET;
-- normal SET;
-- normal ACTION;
-- invoke-id and priority management;
+- client-side normal GET, SET, and ACTION;
+- server-side GET, SET, and ACTION dispatch contracts;
+- invoke-id and priority management for client flows;
 - future block transfer manager for GET/SET/ACTION.
 
 Out of scope:
 
 - association opening;
 - lower-layer transport;
-- server-side COSEM object execution.
+- COSEM object storage and method execution.
 
 Class interaction diagram:
 
@@ -468,6 +470,14 @@ classDiagram
     +receive_blocks()
   }
 
+  class XdlmsServerDispatcher {
+    -CosemAccessPort* cosem
+    -BlockTransferManager blocks
+    +dispatch_get()
+    +dispatch_set()
+    +dispatch_action()
+  }
+
   class ServiceOptions {
     +priority
     +confirmed
@@ -478,6 +488,8 @@ classDiagram
   XdlmsClient --> InvokeIdAllocator
   XdlmsClient --> BlockTransferManager
   XdlmsClient --> ServiceOptions
+  XdlmsServerDispatcher --> BlockTransferManager
+  XdlmsServerDispatcher --> ServiceOptions
 ```
 
 MVP success criteria:
@@ -776,7 +788,7 @@ diagram. This applies at least to:
 - `dlms-hdlc`;
 - `dlms-profile`;
 - `dlms-association`;
-- `dlms-xdlms-client` once block transfer is implemented;
+- `dlms-xdlms` once block transfer is implemented;
 - `dlms-server`.
 
 ## 9. Implementation Order
@@ -787,7 +799,7 @@ The recommended order is:
 2. Implement `dlms-transport` TCP stream MVP.
 3. Implement `dlms-profile` Wrapper/TCP APDU channel MVP.
 4. Implement `dlms-association` no-security LN client association.
-5. Implement `dlms-xdlms-client` normal GET.
+5. Implement `dlms-xdlms` normal GET.
 6. Add integration test: open association and perform GET over a fake or loopback Wrapper/TCP channel.
 7. Implement `dlms-cosem` minimal object model.
 8. Implement `dlms-server` minimal no-security server.
@@ -810,9 +822,9 @@ The root repository should keep cross-layer tests that prove the layer contracts
 | APDU survives Wrapper boundary | `dlms-apdu`, `dlms-wrapper` |
 | Wrapper/TCP channel sends and receives APDU bytes | `dlms-profile`, `dlms-wrapper`, `dlms-transport` |
 | No-security LN association opens | `dlms-association`, `dlms-apdu`, `dlms-profile` |
-| Normal GET through client service | `dlms-xdlms-client`, `dlms-association`, `dlms-apdu` |
+| Normal GET through client service | `dlms-xdlms`, `dlms-association`, `dlms-apdu` |
 | Public-client GET against minimal server | `dlms-client`, `dlms-server`, `dlms-cosem`, `dlms-profile` |
-| Ciphered GET round trip | `dlms-security`, `dlms-xdlms-client`, `dlms-server` |
+| Ciphered GET round trip | `dlms-security`, `dlms-xdlms`, `dlms-server` |
 
 The root tests should validate integration only. Unit coverage for each layer
 belongs in that layer's own repository.

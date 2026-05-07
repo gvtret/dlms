@@ -19,6 +19,6 @@
 [submodule "lib/dlms-association"]
 	path = lib/dlms-association
 	url = git@github.com:gvtret/dlms-association.git
-[submodule "lib/dlms-xdlms-client"]
-	path = lib/dlms-xdlms-client
-	url = git@github.com:gvtret/dlms-xdlms-client.git
+[submodule "lib/dlms-xdlms"]
+	path = lib/dlms-xdlms
+	url = git@github.com:gvtret/dlms-xdlms.git

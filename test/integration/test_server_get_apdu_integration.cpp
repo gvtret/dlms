@@ -1,6 +1,7 @@
 #include "dlms/apdu/apdu_writer.hpp"
 #include "dlms/apdu/data.hpp"
 #include "dlms/apdu/get.hpp"
+#include "dlms/apdu/set.hpp"
 #include "dlms/apdu/xdlms.hpp"
 #include "dlms/cosem/cosem.hpp"
 #include "dlms/server/server.hpp"
@@ -17,15 +18,17 @@ namespace {
 class IntegrationDataObject : public dlms::cosem::ICosemObject
 {
 public:
-  explicit IntegrationDataObject(const dlms::cosem::CosemByteBuffer& value)
+  explicit IntegrationDataObject(
+    const dlms::cosem::CosemByteBuffer& value,
+    dlms::cosem::AttributeAccessMode attributeAccess =
+      dlms::cosem::AttributeAccessMode::ReadOnly)
     : value_(value)
   {
     descriptor_.key.classId = 3u;
     descriptor_.key.version = 0u;
     descriptor_.key.logicalName =
       dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255);
-    rights_.SetAttributeAccess(
-      2u, dlms::cosem::AttributeAccessMode::ReadOnly);
+    rights_.SetAttributeAccess(2u, attributeAccess);
   }
 
   dlms::cosem::CosemObjectDescriptor Descriptor() const
@@ -50,10 +53,14 @@ public:
   }
 
   dlms::cosem::CosemStatus WriteAttribute(
-    std::uint8_t,
-    const dlms::cosem::CosemByteBuffer&)
+    std::uint8_t attributeId,
+    const dlms::cosem::CosemByteBuffer& input)
   {
-    return dlms::cosem::CosemStatus::AccessDenied;
+    if (attributeId != 2u) {
+      return dlms::cosem::CosemStatus::AttributeNotFound;
+    }
+    value_ = input;
+    return dlms::cosem::CosemStatus::Ok;
   }
 
   dlms::cosem::CosemStatus InvokeMethod(
@@ -95,6 +102,39 @@ std::vector<std::uint8_t> EncodeRequest()
   EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
             dlms::apdu::EncodeXdlmsApdu(request, output));
   return output;
+}
+
+std::vector<std::uint8_t> EncodeSetRequest(
+  std::uint8_t invokeIdAndPriority,
+  const dlms::apdu::DlmsData& value)
+{
+  dlms::apdu::XdlmsApdu request;
+  request.kind = dlms::apdu::XdlmsApduKind::SetRequest;
+  request.setRequestAny.choice = dlms::apdu::SetRequestChoice::Normal;
+  request.setRequestAny.invokeIdAndPriority = invokeIdAndPriority;
+  request.setRequestAny.normal.descriptor.classId = 3u;
+  request.setRequestAny.normal.descriptor.logicalName[0] = 1u;
+  request.setRequestAny.normal.descriptor.logicalName[1] = 0u;
+  request.setRequestAny.normal.descriptor.logicalName[2] = 1u;
+  request.setRequestAny.normal.descriptor.logicalName[3] = 8u;
+  request.setRequestAny.normal.descriptor.logicalName[4] = 0u;
+  request.setRequestAny.normal.descriptor.logicalName[5] = 255u;
+  request.setRequestAny.normal.descriptor.attributeId = 2u;
+  request.setRequestAny.normal.hasSelection = false;
+  request.setRequestAny.data = value;
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::EncodeXdlmsApdu(request, output));
+  return output;
+}
+
+dlms::apdu::DlmsData MakeLongUnsignedData(std::uint16_t value)
+{
+  dlms::apdu::DlmsData data;
+  data.type = dlms::apdu::DlmsDataType::LongUnsigned;
+  data.unsignedValue = value;
+  return data;
 }
 
 dlms::apdu::XdlmsApdu DecodeResponse(
@@ -142,4 +182,76 @@ TEST(ServerGetApduIntegration, GetRequestApduReadsCosemObject)
   EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
             decoded.getResponseAny.result.data.type);
   EXPECT_EQ(0x1234u, decoded.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(ServerSetApduIntegration, SetRequestApduWritesCosemObject)
+{
+  dlms::server::ServerContext context;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(
+      EncodeLongUnsigned(0x1234u),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite));
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+  context.AttachLogicalDevice(&logicalDevice);
+  context.SetAssociated(true);
+
+  dlms::server::DlmsServer server(context);
+  dlms::server::XdlmsServerAdapter adapter(server);
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(adapter);
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+
+  std::vector<std::uint8_t> response;
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            processor.ProcessRequest(
+              EncodeSetRequest(0x86u, MakeLongUnsignedData(0x4321u)),
+              response));
+
+  const dlms::apdu::XdlmsApdu decoded = DecodeResponse(response);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetResponse, decoded.kind);
+  EXPECT_EQ(dlms::apdu::SetResponseChoice::Normal,
+            decoded.setResponseAny.choice);
+  EXPECT_EQ(0x86u, decoded.setResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, decoded.setResponseAny.result);
+
+  dlms::cosem::CosemByteBuffer stored;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object->ReadAttribute(2u, stored));
+  EXPECT_EQ(EncodeLongUnsigned(0x4321u), stored);
+}
+
+TEST(ServerSetApduIntegration, SetRequestApduReportsAccessDenied)
+{
+  dlms::server::ServerContext context;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(EncodeLongUnsigned(0x1234u)));
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+  context.AttachLogicalDevice(&logicalDevice);
+  context.SetAssociated(true);
+
+  dlms::server::DlmsServer server(context);
+  dlms::server::XdlmsServerAdapter adapter(server);
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(adapter);
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+
+  std::vector<std::uint8_t> response;
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            processor.ProcessRequest(
+              EncodeSetRequest(0x87u, MakeLongUnsignedData(0x4321u)),
+              response));
+
+  const dlms::apdu::XdlmsApdu decoded = DecodeResponse(response);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetResponse, decoded.kind);
+  EXPECT_EQ(dlms::apdu::SetResponseChoice::Normal,
+            decoded.setResponseAny.choice);
+  EXPECT_EQ(0x87u, decoded.setResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(3u, decoded.setResponseAny.result);
+
+  dlms::cosem::CosemByteBuffer stored;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object->ReadAttribute(2u, stored));
+  EXPECT_EQ(EncodeLongUnsigned(0x1234u), stored);
 }

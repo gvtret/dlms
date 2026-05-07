@@ -64,10 +64,10 @@ lib/dlms-apdu                ACSE and xDLMS APDU codec
 lib/dlms-transport           TCP, UDP, serial, and timer abstractions
 lib/dlms-profile             HDLC and Wrapper APDU channels
 lib/dlms-association         Application Association state machine
-lib/dlms-xdlms               High-level GET, SET, ACTION client/server services
+lib/dlms-xdlms               High-level GET, SET, ACTION client/server services and server GET APDU boundary
 lib/dlms-security            Security contexts, ciphering, HLS, key interfaces
 lib/dlms-cosem               COSEM object model, registry, and access rights
-lib/dlms-server              Server-side APDU dispatcher over COSEM objects
+lib/dlms-server              Server-side service dispatcher over COSEM objects and xDLMS GET adapter
 lib/dlms-client              Ergonomic public client facade
 ```
 
@@ -823,6 +823,7 @@ The root repository should keep cross-layer tests that prove the layer contracts
 | Wrapper/TCP channel sends and receives APDU bytes | `dlms-profile`, `dlms-wrapper`, `dlms-transport` |
 | No-security LN association opens | `dlms-association`, `dlms-apdu`, `dlms-profile` |
 | Normal GET through client service | `dlms-xdlms`, `dlms-association`, `dlms-apdu` |
+| Server GET APDU reaches COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Public-client GET against minimal server | `dlms-client`, `dlms-server`, `dlms-cosem`, `dlms-profile` |
 | Ciphered GET round trip | `dlms-security`, `dlms-xdlms`, `dlms-server` |
 

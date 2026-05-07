@@ -108,3 +108,23 @@ if(TARGET dlms_xdlms AND TARGET dlms_association AND
 else()
   message(STATUS "Skipping xDLMS integration tests: dlms-xdlms stack is not available")
 endif()
+
+if(TARGET dlms_xdlms AND TARGET dlms_server AND
+   TARGET dlms_cosem AND TARGET dlms_apdu)
+  add_executable(dlms_server_get_apdu_integration_tests
+    test_server_get_apdu_integration.cpp)
+
+  target_compile_features(dlms_server_get_apdu_integration_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_server_get_apdu_integration_tests
+    PRIVATE
+      dlms_xdlms
+      dlms_server
+      dlms_cosem
+      dlms_apdu
+      GTest::gtest_main)
+
+  gtest_discover_tests(dlms_server_get_apdu_integration_tests)
+else()
+  message(STATUS "Skipping server GET APDU integration tests: server xDLMS stack is not available")
+endif()

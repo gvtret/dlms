@@ -89,6 +89,22 @@ else()
   message(STATUS "Skipping profile integration tests: dlms-profile or dlms-apdu API is not available")
 endif()
 
+if(DLMS_SECURITY_HAS_API AND TARGET dlms_security)
+  add_executable(dlms_security_integration_tests
+    test_security_integration.cpp)
+
+  target_compile_features(dlms_security_integration_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_security_integration_tests
+    PRIVATE
+      dlms_security
+      GTest::gtest_main)
+
+  gtest_discover_tests(dlms_security_integration_tests)
+else()
+  message(STATUS "Skipping security integration tests: dlms-security API is not available")
+endif()
+
 if(TARGET dlms_xdlms AND TARGET dlms_association AND
    TARGET dlms_profile AND TARGET dlms_apdu)
   add_executable(dlms_xdlms_integration_tests

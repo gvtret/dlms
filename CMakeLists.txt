@@ -35,6 +35,10 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
       add_subdirectory(lib/dlms-association)
     endif()
 
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-security/CMakeLists.txt")
+      add_subdirectory(lib/dlms-security)
+    endif()
+
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-cosem/CMakeLists.txt")
       add_subdirectory(lib/dlms-cosem)
     endif()

@@ -5,6 +5,7 @@
 #include "dlms/association/association_client.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/xdlms/xdlms_client.hpp"
+#include "dlms/xdlms/xdlms_server.hpp"
 
 #include <gtest/gtest.h>
 
@@ -84,6 +85,124 @@ public:
   std::vector<std::vector<std::uint8_t> > sentHistory;
   std::vector<std::uint8_t> nextReceive;
   std::deque<std::vector<std::uint8_t> > receiveQueue;
+};
+
+std::vector<std::uint8_t> EncodedLongUnsigned(std::uint16_t value);
+
+class ServerBackedApduChannel : public dlms::profile::IApduChannel
+{
+public:
+  explicit ServerBackedApduChannel(
+    dlms::xdlms::XdlmsServerApduProcessor& processor)
+    : processor_(processor)
+    , open(false)
+    , sendCalls(0)
+    , receiveCalls(0)
+  {
+  }
+
+  dlms::profile::ProfileStatus Open()
+  {
+    open = true;
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  dlms::profile::ProfileStatus Close()
+  {
+    open = false;
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  bool IsOpen() const
+  {
+    return open;
+  }
+
+  dlms::profile::ProfileStatus SendApdu(dlms::profile::ProfileByteView apdu)
+  {
+    ++sendCalls;
+    sent.assign(apdu.data, apdu.data + apdu.size);
+    sentHistory.push_back(sent);
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  dlms::profile::ProfileStatus ReceiveApdu(std::vector<std::uint8_t>& apdu)
+  {
+    ++receiveCalls;
+    if (!receiveQueue.empty()) {
+      apdu = receiveQueue.front();
+      receiveQueue.pop_front();
+      return dlms::profile::ProfileStatus::Ok;
+    }
+
+    const dlms::xdlms::XdlmsStatus status =
+      processor_.ProcessRequest(sent, apdu);
+    return status == dlms::xdlms::XdlmsStatus::Ok
+      ? dlms::profile::ProfileStatus::Ok
+      : dlms::profile::ProfileStatus::InvalidFrame;
+  }
+
+  dlms::profile::ProfileStatus ReceiveApdu(
+    dlms::profile::ProfileMutableBuffer output)
+  {
+    std::vector<std::uint8_t> apdu;
+    const dlms::profile::ProfileStatus status = ReceiveApdu(apdu);
+    if (status != dlms::profile::ProfileStatus::Ok) {
+      return status;
+    }
+    if (output.size < apdu.size()) {
+      return dlms::profile::ProfileStatus::OutputBufferTooSmall;
+    }
+    for (std::size_t i = 0; i < apdu.size(); ++i) {
+      output.data[i] = apdu[i];
+    }
+    if (output.writtenSize != 0) {
+      *output.writtenSize = apdu.size();
+    }
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  dlms::xdlms::XdlmsServerApduProcessor& processor_;
+  bool open;
+  int sendCalls;
+  int receiveCalls;
+  std::vector<std::uint8_t> sent;
+  std::vector<std::vector<std::uint8_t> > sentHistory;
+  std::deque<std::vector<std::uint8_t> > receiveQueue;
+};
+
+class ActionOnlyHandler : public dlms::xdlms::IXdlmsServerHandler
+{
+public:
+  ActionOnlyHandler()
+    : actionCalls(0)
+    , lastAction(dlms::xdlms::EmptyActionIndication())
+  {
+  }
+
+  dlms::xdlms::XdlmsStatus HandleGet(
+    const dlms::xdlms::GetIndication& indication,
+    dlms::xdlms::GetResult& result)
+  {
+    (void)indication;
+    (void)result;
+    return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+  }
+
+  dlms::xdlms::XdlmsStatus HandleAction(
+    const dlms::xdlms::ActionIndication& indication,
+    dlms::xdlms::ActionResult& result)
+  {
+    ++actionCalls;
+    lastAction = indication;
+    result.actionResult = 0u;
+    result.hasData = true;
+    result.data = EncodedLongUnsigned(0x2468u);
+    return dlms::xdlms::XdlmsStatus::Ok;
+  }
+
+  int actionCalls;
+  dlms::xdlms::ActionIndication lastAction;
 };
 
 std::vector<std::uint8_t> MakeAareBytes()
@@ -524,4 +643,62 @@ TEST(XdlmsIntegration, NormalActionSendsRequestPblocks)
   EXPECT_EQ(0u, result.actionResult);
   EXPECT_TRUE(result.hasData);
   EXPECT_EQ(EncodedLongUnsigned(0x2468u), result.data);
+}
+
+TEST(XdlmsIntegration, ActionRequestPblocksReachServerProcessor)
+{
+  ActionOnlyHandler handler;
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(handler);
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  ServerBackedApduChannel channel(processor);
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+
+  channel.receiveQueue.push_back(MakeAareBytes());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Open());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Establish());
+  ASSERT_TRUE(association.IsAssociated());
+
+  dlms::xdlms::ServiceOptions options =
+    dlms::xdlms::DefaultServiceOptions();
+  options.maxActionBlockPayloadBytes = 2u;
+
+  dlms::xdlms::XdlmsClient xdlms(channel, association);
+  dlms::xdlms::ActionResult result;
+
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            xdlms.Action(
+              MakeMethodDescriptor(),
+              true,
+              EncodedLongUnsigned(0x4321u),
+              options,
+              result));
+
+  ASSERT_EQ(1, handler.actionCalls);
+  EXPECT_TRUE(handler.lastAction.hasParameter);
+  EXPECT_EQ(EncodedLongUnsigned(0x4321u), handler.lastAction.parameter);
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_EQ(0u, result.actionResult);
+  EXPECT_TRUE(result.hasData);
+  EXPECT_EQ(EncodedLongUnsigned(0x2468u), result.data);
+
+  ASSERT_EQ(3u, channel.sentHistory.size());
+  dlms::apdu::XdlmsApdu firstBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[1][0],
+              channel.sentHistory[1].size(),
+              firstBlock));
+  EXPECT_EQ(dlms::apdu::ActionRequestChoice::WithFirstPblock,
+            firstBlock.actionRequestAny.choice);
+
+  dlms::apdu::XdlmsApdu finalBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[2][0],
+              channel.sentHistory[2].size(),
+              finalBlock));
+  EXPECT_EQ(dlms::apdu::ActionRequestChoice::WithPblock,
+            finalBlock.actionRequestAny.choice);
 }

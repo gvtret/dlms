@@ -185,6 +185,40 @@ std::vector<std::uint8_t> MakeSetLastBlockResponse(
   return output;
 }
 
+std::vector<std::uint8_t> MakeActionBlockResponse(
+  std::uint8_t invokeIdAndPriority,
+  std::uint32_t blockNumber,
+  bool lastBlock,
+  const std::vector<std::uint8_t>& rawData)
+{
+  dlms::apdu::XdlmsApdu response;
+  response.kind = dlms::apdu::XdlmsApduKind::ActionResponse;
+  response.actionResponseAny.choice =
+    dlms::apdu::ActionResponseChoice::WithPblock;
+  response.actionResponseAny.invokeIdAndPriority = invokeIdAndPriority;
+  response.actionResponseAny.dataBlock.lastBlock = lastBlock;
+  response.actionResponseAny.dataBlock.blockNumber = blockNumber;
+  response.actionResponseAny.dataBlock.rawData.data =
+    rawData.empty() ? 0 : &rawData[0];
+  response.actionResponseAny.dataBlock.rawData.size = rawData.size();
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::EncodeXdlmsApdu(response, output));
+  return output;
+}
+
+std::vector<std::uint8_t> ActionPayload(
+  std::uint8_t result,
+  const std::vector<std::uint8_t>& encodedData)
+{
+  std::vector<std::uint8_t> output;
+  output.push_back(result);
+  output.push_back(encodedData.empty() ? 0u : 1u);
+  output.insert(output.end(), encodedData.begin(), encodedData.end());
+  return output;
+}
+
 dlms::xdlms::CosemAttributeDescriptor MakeDescriptor()
 {
   dlms::xdlms::CosemAttributeDescriptor descriptor =
@@ -192,6 +226,16 @@ dlms::xdlms::CosemAttributeDescriptor MakeDescriptor()
   descriptor.classId = 7u;
   descriptor.instanceId = dlms::xdlms::CosemLogicalName(1, 0, 99, 1, 0, 255);
   descriptor.attributeId = 7u;
+  return descriptor;
+}
+
+dlms::xdlms::CosemMethodDescriptor MakeMethodDescriptor()
+{
+  dlms::xdlms::CosemMethodDescriptor descriptor =
+    dlms::xdlms::EmptyCosemMethodDescriptor();
+  descriptor.classId = 7u;
+  descriptor.instanceId = dlms::xdlms::CosemLogicalName(1, 0, 99, 1, 0, 255);
+  descriptor.methodId = 1u;
   return descriptor;
 }
 
@@ -326,4 +370,59 @@ TEST(XdlmsIntegration, NormalSetSendsRequestDataBlocks)
   EXPECT_EQ(2u, finalBlock.setRequestAny.dataBlock.blockNumber);
   EXPECT_EQ(1u, result.invokeId);
   EXPECT_EQ(0u, result.accessResult);
+}
+
+TEST(XdlmsIntegration, NormalActionCollectsResponsePblocks)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+
+  channel.nextReceive = MakeAareBytes();
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Open());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Establish());
+  ASSERT_TRUE(association.IsAssociated());
+
+  const std::vector<std::uint8_t> payload =
+    ActionPayload(0u, EncodedLongUnsigned(0x2468u));
+  channel.receiveQueue.push_back(
+    MakeActionBlockResponse(
+      0x81u,
+      1u,
+      false,
+      std::vector<std::uint8_t>(payload.begin(), payload.begin() + 2)));
+  channel.receiveQueue.push_back(
+    MakeActionBlockResponse(
+      0x81u,
+      2u,
+      true,
+      std::vector<std::uint8_t>(payload.begin() + 2, payload.end())));
+
+  dlms::xdlms::XdlmsClient xdlms(channel, association);
+  dlms::xdlms::ActionResult result;
+
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            xdlms.Action(
+              MakeMethodDescriptor(),
+              false,
+              std::vector<std::uint8_t>(),
+              result));
+
+  ASSERT_EQ(3u, channel.sentHistory.size());
+  dlms::apdu::XdlmsApdu nextRequest;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[2][0],
+              channel.sentHistory[2].size(),
+              nextRequest));
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::ActionRequest, nextRequest.kind);
+  EXPECT_EQ(dlms::apdu::ActionRequestChoice::NextPblock,
+            nextRequest.actionRequestAny.choice);
+  EXPECT_EQ(1u, nextRequest.actionRequestAny.blockNumber);
+
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_EQ(0u, result.actionResult);
+  EXPECT_TRUE(result.hasData);
+  EXPECT_EQ(EncodedLongUnsigned(0x2468u), result.data);
 }

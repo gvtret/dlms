@@ -105,6 +105,31 @@ else()
   message(STATUS "Skipping security integration tests: dlms-security API is not available")
 endif()
 
+if(TARGET dlms_security AND TARGET dlms_xdlms AND TARGET dlms_server AND
+   TARGET dlms_cosem AND TARGET dlms_association AND TARGET dlms_profile AND
+   TARGET dlms_apdu)
+  add_executable(dlms_ciphered_get_integration_tests
+    test_ciphered_get_integration.cpp)
+
+  target_compile_features(
+    dlms_ciphered_get_integration_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_ciphered_get_integration_tests
+    PRIVATE
+      dlms_security
+      dlms_xdlms
+      dlms_server
+      dlms_cosem
+      dlms_association
+      dlms_profile
+      dlms_apdu
+      GTest::gtest_main)
+
+  gtest_discover_tests(dlms_ciphered_get_integration_tests)
+else()
+  message(STATUS "Skipping ciphered GET integration tests: protected stack is not available")
+endif()
+
 if(TARGET dlms_xdlms AND TARGET dlms_association AND
    TARGET dlms_profile AND TARGET dlms_apdu)
   add_executable(dlms_xdlms_integration_tests

@@ -208,6 +208,44 @@ std::vector<std::uint8_t> MakeActionBlockResponse(
   return output;
 }
 
+std::vector<std::uint8_t> MakeActionNextPblockResponse(
+  std::uint8_t invokeIdAndPriority,
+  std::uint32_t blockNumber)
+{
+  dlms::apdu::XdlmsApdu response;
+  response.kind = dlms::apdu::XdlmsApduKind::ActionResponse;
+  response.actionResponseAny.choice =
+    dlms::apdu::ActionResponseChoice::NextPblock;
+  response.actionResponseAny.invokeIdAndPriority = invokeIdAndPriority;
+  response.actionResponseAny.blockNumber = blockNumber;
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::EncodeXdlmsApdu(response, output));
+  return output;
+}
+
+std::vector<std::uint8_t> MakeActionResponse(
+  std::uint8_t invokeIdAndPriority,
+  std::uint8_t result)
+{
+  dlms::apdu::XdlmsApdu response;
+  response.kind = dlms::apdu::XdlmsApduKind::ActionResponse;
+  response.actionResponseAny.choice =
+    dlms::apdu::ActionResponseChoice::Normal;
+  response.actionResponseAny.invokeIdAndPriority = invokeIdAndPriority;
+  response.actionResponseAny.normal.result = result;
+  response.actionResponseAny.normal.hasReturnParameter = true;
+  response.actionResponseAny.normal.returnParameter.type =
+    dlms::apdu::DlmsDataType::LongUnsigned;
+  response.actionResponseAny.normal.returnParameter.unsignedValue = 0x2468u;
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::EncodeXdlmsApdu(response, output));
+  return output;
+}
+
 std::vector<std::uint8_t> ActionPayload(
   std::uint8_t result,
   const std::vector<std::uint8_t>& encodedData)
@@ -420,6 +458,67 @@ TEST(XdlmsIntegration, NormalActionCollectsResponsePblocks)
   EXPECT_EQ(dlms::apdu::ActionRequestChoice::NextPblock,
             nextRequest.actionRequestAny.choice);
   EXPECT_EQ(1u, nextRequest.actionRequestAny.blockNumber);
+
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_EQ(0u, result.actionResult);
+  EXPECT_TRUE(result.hasData);
+  EXPECT_EQ(EncodedLongUnsigned(0x2468u), result.data);
+}
+
+TEST(XdlmsIntegration, NormalActionSendsRequestPblocks)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+
+  channel.nextReceive = MakeAareBytes();
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Open());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Establish());
+  ASSERT_TRUE(association.IsAssociated());
+
+  channel.receiveQueue.push_back(MakeActionNextPblockResponse(0x81u, 1u));
+  channel.receiveQueue.push_back(MakeActionResponse(0x81u, 0u));
+
+  dlms::xdlms::ServiceOptions options =
+    dlms::xdlms::DefaultServiceOptions();
+  options.maxActionBlockPayloadBytes = 2u;
+
+  dlms::xdlms::XdlmsClient xdlms(channel, association);
+  dlms::xdlms::ActionResult result;
+
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            xdlms.Action(
+              MakeMethodDescriptor(),
+              true,
+              EncodedLongUnsigned(0x4321u),
+              options,
+              result));
+
+  ASSERT_EQ(3u, channel.sentHistory.size());
+  dlms::apdu::XdlmsApdu firstBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[1][0],
+              channel.sentHistory[1].size(),
+              firstBlock));
+  EXPECT_EQ(dlms::apdu::ActionRequestChoice::WithFirstPblock,
+            firstBlock.actionRequestAny.choice);
+  EXPECT_EQ(1u, firstBlock.actionRequestAny.dataBlock.blockNumber);
+  EXPECT_FALSE(firstBlock.actionRequestAny.dataBlock.lastBlock);
+  EXPECT_EQ(2u, firstBlock.actionRequestAny.dataBlock.rawData.size);
+
+  dlms::apdu::XdlmsApdu finalBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[2][0],
+              channel.sentHistory[2].size(),
+              finalBlock));
+  EXPECT_EQ(dlms::apdu::ActionRequestChoice::WithPblock,
+            finalBlock.actionRequestAny.choice);
+  EXPECT_EQ(2u, finalBlock.actionRequestAny.dataBlock.blockNumber);
+  EXPECT_TRUE(finalBlock.actionRequestAny.dataBlock.lastBlock);
+  EXPECT_EQ(1u, finalBlock.actionRequestAny.dataBlock.rawData.size);
 
   EXPECT_EQ(1u, result.invokeId);
   EXPECT_EQ(0u, result.actionResult);

@@ -1,5 +1,6 @@
 #include "dlms/apdu/data.hpp"
 #include "dlms/apdu/get.hpp"
+#include "dlms/apdu/set.hpp"
 #include "dlms/apdu/xdlms.hpp"
 #include "dlms/association/association_client.hpp"
 #include "dlms/profile/apdu_channel.hpp"
@@ -149,6 +150,41 @@ std::vector<std::uint8_t> EncodedLongUnsigned(std::uint16_t value)
   return data;
 }
 
+std::vector<std::uint8_t> MakeSetAckBlockResponse(
+  std::uint8_t invokeIdAndPriority,
+  std::uint32_t blockNumber)
+{
+  dlms::apdu::XdlmsApdu response;
+  response.kind = dlms::apdu::XdlmsApduKind::SetResponse;
+  response.setResponseAny.choice = dlms::apdu::SetResponseChoice::DataBlock;
+  response.setResponseAny.invokeIdAndPriority = invokeIdAndPriority;
+  response.setResponseAny.blockNumber = blockNumber;
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::EncodeXdlmsApdu(response, output));
+  return output;
+}
+
+std::vector<std::uint8_t> MakeSetLastBlockResponse(
+  std::uint8_t invokeIdAndPriority,
+  std::uint32_t blockNumber,
+  std::uint8_t result)
+{
+  dlms::apdu::XdlmsApdu response;
+  response.kind = dlms::apdu::XdlmsApduKind::SetResponse;
+  response.setResponseAny.choice =
+    dlms::apdu::SetResponseChoice::LastDataBlock;
+  response.setResponseAny.invokeIdAndPriority = invokeIdAndPriority;
+  response.setResponseAny.blockNumber = blockNumber;
+  response.setResponseAny.result = result;
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::EncodeXdlmsApdu(response, output));
+  return output;
+}
+
 dlms::xdlms::CosemAttributeDescriptor MakeDescriptor()
 {
   dlms::xdlms::CosemAttributeDescriptor descriptor =
@@ -234,4 +270,60 @@ TEST(XdlmsIntegration, NormalGetCollectsResponseDataBlocks)
   const std::vector<std::uint8_t> second = EncodedLongUnsigned(0x2222u);
   expected.insert(expected.end(), second.begin(), second.end());
   EXPECT_EQ(expected, result.data);
+}
+
+TEST(XdlmsIntegration, NormalSetSendsRequestDataBlocks)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+
+  channel.nextReceive = MakeAareBytes();
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Open());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Establish());
+  ASSERT_TRUE(association.IsAssociated());
+
+  channel.receiveQueue.push_back(MakeSetAckBlockResponse(0x81u, 1u));
+  channel.receiveQueue.push_back(MakeSetLastBlockResponse(0x81u, 2u, 0u));
+
+  dlms::xdlms::ServiceOptions options =
+    dlms::xdlms::DefaultServiceOptions();
+  options.maxSetBlockPayloadBytes = 2u;
+
+  dlms::xdlms::XdlmsClient xdlms(channel, association);
+  dlms::xdlms::SetResult result;
+
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            xdlms.Set(
+              MakeDescriptor(),
+              EncodedLongUnsigned(0x4321u),
+              options,
+              result));
+
+  ASSERT_EQ(3u, channel.sentHistory.size());
+  dlms::apdu::XdlmsApdu firstBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[1][0],
+              channel.sentHistory[1].size(),
+              firstBlock));
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetRequest, firstBlock.kind);
+  EXPECT_EQ(dlms::apdu::SetRequestChoice::WithFirstDataBlock,
+            firstBlock.setRequestAny.choice);
+  EXPECT_FALSE(firstBlock.setRequestAny.dataBlock.lastBlock);
+  EXPECT_EQ(1u, firstBlock.setRequestAny.dataBlock.blockNumber);
+
+  dlms::apdu::XdlmsApdu finalBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[2][0],
+              channel.sentHistory[2].size(),
+              finalBlock));
+  EXPECT_EQ(dlms::apdu::SetRequestChoice::WithDataBlock,
+            finalBlock.setRequestAny.choice);
+  EXPECT_TRUE(finalBlock.setRequestAny.dataBlock.lastBlock);
+  EXPECT_EQ(2u, finalBlock.setRequestAny.dataBlock.blockNumber);
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_EQ(0u, result.accessResult);
 }

@@ -46,6 +46,11 @@ The following repositories already exist or are present in the current workspace
 | `lib/dlms-transport` | Protocol-neutral TCP, UDP, serial, timer, tracing, and transport adapter primitives |
 | `lib/dlms-profile` | APDU channels over Wrapper/TCP, Wrapper/UDP, and HDLC/LLC profiles |
 | `lib/dlms-association` | Client-side DLMS/COSEM Application Association state machine for no-security LN open |
+| `lib/dlms-xdlms` | Client and server xDLMS GET, SET, ACTION service orchestration and security APDU boundary |
+| `lib/dlms-security` | Suite 0 AES-GCM APDU protection, key-store interfaces, and invocation counter stores |
+| `lib/dlms-cosem` | Minimal COSEM logical-device model, object registry, access rights, and server resource dispatch |
+| `lib/dlms-server` | Server-side GET, SET, ACTION adapter and dispatcher over COSEM objects |
+| `lib/dlms-client` | Public synchronous client facade over profile, association, xDLMS, and optional security composition |
 
 Codec layers deliberately do not own transport I/O, timers, association
 orchestration, COSEM object storage, access-right decisions, or cryptographic

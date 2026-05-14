@@ -828,6 +828,11 @@ The root repository should keep cross-layer tests that prove the layer contracts
 | Wrapper/TCP channel sends and receives APDU bytes | `dlms-profile`, `dlms-wrapper`, `dlms-transport` |
 | No-security LN association opens | `dlms-association`, `dlms-apdu`, `dlms-profile` |
 | Normal GET through client service | `dlms-xdlms`, `dlms-association`, `dlms-apdu` |
+| Opt-in live public-client GET over Wrapper/TCP | `dlms-client`, `dlms-association`, `dlms-xdlms`, `dlms-profile`, `dlms-wrapper`, `dlms-transport` |
+
+Live meter checks are not part of the default deterministic suite. They are
+documented in `docs/live_meter_smoke_plan.md` and must require explicit endpoint
+configuration before they run.
 | Server GET APDU reaches COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Server SET APDU writes COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Server ACTION APDU invokes COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |

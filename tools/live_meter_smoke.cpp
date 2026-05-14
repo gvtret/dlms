@@ -94,6 +94,19 @@ bool EnvHexBytes(
   return true;
 }
 
+bool EnvHexBytesOptional(
+  const char* name,
+  std::uint8_t* output,
+  std::size_t outputSize)
+{
+  const char* value = Env(name);
+  if (value == 0 || value[0] == '\0') {
+    return true;
+  }
+
+  return EnvHexBytes(name, output, outputSize);
+}
+
 bool EnvAuthentication(
   dlms::client::DlmsClientOptions& options,
   bool& ok)
@@ -153,7 +166,7 @@ bool EnvAuthentication(
         "DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX",
         options.security.clientSystemTitle,
         sizeof(options.security.clientSystemTitle)) ||
-      !EnvHexBytes(
+      !EnvHexBytesOptional(
         "DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX",
         options.security.serverSystemTitle,
         sizeof(options.security.serverSystemTitle)) ||

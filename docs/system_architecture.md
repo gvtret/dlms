@@ -444,7 +444,7 @@ In scope:
 - client-side normal GET, SET, and ACTION;
 - server-side GET, SET, and ACTION dispatch contracts;
 - invoke-id and priority management for client flows;
-- future block transfer manager for GET/SET/ACTION.
+- service-specific block transfer for GET, SET, and ACTION MVP paths.
 
 Out of scope:
 
@@ -793,7 +793,7 @@ diagram. This applies at least to:
 - `dlms-hdlc`;
 - `dlms-profile`;
 - `dlms-association`;
-- `dlms-xdlms` once block transfer is implemented;
+- `dlms-xdlms`;
 - `dlms-server`.
 
 ## 9. Implementation Order

@@ -6,6 +6,7 @@ project(dlms_integration
 
 option(DLMS_BUILD_INTEGRATION_TESTS "Build cross-library integration tests" ON)
 option(DLMS_USE_SYSTEM_GTEST "Use system-installed GoogleTest" OFF)
+option(DLMS_BUILD_LIVE_TESTS "Build opt-in live meter smoke tests" OFF)
 
 if(DLMS_BUILD_INTEGRATION_TESTS)
   enable_testing()
@@ -53,6 +54,19 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-client/CMakeLists.txt")
       add_subdirectory(lib/dlms-client)
+    endif()
+
+    if(DLMS_BUILD_LIVE_TESTS AND TARGET dlms_client)
+      add_executable(dlms_live_meter_smoke
+        tools/live_meter_smoke.cpp)
+
+      target_compile_features(dlms_live_meter_smoke PRIVATE cxx_std_11)
+
+      target_link_libraries(dlms_live_meter_smoke
+        PRIVATE
+          dlms_client)
+
+      add_test(NAME LiveMeterSmoke COMMAND dlms_live_meter_smoke)
     endif()
 
     if(DLMS_LLC_HAS_CODEC_API)

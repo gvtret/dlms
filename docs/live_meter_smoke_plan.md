@@ -73,7 +73,7 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_LLS_PASSWORD` | none | raw LLS password bytes for `lls` authentication |
 | `DLMS_LIVE_HLS_PASSWORD` | none | raw HLS High password bytes for `high` authentication |
 | `DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX` | none | 8-byte hex client system title for `hls-gmac` |
-| `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | none | 8-byte hex server system title for `hls-gmac` |
+| `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | optional | 8-byte hex server system title for `hls-gmac`; if absent, use the AARE responding AP title |
 | `DLMS_LIVE_AUTHENTICATION_KEY_HEX` | none | 16-byte hex authentication key for `hls-gmac` |
 | `DLMS_LIVE_INVOCATION_COUNTER` | `1` | local invocation counter start for `hls-gmac` |
 | `DLMS_LIVE_CLASS_ID` | `1` | GET target COSEM class id |
@@ -99,9 +99,11 @@ provided certification configs use `HLSPassword=HiPassword` for this mode when
 `bGMAC=false`.
 
 For HLS GMAC, callers shall set `DLMS_LIVE_AUTHENTICATION=hls-gmac`,
-`DLMS_LIVE_CLIENT_SAP=48`, client/server system titles, and the authentication
-key as hex strings. The smoke passes key bytes to `DlmsClientOptions` exactly as
-decoded from hex. The provided certification configs use `SystemTitle=12345678`,
+`DLMS_LIVE_CLIENT_SAP=48`, client system title, and the authentication key as
+hex strings. The server system title can be provided explicitly or discovered
+from the AARE responding AP title. The smoke passes key bytes to
+`DlmsClientOptions` exactly as decoded from hex. The provided certification
+configs use `SystemTitle=12345678`,
 `AuthenticationKey=404142434445464748494A4B4C4D4E4F`, and
 `BlockCipherKey=303132333435363738393A3B3C3D3E3F` for this mode when
 `bGMAC=true`.
@@ -181,7 +183,7 @@ DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=32 DLMS_LIVE_AUTHENTICATION=l
 HLS GMAC live verification is manual and opt-in:
 
 ```text
-DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=hls-gmac DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX=<16 hex chars> DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX=<16 hex chars> DLMS_LIVE_AUTHENTICATION_KEY_HEX=<32 hex chars> ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
+DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=hls-gmac DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX=<16 hex chars> DLMS_LIVE_AUTHENTICATION_KEY_HEX=<32 hex chars> ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
 ```
 
 HLS High live verification is manual and opt-in:
@@ -385,4 +387,19 @@ association: Ok
 get: Ok bytes=17
 release: AssociationFailed (close fallback)
 close: Ok
+```
+
+### Phase 57. HLS GMAC Server Title Discovery
+
+Deliverables:
+
+- expose AARE responding AP title from `dlms-association`;
+- allow `dlms-client` HLS GMAC to use the discovered title when
+  `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` is not set;
+- keep explicit server title override support.
+
+Commit message:
+
+```text
+feat(client): discover HLS GMAC server title from AARE
 ```

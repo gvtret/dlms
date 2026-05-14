@@ -56,6 +56,35 @@ unsigned long EnvUnsigned(
   return parsed;
 }
 
+bool EnvAuthentication(
+  dlms::client::DlmsClientOptions& options)
+{
+  const char* mode = Env("DLMS_LIVE_AUTHENTICATION");
+  if (mode == 0 || mode[0] == '\0' || std::strcmp(mode, "none") == 0) {
+    options.authenticationMode =
+      dlms::client::ClientAuthenticationMode::None;
+    return true;
+  }
+
+  if (std::strcmp(mode, "lls") != 0) {
+    std::cerr << "config DLMS_LIVE_AUTHENTICATION invalid: " << mode << "\n";
+    return false;
+  }
+
+  const char* password = Env("DLMS_LIVE_LLS_PASSWORD");
+  if (password == 0 || password[0] == '\0') {
+    std::cerr << "config DLMS_LIVE_LLS_PASSWORD required for lls\n";
+    return false;
+  }
+
+  options.authenticationMode =
+    dlms::client::ClientAuthenticationMode::LowLevelSecurity;
+  options.lowLevelSecurity.credential =
+    reinterpret_cast<const std::uint8_t*>(password);
+  options.lowLevelSecurity.credentialSize = std::strlen(password);
+  return true;
+}
+
 bool ParseObis(const char* text, dlms::xdlms::CosemLogicalName& output)
 {
   if (text == 0 || text[0] == '\0') {
@@ -145,6 +174,9 @@ dlms::client::DlmsClientOptions MakeOptions(
       5000u,
       std::numeric_limits<std::uint32_t>::max(),
       ok));
+  if (!EnvAuthentication(options)) {
+    ok = false;
+  }
 
   return options;
 }

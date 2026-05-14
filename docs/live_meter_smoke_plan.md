@@ -20,9 +20,9 @@ dlms-client
 ```
 
 The first smoke target is public-client no-security LN association. The second
-target is LLS LN association through the same public client facade. HLS remains
-a follow-up authentication phase because the challenge-response path is not
-implemented yet.
+target is LLS LN association through the same public client facade. The third
+target is standard HLS GMAC when the meter exposes a matching authentication
+mechanism.
 
 ## 2. MVP Requirements
 
@@ -35,6 +35,7 @@ The live smoke shall:
 - connect to Wrapper/TCP;
 - open a no-security LN association as public client SAP 16 by default;
 - optionally open an LLS LN association when explicitly configured;
+- optionally open an HLS GMAC LN association when explicitly configured;
 - perform one explicit GET request;
 - print a compact status line for connect, association, service, and close;
 - return a non-zero process code when connect, association, GET, or close
@@ -50,6 +51,7 @@ The smoke shall not:
 - embed lab IP addresses or credentials in committed source;
 - require LLS/HLS passwords for the default public-client smoke;
 - transform, hash, derive, persist, or log LLS credential bytes;
+- transform, derive, persist, or log HLS GMAC key bytes;
 - mutate meter state;
 - retry indefinitely;
 - make CI depend on live network access.
@@ -66,8 +68,12 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_SERVER_SAP` | `1` | logical device SAP |
 | `DLMS_LIVE_SOURCE_WPORT` | same as client SAP | Wrapper source port |
 | `DLMS_LIVE_DEST_WPORT` | same as server SAP | Wrapper destination port |
-| `DLMS_LIVE_AUTHENTICATION` | `none` | association authentication mode: `none` or `lls` |
+| `DLMS_LIVE_AUTHENTICATION` | `none` | association authentication mode: `none`, `lls`, or `hls-gmac` |
 | `DLMS_LIVE_LLS_PASSWORD` | none | raw LLS password bytes for `lls` authentication |
+| `DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX` | none | 8-byte hex client system title for `hls-gmac` |
+| `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | none | 8-byte hex server system title for `hls-gmac` |
+| `DLMS_LIVE_AUTHENTICATION_KEY_HEX` | none | 16-byte hex authentication key for `hls-gmac` |
+| `DLMS_LIVE_INVOCATION_COUNTER` | `1` | local invocation counter start for `hls-gmac` |
 | `DLMS_LIVE_CLASS_ID` | `1` | GET target COSEM class id |
 | `DLMS_LIVE_OBIS` | `0.0.42.0.0.255` | GET target logical name |
 | `DLMS_LIVE_ATTRIBUTE_ID` | `2` | GET target attribute id |
@@ -82,6 +88,12 @@ For LLS, callers shall set `DLMS_LIVE_AUTHENTICATION=lls`,
 `DLMS_LIVE_CLIENT_SAP=32`, and `DLMS_LIVE_LLS_PASSWORD=<password>` unless the
 target meter uses a different client SAP. The smoke passes the password bytes to
 `DlmsClientOptions` exactly as provided by the process environment.
+
+For HLS GMAC, callers shall set `DLMS_LIVE_AUTHENTICATION=hls-gmac`,
+`DLMS_LIVE_CLIENT_SAP=48`, client/server system titles, and the authentication
+key as hex strings. The smoke passes key bytes to `DlmsClientOptions` exactly as
+decoded from hex. Proprietary high-password HLS mechanisms are not covered by
+this mode.
 
 ## 4. Architecture
 
@@ -153,6 +165,12 @@ LLS live verification is also manual and opt-in:
 
 ```text
 DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=32 DLMS_LIVE_AUTHENTICATION=lls DLMS_LIVE_LLS_PASSWORD=<password> ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
+```
+
+HLS GMAC live verification is manual and opt-in:
+
+```text
+DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=hls-gmac DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX=<16 hex chars> DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX=<16 hex chars> DLMS_LIVE_AUTHENTICATION_KEY_HEX=<32 hex chars> ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
 ```
 
 If `DLMS_LIVE_WRAPPER_HOST` is absent, the live smoke shall report that it is
@@ -256,3 +274,46 @@ close: Ok
 The release fallback matches the public-client smoke behavior and does not
 invalidate the LLS MVP path, which is scoped to connect, association, and a
 single read-only GET.
+
+### Phase 51. HLS GMAC Live Smoke Documentation
+
+Deliverables:
+
+- live smoke configuration contract for `hls-gmac`;
+- hex key and system-title environment variables;
+- explicit separation from proprietary high-password HLS.
+
+Commit message:
+
+```text
+docs: define HLS GMAC live meter smoke
+```
+
+### Phase 52. HLS GMAC Live Smoke Implementation
+
+Deliverables:
+
+- authentication mode parsing for `hls-gmac`;
+- hex parser for system titles and authentication key;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add HLS GMAC live meter smoke option
+```
+
+### Phase 53. Optional HLS Client 48 Verification
+
+Deliverables:
+
+- run the smoke against an explicitly supplied lab endpoint with client SAP 48
+  when HLS GMAC material is available;
+- document observed connect/association/GET status or document that the target
+  uses a non-GMAC HLS mechanism.
+
+Commit message:
+
+```text
+test: verify HLS client live smoke
+```

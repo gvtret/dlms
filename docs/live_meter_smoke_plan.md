@@ -35,7 +35,13 @@ The live smoke shall:
 - open a no-security LN association as public client SAP 16;
 - perform one explicit GET request;
 - print a compact status line for connect, association, service, and close;
-- return a non-zero process code on any failed step.
+- return a non-zero process code when connect, association, GET, or close
+  fails.
+
+Confirmed release is best-effort for the live smoke. Some meters accept the
+service path but fail or omit the confirmed release exchange. The smoke shall
+report the release status and fall back to `Close()` so the MVP verdict remains
+focused on the public-client service path.
 
 The smoke shall not:
 
@@ -111,6 +117,9 @@ sequenceDiagram
   Client->>Meter: GET through xDLMS/profile/transport
   Meter-->>Client: GET response data
   Main->>Client: ReleaseAssociation()
+  alt release fails
+    Main->>Client: Close()
+  end
   Main->>Client: Close()
 ```
 
@@ -175,4 +184,3 @@ Commit message:
 ```text
 test: verify public client live smoke
 ```
-

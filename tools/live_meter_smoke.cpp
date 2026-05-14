@@ -198,10 +198,12 @@ int main()
 
   status = client.ReleaseAssociation();
   if (status != dlms::client::ClientStatus::Ok) {
-    client.Close();
-    return Fail("release", status);
+    std::cout << "release: "
+              << dlms::client::ClientStatusName(status)
+              << " (close fallback)\n";
+  } else {
+    std::cout << "release: Ok\n";
   }
-  std::cout << "release: Ok\n";
 
   status = client.Close();
   if (status != dlms::client::ClientStatus::Ok) {

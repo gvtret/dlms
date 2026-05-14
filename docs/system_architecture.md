@@ -810,7 +810,7 @@ The recommended order is:
 8. Implement `dlms-server` minimal no-security server.
 9. Implement HDLC profile orchestration in `dlms-profile`.
 10. Implement `dlms-security` Suite 0 AES-GCM.
-11. Add block transfer for GET/SET/ACTION.
+11. Complete server GET response block transfer.
 12. Add richer COSEM interface classes and optional SN referencing.
 
 This order prioritizes a working no-security LN client/server path before

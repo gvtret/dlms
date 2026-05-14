@@ -219,6 +219,50 @@ public:
   dlms::xdlms::ActionIndication lastAction;
 };
 
+class GetBlockHandler : public dlms::xdlms::IXdlmsServerHandler
+{
+public:
+  GetBlockHandler()
+    : getCalls(0)
+    , lastGet(dlms::xdlms::EmptyGetIndication())
+  {
+  }
+
+  dlms::xdlms::XdlmsStatus HandleGet(
+    const dlms::xdlms::GetIndication& indication,
+    dlms::xdlms::GetResult& result)
+  {
+    ++getCalls;
+    lastGet = indication;
+    result.hasData = true;
+    result.data = EncodedLongUnsigned(0x1111u);
+    const std::vector<std::uint8_t> second = EncodedLongUnsigned(0x2222u);
+    result.data.insert(result.data.end(), second.begin(), second.end());
+    return dlms::xdlms::XdlmsStatus::Ok;
+  }
+
+  dlms::xdlms::XdlmsStatus HandleSet(
+    const dlms::xdlms::SetIndication& indication,
+    dlms::xdlms::SetResult& result)
+  {
+    (void)indication;
+    (void)result;
+    return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+  }
+
+  dlms::xdlms::XdlmsStatus HandleAction(
+    const dlms::xdlms::ActionIndication& indication,
+    dlms::xdlms::ActionResult& result)
+  {
+    (void)indication;
+    (void)result;
+    return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+  }
+
+  int getCalls;
+  dlms::xdlms::GetIndication lastGet;
+};
+
 std::vector<std::uint8_t> MakeAareBytes()
 {
   const std::uint8_t kAare[] = {
@@ -488,6 +532,61 @@ TEST(XdlmsIntegration, NormalGetCollectsResponseDataBlocks)
   const std::vector<std::uint8_t> second = EncodedLongUnsigned(0x2222u);
   expected.insert(expected.end(), second.begin(), second.end());
   EXPECT_EQ(expected, result.data);
+}
+
+TEST(XdlmsIntegration, ServerGetResponseBlocksReachClient)
+{
+  GetBlockHandler handler;
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(handler);
+  dlms::xdlms::ServiceOptions serverOptions =
+    dlms::xdlms::DefaultServiceOptions();
+  serverOptions.maxGetBlockPayloadBytes = 3u;
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher, serverOptions);
+  ServerBackedApduChannel channel(processor);
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+
+  channel.receiveQueue.push_back(MakeAareBytes());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Open());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Establish());
+  ASSERT_TRUE(association.IsAssociated());
+
+  dlms::xdlms::XdlmsClient xdlms(channel, association);
+  dlms::xdlms::GetResult result;
+
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            xdlms.Get(MakeDescriptor(), result));
+
+  ASSERT_EQ(1, handler.getCalls);
+  EXPECT_EQ(1u, handler.lastGet.invokeId);
+  std::vector<std::uint8_t> expected = EncodedLongUnsigned(0x1111u);
+  const std::vector<std::uint8_t> second = EncodedLongUnsigned(0x2222u);
+  expected.insert(expected.end(), second.begin(), second.end());
+  EXPECT_TRUE(result.hasData);
+  EXPECT_EQ(expected, result.data);
+
+  ASSERT_EQ(3u, channel.sentHistory.size());
+  dlms::apdu::XdlmsApdu normalRequest;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[1][0],
+              channel.sentHistory[1].size(),
+              normalRequest));
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetRequest, normalRequest.kind);
+  EXPECT_EQ(dlms::apdu::GetRequestChoice::Normal,
+            normalRequest.getRequestAny.choice);
+
+  dlms::apdu::XdlmsApdu nextRequest;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[2][0],
+              channel.sentHistory[2].size(),
+              nextRequest));
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetRequest, nextRequest.kind);
+  EXPECT_EQ(dlms::apdu::GetRequestChoice::Next,
+            nextRequest.getRequestAny.choice);
+  EXPECT_EQ(1u, nextRequest.getRequestAny.blockNumber);
 }
 
 TEST(XdlmsIntegration, NormalSetSendsRequestDataBlocks)

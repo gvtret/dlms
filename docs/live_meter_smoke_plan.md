@@ -21,8 +21,8 @@ dlms-client
 
 The first smoke target is public-client no-security LN association. The second
 target is LLS LN association through the same public client facade. The third
-target is standard HLS GMAC when the meter exposes a matching authentication
-mechanism.
+target is password-based HLS High. The fourth target is standard HLS GMAC when
+the meter exposes a matching authentication mechanism.
 
 ## 2. MVP Requirements
 
@@ -35,6 +35,7 @@ The live smoke shall:
 - connect to Wrapper/TCP;
 - open a no-security LN association as public client SAP 16 by default;
 - optionally open an LLS LN association when explicitly configured;
+- optionally open an HLS High LN association when explicitly configured;
 - optionally open an HLS GMAC LN association when explicitly configured;
 - perform one explicit GET request;
 - print a compact status line for connect, association, service, and close;
@@ -68,8 +69,9 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_SERVER_SAP` | `1` | logical device SAP |
 | `DLMS_LIVE_SOURCE_WPORT` | same as client SAP | Wrapper source port |
 | `DLMS_LIVE_DEST_WPORT` | same as server SAP | Wrapper destination port |
-| `DLMS_LIVE_AUTHENTICATION` | `none` | association authentication mode: `none`, `lls`, or `hls-gmac` |
+| `DLMS_LIVE_AUTHENTICATION` | `none` | association authentication mode: `none`, `lls`, `high`, or `hls-gmac` |
 | `DLMS_LIVE_LLS_PASSWORD` | none | raw LLS password bytes for `lls` authentication |
+| `DLMS_LIVE_HLS_PASSWORD` | none | raw HLS High password bytes for `high` authentication |
 | `DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX` | none | 8-byte hex client system title for `hls-gmac` |
 | `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | none | 8-byte hex server system title for `hls-gmac` |
 | `DLMS_LIVE_AUTHENTICATION_KEY_HEX` | none | 16-byte hex authentication key for `hls-gmac` |
@@ -89,11 +91,20 @@ For LLS, callers shall set `DLMS_LIVE_AUTHENTICATION=lls`,
 target meter uses a different client SAP. The smoke passes the password bytes to
 `DlmsClientOptions` exactly as provided by the process environment.
 
+For HLS High, callers shall set `DLMS_LIVE_AUTHENTICATION=high`,
+`DLMS_LIVE_CLIENT_SAP=48`, and `DLMS_LIVE_HLS_PASSWORD=<password>` unless the
+target meter uses a different client SAP. The smoke passes the password bytes
+to `DlmsClientOptions` exactly as provided by the process environment. The
+provided certification configs use `HLSPassword=HiPassword` for this mode when
+`bGMAC=false`.
+
 For HLS GMAC, callers shall set `DLMS_LIVE_AUTHENTICATION=hls-gmac`,
 `DLMS_LIVE_CLIENT_SAP=48`, client/server system titles, and the authentication
 key as hex strings. The smoke passes key bytes to `DlmsClientOptions` exactly as
-decoded from hex. Proprietary high-password HLS mechanisms are not covered by
-this mode.
+decoded from hex. The provided certification configs use `SystemTitle=12345678`,
+`AuthenticationKey=404142434445464748494A4B4C4D4E4F`, and
+`BlockCipherKey=303132333435363738393A3B3C3D3E3F` for this mode when
+`bGMAC=true`.
 
 ## 4. Architecture
 
@@ -171,6 +182,12 @@ HLS GMAC live verification is manual and opt-in:
 
 ```text
 DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=hls-gmac DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX=<16 hex chars> DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX=<16 hex chars> DLMS_LIVE_AUTHENTICATION_KEY_HEX=<32 hex chars> ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
+```
+
+HLS High live verification is manual and opt-in:
+
+```text
+DLMS_LIVE_WRAPPER_HOST=192.168.102.38 DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=high DLMS_LIVE_HLS_PASSWORD=HiPassword ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
 ```
 
 If `DLMS_LIVE_WRAPPER_HOST` is absent, the live smoke shall report that it is
@@ -316,4 +333,32 @@ Commit message:
 
 ```text
 test: verify HLS client live smoke
+```
+
+### Phase 54. HLS High Live Smoke Documentation
+
+Deliverables:
+
+- live smoke configuration contract for password-based `high`;
+- explicit separation from `hls-gmac` key material;
+- client SAP 48 command using the certification `HiPassword` value.
+
+Commit message:
+
+```text
+docs: define HLS High live meter smoke
+```
+
+### Phase 55. HLS High Live Smoke Implementation
+
+Deliverables:
+
+- authentication mode parsing for `high`;
+- raw HLS password forwarding to `DlmsClientOptions`;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add HLS High live meter smoke option
 ```

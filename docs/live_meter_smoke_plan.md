@@ -362,3 +362,27 @@ Commit message:
 ```text
 test: add HLS High live meter smoke option
 ```
+
+### Phase 56. Optional HLS High Client 48 Verification
+
+Deliverables:
+
+- run the smoke against `192.168.102.38:4059` with client SAP 48 and
+  `DLMS_LIVE_HLS_PASSWORD=HiPassword`;
+- document observed connect/association/GET status.
+
+Commit message:
+
+```text
+test: verify HLS High client live smoke
+```
+
+Observed verification:
+
+```text
+connect: Ok
+association: Ok
+get: Ok bytes=17
+release: AssociationFailed (close fallback)
+close: Ok
+```

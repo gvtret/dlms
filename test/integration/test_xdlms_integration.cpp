@@ -386,6 +386,9 @@ std::vector<std::uint8_t> ActionPayload(
   std::vector<std::uint8_t> output;
   output.push_back(result);
   output.push_back(encodedData.empty() ? 0u : 1u);
+  if (!encodedData.empty()) {
+    output.push_back(0u);
+  }
   output.insert(output.end(), encodedData.begin(), encodedData.end());
   return output;
 }

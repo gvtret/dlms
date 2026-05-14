@@ -56,8 +56,47 @@ unsigned long EnvUnsigned(
   return parsed;
 }
 
+int HexValue(char value)
+{
+  if (value >= '0' && value <= '9') {
+    return value - '0';
+  }
+  if (value >= 'a' && value <= 'f') {
+    return 10 + value - 'a';
+  }
+  if (value >= 'A' && value <= 'F') {
+    return 10 + value - 'A';
+  }
+  return -1;
+}
+
+bool EnvHexBytes(
+  const char* name,
+  std::uint8_t* output,
+  std::size_t outputSize)
+{
+  const char* value = Env(name);
+  if (value == 0 || std::strlen(value) != outputSize * 2u) {
+    std::cerr << "config " << name << " requires "
+              << (outputSize * 2u) << " hex chars\n";
+    return false;
+  }
+
+  for (std::size_t i = 0u; i < outputSize; ++i) {
+    const int high = HexValue(value[i * 2u]);
+    const int low = HexValue(value[i * 2u + 1u]);
+    if (high < 0 || low < 0) {
+      std::cerr << "config " << name << " invalid hex\n";
+      return false;
+    }
+    output[i] = static_cast<std::uint8_t>((high << 4) | low);
+  }
+  return true;
+}
+
 bool EnvAuthentication(
-  dlms::client::DlmsClientOptions& options)
+  dlms::client::DlmsClientOptions& options,
+  bool& ok)
 {
   const char* mode = Env("DLMS_LIVE_AUTHENTICATION");
   if (mode == 0 || mode[0] == '\0' || std::strcmp(mode, "none") == 0) {
@@ -66,22 +105,50 @@ bool EnvAuthentication(
     return true;
   }
 
-  if (std::strcmp(mode, "lls") != 0) {
+  if (std::strcmp(mode, "lls") == 0) {
+    const char* password = Env("DLMS_LIVE_LLS_PASSWORD");
+    if (password == 0 || password[0] == '\0') {
+      std::cerr << "config DLMS_LIVE_LLS_PASSWORD required for lls\n";
+      return false;
+    }
+
+    options.authenticationMode =
+      dlms::client::ClientAuthenticationMode::LowLevelSecurity;
+    options.lowLevelSecurity.credential =
+      reinterpret_cast<const std::uint8_t*>(password);
+    options.lowLevelSecurity.credentialSize = std::strlen(password);
+    return true;
+  }
+
+  if (std::strcmp(mode, "hls-gmac") != 0) {
     std::cerr << "config DLMS_LIVE_AUTHENTICATION invalid: " << mode << "\n";
     return false;
   }
 
-  const char* password = Env("DLMS_LIVE_LLS_PASSWORD");
-  if (password == 0 || password[0] == '\0') {
-    std::cerr << "config DLMS_LIVE_LLS_PASSWORD required for lls\n";
+  options.authenticationMode =
+    dlms::client::ClientAuthenticationMode::HighLevelSecurityGmac;
+  options.security.invocationCounter = static_cast<std::uint32_t>(
+    EnvUnsigned(
+      "DLMS_LIVE_INVOCATION_COUNTER",
+      1u,
+      std::numeric_limits<std::uint32_t>::max(),
+      ok));
+
+  if (!EnvHexBytes(
+        "DLMS_LIVE_CLIENT_SYSTEM_TITLE_HEX",
+        options.security.clientSystemTitle,
+        sizeof(options.security.clientSystemTitle)) ||
+      !EnvHexBytes(
+        "DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX",
+        options.security.serverSystemTitle,
+        sizeof(options.security.serverSystemTitle)) ||
+      !EnvHexBytes(
+        "DLMS_LIVE_AUTHENTICATION_KEY_HEX",
+        options.security.authenticationKey,
+        sizeof(options.security.authenticationKey))) {
     return false;
   }
 
-  options.authenticationMode =
-    dlms::client::ClientAuthenticationMode::LowLevelSecurity;
-  options.lowLevelSecurity.credential =
-    reinterpret_cast<const std::uint8_t*>(password);
-  options.lowLevelSecurity.credentialSize = std::strlen(password);
   return true;
 }
 
@@ -174,7 +241,7 @@ dlms::client::DlmsClientOptions MakeOptions(
       5000u,
       std::numeric_limits<std::uint32_t>::max(),
       ok));
-  if (!EnvAuthentication(options)) {
+  if (!EnvAuthentication(options, ok)) {
     ok = false;
   }
 

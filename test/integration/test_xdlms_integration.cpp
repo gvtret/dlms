@@ -175,7 +175,9 @@ class ActionOnlyHandler : public dlms::xdlms::IXdlmsServerHandler
 {
 public:
   ActionOnlyHandler()
-    : actionCalls(0)
+    : setCalls(0)
+    , actionCalls(0)
+    , lastSet(dlms::xdlms::EmptySetIndication())
     , lastAction(dlms::xdlms::EmptyActionIndication())
   {
   }
@@ -187,6 +189,16 @@ public:
     (void)indication;
     (void)result;
     return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+  }
+
+  dlms::xdlms::XdlmsStatus HandleSet(
+    const dlms::xdlms::SetIndication& indication,
+    dlms::xdlms::SetResult& result)
+  {
+    ++setCalls;
+    lastSet = indication;
+    result.accessResult = 0u;
+    return dlms::xdlms::XdlmsStatus::Ok;
   }
 
   dlms::xdlms::XdlmsStatus HandleAction(
@@ -201,7 +213,9 @@ public:
     return dlms::xdlms::XdlmsStatus::Ok;
   }
 
+  int setCalls;
   int actionCalls;
+  dlms::xdlms::SetIndication lastSet;
   dlms::xdlms::ActionIndication lastAction;
 };
 
@@ -701,4 +715,58 @@ TEST(XdlmsIntegration, ActionRequestPblocksReachServerProcessor)
               finalBlock));
   EXPECT_EQ(dlms::apdu::ActionRequestChoice::WithPblock,
             finalBlock.actionRequestAny.choice);
+}
+
+TEST(XdlmsIntegration, SetRequestBlocksReachServerProcessor)
+{
+  ActionOnlyHandler handler;
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(handler);
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  ServerBackedApduChannel channel(processor);
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+
+  channel.receiveQueue.push_back(MakeAareBytes());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Open());
+  ASSERT_EQ(dlms::association::AssociationStatus::Ok, association.Establish());
+  ASSERT_TRUE(association.IsAssociated());
+
+  dlms::xdlms::ServiceOptions options =
+    dlms::xdlms::DefaultServiceOptions();
+  options.maxSetBlockPayloadBytes = 2u;
+
+  dlms::xdlms::XdlmsClient xdlms(channel, association);
+  dlms::xdlms::SetResult result;
+
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            xdlms.Set(
+              MakeDescriptor(),
+              EncodedLongUnsigned(0x4321u),
+              options,
+              result));
+
+  ASSERT_EQ(1, handler.setCalls);
+  EXPECT_EQ(EncodedLongUnsigned(0x4321u), handler.lastSet.data);
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_EQ(0u, result.accessResult);
+
+  ASSERT_EQ(3u, channel.sentHistory.size());
+  dlms::apdu::XdlmsApdu firstBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[1][0],
+              channel.sentHistory[1].size(),
+              firstBlock));
+  EXPECT_EQ(dlms::apdu::SetRequestChoice::WithFirstDataBlock,
+            firstBlock.setRequestAny.choice);
+
+  dlms::apdu::XdlmsApdu finalBlock;
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeXdlmsApdu(
+              &channel.sentHistory[2][0],
+              channel.sentHistory[2].size(),
+              finalBlock));
+  EXPECT_EQ(dlms::apdu::SetRequestChoice::WithDataBlock,
+            finalBlock.setRequestAny.choice);
 }

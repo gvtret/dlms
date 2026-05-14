@@ -242,3 +242,17 @@ Commit message:
 ```text
 test: verify LLS client live smoke
 ```
+
+Observed verification:
+
+```text
+connect: Ok
+association: Ok
+get: Ok bytes=17
+release: AssociationFailed (close fallback)
+close: Ok
+```
+
+The release fallback matches the public-client smoke behavior and does not
+invalidate the LLS MVP path, which is scoped to connect, association, and a
+single read-only GET.

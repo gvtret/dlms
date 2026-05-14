@@ -19,9 +19,10 @@ dlms-client
   -> real meter endpoint
 ```
 
-The first smoke target is public-client no-security LN association. LLS and HLS
-remain follow-up authentication phases because `dlms-association` still rejects
-those authentication modes until ACSE authentication field encoding is enabled.
+The first smoke target is public-client no-security LN association. The second
+target is LLS LN association through the same public client facade. HLS remains
+a follow-up authentication phase because the challenge-response path is not
+implemented yet.
 
 ## 2. MVP Requirements
 
@@ -32,7 +33,8 @@ The live smoke shall:
 - take endpoint and addressing values from environment variables;
 - use `DlmsClient` options composition, not manual lower-layer wiring;
 - connect to Wrapper/TCP;
-- open a no-security LN association as public client SAP 16;
+- open a no-security LN association as public client SAP 16 by default;
+- optionally open an LLS LN association when explicitly configured;
 - perform one explicit GET request;
 - print a compact status line for connect, association, service, and close;
 - return a non-zero process code when connect, association, GET, or close
@@ -46,7 +48,8 @@ focused on the public-client service path.
 The smoke shall not:
 
 - embed lab IP addresses or credentials in committed source;
-- require LLS/HLS passwords;
+- require LLS/HLS passwords for the default public-client smoke;
+- transform, hash, derive, persist, or log LLS credential bytes;
 - mutate meter state;
 - retry indefinitely;
 - make CI depend on live network access.
@@ -63,6 +66,8 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_SERVER_SAP` | `1` | logical device SAP |
 | `DLMS_LIVE_SOURCE_WPORT` | same as client SAP | Wrapper source port |
 | `DLMS_LIVE_DEST_WPORT` | same as server SAP | Wrapper destination port |
+| `DLMS_LIVE_AUTHENTICATION` | `none` | association authentication mode: `none` or `lls` |
+| `DLMS_LIVE_LLS_PASSWORD` | none | raw LLS password bytes for `lls` authentication |
 | `DLMS_LIVE_CLASS_ID` | `1` | GET target COSEM class id |
 | `DLMS_LIVE_OBIS` | `0.0.42.0.0.255` | GET target logical name |
 | `DLMS_LIVE_ATTRIBUTE_ID` | `2` | GET target attribute id |
@@ -73,12 +78,18 @@ The default GET target is logical device name on a `Data` object. If a meter
 uses a different public object list, the caller can override class id, OBIS, and
 attribute id without rebuilding.
 
+For LLS, callers shall set `DLMS_LIVE_AUTHENTICATION=lls`,
+`DLMS_LIVE_CLIENT_SAP=32`, and `DLMS_LIVE_LLS_PASSWORD=<password>` unless the
+target meter uses a different client SAP. The smoke passes the password bytes to
+`DlmsClientOptions` exactly as provided by the process environment.
+
 ## 4. Architecture
 
 ```mermaid
 flowchart LR
   Env["Environment variables"] --> Smoke["live_meter_smoke"]
   Smoke --> Client["DlmsClient"]
+  Smoke --> Auth["ClientAuthenticationMode"]
   Client --> Assoc["AssociationClient"]
   Client --> Xdlms["XdlmsClient"]
   Client --> Profile["WrapperTcpProfileChannel"]
@@ -101,7 +112,7 @@ sequenceDiagram
   participant Tcp as TcpStreamTransport
   participant Meter as Meter
 
-  Main->>Client: Construct(options)
+  Main->>Client: Construct(options with authentication)
   Main->>Client: Connect()
   Client->>Assoc: Open()
   Assoc->>Profile: Open()
@@ -136,6 +147,12 @@ Live verification is manual and opt-in:
 
 ```text
 DLMS_LIVE_WRAPPER_HOST=<host> ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
+```
+
+LLS live verification is also manual and opt-in:
+
+```text
+DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=32 DLMS_LIVE_AUTHENTICATION=lls DLMS_LIVE_LLS_PASSWORD=<password> ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
 ```
 
 If `DLMS_LIVE_WRAPPER_HOST` is absent, the live smoke shall report that it is
@@ -183,4 +200,45 @@ Commit message:
 
 ```text
 test: verify public client live smoke
+```
+
+### Phase 48. LLS Live Smoke Documentation
+
+Deliverables:
+
+- live smoke configuration contract for `none` and `lls` authentication;
+- manual client SAP 32 verification command;
+- explicit credential handling boundary.
+
+Commit message:
+
+```text
+docs: define LLS live meter smoke
+```
+
+### Phase 49. LLS Live Smoke Implementation
+
+Deliverables:
+
+- authentication mode parsing;
+- raw LLS password forwarding to `DlmsClientOptions`;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add LLS live meter smoke option
+```
+
+### Phase 50. Optional LLS Client 32 Verification
+
+Deliverables:
+
+- run the smoke against an explicitly supplied lab endpoint with client SAP 32;
+- document observed connect/association/GET status.
+
+Commit message:
+
+```text
+test: verify LLS client live smoke
 ```

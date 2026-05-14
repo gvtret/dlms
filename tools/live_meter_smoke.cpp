@@ -120,6 +120,21 @@ bool EnvAuthentication(
     return true;
   }
 
+  if (std::strcmp(mode, "high") == 0) {
+    const char* password = Env("DLMS_LIVE_HLS_PASSWORD");
+    if (password == 0 || password[0] == '\0') {
+      std::cerr << "config DLMS_LIVE_HLS_PASSWORD required for high\n";
+      return false;
+    }
+
+    options.authenticationMode =
+      dlms::client::ClientAuthenticationMode::HighLevelSecurity;
+    options.highLevelSecurity.password =
+      reinterpret_cast<const std::uint8_t*>(password);
+    options.highLevelSecurity.passwordSize = std::strlen(password);
+    return true;
+  }
+
   if (std::strcmp(mode, "hls-gmac") != 0) {
     std::cerr << "config DLMS_LIVE_AUTHENTICATION invalid: " << mode << "\n";
     return false;

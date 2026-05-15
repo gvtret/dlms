@@ -63,12 +63,22 @@ The executable shall read these environment variables:
 
 | Variable | Default | Meaning |
 |---|---:|---|
+| `DLMS_LIVE_PROFILE` | `wrapper-tcp` | client profile: `wrapper-tcp` or `hdlc-tcp` |
 | `DLMS_LIVE_WRAPPER_HOST` | none | required meter host or IP |
-| `DLMS_LIVE_WRAPPER_PORT` | `4059` | Wrapper/TCP port |
+| `DLMS_LIVE_WRAPPER_PORT` | `4059` | TCP port used by the selected live profile |
 | `DLMS_LIVE_CLIENT_SAP` | `16` | client SAP for public no-security access |
 | `DLMS_LIVE_SERVER_SAP` | `1` | logical device SAP |
 | `DLMS_LIVE_SOURCE_WPORT` | same as client SAP | Wrapper source port |
 | `DLMS_LIVE_DEST_WPORT` | same as server SAP | Wrapper destination port |
+| `DLMS_LIVE_HDLC_CLIENT_ADDRESS` | same as client SAP | HDLC client address for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_LOGICAL_DEVICE_ADDRESS` | same as server SAP | HDLC logical device address for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_PHYSICAL_DEVICE_ADDRESS` | `0` | HDLC physical device address for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_MAX_INFO_TX` | `128` | HDLC max information field transmit for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_MAX_INFO_RX` | `128` | HDLC max information field receive for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_WINDOW_TX` | `1` | HDLC transmit window size for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_WINDOW_RX` | `1` | HDLC receive window size for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_RETRY_COUNT` | `3` | HDLC control-frame retry count for `hdlc-tcp` |
+| `DLMS_LIVE_HDLC_RETRY_DELAY_MS` | `10` | HDLC retry delay for `hdlc-tcp` |
 | `DLMS_LIVE_AUTHENTICATION` | `none` | association authentication mode: `none`, `lls`, `high`, or `hls-gmac` |
 | `DLMS_LIVE_LLS_PASSWORD` | none | raw LLS password bytes for `lls` authentication |
 | `DLMS_LIVE_HLS_PASSWORD` | none | raw HLS High password bytes for `high` authentication |
@@ -85,6 +95,14 @@ The executable shall read these environment variables:
 The default GET target is logical device name on a `Data` object. If a meter
 uses a different public object list, the caller can override class id, OBIS, and
 attribute id without rebuilding.
+
+For HDLC over TCP, callers shall set `DLMS_LIVE_PROFILE=hdlc-tcp`. The TCP host
+and port remain configured by `DLMS_LIVE_WRAPPER_HOST` and
+`DLMS_LIVE_WRAPPER_PORT` for backward compatibility with existing smoke
+commands. HDLC addressing can be configured independently with the
+`DLMS_LIVE_HDLC_*` variables. The provided TCP/HDLC legacy configuration uses
+logical device address `1`, physical device address `1`, and max information
+field sizes `256`.
 
 For LLS, callers shall set `DLMS_LIVE_AUTHENTICATION=lls`,
 `DLMS_LIVE_CLIENT_SAP=32`, and `DLMS_LIVE_LLS_PASSWORD=<password>` unless the
@@ -190,6 +208,12 @@ HLS High live verification is manual and opt-in:
 
 ```text
 DLMS_LIVE_WRAPPER_HOST=192.168.102.38 DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=high DLMS_LIVE_HLS_PASSWORD=HiPassword ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
+```
+
+HDLC/TCP live verification is manual and opt-in:
+
+```text
+DLMS_LIVE_PROFILE=hdlc-tcp DLMS_LIVE_WRAPPER_HOST=192.168.102.38 DLMS_LIVE_HDLC_PHYSICAL_DEVICE_ADDRESS=1 DLMS_LIVE_HDLC_MAX_INFO_TX=256 DLMS_LIVE_HDLC_MAX_INFO_RX=256 ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
 ```
 
 If `DLMS_LIVE_WRAPPER_HOST` is absent, the live smoke shall report that it is
@@ -402,4 +426,46 @@ Commit message:
 
 ```text
 feat(client): discover HLS GMAC server title from AARE
+```
+
+### Phase 58. HDLC/TCP Live Smoke Documentation
+
+Deliverables:
+
+- live smoke profile selector contract;
+- HDLC/TCP addressing and negotiation environment variables;
+- manual command for the TCP/HDLC legacy endpoint.
+
+Commit message:
+
+```text
+docs: define HDLC TCP live meter smoke
+```
+
+### Phase 59. HDLC/TCP Live Smoke Implementation
+
+Deliverables:
+
+- parse `DLMS_LIVE_PROFILE=hdlc-tcp`;
+- map HDLC/TCP environment variables into `DlmsClientOptions`;
+- keep `wrapper-tcp` as the default;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add HDLC TCP live meter smoke option
+```
+
+### Phase 60. Optional HDLC/TCP Verification
+
+Deliverables:
+
+- run the smoke against `192.168.102.38:4059` with `hdlc-tcp`;
+- document observed connect/association/GET status.
+
+Commit message:
+
+```text
+test: verify HDLC TCP live smoke
 ```

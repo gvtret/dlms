@@ -180,6 +180,24 @@ bool EnvAuthentication(
   return true;
 }
 
+bool EnvProfile(dlms::client::DlmsClientOptions& options)
+{
+  const char* profile = Env("DLMS_LIVE_PROFILE");
+  if (profile == 0 || profile[0] == '\0' ||
+      std::strcmp(profile, "wrapper-tcp") == 0) {
+    options.profile = dlms::client::ClientProfile::WrapperTcp;
+    return true;
+  }
+
+  if (std::strcmp(profile, "hdlc-tcp") == 0) {
+    options.profile = dlms::client::ClientProfile::HdlcTcp;
+    return true;
+  }
+
+  std::cerr << "config DLMS_LIVE_PROFILE invalid: " << profile << "\n";
+  return false;
+}
+
 bool ParseObis(const char* text, dlms::xdlms::CosemLogicalName& output)
 {
   if (text == 0 || text[0] == '\0') {
@@ -238,6 +256,10 @@ dlms::client::DlmsClientOptions MakeOptions(
   dlms::client::DlmsClientOptions options =
     dlms::client::DefaultDlmsClientOptions();
 
+  if (!EnvProfile(options)) {
+    ok = false;
+  }
+
   options.wrapperTcp.host = host;
   options.wrapperTcp.port = static_cast<std::uint16_t>(
     EnvUnsigned("DLMS_LIVE_WRAPPER_PORT", 4059u, 0xffffu, ok));
@@ -256,6 +278,42 @@ dlms::client::DlmsClientOptions MakeOptions(
       "DLMS_LIVE_DEST_WPORT",
       options.serverSap,
       0xffffu,
+      ok));
+  options.hdlcTcp.host = host;
+  options.hdlcTcp.port = options.wrapperTcp.port;
+  options.hdlcTcp.clientAddress = static_cast<std::uint8_t>(
+    EnvUnsigned(
+      "DLMS_LIVE_HDLC_CLIENT_ADDRESS",
+      options.clientSap,
+      0x7fu,
+      ok));
+  options.hdlcTcp.logicalDeviceAddress = static_cast<std::uint16_t>(
+    EnvUnsigned(
+      "DLMS_LIVE_HDLC_LOGICAL_DEVICE_ADDRESS",
+      options.serverSap,
+      0x3fffu,
+      ok));
+  options.hdlcTcp.physicalDeviceAddress = static_cast<std::uint16_t>(
+    EnvUnsigned(
+      "DLMS_LIVE_HDLC_PHYSICAL_DEVICE_ADDRESS",
+      0u,
+      0x3fffu,
+      ok));
+  options.hdlcTcp.maxInfoTx = static_cast<std::size_t>(
+    EnvUnsigned("DLMS_LIVE_HDLC_MAX_INFO_TX", 128u, 0xffffu, ok));
+  options.hdlcTcp.maxInfoRx = static_cast<std::size_t>(
+    EnvUnsigned("DLMS_LIVE_HDLC_MAX_INFO_RX", 128u, 0xffffu, ok));
+  options.hdlcTcp.windowSizeTx = static_cast<std::uint8_t>(
+    EnvUnsigned("DLMS_LIVE_HDLC_WINDOW_TX", 1u, 0xffu, ok));
+  options.hdlcTcp.windowSizeRx = static_cast<std::uint8_t>(
+    EnvUnsigned("DLMS_LIVE_HDLC_WINDOW_RX", 1u, 0xffu, ok));
+  options.hdlcTcp.retryCount = static_cast<std::uint8_t>(
+    EnvUnsigned("DLMS_LIVE_HDLC_RETRY_COUNT", 3u, 0xffu, ok));
+  options.hdlcTcp.retryDelayMs = static_cast<std::uint32_t>(
+    EnvUnsigned(
+      "DLMS_LIVE_HDLC_RETRY_DELAY_MS",
+      10u,
+      std::numeric_limits<std::uint32_t>::max(),
       ok));
   options.connectTimeoutMs = static_cast<std::uint32_t>(
     EnvUnsigned(

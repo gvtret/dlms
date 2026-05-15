@@ -231,6 +231,76 @@ const char* AuthenticationName(
   return "unknown";
 }
 
+const char* WrapperTraceKindName(dlms::profile::WrapperTcpTraceKind kind)
+{
+  switch (kind) {
+  case dlms::profile::WrapperTcpTraceKind::EncodedFrame:
+    return "encoded-frame";
+  case dlms::profile::WrapperTcpTraceKind::DecodedFrame:
+    return "decoded-frame";
+  case dlms::profile::WrapperTcpTraceKind::ReadStatus:
+    return "read-status";
+  case dlms::profile::WrapperTcpTraceKind::DecodeStatus:
+    return "decode-status";
+  }
+  return "unknown";
+}
+
+const char* WrapperTraceDirectionName(
+  dlms::profile::WrapperTcpTraceDirection direction)
+{
+  switch (direction) {
+  case dlms::profile::WrapperTcpTraceDirection::Outbound:
+    return "out";
+  case dlms::profile::WrapperTcpTraceDirection::Inbound:
+    return "in";
+  }
+  return "unknown";
+}
+
+const char* ProfileStatusName(dlms::profile::ProfileStatus status)
+{
+  switch (status) {
+  case dlms::profile::ProfileStatus::Ok:
+    return "Ok";
+  case dlms::profile::ProfileStatus::NeedMoreData:
+    return "NeedMoreData";
+  case dlms::profile::ProfileStatus::OutputBufferTooSmall:
+    return "OutputBufferTooSmall";
+  case dlms::profile::ProfileStatus::InvalidArgument:
+    return "InvalidArgument";
+  case dlms::profile::ProfileStatus::NotOpen:
+    return "NotOpen";
+  case dlms::profile::ProfileStatus::AlreadyOpen:
+    return "AlreadyOpen";
+  case dlms::profile::ProfileStatus::OpenFailed:
+    return "OpenFailed";
+  case dlms::profile::ProfileStatus::ReadFailed:
+    return "ReadFailed";
+  case dlms::profile::ProfileStatus::WriteFailed:
+    return "WriteFailed";
+  case dlms::profile::ProfileStatus::Timeout:
+    return "Timeout";
+  case dlms::profile::ProfileStatus::ConnectionClosed:
+    return "ConnectionClosed";
+  case dlms::profile::ProfileStatus::WouldBlock:
+    return "WouldBlock";
+  case dlms::profile::ProfileStatus::InvalidFrame:
+    return "InvalidFrame";
+  case dlms::profile::ProfileStatus::InvalidLength:
+    return "InvalidLength";
+  case dlms::profile::ProfileStatus::InvalidAddress:
+    return "InvalidAddress";
+  case dlms::profile::ProfileStatus::PayloadTooLarge:
+    return "PayloadTooLarge";
+  case dlms::profile::ProfileStatus::UnsupportedFeature:
+    return "UnsupportedFeature";
+  case dlms::profile::ProfileStatus::InternalError:
+    return "InternalError";
+  }
+  return "Unknown";
+}
+
 void PrintObis(const dlms::xdlms::CosemLogicalName& name)
 {
   for (std::size_t i = 0u; i < name.Size(); ++i) {
@@ -417,6 +487,28 @@ void PrintTrace(
             << "\n";
 }
 
+class ConsoleWrapperTcpTraceSink
+  : public dlms::profile::IWrapperTcpTraceSink
+{
+public:
+  void OnWrapperTcpTrace(
+    const dlms::profile::WrapperTcpTraceEvent& event)
+  {
+    std::cout << "trace: wrapper-frame kind="
+              << WrapperTraceKindName(event.kind)
+              << " direction="
+              << WrapperTraceDirectionName(event.direction)
+              << " status="
+              << ProfileStatusName(event.status)
+              << " sourceWPort=" << event.sourcePort
+              << " destWPort=" << event.destinationPort
+              << " encodedSize=" << event.encodedSize
+              << " apduSize=" << event.apduSize
+              << " byteSize=" << event.byteSize
+              << "\n";
+  }
+};
+
 int Fail(const char* step, dlms::client::ClientStatus status)
 {
   std::cerr << step << ": "
@@ -435,7 +527,7 @@ int main()
   }
 
   bool ok = true;
-  const dlms::client::DlmsClientOptions options = MakeOptions(host, ok);
+  dlms::client::DlmsClientOptions options = MakeOptions(host, ok);
   const dlms::client::CosemAttributeDescriptor descriptor =
     MakeDescriptor(ok);
   if (!ok) {
@@ -444,6 +536,12 @@ int main()
 
   if (EnvTraceEnabled()) {
     PrintTrace(options, descriptor);
+  }
+
+  ConsoleWrapperTcpTraceSink wrapperTrace;
+  if (EnvTraceEnabled() &&
+      options.profile == dlms::client::ClientProfile::WrapperTcp) {
+    options.wrapperTcpTraceSink = &wrapperTrace;
   }
 
   dlms::client::DlmsClient client(options);

@@ -553,3 +553,26 @@ Commit message:
 ```text
 test: add live smoke Wrapper TCP trace
 ```
+
+Observed verification against WRAPPER legacy mode on `192.168.102.38:4059`:
+
+```text
+client 16 none:
+trace: wrapper-frame kind=encoded-frame direction=out status=Ok sourceWPort=16 destWPort=1 encodedSize=28 apduSize=20 byteSize=28
+trace: wrapper-frame kind=read-status direction=in status=Timeout sourceWPort=0 destWPort=0 encodedSize=0 apduSize=0 byteSize=0
+association: ReceiveFailed
+
+client 32 LLS/password:
+trace: wrapper-frame kind=encoded-frame direction=out status=Ok sourceWPort=32 destWPort=1 encodedSize=53 apduSize=45 byteSize=53
+trace: wrapper-frame kind=read-status direction=in status=Timeout sourceWPort=0 destWPort=0 encodedSize=0 apduSize=0 byteSize=0
+association: ReceiveFailed
+
+client 48 High/HiPassword:
+trace: wrapper-frame kind=encoded-frame direction=out status=Ok sourceWPort=48 destWPort=1 encodedSize=61 apduSize=53 byteSize=61
+trace: wrapper-frame kind=read-status direction=in status=ConnectionClosed sourceWPort=0 destWPort=0 encodedSize=0 apduSize=0 byteSize=0
+association: ReceiveFailed
+```
+
+The client writes AARQ WRAPPER frames successfully. For clients 16 and 32 the
+meter does not return a WRAPPER frame before timeout. For client 48 the meter
+closes the TCP connection after AARQ.

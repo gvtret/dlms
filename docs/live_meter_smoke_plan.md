@@ -469,3 +469,25 @@ Commit message:
 ```text
 test: verify HDLC TCP live smoke
 ```
+
+Observed verification against `192.168.102.38:4059`:
+
+Wrapper/TCP public, LLS, and HLS High all reached TCP connect but failed before
+AARE:
+
+```text
+connect: Ok
+association: ReceiveFailed
+```
+
+HDLC/TCP public client reached TCP open but did not receive a UA during HDLC
+data-link setup. Both logical+physical server address `1/1` and logical-only
+server address `1/0` were tried:
+
+```text
+connect: ChannelOpenFailed
+```
+
+This keeps the deterministic MVP path valid, but live verification now needs a
+lower-level trace phase to distinguish endpoint mode, addressing, and meter
+response behavior.

@@ -384,6 +384,42 @@ TEST(ClientGetIntegration, PublicClientReadsSapAssignmentList)
   EXPECT_EQ(expectedValue, actualValue);
 }
 
+TEST(ClientGetIntegration, PublicClientReadsLogicalDeviceName)
+{
+  dlms::server::ServerContext context;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<dlms::cosem::CosemDataObject> object(
+    new dlms::cosem::CosemDataObject(
+      dlms::cosem::MakeLogicalDeviceNameObject("ld-1")));
+
+  AttachObject(context, logicalDevice, object);
+
+  dlms::server::DlmsServer server(context);
+  dlms::server::XdlmsServerAdapter adapter(server);
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(adapter);
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  ClientServerApduChannel channel(processor);
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  dlms::client::DlmsClient client(channel, association);
+
+  OpenClientAssociation(client);
+
+  std::vector<std::uint8_t> expectedValue;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object->ReadAttribute(2u, expectedValue));
+
+  std::vector<std::uint8_t> actualValue;
+  EXPECT_EQ(dlms::client::ClientStatus::Ok,
+            client.Get(
+              MakeDescriptor(1u,
+                             dlms::cosem::LogicalDeviceNameObjectName(),
+                             2u),
+              actualValue));
+  EXPECT_EQ(expectedValue, actualValue);
+}
+
 TEST(ClientSetIntegration, PublicClientWritesMinimalServerObject)
 {
   dlms::server::ServerContext context;

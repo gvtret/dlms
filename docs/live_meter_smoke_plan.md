@@ -65,7 +65,7 @@ The executable shall read these environment variables:
 | Variable | Default | Meaning |
 |---|---:|---|
 | `DLMS_LIVE_PROFILE` | `wrapper-tcp` | client profile: `wrapper-tcp` or `hdlc-tcp` |
-| `DLMS_LIVE_TRACE` | unset | when set to `1`, print non-secret live smoke configuration before connect |
+| `DLMS_LIVE_TRACE` | unset | when set to `1`, print non-secret live smoke configuration and profile frame metadata |
 | `DLMS_LIVE_WRAPPER_HOST` | none | required meter host or IP |
 | `DLMS_LIVE_WRAPPER_PORT` | `4059` | TCP port used by the selected live profile |
 | `DLMS_LIVE_CLIENT_SAP` | `16` | client SAP for public no-security access |
@@ -520,4 +520,36 @@ Commit message:
 
 ```text
 test: add live smoke configuration trace
+```
+
+### Phase 63. Wrapper/TCP Frame Trace Documentation
+
+Deliverables:
+
+- document that `DLMS_LIVE_TRACE=1` includes WRAPPER/TCP frame metadata for
+  the live smoke;
+- keep trace output metadata-only by default;
+- explicitly exclude passwords, keys, system titles, invocation counters, and
+  full APDU payloads.
+
+Commit message:
+
+```text
+docs: define live smoke Wrapper TCP trace
+```
+
+### Phase 64. Wrapper/TCP Frame Trace Implementation
+
+Deliverables:
+
+- implement a live smoke `IWrapperTcpTraceSink`;
+- wire the sink through `DlmsClientOptions`;
+- print outbound encoded frame, inbound decoded frame, read failure, and decode
+  failure metadata when `DLMS_LIVE_TRACE=1`;
+- run live WRAPPER legacy public, LLS, and High attempts against the lab meter.
+
+Commit message:
+
+```text
+test: add live smoke Wrapper TCP trace
 ```

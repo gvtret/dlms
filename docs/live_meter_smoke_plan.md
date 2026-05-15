@@ -53,6 +53,7 @@ The smoke shall not:
 - require LLS/HLS passwords for the default public-client smoke;
 - transform, hash, derive, persist, or log LLS credential bytes;
 - transform, derive, persist, or log HLS GMAC key bytes;
+- log LLS/HLS passwords or GMAC key material, including in trace mode;
 - mutate meter state;
 - retry indefinitely;
 - make CI depend on live network access.
@@ -64,6 +65,7 @@ The executable shall read these environment variables:
 | Variable | Default | Meaning |
 |---|---:|---|
 | `DLMS_LIVE_PROFILE` | `wrapper-tcp` | client profile: `wrapper-tcp` or `hdlc-tcp` |
+| `DLMS_LIVE_TRACE` | unset | when set to `1`, print non-secret live smoke configuration before connect |
 | `DLMS_LIVE_WRAPPER_HOST` | none | required meter host or IP |
 | `DLMS_LIVE_WRAPPER_PORT` | `4059` | TCP port used by the selected live profile |
 | `DLMS_LIVE_CLIENT_SAP` | `16` | client SAP for public no-security access |
@@ -491,3 +493,31 @@ connect: ChannelOpenFailed
 This keeps the deterministic MVP path valid, but live verification now needs a
 lower-level trace phase to distinguish endpoint mode, addressing, and meter
 response behavior.
+
+### Phase 61. Live Smoke Configuration Trace Documentation
+
+Deliverables:
+
+- `DLMS_LIVE_TRACE=1` contract;
+- explicit non-secret trace boundary.
+
+Commit message:
+
+```text
+docs: define live smoke configuration trace
+```
+
+### Phase 62. Live Smoke Configuration Trace Implementation
+
+Deliverables:
+
+- print selected profile, endpoint, SAP, Wrapper ports, and HDLC addressing
+  when `DLMS_LIVE_TRACE=1`;
+- never print passwords, keys, system titles, or invocation counter values;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add live smoke configuration trace
+```

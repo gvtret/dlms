@@ -198,6 +198,49 @@ bool EnvProfile(dlms::client::DlmsClientOptions& options)
   return false;
 }
 
+bool EnvTraceEnabled()
+{
+  const char* trace = Env("DLMS_LIVE_TRACE");
+  return trace != 0 && std::strcmp(trace, "1") == 0;
+}
+
+const char* ProfileName(dlms::client::ClientProfile profile)
+{
+  switch (profile) {
+  case dlms::client::ClientProfile::WrapperTcp:
+    return "wrapper-tcp";
+  case dlms::client::ClientProfile::HdlcTcp:
+    return "hdlc-tcp";
+  }
+  return "unknown";
+}
+
+const char* AuthenticationName(
+  dlms::client::ClientAuthenticationMode mode)
+{
+  switch (mode) {
+  case dlms::client::ClientAuthenticationMode::None:
+    return "none";
+  case dlms::client::ClientAuthenticationMode::LowLevelSecurity:
+    return "lls";
+  case dlms::client::ClientAuthenticationMode::HighLevelSecurity:
+    return "high";
+  case dlms::client::ClientAuthenticationMode::HighLevelSecurityGmac:
+    return "hls-gmac";
+  }
+  return "unknown";
+}
+
+void PrintObis(const dlms::xdlms::CosemLogicalName& name)
+{
+  for (std::size_t i = 0u; i < name.Size(); ++i) {
+    if (i != 0u) {
+      std::cout << ".";
+    }
+    std::cout << static_cast<unsigned>(name[i]);
+  }
+}
+
 bool ParseObis(const char* text, dlms::xdlms::CosemLogicalName& output)
 {
   if (text == 0 || text[0] == '\0') {
@@ -334,6 +377,46 @@ dlms::client::DlmsClientOptions MakeOptions(
   return options;
 }
 
+void PrintTrace(
+  const dlms::client::DlmsClientOptions& options,
+  const dlms::client::CosemAttributeDescriptor& descriptor)
+{
+  std::cout << "trace: profile=" << ProfileName(options.profile)
+            << " endpoint=" << options.wrapperTcp.host
+            << ":" << options.wrapperTcp.port
+            << " clientSap=" << options.clientSap
+            << " serverSap=" << options.serverSap
+            << " authentication="
+            << AuthenticationName(options.authenticationMode)
+            << "\n";
+  std::cout << "trace: wrapper sourceWPort="
+            << options.wrapperTcp.sourceWPort
+            << " destWPort=" << options.wrapperTcp.destinationWPort
+            << "\n";
+  std::cout << "trace: hdlc clientAddress="
+            << static_cast<unsigned>(options.hdlcTcp.clientAddress)
+            << " logicalDeviceAddress="
+            << options.hdlcTcp.logicalDeviceAddress
+            << " physicalDeviceAddress="
+            << options.hdlcTcp.physicalDeviceAddress
+            << " maxInfoTx=" << options.hdlcTcp.maxInfoTx
+            << " maxInfoRx=" << options.hdlcTcp.maxInfoRx
+            << " windowTx="
+            << static_cast<unsigned>(options.hdlcTcp.windowSizeTx)
+            << " windowRx="
+            << static_cast<unsigned>(options.hdlcTcp.windowSizeRx)
+            << " retryCount="
+            << static_cast<unsigned>(options.hdlcTcp.retryCount)
+            << " retryDelayMs=" << options.hdlcTcp.retryDelayMs
+            << "\n";
+  std::cout << "trace: get classId=" << descriptor.classId
+            << " obis=";
+  PrintObis(descriptor.instanceId);
+  std::cout << " attributeId="
+            << static_cast<unsigned>(descriptor.attributeId)
+            << "\n";
+}
+
 int Fail(const char* step, dlms::client::ClientStatus status)
 {
   std::cerr << step << ": "
@@ -357,6 +440,10 @@ int main()
     MakeDescriptor(ok);
   if (!ok) {
     return 1;
+  }
+
+  if (EnvTraceEnabled()) {
+    PrintTrace(options, descriptor);
   }
 
   dlms::client::DlmsClient client(options);

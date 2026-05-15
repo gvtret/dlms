@@ -214,6 +214,26 @@ dlms::client::CosemAttributeDescriptor MakeDescriptor()
   return descriptor;
 }
 
+dlms::xdlms::CosemLogicalName ToClientName(
+  const dlms::cosem::CosemLogicalName& name)
+{
+  return dlms::xdlms::CosemLogicalName(
+    name[0], name[1], name[2], name[3], name[4], name[5]);
+}
+
+dlms::client::CosemAttributeDescriptor MakeDescriptor(
+  std::uint16_t classId,
+  const dlms::cosem::CosemLogicalName& logicalName,
+  std::uint8_t attributeId)
+{
+  dlms::client::CosemAttributeDescriptor descriptor =
+    dlms::xdlms::EmptyCosemAttributeDescriptor();
+  descriptor.classId = classId;
+  descriptor.instanceId = ToClientName(logicalName);
+  descriptor.attributeId = attributeId;
+  return descriptor;
+}
+
 dlms::client::CosemMethodDescriptor MakeMethodDescriptor()
 {
   dlms::client::CosemMethodDescriptor descriptor =
@@ -278,6 +298,89 @@ TEST(ClientGetIntegration, PublicClientReadsMinimalServerObject)
   std::vector<std::uint8_t> actualValue;
   EXPECT_EQ(dlms::client::ClientStatus::Ok,
             client.Get(MakeDescriptor(), actualValue));
+  EXPECT_EQ(expectedValue, actualValue);
+}
+
+TEST(ClientGetIntegration, PublicClientReadsAssociationObjectList)
+{
+  dlms::server::ServerContext context;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<dlms::cosem::CosemDataObject> dataObject(
+    new dlms::cosem::CosemDataObject(
+      dlms::cosem::CosemLogicalName(0, 0, 42, 0, 0, 255),
+      EncodeLongUnsigned(0x1234u),
+      dlms::cosem::AttributeAccessMode::ReadOnly));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(dataObject));
+
+  const std::shared_ptr<dlms::cosem::CosemAssociationLnObject> associationObject(
+    new dlms::cosem::CosemAssociationLnObject(
+      dlms::cosem::CurrentAssociationLnName(),
+      logicalDevice.BuildAssociationView()));
+  AttachObject(context, logicalDevice, associationObject);
+
+  dlms::server::DlmsServer server(context);
+  dlms::server::XdlmsServerAdapter adapter(server);
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(adapter);
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  ClientServerApduChannel channel(processor);
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  dlms::client::DlmsClient client(channel, association);
+
+  OpenClientAssociation(client);
+
+  std::vector<std::uint8_t> expectedValue;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            associationObject->ReadAttribute(2u, expectedValue));
+
+  std::vector<std::uint8_t> actualValue;
+  EXPECT_EQ(dlms::client::ClientStatus::Ok,
+            client.Get(
+              MakeDescriptor(15u,
+                             dlms::cosem::CurrentAssociationLnName(),
+                             2u),
+              actualValue));
+  EXPECT_EQ(expectedValue, actualValue);
+}
+
+TEST(ClientGetIntegration, PublicClientReadsSapAssignmentList)
+{
+  dlms::server::ServerContext context;
+  dlms::cosem::PhysicalDevice physicalDevice;
+  const std::shared_ptr<dlms::cosem::LogicalDevice> logicalDevice(
+    new dlms::cosem::LogicalDevice(1u, "ld-1"));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            physicalDevice.AddLogicalDevice(logicalDevice));
+
+  const std::shared_ptr<dlms::cosem::CosemSapAssignmentObject> sapObject(
+    new dlms::cosem::CosemSapAssignmentObject(
+      dlms::cosem::SapAssignmentName(),
+      physicalDevice.SapAssignments()));
+  AttachObject(context, *logicalDevice, sapObject);
+
+  dlms::server::DlmsServer server(context);
+  dlms::server::XdlmsServerAdapter adapter(server);
+  dlms::xdlms::XdlmsServerDispatcher dispatcher(adapter);
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  ClientServerApduChannel channel(processor);
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  dlms::client::DlmsClient client(channel, association);
+
+  OpenClientAssociation(client);
+
+  std::vector<std::uint8_t> expectedValue;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            sapObject->ReadAttribute(2u, expectedValue));
+
+  std::vector<std::uint8_t> actualValue;
+  EXPECT_EQ(dlms::client::ClientStatus::Ok,
+            client.Get(
+              MakeDescriptor(17u, dlms::cosem::SapAssignmentName(), 2u),
+              actualValue));
   EXPECT_EQ(expectedValue, actualValue);
 }
 

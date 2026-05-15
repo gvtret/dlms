@@ -224,10 +224,15 @@ dlms::client::CosemMethodDescriptor MakeMethodDescriptor()
   return descriptor;
 }
 
+dlms::cosem::CosemLogicalName MakeCosemName()
+{
+  return dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255);
+}
+
 void AttachObject(
   dlms::server::ServerContext& context,
   dlms::cosem::LogicalDevice& logicalDevice,
-  const std::shared_ptr<IntegrationDataObject>& object)
+  const std::shared_ptr<dlms::cosem::ICosemObject>& object)
 {
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             logicalDevice.RegisterObject(object));
@@ -249,8 +254,12 @@ TEST(ClientGetIntegration, PublicClientReadsMinimalServerObject)
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
   const std::vector<std::uint8_t> expectedValue =
     EncodeLongUnsigned(0x1234u);
-  const std::shared_ptr<IntegrationDataObject> object(
-    new IntegrationDataObject(expectedValue));
+  const std::shared_ptr<dlms::cosem::CosemRegisterObject> object(
+    new dlms::cosem::CosemRegisterObject(
+      MakeCosemName(),
+      expectedValue,
+      dlms::cosem::CosemByteBuffer(),
+      dlms::cosem::AttributeAccessMode::ReadOnly));
 
   AttachObject(context, logicalDevice, object);
 
@@ -276,9 +285,11 @@ TEST(ClientSetIntegration, PublicClientWritesMinimalServerObject)
 {
   dlms::server::ServerContext context;
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
-  const std::shared_ptr<IntegrationDataObject> object(
-    new IntegrationDataObject(
+  const std::shared_ptr<dlms::cosem::CosemRegisterObject> object(
+    new dlms::cosem::CosemRegisterObject(
+      MakeCosemName(),
       EncodeLongUnsigned(0x1234u),
+      dlms::cosem::CosemByteBuffer(),
       dlms::cosem::AttributeAccessMode::ReadAndWrite));
   AttachObject(context, logicalDevice, object);
 
@@ -307,8 +318,12 @@ TEST(ClientSetIntegration, PublicClientReportsServiceRejection)
   dlms::server::ServerContext context;
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
   const std::vector<std::uint8_t> initialValue = EncodeLongUnsigned(0x1234u);
-  const std::shared_ptr<IntegrationDataObject> object(
-    new IntegrationDataObject(initialValue));
+  const std::shared_ptr<dlms::cosem::CosemRegisterObject> object(
+    new dlms::cosem::CosemRegisterObject(
+      MakeCosemName(),
+      initialValue,
+      dlms::cosem::CosemByteBuffer(),
+      dlms::cosem::AttributeAccessMode::ReadOnly));
   AttachObject(context, logicalDevice, object);
 
   dlms::server::DlmsServer server(context);

@@ -51,6 +51,7 @@ The following repositories already exist or are present in the current workspace
 | `lib/dlms-cosem` | Minimal COSEM logical-device model, object registry, access rights, and server resource dispatch |
 | `lib/dlms-server` | Server-side GET, SET, ACTION adapter and dispatcher over COSEM objects |
 | `lib/dlms-client` | Public synchronous client facade over profile, association, xDLMS, and optional security composition |
+| `lib/dlms-endpoint` | Runtime composition layer for client, server, push listener, and gateway endpoints |
 
 Codec layers deliberately do not own transport I/O, timers, association
 orchestration, COSEM object storage, access-right decisions, or cryptographic
@@ -72,8 +73,9 @@ lib/dlms-association         Application Association state machine
 lib/dlms-xdlms               High-level GET, SET, ACTION client/server services and server GET APDU boundary
 lib/dlms-security            Security contexts, ciphering, HLS, key interfaces
 lib/dlms-cosem               COSEM object model, registry, and access rights
-lib/dlms-server              Server-side service dispatcher over COSEM objects and xDLMS GET adapter
+lib/dlms-server              Server-side service dispatcher over decoded xDLMS indications and COSEM objects
 lib/dlms-client              Ergonomic public client facade
+lib/dlms-endpoint            Runtime composition for client/server/push/gateway endpoints
 ```
 
 `dlms-common` should be introduced only when new repositories create real
@@ -86,7 +88,8 @@ flowchart TB
   App["User application / HES / meter app"]
 
   Client["dlms-client<br/>High-level client facade"]
-  Server["dlms-server<br/>Server dispatcher"]
+  Server["dlms-server<br/>Decoded xDLMS to COSEM dispatcher"]
+  Endpoint["dlms-endpoint<br/>Runtime endpoints"]
 
   XDlms["dlms-xdlms<br/>GET / SET / ACTION / block transfer"]
   Assoc["dlms-association<br/>AA state machine<br/>COSEM-OPEN / RELEASE / ABORT"]
@@ -103,24 +106,29 @@ flowchart TB
 
   App --> Client
   App --> Server
+  App --> Endpoint
+
+  Endpoint --> Client
+  Endpoint --> Server
+  Endpoint --> XDlms
+  Endpoint --> Assoc
+  Endpoint --> Security
+  Endpoint --> Profile
+  Endpoint --> Transport
 
   Client --> XDlms
   XDlms --> Assoc
-  Server --> Assoc
   Server --> XDlms
   Server --> Cosem
 
   Assoc --> Security
   XDlms --> Security
-  Server --> Security
 
   Assoc --> Apdu
   XDlms --> Apdu
-  Server --> Apdu
 
   Assoc --> Profile
   XDlms --> Profile
-  Server --> Profile
 
   Profile --> Wrapper
   Profile --> LLC
@@ -155,6 +163,7 @@ flowchart LR
   Cosem["dlms-cosem"]
   Server["dlms-server"]
   Client["dlms-client"]
+  Endpoint["dlms-endpoint"]
 
   Common --> HDLC
   Common --> LLC
@@ -178,14 +187,21 @@ flowchart LR
   APDU --> Cosem
   Security --> Cosem
 
-  Cosem --> Server
-  Association --> Server
-  Profile --> Server
-
   XDlms --> Server
   XDlms --> Client
   Association --> Client
   Profile --> Client
+
+  Cosem --> Server
+
+  Transport --> Endpoint
+  Profile --> Endpoint
+  Association --> Endpoint
+  Security --> Endpoint
+  XDlms --> Endpoint
+  Cosem --> Endpoint
+  Server --> Endpoint
+  Client --> Endpoint
 ```
 
 ## 7. Layer Responsibilities
@@ -653,19 +669,21 @@ MVP success criteria:
 
 ### 7.8 `dlms-server`
 
-Dispatches incoming APDUs to the COSEM object model.
+Dispatches decoded xDLMS service indications to the COSEM object model.
 
 In scope:
 
-- server-side association handling;
-- APDU receive/decode/dispatch loop;
 - GET/SET/ACTION dispatch;
 - access-right checks;
-- response APDU construction.
+- response value construction;
+- xDLMS indication/result adapter.
 
 Out of scope:
 
 - low-level codec implementations;
+- transport/profile lifecycle;
+- server-side association loop;
+- APDU receive/decode/dispatch loop;
 - persistent object storage;
 - cryptographic primitive implementation.
 
@@ -674,11 +692,11 @@ Class interaction diagram:
 ```mermaid
 classDiagram
   class DlmsServer {
-    -AssociationServer association
     -CosemServiceDispatcher dispatcher
-    -IApduChannel channel
-    +run_once()
-    +handle_apdu()
+    -ServerContext context
+    +handle_get()
+    +handle_set()
+    +handle_action()
   }
 
   class CosemServiceDispatcher {
@@ -688,21 +706,20 @@ classDiagram
   }
 
   class ResponseBuilder {
-    +build_get_response()
-    +build_set_response()
-    +build_action_response()
+    +make_get_response()
+    +make_set_response()
+    +make_action_response()
   }
 
-  DlmsServer --> AssociationServer
   DlmsServer --> CosemServiceDispatcher
   CosemServiceDispatcher --> ResponseBuilder
 ```
 
 MVP success criteria:
 
-- Wrapper/TCP server using fake or loopback transport.
-- Public-client no-security association.
-- GET for object list, logical device name, and a simple `Data` object.
+- decoded GET for object list, logical device name, and a simple `Data` object;
+- decoded SET and ACTION dispatch to registered COSEM objects;
+- xDLMS adapter for server-side GET, SET, and ACTION indications.
 
 ### 7.9 `dlms-client`
 
@@ -760,6 +777,79 @@ client.ReleaseAssociation();
 client.Close();
 ```
 
+### 7.10 `dlms-endpoint`
+
+Composes existing framework layers into runtime endpoints.
+
+In scope:
+
+- client endpoint lifecycle;
+- server endpoint lifecycle;
+- push listener endpoint lifecycle;
+- gateway endpoint lifecycle;
+- construction and binding of transport, profile, association, security,
+  xDLMS, client, server, and COSEM components.
+
+Out of scope:
+
+- protocol codecs;
+- association negotiation rules;
+- xDLMS service semantics;
+- COSEM object behaviour;
+- cryptographic primitive implementation;
+- application-specific SPODES object sets.
+
+Class interaction diagram:
+
+```mermaid
+classDiagram
+  class ClientEndpoint {
+    +Open()
+    +Get()
+    +Set()
+    +Action()
+    +Close()
+  }
+
+  class ServerEndpoint {
+    +Open()
+    +RunOnce()
+    +Close()
+  }
+
+  class PushListenerEndpoint {
+    +Open()
+    +RunOnce()
+    +Close()
+  }
+
+  class GatewayEndpoint {
+    +Open()
+    +RunOnce()
+    +Close()
+  }
+
+  class EndpointTransportFactory
+  class EndpointProfileFactory
+  class EndpointSecurityFactory
+
+  ClientEndpoint --> EndpointTransportFactory
+  ClientEndpoint --> EndpointProfileFactory
+  ClientEndpoint --> EndpointSecurityFactory
+  ServerEndpoint --> EndpointTransportFactory
+  ServerEndpoint --> EndpointProfileFactory
+  ServerEndpoint --> EndpointSecurityFactory
+  GatewayEndpoint --> ClientEndpoint
+  GatewayEndpoint --> ServerEndpoint
+```
+
+MVP success criteria:
+
+- Wrapper/TCP client endpoint using `dlms-client`;
+- server endpoint `RunOnce` over a fake APDU channel;
+- push listener endpoint receives one APDU and calls user code;
+- gateway endpoint forwards an allowed GET upstream and returns the response.
+
 ## 8. Required Documentation Per Layer Repository
 
 Each layer repository should include:
@@ -795,6 +885,7 @@ diagram. This applies at least to:
 - `dlms-association`;
 - `dlms-xdlms`;
 - `dlms-server`.
+- `dlms-endpoint`.
 
 ## 9. Implementation Order
 
@@ -808,10 +899,11 @@ The recommended order is:
 6. Add integration test: open association and perform GET over a fake or loopback Wrapper/TCP channel.
 7. Implement `dlms-cosem` minimal object model.
 8. Implement `dlms-server` minimal no-security server.
-9. Implement HDLC profile orchestration in `dlms-profile`.
-10. Implement `dlms-security` Suite 0 AES-GCM.
-11. Complete server GET response block transfer.
-12. Add richer COSEM interface classes and optional SN referencing.
+9. Implement `dlms-endpoint` runtime composition for client/server/push/gateway.
+10. Implement HDLC profile orchestration in `dlms-profile`.
+11. Implement `dlms-security` Suite 0 AES-GCM.
+12. Complete server GET response block transfer.
+13. Add richer COSEM interface classes and optional SN referencing.
 
 This order prioritizes a working no-security LN client/server path before
 cryptography and large object-model coverage. That keeps the implementation

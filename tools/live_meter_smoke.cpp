@@ -480,6 +480,9 @@ dlms::client::DlmsClientOptions MakeOptions(
       10u,
       std::numeric_limits<std::uint32_t>::max(),
       ok));
+  options.associationProposedDlmsVersionNumber =
+    static_cast<std::uint8_t>(
+      EnvUnsigned("DLMS_LIVE_PROPOSED_DLMS_VERSION", 6u, 0xffu, ok));
   if (!EnvHexBytesOptional(
         "DLMS_LIVE_PROPOSED_CONFORMANCE_HEX",
         options.associationProposedConformance.bytes,

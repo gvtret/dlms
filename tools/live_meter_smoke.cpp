@@ -258,6 +258,58 @@ const char* WrapperTraceDirectionName(
   return "unknown";
 }
 
+const char* AssociationTraceKindName(
+  dlms::association::AssociationTraceKind kind)
+{
+  switch (kind) {
+  case dlms::association::AssociationTraceKind::AarqBuilt:
+    return "aarq-built";
+  case dlms::association::AssociationTraceKind::AarqBuildFailed:
+    return "aarq-build-failed";
+  case dlms::association::AssociationTraceKind::AareReceiveFailed:
+    return "aare-receive-failed";
+  }
+  return "unknown";
+}
+
+const char* AssociationTraceStatusName(
+  dlms::association::AssociationStatus status)
+{
+  return dlms::association::AssociationStatusName(status);
+}
+
+const char* AssociationAuthenticationName(
+  dlms::association::AuthenticationMode mode)
+{
+  switch (mode) {
+  case dlms::association::AuthenticationMode::None:
+    return "none";
+  case dlms::association::AuthenticationMode::LowLevelSecurity:
+    return "lls";
+  case dlms::association::AuthenticationMode::HighLevelSecurity:
+    return "high";
+  }
+  return "unknown";
+}
+
+const char* HlsMechanismName(
+  dlms::association::HighLevelSecurityMechanism mechanism)
+{
+  switch (mechanism) {
+  case dlms::association::HighLevelSecurityMechanism::Unknown:
+    return "unknown";
+  case dlms::association::HighLevelSecurityMechanism::HlsHigh:
+    return "high";
+  case dlms::association::HighLevelSecurityMechanism::HlsMd5:
+    return "md5";
+  case dlms::association::HighLevelSecurityMechanism::HlsSha1:
+    return "sha1";
+  case dlms::association::HighLevelSecurityMechanism::HlsGmac:
+    return "gmac";
+  }
+  return "unknown";
+}
+
 const char* ProfileStatusName(dlms::profile::ProfileStatus status)
 {
   switch (status) {
@@ -509,6 +561,47 @@ public:
   }
 };
 
+class ConsoleAssociationTraceSink
+  : public dlms::association::IAssociationTraceSink
+{
+public:
+  void OnAssociationTrace(
+    const dlms::association::AssociationTraceEvent& event)
+  {
+    std::cout << "trace: association kind="
+              << AssociationTraceKindName(event.kind)
+              << " status="
+              << AssociationTraceStatusName(event.status)
+              << " authentication="
+              << AssociationAuthenticationName(event.authenticationMode)
+              << " hlsMechanism="
+              << HlsMechanismName(event.hlsMechanism)
+              << " proposedDlmsVersion="
+              << static_cast<unsigned>(event.proposedDlmsVersionNumber)
+              << " proposedConformance="
+              << static_cast<unsigned>(event.proposedConformance.bytes[0])
+              << "."
+              << static_cast<unsigned>(event.proposedConformance.bytes[1])
+              << "."
+              << static_cast<unsigned>(event.proposedConformance.bytes[2])
+              << " clientMaxPdu=" << event.clientMaxReceivePduSize
+              << " encodedAarqSize=" << event.encodedAarqSize
+              << " authValueSize="
+              << event.callingAuthenticationValueSize;
+    if (event.fieldCount != 0u && event.fields != 0) {
+      std::cout << " fields=";
+      for (std::size_t i = 0u; i < event.fieldCount; ++i) {
+        if (i != 0u) {
+          std::cout << ",";
+        }
+        std::cout << static_cast<unsigned>(event.fields[i].tag)
+                  << ":" << event.fields[i].encodedSize;
+      }
+    }
+    std::cout << "\n";
+  }
+};
+
 int Fail(const char* step, dlms::client::ClientStatus status)
 {
   std::cerr << step << ": "
@@ -539,9 +632,13 @@ int main()
   }
 
   ConsoleWrapperTcpTraceSink wrapperTrace;
+  ConsoleAssociationTraceSink associationTrace;
   if (EnvTraceEnabled() &&
       options.profile == dlms::client::ClientProfile::WrapperTcp) {
     options.wrapperTcpTraceSink = &wrapperTrace;
+  }
+  if (EnvTraceEnabled()) {
+    options.associationTraceSink = &associationTrace;
   }
 
   dlms::client::DlmsClient client(options);

@@ -480,6 +480,8 @@ dlms::client::DlmsClientOptions MakeOptions(
       10u,
       std::numeric_limits<std::uint32_t>::max(),
       ok));
+  options.associationClientMaxReceivePduSize = static_cast<std::uint16_t>(
+    EnvUnsigned("DLMS_LIVE_CLIENT_MAX_PDU_SIZE", 512u, 0xffffu, ok));
   options.connectTimeoutMs = static_cast<std::uint32_t>(
     EnvUnsigned(
       "DLMS_LIVE_CONNECT_TIMEOUT_MS",

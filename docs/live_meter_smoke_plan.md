@@ -88,6 +88,7 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | optional | 8-byte hex server system title for `hls-gmac`; if absent, use the AARE responding AP title |
 | `DLMS_LIVE_AUTHENTICATION_KEY_HEX` | none | 16-byte hex authentication key for `hls-gmac` |
 | `DLMS_LIVE_INVOCATION_COUNTER` | `1` | local invocation counter start for `hls-gmac` |
+| `DLMS_LIVE_PROPOSED_QOS` | unset | optional AARQ proposed quality-of-service signed value |
 | `DLMS_LIVE_PROPOSED_DLMS_VERSION` | `6` | AARQ proposed DLMS version number |
 | `DLMS_LIVE_PROPOSED_CONFORMANCE_HEX` | `007E1F` | AARQ proposed-conformance bitmap, exactly 6 hex chars |
 | `DLMS_LIVE_CLIENT_MAX_PDU_SIZE` | `512` | AARQ proposed client max receive PDU size |
@@ -132,12 +133,13 @@ configs use `SystemTitle=12345678`,
 `bGMAC=true`.
 
 For certification-profile parity, callers can set
-`DLMS_LIVE_PROPOSED_DLMS_VERSION` and
+`DLMS_LIVE_PROPOSED_QOS`, `DLMS_LIVE_PROPOSED_DLMS_VERSION`, and
 `DLMS_LIVE_PROPOSED_CONFORMANCE_HEX` to the three-byte xDLMS
 proposed-conformance bitmap encoded as six hex characters. The default keeps
-the current association version `6` and conformance value `007E1F`. The
-pyDlmsCertification YellowBook probes use DLMS version `5` as a negative probe
-and `0060FE9F` for the .NET/Gurux conformance profile in selected AARQ tests.
+the current association behavior by omitting QoS, using version `6`, and using
+conformance value `007E1F`. The pyDlmsCertification YellowBook probes use QoS
+`1` and DLMS version `5` as negative probes, plus `0060FE9F` for the .NET/Gurux
+conformance profile in selected AARQ tests.
 
 ## 4. Architecture
 
@@ -709,4 +711,33 @@ Commit message:
 
 ```text
 test: add live smoke DLMS version option
+```
+
+### Phase 73. Live Smoke Proposed QoS Documentation
+
+Deliverables:
+
+- document `DLMS_LIVE_PROPOSED_QOS`;
+- keep the default behavior as QoS omitted;
+- note the pyDlmsCertification YellowBook negative probe value `1`.
+
+Commit message:
+
+```text
+docs: define live smoke QoS option
+```
+
+### Phase 74. Live Smoke Proposed QoS Implementation
+
+Deliverables:
+
+- parse optional signed QoS value;
+- forward it into `DlmsClientOptions` only when set;
+- print QoS metadata through association trace output;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add live smoke QoS option
 ```

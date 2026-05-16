@@ -35,6 +35,26 @@ bool ParseUnsigned(
   return true;
 }
 
+bool ParseSigned(
+  const char* text,
+  long minimum,
+  long maximum,
+  long& output)
+{
+  if (text == 0 || text[0] == '\0') {
+    return false;
+  }
+
+  char* end = 0;
+  const long value = std::strtol(text, &end, 10);
+  if (end == text || *end != '\0' || value < minimum || value > maximum) {
+    return false;
+  }
+
+  output = value;
+  return true;
+}
+
 unsigned long EnvUnsigned(
   const char* name,
   unsigned long defaultValue,
@@ -54,6 +74,25 @@ unsigned long EnvUnsigned(
   }
 
   return parsed;
+}
+
+bool EnvSignedOptional(
+  const char* name,
+  long minimum,
+  long maximum,
+  long& output)
+{
+  const char* value = Env(name);
+  if (value == 0 || value[0] == '\0') {
+    return false;
+  }
+
+  if (!ParseSigned(value, minimum, maximum, output)) {
+    std::cerr << "config " << name << " invalid: " << value << "\n";
+    return false;
+  }
+
+  return true;
 }
 
 int HexValue(char value)
@@ -480,6 +519,14 @@ dlms::client::DlmsClientOptions MakeOptions(
       10u,
       std::numeric_limits<std::uint32_t>::max(),
       ok));
+  long qos = 0;
+  if (EnvSignedOptional("DLMS_LIVE_PROPOSED_QOS", -128, 127, qos)) {
+    options.associationHasProposedQualityOfService = true;
+    options.associationProposedQualityOfService =
+      static_cast<std::int8_t>(qos);
+  } else if (Env("DLMS_LIVE_PROPOSED_QOS") != 0) {
+    ok = false;
+  }
   options.associationProposedDlmsVersionNumber =
     static_cast<std::uint8_t>(
       EnvUnsigned("DLMS_LIVE_PROPOSED_DLMS_VERSION", 6u, 0xffu, ok));
@@ -587,6 +634,13 @@ public:
               << AssociationAuthenticationName(event.authenticationMode)
               << " hlsMechanism="
               << HlsMechanismName(event.hlsMechanism)
+              << " proposedQos=";
+    if (event.hasProposedQualityOfService) {
+      std::cout << static_cast<int>(event.proposedQualityOfService);
+    } else {
+      std::cout << "omitted";
+    }
+    std::cout
               << " proposedDlmsVersion="
               << static_cast<unsigned>(event.proposedDlmsVersionNumber)
               << " proposedConformance="

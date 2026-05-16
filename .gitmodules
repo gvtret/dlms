@@ -34,3 +34,6 @@
 [submodule "lib/dlms-security"]
 	path = lib/dlms-security
 	url = git@github.com:gvtret/dlms-security.git
+[submodule "lib/dlms-endpoint"]
+	path = lib/dlms-endpoint
+	url = git@github.com:gvtret/dlms-endpoint.git

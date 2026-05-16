@@ -576,3 +576,37 @@ association: ReceiveFailed
 The client writes AARQ WRAPPER frames successfully. For clients 16 and 32 the
 meter does not return a WRAPPER frame before timeout. For client 48 the meter
 closes the TCP connection after AARQ.
+
+### Phase 65. Association Metadata Trace Documentation
+
+Deliverables:
+
+- document that `DLMS_LIVE_TRACE=1` includes non-secret association metadata;
+- include reference notes from `E:\work\pyDlmsCertification`:
+  - pilot WRAPPER uses `serverAddress=PhysicalAddress`;
+  - pilot response timeout is `15` seconds;
+  - pilot WRAPPER legacy passwords are `password` and `HiPassword`;
+- keep credentials and challenge bytes out of trace output.
+
+Commit message:
+
+```text
+docs: define live smoke association trace
+```
+
+### Phase 66. Association Metadata Trace Implementation
+
+Deliverables:
+
+- implement a live smoke `IAssociationTraceSink`;
+- wire the sink through `DlmsClientOptions`;
+- print AARQ metadata: auth mode, HLS mechanism, proposed DLMS version,
+  conformance bytes, client max PDU size, encoded AARQ size, ACSE field
+  tags/sizes, and authentication-value length only;
+- print AARE receive failure metadata when no AARE is received.
+
+Commit message:
+
+```text
+test: add live smoke association trace
+```

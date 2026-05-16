@@ -88,6 +88,7 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | optional | 8-byte hex server system title for `hls-gmac`; if absent, use the AARE responding AP title |
 | `DLMS_LIVE_AUTHENTICATION_KEY_HEX` | none | 16-byte hex authentication key for `hls-gmac` |
 | `DLMS_LIVE_INVOCATION_COUNTER` | `1` | local invocation counter start for `hls-gmac` |
+| `DLMS_LIVE_PROPOSED_DLMS_VERSION` | `6` | AARQ proposed DLMS version number |
 | `DLMS_LIVE_PROPOSED_CONFORMANCE_HEX` | `007E1F` | AARQ proposed-conformance bitmap, exactly 6 hex chars |
 | `DLMS_LIVE_CLIENT_MAX_PDU_SIZE` | `512` | AARQ proposed client max receive PDU size |
 | `DLMS_LIVE_CLASS_ID` | `1` | GET target COSEM class id |
@@ -131,11 +132,12 @@ configs use `SystemTitle=12345678`,
 `bGMAC=true`.
 
 For certification-profile parity, callers can set
+`DLMS_LIVE_PROPOSED_DLMS_VERSION` and
 `DLMS_LIVE_PROPOSED_CONFORMANCE_HEX` to the three-byte xDLMS
 proposed-conformance bitmap encoded as six hex characters. The default keeps
-the current association value `007E1F`. The pyDlmsCertification YellowBook
-probes use `0060FE9F` for the .NET/Gurux conformance profile in selected AARQ
-tests.
+the current association version `6` and conformance value `007E1F`. The
+pyDlmsCertification YellowBook probes use DLMS version `5` as a negative probe
+and `0060FE9F` for the .NET/Gurux conformance profile in selected AARQ tests.
 
 ## 4. Architecture
 
@@ -678,4 +680,33 @@ Commit message:
 
 ```text
 test: add live smoke conformance option
+```
+
+### Phase 71. Live Smoke Proposed DLMS Version Documentation
+
+Deliverables:
+
+- document `DLMS_LIVE_PROPOSED_DLMS_VERSION`;
+- keep default `6` for compatibility with the current association default;
+- note the pyDlmsCertification YellowBook negative probe value `5`.
+
+Commit message:
+
+```text
+docs: define live smoke DLMS version option
+```
+
+### Phase 72. Live Smoke Proposed DLMS Version Implementation
+
+Deliverables:
+
+- parse optional non-zero DLMS version value;
+- forward it into `DlmsClientOptions::associationProposedDlmsVersionNumber`;
+- show the value through existing association trace output;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add live smoke DLMS version option
 ```

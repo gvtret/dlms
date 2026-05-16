@@ -88,6 +88,7 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | optional | 8-byte hex server system title for `hls-gmac`; if absent, use the AARE responding AP title |
 | `DLMS_LIVE_AUTHENTICATION_KEY_HEX` | none | 16-byte hex authentication key for `hls-gmac` |
 | `DLMS_LIVE_INVOCATION_COUNTER` | `1` | local invocation counter start for `hls-gmac` |
+| `DLMS_LIVE_PROPOSED_CONFORMANCE_HEX` | `007E1F` | AARQ proposed-conformance bitmap, exactly 6 hex chars |
 | `DLMS_LIVE_CLIENT_MAX_PDU_SIZE` | `512` | AARQ proposed client max receive PDU size |
 | `DLMS_LIVE_CLASS_ID` | `1` | GET target COSEM class id |
 | `DLMS_LIVE_OBIS` | `0.0.42.0.0.255` | GET target logical name |
@@ -128,6 +129,13 @@ configs use `SystemTitle=12345678`,
 `AuthenticationKey=404142434445464748494A4B4C4D4E4F`, and
 `BlockCipherKey=303132333435363738393A3B3C3D3E3F` for this mode when
 `bGMAC=true`.
+
+For certification-profile parity, callers can set
+`DLMS_LIVE_PROPOSED_CONFORMANCE_HEX` to the three-byte xDLMS
+proposed-conformance bitmap encoded as six hex characters. The default keeps
+the current association value `007E1F`. The pyDlmsCertification YellowBook
+probes use `0060FE9F` for the .NET/Gurux conformance profile in selected AARQ
+tests.
 
 ## 4. Architecture
 
@@ -640,4 +648,34 @@ Commit message:
 
 ```text
 test: add live smoke client max PDU option
+```
+
+### Phase 69. Live Smoke Proposed Conformance Documentation
+
+Deliverables:
+
+- document `DLMS_LIVE_PROPOSED_CONFORMANCE_HEX`;
+- keep default `007E1F` for compatibility with the current association
+  default;
+- note the pyDlmsCertification/Gurux `.NET` profile value `0060FE9F`.
+
+Commit message:
+
+```text
+docs: define live smoke conformance option
+```
+
+### Phase 70. Live Smoke Proposed Conformance Implementation
+
+Deliverables:
+
+- parse optional six-character conformance hex;
+- forward it into `DlmsClientOptions::associationProposedConformance`;
+- show the value through existing association trace output;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add live smoke conformance option
 ```

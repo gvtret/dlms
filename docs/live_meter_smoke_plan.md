@@ -88,6 +88,7 @@ The executable shall read these environment variables:
 | `DLMS_LIVE_SERVER_SYSTEM_TITLE_HEX` | optional | 8-byte hex server system title for `hls-gmac`; if absent, use the AARE responding AP title |
 | `DLMS_LIVE_AUTHENTICATION_KEY_HEX` | none | 16-byte hex authentication key for `hls-gmac` |
 | `DLMS_LIVE_INVOCATION_COUNTER` | `1` | local invocation counter start for `hls-gmac` |
+| `DLMS_LIVE_CLIENT_MAX_PDU_SIZE` | `512` | AARQ proposed client max receive PDU size |
 | `DLMS_LIVE_CLASS_ID` | `1` | GET target COSEM class id |
 | `DLMS_LIVE_OBIS` | `0.0.42.0.0.255` | GET target logical name |
 | `DLMS_LIVE_ATTRIBUTE_ID` | `2` | GET target attribute id |
@@ -585,6 +586,7 @@ Deliverables:
 - include reference notes from `E:\work\pyDlmsCertification`:
   - pilot WRAPPER uses `serverAddress=PhysicalAddress`;
   - pilot response timeout is `15` seconds;
+  - pilot LLS/HLS PDU size is `2048`;
   - pilot WRAPPER legacy passwords are `password` and `HiPassword`;
 - keep credentials and challenge bytes out of trace output.
 
@@ -609,4 +611,33 @@ Commit message:
 
 ```text
 test: add live smoke association trace
+```
+
+### Phase 67. Live Smoke Client Max PDU Documentation
+
+Deliverables:
+
+- document `DLMS_LIVE_CLIENT_MAX_PDU_SIZE`;
+- note that `pyDlmsCertification` pilot config uses `2048` for LLS/HLS;
+- keep default `512` for compatibility with the current association default.
+
+Commit message:
+
+```text
+docs: define live smoke client max PDU option
+```
+
+### Phase 68. Live Smoke Client Max PDU Implementation
+
+Deliverables:
+
+- parse `DLMS_LIVE_CLIENT_MAX_PDU_SIZE`;
+- forward it into `DlmsClientOptions::associationClientMaxReceivePduSize`;
+- show the value through existing association trace output;
+- deterministic build and test verification.
+
+Commit message:
+
+```text
+test: add live smoke client max PDU option
 ```

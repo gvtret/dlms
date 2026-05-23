@@ -870,6 +870,9 @@ MVP success criteria:
   ACTION requests and forwards them to an injected upstream.
 - TCP gateway listener runtime accepts HDLC-over-TCP no-session downstream GET,
   SET, and ACTION requests and forwards them to an injected upstream.
+- TCP gateway listener runtime accepts HDLC-over-TCP explicit SNRM/UA
+  downstream GET, SET, and ACTION requests and forwards them to an injected
+  upstream.
 
 ## 8. Required Documentation Per Layer Repository
 
@@ -962,6 +965,7 @@ configuration before they run.
 | Gateway endpoint forwards GET to injected upstream | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 
 The root tests should validate integration only. Unit coverage for each layer
 belongs in that layer's own repository.

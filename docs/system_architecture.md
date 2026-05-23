@@ -851,6 +851,8 @@ MVP success criteria:
 
 - Wrapper/TCP client endpoint using `dlms-client`;
 - server endpoint `RunOnce` over a fake APDU channel;
+- TCP listener runtime accepts one Wrapper/TCP connection and serves one
+  bounded server `RunOnce`;
 - push listener endpoint receives one APDU and calls user code;
 - gateway endpoint forwards an allowed GET upstream and returns the response.
 
@@ -935,6 +937,7 @@ configuration before they run.
 | Public-client GET against minimal server | `dlms-client`, `dlms-server`, `dlms-cosem`, `dlms-profile` |
 | Ciphered GET round trip | `dlms-security`, `dlms-xdlms`, `dlms-server` |
 | Server endpoint serves COSEM GET through profile channel | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
+| TCP listener runtime serves one Wrapper/TCP GET | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | Gateway endpoint forwards GET to injected upstream | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms` |
 

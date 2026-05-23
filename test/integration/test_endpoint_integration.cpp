@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -203,6 +204,28 @@ std::vector<std::uint8_t> MakeGetRequest(std::uint8_t invokeIdAndPriority)
   return output;
 }
 
+dlms::endpoint::EndpointTransportOptions TcpListenerOptions()
+{
+  dlms::endpoint::EndpointTransportOptions options =
+    dlms::endpoint::DefaultEndpointTransportOptions();
+  options.kind = dlms::endpoint::EndpointTransportKind::Tcp;
+  options.host = "127.0.0.1";
+  options.port = 0u;
+  options.timeoutMs = 1000u;
+  return options;
+}
+
+dlms::endpoint::EndpointTransportOptions TcpClientOptions(std::uint16_t port)
+{
+  dlms::endpoint::EndpointTransportOptions options =
+    dlms::endpoint::DefaultEndpointTransportOptions();
+  options.kind = dlms::endpoint::EndpointTransportKind::Tcp;
+  options.host = "127.0.0.1";
+  options.port = port;
+  options.timeoutMs = 1000u;
+  return options;
+}
+
 dlms::apdu::XdlmsApdu DecodeResponse(
   const std::vector<std::uint8_t>& bytes)
 {
@@ -247,6 +270,84 @@ TEST(EndpointIntegration, ServerEndpointServesCosemGetThroughProfileChannel)
   EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
             response.getResponseAny.result.data.type);
   EXPECT_EQ(0x1234u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeServesOneWrapperGet)
+{
+  dlms::endpoint::EndpointProfileOptions profile =
+    dlms::endpoint::DefaultEndpointProfileOptions();
+  profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(
+              TcpListenerOptions(),
+              profile,
+              listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x5678u),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  dlms::endpoint::ServerListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    logicalDevice);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointTransportBundle clientTransport;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointTransport(
+              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              clientTransport));
+  dlms::endpoint::EndpointProfileBundle clientProfile;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointProfile(
+              profile,
+              clientTransport,
+              clientProfile));
+  ASSERT_TRUE(clientProfile.Channel() != 0);
+  ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Open());
+
+  dlms::endpoint::EndpointStatus serverStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread serverThread([&runtime, &serverStatus]() {
+    serverStatus = runtime.RunOnce();
+  });
+
+  const std::vector<std::uint8_t> request = MakeGetRequest(0x87u);
+  dlms::profile::ProfileByteView requestView;
+  requestView.data = request.empty() ? 0 : &request[0];
+  requestView.size = request.size();
+  const dlms::profile::ProfileStatus sendStatus =
+    clientProfile.Channel()->SendApdu(requestView);
+
+  std::vector<std::uint8_t> responseBytes;
+  const dlms::profile::ProfileStatus receiveStatus =
+    clientProfile.Channel()->ReceiveApdu(responseBytes);
+
+  serverThread.join();
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok, sendStatus);
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok, receiveStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, serverStatus);
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x5678u, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, PushListenerEndpointForwardsRawPushApdu)

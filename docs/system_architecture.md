@@ -863,6 +863,8 @@ MVP success criteria:
   one raw push APDU;
 - TCP push listener runtime accepts one HDLC-over-TCP no-session connection and
   dispatches one raw push APDU;
+- TCP push listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
+  connection and dispatches one raw push APDU;
 - UDP push listener runtime receives one Wrapper/UDP datagram and dispatches
   one raw push APDU;
 - gateway endpoint forwards an allowed GET upstream and returns the response;
@@ -961,6 +963,7 @@ configuration before they run.
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
+| TCP push listener runtime dispatches one HDLC-over-TCP explicit SNRM/UA session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | UDP push listener runtime dispatches one Wrapper/UDP datagram APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | Gateway endpoint forwards GET to injected upstream | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |

@@ -511,12 +511,14 @@ void RunOneTcpPushListenerExchange(
   const std::vector<std::uint8_t>& pushApdu,
   RecordingPushHandler& handler,
   dlms::endpoint::EndpointProfileKind profileKind =
-    dlms::endpoint::EndpointProfileKind::Wrapper)
+    dlms::endpoint::EndpointProfileKind::Wrapper,
+  bool hdlcUseSession = false)
 {
   dlms::endpoint::PushListenerEndpointOptions options =
     dlms::endpoint::DefaultPushListenerEndpointOptions();
   options.transport = TcpListenerOptions();
   options.profile.kind = profileKind;
+  options.profile.hdlcUseSession = hdlcUseSession;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -550,6 +552,12 @@ void RunOneTcpPushListenerExchange(
   std::thread runtimeThread([&runtime, &runtimeStatus]() {
     runtimeStatus = runtime.RunOnce();
   });
+
+  if (hdlcUseSession) {
+    ASSERT_TRUE(clientProfile.hdlc.get() != 0);
+    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+              clientProfile.hdlc->ConnectDataLink());
+  }
 
   dlms::profile::ProfileByteView pushView;
   pushView.data = pushApdu.empty() ? 0 : &pushApdu[0];
@@ -1049,6 +1057,26 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcApdu)
       pushApdu,
       handler,
       dlms::endpoint::EndpointProfileKind::Hdlc));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcSessionApdu)
+{
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x05u);
+  pushApdu.push_back(0x77u);
+  pushApdu.push_back(0x88u);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(
+      pushApdu,
+      handler,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
 
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(pushApdu, handler.lastApdu);

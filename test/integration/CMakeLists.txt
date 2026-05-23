@@ -84,7 +84,16 @@ if(DLMS_PROFILE_HAS_API AND TARGET dlms_profile AND
       dlms_apdu
       GTest::gtest_main)
 
-  gtest_discover_tests(dlms_profile_integration_tests)
+  if(WIN32)
+    get_filename_component(DLMS_MINGW_BIN_DIR
+      "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    add_test(NAME dlms_profile_integration_tests
+      COMMAND ${CMAKE_COMMAND} -E env
+        "PATH=${DLMS_MINGW_BIN_DIR}"
+        $<TARGET_FILE:dlms_profile_integration_tests>)
+  else()
+    gtest_discover_tests(dlms_profile_integration_tests)
+  endif()
 else()
   message(STATUS "Skipping profile integration tests: dlms-profile or dlms-apdu API is not available")
 endif()
@@ -190,7 +199,16 @@ if(TARGET dlms_client AND TARGET dlms_xdlms AND TARGET dlms_server AND
       dlms_apdu
       GTest::gtest_main)
 
-  gtest_discover_tests(dlms_client_service_integration_tests)
+  if(WIN32)
+    get_filename_component(DLMS_MINGW_BIN_DIR
+      "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    add_test(NAME dlms_client_service_integration_tests
+      COMMAND ${CMAKE_COMMAND} -E env
+        "PATH=${DLMS_MINGW_BIN_DIR}"
+        $<TARGET_FILE:dlms_client_service_integration_tests>)
+  else()
+    gtest_discover_tests(dlms_client_service_integration_tests)
+  endif()
 else()
   message(STATUS "Skipping client service integration tests: client/server stack is not available")
 endif()

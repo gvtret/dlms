@@ -457,6 +457,62 @@ void RunOneTcpListenerExchange(
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
 }
 
+void RunOneTcpPushListenerExchange(
+  const std::vector<std::uint8_t>& pushApdu,
+  RecordingPushHandler& handler)
+{
+  dlms::endpoint::PushListenerEndpointOptions options =
+    dlms::endpoint::DefaultPushListenerEndpointOptions();
+  options.transport = TcpListenerOptions();
+  options.profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(options, listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+
+  dlms::endpoint::PushListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    options,
+    handler);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointTransportBundle clientTransport;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointTransport(
+              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              clientTransport));
+  dlms::endpoint::EndpointProfileBundle clientProfile;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointProfile(
+              options.profile,
+              clientTransport,
+              clientProfile));
+  ASSERT_TRUE(clientProfile.Channel() != 0);
+  ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Open());
+
+  dlms::endpoint::EndpointStatus runtimeStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread runtimeThread([&runtime, &runtimeStatus]() {
+    runtimeStatus = runtime.RunOnce();
+  });
+
+  dlms::profile::ProfileByteView pushView;
+  pushView.data = pushApdu.empty() ? 0 : &pushApdu[0];
+  pushView.size = pushApdu.size();
+  const dlms::profile::ProfileStatus sendStatus =
+    clientProfile.Channel()->SendApdu(pushView);
+
+  runtimeThread.join();
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok, sendStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtimeStatus);
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+}
+
 } // namespace
 
 TEST(EndpointIntegration, ServerEndpointServesCosemGetThroughProfileChannel)
@@ -593,6 +649,22 @@ TEST(EndpointIntegration, PushListenerEndpointForwardsRawPushApdu)
   EXPECT_EQ(1u, channel.receiveCalls);
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(channel.nextReceive, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneWrapperApdu)
+{
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x02u);
+  pushApdu.push_back(0x11u);
+  pushApdu.push_back(0x22u);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(pushApdu, handler));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
 TEST(EndpointIntegration, GatewayEndpointForwardsGetToInjectedUpstream)

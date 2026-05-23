@@ -854,6 +854,8 @@ MVP success criteria:
 - TCP listener runtime accepts one Wrapper/TCP connection and serves bounded
   server GET, SET, and ACTION `RunOnce` paths;
 - push listener endpoint receives one APDU and calls user code;
+- TCP push listener runtime accepts one Wrapper/TCP connection and dispatches
+  one raw push APDU;
 - gateway endpoint forwards an allowed GET upstream and returns the response.
 
 ## 8. Required Documentation Per Layer Repository
@@ -939,6 +941,7 @@ configuration before they run.
 | Server endpoint serves COSEM GET through profile channel | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
+| TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | Gateway endpoint forwards GET to injected upstream | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms` |
 
 The root tests should validate integration only. Unit coverage for each layer

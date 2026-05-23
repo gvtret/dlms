@@ -479,12 +479,14 @@ void RunOneTcpListenerExchange(
 
 void RunOneTcpPushListenerExchange(
   const std::vector<std::uint8_t>& pushApdu,
-  RecordingPushHandler& handler)
+  RecordingPushHandler& handler,
+  dlms::endpoint::EndpointProfileKind profileKind =
+    dlms::endpoint::EndpointProfileKind::Wrapper)
 {
   dlms::endpoint::PushListenerEndpointOptions options =
     dlms::endpoint::DefaultPushListenerEndpointOptions();
   options.transport = TcpListenerOptions();
-  options.profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
+  options.profile.kind = profileKind;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -841,6 +843,25 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneWrapperApdu)
   RecordingPushHandler handler;
   ASSERT_NO_FATAL_FAILURE(
     RunOneTcpPushListenerExchange(pushApdu, handler));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcApdu)
+{
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x03u);
+  pushApdu.push_back(0x33u);
+  pushApdu.push_back(0x44u);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(
+      pushApdu,
+      handler,
+      dlms::endpoint::EndpointProfileKind::Hdlc));
 
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(pushApdu, handler.lastApdu);

@@ -222,13 +222,13 @@ DLMS_LIVE_WRAPPER_HOST=<host> DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=h
 HLS High live verification is manual and opt-in:
 
 ```text
-DLMS_LIVE_WRAPPER_HOST=192.168.102.38 DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=high DLMS_LIVE_HLS_PASSWORD=HiPassword ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
+DLMS_LIVE_WRAPPER_HOST=192.168.102.36 DLMS_LIVE_CLIENT_SAP=48 DLMS_LIVE_AUTHENTICATION=high DLMS_LIVE_HLS_PASSWORD=HiPassword ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
 ```
 
 HDLC/TCP live verification is manual and opt-in:
 
 ```text
-DLMS_LIVE_PROFILE=hdlc-tcp DLMS_LIVE_WRAPPER_HOST=192.168.102.38 DLMS_LIVE_HDLC_PHYSICAL_DEVICE_ADDRESS=1 DLMS_LIVE_HDLC_MAX_INFO_TX=256 DLMS_LIVE_HDLC_MAX_INFO_RX=256 ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
+DLMS_LIVE_PROFILE=hdlc-tcp DLMS_LIVE_WRAPPER_HOST=192.168.102.36 DLMS_LIVE_HDLC_PHYSICAL_DEVICE_ADDRESS=1 DLMS_LIVE_HDLC_MAX_INFO_TX=256 DLMS_LIVE_HDLC_MAX_INFO_RX=256 ctest --test-dir build-mingw64 -R LiveMeterSmoke --output-on-failure
 ```
 
 If `DLMS_LIVE_WRAPPER_HOST` is absent, the live smoke shall report that it is
@@ -408,7 +408,7 @@ test: add HLS High live meter smoke option
 
 Deliverables:
 
-- run the smoke against `192.168.102.38:4059` with client SAP 48 and
+- run the smoke against `192.168.102.36:4059` with client SAP 48 and
   `DLMS_LIVE_HLS_PASSWORD=HiPassword`;
 - document observed connect/association/GET status.
 
@@ -476,7 +476,7 @@ test: add HDLC TCP live meter smoke option
 
 Deliverables:
 
-- run the smoke against `192.168.102.38:4059` with `hdlc-tcp`;
+- run the smoke against `192.168.102.36:4059` with `hdlc-tcp`;
 - document observed connect/association/GET status.
 
 Commit message:
@@ -485,7 +485,7 @@ Commit message:
 test: verify HDLC TCP live smoke
 ```
 
-Observed verification against `192.168.102.38:4059`:
+Observed verification against `192.168.102.36:4059`:
 
 Wrapper/TCP public, LLS, and HLS High all reached TCP connect but failed before
 AARE:
@@ -567,7 +567,7 @@ Commit message:
 test: add live smoke Wrapper TCP trace
 ```
 
-Observed verification against WRAPPER legacy mode on `192.168.102.38:4059`:
+Observed verification against WRAPPER legacy mode on `192.168.102.36:4059`:
 
 ```text
 client 16 none:

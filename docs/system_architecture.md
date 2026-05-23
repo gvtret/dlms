@@ -829,6 +829,8 @@ classDiagram
     +Close()
   }
 
+  class IGatewayPolicy
+  class IGatewayUpstream
   class EndpointTransportFactory
   class EndpointProfileFactory
   class EndpointSecurityFactory
@@ -839,8 +841,10 @@ classDiagram
   ServerEndpoint --> EndpointTransportFactory
   ServerEndpoint --> EndpointProfileFactory
   ServerEndpoint --> EndpointSecurityFactory
-  GatewayEndpoint --> ClientEndpoint
-  GatewayEndpoint --> ServerEndpoint
+  GatewayEndpoint --> IGatewayPolicy
+  GatewayEndpoint --> IGatewayUpstream
+  IGatewayUpstream <|.. ClientEndpointGatewayUpstream
+  ClientEndpointGatewayUpstream --> ClientEndpoint
 ```
 
 MVP success criteria:
@@ -930,6 +934,9 @@ configuration before they run.
 | Server ACTION APDU invokes COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Public-client GET against minimal server | `dlms-client`, `dlms-server`, `dlms-cosem`, `dlms-profile` |
 | Ciphered GET round trip | `dlms-security`, `dlms-xdlms`, `dlms-server` |
+| Server endpoint serves COSEM GET through profile channel | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
+| Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
+| Gateway endpoint forwards GET to injected upstream | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms` |
 
 The root tests should validate integration only. Unit coverage for each layer
 belongs in that layer's own repository.

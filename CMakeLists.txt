@@ -7,6 +7,7 @@ project(dlms_integration
 option(DLMS_BUILD_INTEGRATION_TESTS "Build cross-library integration tests" ON)
 option(DLMS_USE_SYSTEM_GTEST "Use system-installed GoogleTest" OFF)
 option(DLMS_BUILD_LIVE_TESTS "Build opt-in live meter smoke tests" OFF)
+option(DLMS_BUILD_EXAMPLES "Build example programs" ON)
 
 if(DLMS_BUILD_INTEGRATION_TESTS)
   enable_testing()
@@ -54,6 +55,40 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
 
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-client/CMakeLists.txt")
       add_subdirectory(lib/dlms-client)
+    endif()
+
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-endpoint/CMakeLists.txt")
+      add_subdirectory(lib/dlms-endpoint)
+    endif()
+
+    if(DLMS_BUILD_EXAMPLES AND TARGET dlms_endpoint)
+      add_executable(dlms_endpoint_client_example
+        tools/endpoint_client_example.cpp)
+      target_compile_features(dlms_endpoint_client_example PRIVATE cxx_std_11)
+      target_link_libraries(dlms_endpoint_client_example
+        PRIVATE
+          dlms_endpoint)
+
+      add_executable(dlms_endpoint_server_example
+        tools/endpoint_server_example.cpp)
+      target_compile_features(dlms_endpoint_server_example PRIVATE cxx_std_11)
+      target_link_libraries(dlms_endpoint_server_example
+        PRIVATE
+          dlms_endpoint)
+
+      add_executable(dlms_endpoint_push_listener_example
+        tools/endpoint_push_listener_example.cpp)
+      target_compile_features(dlms_endpoint_push_listener_example PRIVATE cxx_std_11)
+      target_link_libraries(dlms_endpoint_push_listener_example
+        PRIVATE
+          dlms_endpoint)
+
+      add_executable(dlms_endpoint_gateway_example
+        tools/endpoint_gateway_example.cpp)
+      target_compile_features(dlms_endpoint_gateway_example PRIVATE cxx_std_11)
+      target_link_libraries(dlms_endpoint_gateway_example
+        PRIVATE
+          dlms_endpoint)
     endif()
 
     if(DLMS_BUILD_LIVE_TESTS AND TARGET dlms_client)

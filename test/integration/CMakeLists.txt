@@ -194,3 +194,31 @@ if(TARGET dlms_client AND TARGET dlms_xdlms AND TARGET dlms_server AND
 else()
   message(STATUS "Skipping client service integration tests: client/server stack is not available")
 endif()
+
+if(TARGET dlms_endpoint AND TARGET dlms_apdu AND TARGET dlms_cosem)
+  add_executable(dlms_endpoint_integration_tests
+    test_endpoint_integration.cpp)
+
+  target_compile_features(
+    dlms_endpoint_integration_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_endpoint_integration_tests
+    PRIVATE
+      dlms_endpoint
+      dlms_apdu
+      dlms_cosem
+      GTest::gtest_main)
+
+  if(WIN32)
+    get_filename_component(DLMS_MINGW_BIN_DIR
+      "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    add_test(NAME dlms_endpoint_integration_tests
+      COMMAND ${CMAKE_COMMAND} -E env
+        "PATH=${DLMS_MINGW_BIN_DIR}"
+        $<TARGET_FILE:dlms_endpoint_integration_tests>)
+  else()
+    gtest_discover_tests(dlms_endpoint_integration_tests)
+  endif()
+else()
+  message(STATUS "Skipping endpoint integration tests: dlms-endpoint stack is not available")
+endif()

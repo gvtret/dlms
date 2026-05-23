@@ -808,6 +808,70 @@ TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSessionGet)
   EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSessionSet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(
+      EncodeLongUnsigned(0x1234u),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeSetRequest(0x82u, MakeLongUnsignedData(0x3579u)),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::SetResponseChoice::Normal,
+            response.setResponseAny.choice);
+  EXPECT_EQ(0x82u, response.setResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.setResponseAny.result);
+
+  dlms::cosem::CosemByteBuffer stored;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object->ReadAttribute(2u, stored));
+  EXPECT_EQ(EncodeLongUnsigned(0x3579u), stored);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSessionAction)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(EncodeLongUnsigned(0x1234u)));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeActionRequest(0x83u, 1u, MakeLongUnsignedData(0x579bu)),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::ActionResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::ActionResponseChoice::Normal,
+            response.actionResponseAny.choice);
+  EXPECT_EQ(0x83u, response.actionResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.actionResponseAny.normal.result);
+  EXPECT_TRUE(response.actionResponseAny.normal.hasReturnParameter);
+  EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
+            response.actionResponseAny.normal.returnParameter.type);
+  EXPECT_EQ(0x2468u,
+            response.actionResponseAny.normal.returnParameter.unsignedValue);
+  EXPECT_EQ(1u, object->InvokeCount());
+  EXPECT_EQ(1u, object->LastInvokeMethodId());
+  EXPECT_EQ(EncodeLongUnsigned(0x579bu), object->LastInvokeParameter());
+}
+
 TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSet)
 {
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");

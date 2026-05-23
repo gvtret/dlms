@@ -855,8 +855,9 @@ MVP success criteria:
   server GET, SET, and ACTION `RunOnce` paths;
 - TCP listener runtime accepts HDLC-over-TCP connections and serves bounded
   no-session server GET, SET, and ACTION `RunOnce` paths;
-- TCP listener runtime accepts one HDLC-over-TCP connection, completes explicit
-  SNRM/UA data-link setup, and serves one GET `RunOnce` path;
+- TCP listener runtime accepts HDLC-over-TCP connections, completes explicit
+  SNRM/UA data-link setup, and serves bounded GET, SET, and ACTION `RunOnce`
+  paths;
 - push listener endpoint receives one APDU and calls user code;
 - TCP push listener runtime accepts one Wrapper/TCP connection and dispatches
   one raw push APDU;
@@ -953,7 +954,7 @@ configuration before they run.
 | Server endpoint serves COSEM GET through profile channel | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves HDLC-over-TCP no-session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
-| TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session GET | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
+| TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |

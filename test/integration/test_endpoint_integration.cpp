@@ -399,6 +399,28 @@ dlms::endpoint::EndpointTransportOptions TcpClientOptions(std::uint16_t port)
   return options;
 }
 
+dlms::endpoint::EndpointTransportOptions UdpListenerOptions()
+{
+  dlms::endpoint::EndpointTransportOptions options =
+    dlms::endpoint::DefaultEndpointTransportOptions();
+  options.kind = dlms::endpoint::EndpointTransportKind::Udp;
+  options.host = "127.0.0.1";
+  options.port = 0u;
+  options.timeoutMs = 1000u;
+  return options;
+}
+
+dlms::endpoint::EndpointTransportOptions UdpClientOptions(std::uint16_t port)
+{
+  dlms::endpoint::EndpointTransportOptions options =
+    dlms::endpoint::DefaultEndpointTransportOptions();
+  options.kind = dlms::endpoint::EndpointTransportKind::Udp;
+  options.host = "127.0.0.1";
+  options.port = port;
+  options.timeoutMs = 1000u;
+  return options;
+}
+
 dlms::apdu::XdlmsApdu DecodeResponse(
   const std::vector<std::uint8_t>& bytes)
 {
@@ -504,6 +526,62 @@ void RunOneTcpPushListenerExchange(
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
               TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              clientTransport));
+  dlms::endpoint::EndpointProfileBundle clientProfile;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointProfile(
+              options.profile,
+              clientTransport,
+              clientProfile));
+  ASSERT_TRUE(clientProfile.Channel() != 0);
+  ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Open());
+
+  dlms::endpoint::EndpointStatus runtimeStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread runtimeThread([&runtime, &runtimeStatus]() {
+    runtimeStatus = runtime.RunOnce();
+  });
+
+  dlms::profile::ProfileByteView pushView;
+  pushView.data = pushApdu.empty() ? 0 : &pushApdu[0];
+  pushView.size = pushApdu.size();
+  const dlms::profile::ProfileStatus sendStatus =
+    clientProfile.Channel()->SendApdu(pushView);
+
+  runtimeThread.join();
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok, sendStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtimeStatus);
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+}
+
+void RunOneUdpPushListenerExchange(
+  const std::vector<std::uint8_t>& pushApdu,
+  RecordingPushHandler& handler)
+{
+  dlms::endpoint::PushListenerEndpointOptions options =
+    dlms::endpoint::DefaultPushListenerEndpointOptions();
+  options.transport = UdpListenerOptions();
+  options.profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(options, listenerBundle));
+  ASSERT_TRUE(listenerBundle.udpPush.get() != 0);
+
+  dlms::endpoint::PushListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    options,
+    handler);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.udpPush->LocalPort());
+
+  dlms::endpoint::EndpointTransportBundle clientTransport;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointTransport(
+              UdpClientOptions(listenerBundle.udpPush->LocalPort()),
               clientTransport));
   dlms::endpoint::EndpointProfileBundle clientProfile;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -862,6 +940,22 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcApdu)
       pushApdu,
       handler,
       dlms::endpoint::EndpointProfileKind::Hdlc));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, UdpPushListenerRuntimeForwardsOneWrapperApdu)
+{
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x04u);
+  pushApdu.push_back(0x55u);
+  pushApdu.push_back(0x66u);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneUdpPushListenerExchange(pushApdu, handler));
 
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(pushApdu, handler.lastApdu);

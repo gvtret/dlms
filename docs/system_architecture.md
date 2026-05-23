@@ -856,7 +856,9 @@ MVP success criteria:
 - push listener endpoint receives one APDU and calls user code;
 - TCP push listener runtime accepts one Wrapper/TCP connection and dispatches
   one raw push APDU;
-- gateway endpoint forwards an allowed GET upstream and returns the response.
+- gateway endpoint forwards an allowed GET upstream and returns the response;
+- TCP gateway listener runtime accepts one Wrapper/TCP downstream GET and
+  forwards it to an injected upstream.
 
 ## 8. Required Documentation Per Layer Repository
 
@@ -943,6 +945,7 @@ configuration before they run.
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | Gateway endpoint forwards GET to injected upstream | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms` |
+| TCP gateway listener runtime forwards one Wrapper/TCP GET | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
 
 The root tests should validate integration only. Unit coverage for each layer
 belongs in that layer's own repository.

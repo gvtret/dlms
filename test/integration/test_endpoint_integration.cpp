@@ -513,6 +513,74 @@ void RunOneTcpPushListenerExchange(
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
 }
 
+void RunOneTcpGatewayListenerExchange(
+  const std::vector<std::uint8_t>& request,
+  FakeGatewayUpstream& upstream,
+  AllowAllPolicy& policy,
+  std::vector<std::uint8_t>& responseBytes)
+{
+  responseBytes.clear();
+
+  dlms::endpoint::GatewayEndpointOptions options =
+    dlms::endpoint::DefaultGatewayEndpointOptions();
+  options.downstream.transport = TcpListenerOptions();
+  options.downstream.profile.kind =
+    dlms::endpoint::EndpointProfileKind::Wrapper;
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(
+              options.downstream,
+              listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+
+  dlms::endpoint::GatewayListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    options,
+    upstream,
+    policy);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointTransportBundle clientTransport;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointTransport(
+              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              clientTransport));
+  dlms::endpoint::EndpointProfileBundle clientProfile;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointProfile(
+              options.downstream.profile,
+              clientTransport,
+              clientProfile));
+  ASSERT_TRUE(clientProfile.Channel() != 0);
+  ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Open());
+
+  dlms::endpoint::EndpointStatus runtimeStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread runtimeThread([&runtime, &runtimeStatus]() {
+    runtimeStatus = runtime.RunOnce();
+  });
+
+  dlms::profile::ProfileByteView requestView;
+  requestView.data = request.empty() ? 0 : &request[0];
+  requestView.size = request.size();
+  const dlms::profile::ProfileStatus sendStatus =
+    clientProfile.Channel()->SendApdu(requestView);
+
+  const dlms::profile::ProfileStatus receiveStatus =
+    clientProfile.Channel()->ReceiveApdu(responseBytes);
+
+  runtimeThread.join();
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok, sendStatus);
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok, receiveStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtimeStatus);
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+}
+
 } // namespace
 
 TEST(EndpointIntegration, ServerEndpointServesCosemGetThroughProfileChannel)
@@ -690,4 +758,29 @@ TEST(EndpointIntegration, GatewayEndpointForwardsGetToInjectedUpstream)
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x4321u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeForwardsOneWrapperGet)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.getData = EncodeLongUnsigned(0x2468u);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeGetRequest(0x8au),
+      upstream,
+      policy,
+      responseBytes));
+
+  EXPECT_EQ(1u, upstream.getCalls);
+  EXPECT_EQ(3u, upstream.lastGetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastGetDescriptor.attributeId);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
 }

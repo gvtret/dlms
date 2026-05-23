@@ -438,13 +438,15 @@ void RunOneTcpListenerExchange(
   const std::vector<std::uint8_t>& request,
   std::vector<std::uint8_t>& responseBytes,
   dlms::endpoint::EndpointProfileKind profileKind =
-    dlms::endpoint::EndpointProfileKind::Wrapper)
+    dlms::endpoint::EndpointProfileKind::Wrapper,
+  bool hdlcUseSession = false)
 {
   responseBytes.clear();
 
   dlms::endpoint::EndpointProfileOptions profile =
     dlms::endpoint::DefaultEndpointProfileOptions();
   profile.kind = profileKind;
+  profile.hdlcUseSession = hdlcUseSession;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -480,6 +482,12 @@ void RunOneTcpListenerExchange(
   std::thread serverThread([&runtime, &serverStatus]() {
     serverStatus = runtime.RunOnce();
   });
+
+  if (hdlcUseSession) {
+    ASSERT_TRUE(clientProfile.hdlc.get() != 0);
+    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+              clientProfile.hdlc->ConnectDataLink());
+  }
 
   dlms::profile::ProfileByteView requestView;
   requestView.data = request.empty() ? 0 : &request[0];
@@ -769,6 +777,35 @@ TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcGet)
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x6789u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSessionGet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x2468u),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeGetRequest(0x81u),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSet)

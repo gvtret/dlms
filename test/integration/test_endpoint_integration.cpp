@@ -414,13 +414,15 @@ dlms::apdu::XdlmsApdu DecodeResponse(
 void RunOneTcpListenerExchange(
   dlms::cosem::LogicalDevice& logicalDevice,
   const std::vector<std::uint8_t>& request,
-  std::vector<std::uint8_t>& responseBytes)
+  std::vector<std::uint8_t>& responseBytes,
+  dlms::endpoint::EndpointProfileKind profileKind =
+    dlms::endpoint::EndpointProfileKind::Wrapper)
 {
   responseBytes.clear();
 
   dlms::endpoint::EndpointProfileOptions profile =
     dlms::endpoint::DefaultEndpointProfileOptions();
-  profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
+  profile.kind = profileKind;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -658,6 +660,34 @@ TEST(EndpointIntegration, TcpListenerRuntimeServesOneWrapperGet)
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x5678u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcGet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x6789u),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeGetRequest(0x8du),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x6789u, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeServesOneWrapperSet)

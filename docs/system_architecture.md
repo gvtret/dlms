@@ -799,6 +799,11 @@ Out of scope:
 - cryptographic primitive implementation;
 - application-specific SPODES object sets.
 
+Server-side AARQ/AARE is not an endpoint runtime responsibility yet. The
+current association layer exposes client-side association flow; a lower-layer
+server association processor must own AARQ decode, AARE encode, and xDLMS
+context negotiation before endpoint listener runtimes compose that step.
+
 Class interaction diagram:
 
 ```mermaid

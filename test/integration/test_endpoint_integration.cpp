@@ -1337,6 +1337,43 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenServ
   EXPECT_EQ(EncodeLongUnsigned(0x6789u), stored);
 }
 
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenServesSet)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(
+      EncodeLongUnsigned(0x1234u),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeSetRequest(0x8bu, MakeLongUnsignedData(0x579bu)),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::SetResponseChoice::Normal,
+            response.setResponseAny.choice);
+  EXPECT_EQ(0x8bu, response.setResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.setResponseAny.result);
+
+  dlms::cosem::CosemByteBuffer stored;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object->ReadAttribute(2u, stored));
+  EXPECT_EQ(EncodeLongUnsigned(0x579bu), stored);
+}
+
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenServesAction)
 {
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
@@ -1369,6 +1406,45 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenServ
   EXPECT_EQ(1u, object->InvokeCount());
   EXPECT_EQ(1u, object->LastInvokeMethodId());
   EXPECT_EQ(EncodeLongUnsigned(0x4567u), object->LastInvokeParameter());
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenServesAction)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(EncodeLongUnsigned(0x1234u)));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeActionRequest(0x8cu, 1u, MakeLongUnsignedData(0x7531u)),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::ActionResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::ActionResponseChoice::Normal,
+            response.actionResponseAny.choice);
+  EXPECT_EQ(0x8cu, response.actionResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.actionResponseAny.normal.result);
+  EXPECT_TRUE(response.actionResponseAny.normal.hasReturnParameter);
+  EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
+            response.actionResponseAny.normal.returnParameter.type);
+  EXPECT_EQ(0x2468u,
+            response.actionResponseAny.normal.returnParameter.unsignedValue);
+  EXPECT_EQ(1u, object->InvokeCount());
+  EXPECT_EQ(1u, object->LastInvokeMethodId());
+  EXPECT_EQ(EncodeLongUnsigned(0x7531u), object->LastInvokeParameter());
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcAssociationThenServesGet)
@@ -2378,6 +2454,40 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationT
   EXPECT_EQ(0u, response.setResponseAny.result);
 }
 
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsSet)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeSetRequest(0x85u, MakeLongUnsignedData(0x8642u)),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  EXPECT_EQ(1u, upstream.setCalls);
+  EXPECT_EQ(3u, upstream.lastSetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastSetDescriptor.attributeId);
+  EXPECT_EQ(EncodeLongUnsigned(0x8642u), upstream.lastSetData);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::SetResponseChoice::Normal,
+            response.setResponseAny.choice);
+  EXPECT_EQ(0x85u, response.setResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.setResponseAny.result);
+}
+
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationThenForwardsAction)
 {
   FakeGatewayUpstream upstream;
@@ -2411,6 +2521,47 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationT
   EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
             response.actionResponseAny.normal.returnParameter.type);
   EXPECT_EQ(0x468au,
+            response.actionResponseAny.normal.returnParameter.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsAction)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.actionReturnData = EncodeLongUnsigned(0x9753u);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeActionRequest(0x86u, 1u, MakeLongUnsignedData(0x2468u)),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  EXPECT_EQ(1u, upstream.actionCalls);
+  EXPECT_EQ(3u, upstream.lastActionDescriptor.classId);
+  EXPECT_EQ(1u, upstream.lastActionDescriptor.methodId);
+  EXPECT_TRUE(upstream.lastActionHasParameter);
+  EXPECT_EQ(EncodeLongUnsigned(0x2468u), upstream.lastActionParameter);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::ActionResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::ActionResponseChoice::Normal,
+            response.actionResponseAny.choice);
+  EXPECT_EQ(0x86u, response.actionResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.actionResponseAny.normal.result);
+  EXPECT_TRUE(response.actionResponseAny.normal.hasReturnParameter);
+  EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
+            response.actionResponseAny.normal.returnParameter.type);
+  EXPECT_EQ(0x9753u,
             response.actionResponseAny.normal.returnParameter.unsignedValue);
 }
 

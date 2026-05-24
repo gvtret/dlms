@@ -1644,6 +1644,27 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionLowPasswordAsso
   EXPECT_EQ(0x5317u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(EndpointIntegration, TcpListenerRuntimeRejectsHdlcSessionLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpServerLowPasswordAssociation(
+      logicalDevice,
+      serverCredential,
+      clientCredential,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+}
+
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionAssociationThenServesSet)
 {
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
@@ -2152,6 +2173,29 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionLowPassword
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeRejectsHdlcSessionLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpPushLowPasswordAssociation(
+      handler,
+      serverCredential,
+      clientCredential,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+
+  EXPECT_EQ(0u, handler.calls);
+}
+
 TEST(EndpointIntegration, UdpPushListenerRuntimeForwardsOneWrapperApdu)
 {
   std::vector<std::uint8_t> pushApdu;
@@ -2635,6 +2679,34 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionLowPassw
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x3175u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeRejectsHdlcSessionLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpGatewayLowPasswordAssociation(
+      upstream,
+      policy,
+      serverCredential,
+      clientCredential,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+
+  EXPECT_FALSE(upstream.IsOpen());
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociationThenForwardsSet)

@@ -507,42 +507,74 @@ void RunOneTcpListenerExchange(
     serverStatus = runtime.RunOnce();
   });
 
+  bool continueExchange = true;
   if (hdlcUseSession) {
-    ASSERT_TRUE(clientProfile.hdlc.get() != 0);
-    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
-              clientProfile.hdlc->ConnectDataLink());
+    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
+    if (clientProfile.hdlc.get() == 0) {
+      continueExchange = false;
+    } else {
+      const dlms::profile::ProfileStatus connectStatus =
+        clientProfile.hdlc->ConnectDataLink();
+      EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
+      if (connectStatus != dlms::profile::ProfileStatus::Ok) {
+        continueExchange = false;
+      }
+    }
   }
 
-  if (negotiateAssociation) {
+  if (continueExchange && negotiateAssociation) {
     const std::vector<std::uint8_t> aarq = MakeAarq();
     dlms::profile::ProfileByteView aarqView;
     aarqView.data = aarq.empty() ? 0 : &aarq[0];
     aarqView.size = aarq.size();
-    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
-              clientProfile.Channel()->SendApdu(aarqView));
+    const dlms::profile::ProfileStatus aarqSendStatus =
+      clientProfile.Channel()->SendApdu(aarqView);
+    EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aarqSendStatus);
+    if (aarqSendStatus != dlms::profile::ProfileStatus::Ok) {
+      continueExchange = false;
+    }
 
     std::vector<std::uint8_t> aareBytes;
-    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
-              clientProfile.Channel()->ReceiveApdu(aareBytes));
-    dlms::apdu::AcseApdu aare = {};
-    ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
-              dlms::apdu::DecodeAcseApdu(
-                aareBytes.empty() ? 0 : &aareBytes[0],
-                aareBytes.size(),
-                aare));
-    ASSERT_EQ(dlms::apdu::AcseApduKind::Aare, aare.kind);
-    EXPECT_TRUE(aare.aare.hasResult);
-    EXPECT_EQ(0, aare.aare.result);
+    if (continueExchange) {
+      const dlms::profile::ProfileStatus aareReceiveStatus =
+        clientProfile.Channel()->ReceiveApdu(aareBytes);
+      EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aareReceiveStatus);
+      if (aareReceiveStatus != dlms::profile::ProfileStatus::Ok) {
+        continueExchange = false;
+      }
+    }
+    if (continueExchange) {
+      dlms::apdu::AcseApdu aare = {};
+      const dlms::apdu::ApduStatus decodeStatus =
+        dlms::apdu::DecodeAcseApdu(
+          aareBytes.empty() ? 0 : &aareBytes[0],
+          aareBytes.size(),
+          aare);
+      EXPECT_EQ(dlms::apdu::ApduStatus::Ok, decodeStatus);
+      if (decodeStatus == dlms::apdu::ApduStatus::Ok) {
+        EXPECT_EQ(dlms::apdu::AcseApduKind::Aare, aare.kind);
+        EXPECT_TRUE(aare.aare.hasResult);
+        EXPECT_EQ(0, aare.aare.result);
+      } else {
+        continueExchange = false;
+      }
+    }
   }
 
   dlms::profile::ProfileByteView requestView;
   requestView.data = request.empty() ? 0 : &request[0];
   requestView.size = request.size();
-  const dlms::profile::ProfileStatus sendStatus =
-    clientProfile.Channel()->SendApdu(requestView);
+  dlms::profile::ProfileStatus sendStatus =
+    dlms::profile::ProfileStatus::InternalError;
+  if (continueExchange) {
+    sendStatus = clientProfile.Channel()->SendApdu(requestView);
+  }
 
-  const dlms::profile::ProfileStatus receiveStatus =
-    clientProfile.Channel()->ReceiveApdu(responseBytes);
+  dlms::profile::ProfileStatus receiveStatus =
+    dlms::profile::ProfileStatus::InternalError;
+  if (continueExchange) {
+    receiveStatus = clientProfile.Channel()->ReceiveApdu(responseBytes);
+  }
 
   serverThread.join();
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, sendStatus);
@@ -1060,6 +1092,36 @@ TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSessionGet)
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionAssociationThenServesGet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x9753u),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeGetRequest(0x87u),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x9753u, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSessionSet)

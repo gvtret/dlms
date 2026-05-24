@@ -1380,6 +1380,41 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionAssociationThen
   EXPECT_EQ(0x9753u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenServesGet)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x5317u),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeGetRequest(0x84u),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true,
+      &credential));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x5317u, response.getResponseAny.result.data.unsignedValue);
+}
+
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionAssociationThenServesSet)
 {
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
@@ -1819,6 +1854,32 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionAssociation
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenForwardsOneApdu)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x08u);
+  pushApdu.push_back(0x53u);
+  pushApdu.push_back(0x17u);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(
+      pushApdu,
+      handler,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true,
+      &credential));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
 TEST(EndpointIntegration, UdpPushListenerRuntimeForwardsOneWrapperApdu)
 {
   std::vector<std::uint8_t> pushApdu;
@@ -2216,6 +2277,39 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociat
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x9753u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenForwardsGet)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.getData = EncodeLongUnsigned(0x3175u);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeGetRequest(0x89u),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true,
+      &credential));
+
+  EXPECT_EQ(1u, upstream.getCalls);
+  EXPECT_EQ(3u, upstream.lastGetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastGetDescriptor.attributeId);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x3175u, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociationThenForwardsSet)

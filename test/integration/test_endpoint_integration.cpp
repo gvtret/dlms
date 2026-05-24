@@ -342,6 +342,51 @@ std::vector<std::uint8_t> MakeAarq()
   return output;
 }
 
+std::vector<std::uint8_t> MakeLlsAarq(
+  const std::vector<std::uint8_t>& credential)
+{
+  const dlms::apdu::InitiateRequest request =
+    dlms::apdu::MakeDefaultInitiateRequest();
+  const dlms::apdu::XdlmsApdu xdlms(request);
+  dlms::apdu::AcseApdu aarq =
+    dlms::apdu::MakeAarqWithInitiateRequest(xdlms);
+
+  const std::uint8_t requirements[] = {0x8A, 0x02, 0x07, 0x80};
+  const std::uint8_t mechanism[] = {
+    0x8B, 0x07, 0x60, 0x85, 0x74, 0x05, 0x08, 0x02, 0x01};
+  std::vector<std::uint8_t> credentialField;
+  credentialField.push_back(0xAC);
+  credentialField.push_back(
+    static_cast<std::uint8_t>(credential.size() + 2u));
+  credentialField.push_back(0x80);
+  credentialField.push_back(static_cast<std::uint8_t>(credential.size()));
+  credentialField.insert(
+    credentialField.end(),
+    credential.begin(),
+    credential.end());
+
+  dlms::apdu::AcseRawField field = {};
+  field.tag = requirements[0];
+  field.encoded.data = requirements;
+  field.encoded.size = sizeof(requirements);
+  aarq.aarq.fields.push_back(field);
+
+  field.tag = mechanism[0];
+  field.encoded.data = mechanism;
+  field.encoded.size = sizeof(mechanism);
+  aarq.aarq.fields.push_back(field);
+
+  field.tag = credentialField[0];
+  field.encoded.data = &credentialField[0];
+  field.encoded.size = credentialField.size();
+  aarq.aarq.fields.push_back(field);
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::EncodeAcseApdu(aarq, output));
+  return output;
+}
+
 std::vector<std::uint8_t> MakeSetRequest(
   std::uint8_t invokeIdAndPriority,
   const dlms::apdu::DlmsData& value)
@@ -456,7 +501,8 @@ void RunOneTcpListenerExchange(
   dlms::endpoint::EndpointProfileKind profileKind =
     dlms::endpoint::EndpointProfileKind::Wrapper,
   bool hdlcUseSession = false,
-  bool negotiateAssociation = false)
+  bool negotiateAssociation = false,
+  const std::vector<std::uint8_t>* lowPasswordCredential = 0)
 {
   responseBytes.clear();
 
@@ -478,6 +524,12 @@ void RunOneTcpListenerExchange(
   serverOptions.transport = TcpListenerOptions();
   serverOptions.profile = profile;
   serverOptions.negotiateAssociation = negotiateAssociation;
+  if (lowPasswordCredential != 0) {
+    serverOptions.security.authentication =
+      dlms::endpoint::EndpointAuthenticationKind::LowPassword;
+    serverOptions.security.password = &(*lowPasswordCredential)[0];
+    serverOptions.security.passwordSize = lowPasswordCredential->size();
+  }
 
   dlms::endpoint::ServerListenerRuntime runtime(
     *listenerBundle.Listener(),
@@ -523,7 +575,10 @@ void RunOneTcpListenerExchange(
   }
 
   if (continueExchange && negotiateAssociation) {
-    const std::vector<std::uint8_t> aarq = MakeAarq();
+    const std::vector<std::uint8_t> aarq =
+      lowPasswordCredential == 0
+        ? MakeAarq()
+        : MakeLlsAarq(*lowPasswordCredential);
     dlms::profile::ProfileByteView aarqView;
     aarqView.data = aarq.empty() ? 0 : &aarq[0];
     aarqView.size = aarq.size();
@@ -591,7 +646,8 @@ void RunOneTcpPushListenerExchange(
   dlms::endpoint::EndpointProfileKind profileKind =
     dlms::endpoint::EndpointProfileKind::Wrapper,
   bool hdlcUseSession = false,
-  bool negotiateAssociation = false)
+  bool negotiateAssociation = false,
+  const std::vector<std::uint8_t>* lowPasswordCredential = 0)
 {
   dlms::endpoint::PushListenerEndpointOptions options =
     dlms::endpoint::DefaultPushListenerEndpointOptions();
@@ -599,6 +655,12 @@ void RunOneTcpPushListenerExchange(
   options.profile.kind = profileKind;
   options.profile.hdlcUseSession = hdlcUseSession;
   options.negotiateAssociation = negotiateAssociation;
+  if (lowPasswordCredential != 0) {
+    options.security.authentication =
+      dlms::endpoint::EndpointAuthenticationKind::LowPassword;
+    options.security.password = &(*lowPasswordCredential)[0];
+    options.security.passwordSize = lowPasswordCredential->size();
+  }
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -649,7 +711,10 @@ void RunOneTcpPushListenerExchange(
   }
 
   if (continueExchange && negotiateAssociation) {
-    const std::vector<std::uint8_t> aarq = MakeAarq();
+    const std::vector<std::uint8_t> aarq =
+      lowPasswordCredential == 0
+        ? MakeAarq()
+        : MakeLlsAarq(*lowPasswordCredential);
     dlms::profile::ProfileByteView aarqView;
     aarqView.data = aarq.empty() ? 0 : &aarq[0];
     aarqView.size = aarq.size();
@@ -769,7 +834,8 @@ void RunOneTcpGatewayListenerExchange(
   dlms::endpoint::EndpointProfileKind profileKind =
     dlms::endpoint::EndpointProfileKind::Wrapper,
   bool hdlcUseSession = false,
-  bool negotiateAssociation = false)
+  bool negotiateAssociation = false,
+  const std::vector<std::uint8_t>* lowPasswordCredential = 0)
 {
   responseBytes.clear();
 
@@ -779,6 +845,12 @@ void RunOneTcpGatewayListenerExchange(
   options.downstream.profile.kind = profileKind;
   options.downstream.profile.hdlcUseSession = hdlcUseSession;
   options.downstream.negotiateAssociation = negotiateAssociation;
+  if (lowPasswordCredential != 0) {
+    options.downstream.security.authentication =
+      dlms::endpoint::EndpointAuthenticationKind::LowPassword;
+    options.downstream.security.password = &(*lowPasswordCredential)[0];
+    options.downstream.security.passwordSize = lowPasswordCredential->size();
+  }
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -832,7 +904,10 @@ void RunOneTcpGatewayListenerExchange(
   }
 
   if (continueExchange && negotiateAssociation) {
-    const std::vector<std::uint8_t> aarq = MakeAarq();
+    const std::vector<std::uint8_t> aarq =
+      lowPasswordCredential == 0
+        ? MakeAarq()
+        : MakeLlsAarq(*lowPasswordCredential);
     dlms::profile::ProfileByteView aarqView;
     aarqView.data = aarq.empty() ? 0 : &aarq[0];
     aarqView.size = aarq.size();
@@ -984,6 +1059,41 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenServ
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x789au, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenServesGet)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x2345u),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeGetRequest(0x82u),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x2345u, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenServesSet)
@@ -1541,6 +1651,32 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperAssociationThen
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsOneApdu)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x09u);
+  pushApdu.push_back(0x12u);
+  pushApdu.push_back(0x90u);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(
+      pushApdu,
+      handler,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
 TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcApdu)
 {
   std::vector<std::uint8_t> pushApdu;
@@ -1714,6 +1850,39 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationT
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x3579u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsGet)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.getData = EncodeLongUnsigned(0x579bu);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeGetRequest(0x81u),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  EXPECT_EQ(1u, upstream.getCalls);
+  EXPECT_EQ(3u, upstream.lastGetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastGetDescriptor.attributeId);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x579bu, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationThenForwardsSet)

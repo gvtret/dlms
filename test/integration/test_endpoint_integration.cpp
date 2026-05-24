@@ -714,7 +714,8 @@ void RunOneTcpGatewayListenerExchange(
   std::vector<std::uint8_t>& responseBytes,
   dlms::endpoint::EndpointProfileKind profileKind =
     dlms::endpoint::EndpointProfileKind::Wrapper,
-  bool hdlcUseSession = false)
+  bool hdlcUseSession = false,
+  bool negotiateAssociation = false)
 {
   responseBytes.clear();
 
@@ -723,6 +724,7 @@ void RunOneTcpGatewayListenerExchange(
   options.downstream.transport = TcpListenerOptions();
   options.downstream.profile.kind = profileKind;
   options.downstream.profile.hdlcUseSession = hdlcUseSession;
+  options.downstream.negotiateAssociation = negotiateAssociation;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -760,20 +762,75 @@ void RunOneTcpGatewayListenerExchange(
     runtimeStatus = runtime.RunOnce();
   });
 
+  bool continueExchange = true;
   if (hdlcUseSession) {
-    ASSERT_TRUE(clientProfile.hdlc.get() != 0);
-    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
-              clientProfile.hdlc->ConnectDataLink());
+    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
+    if (clientProfile.hdlc.get() == 0) {
+      continueExchange = false;
+    } else {
+      const dlms::profile::ProfileStatus connectStatus =
+        clientProfile.hdlc->ConnectDataLink();
+      EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
+      if (connectStatus != dlms::profile::ProfileStatus::Ok) {
+        continueExchange = false;
+      }
+    }
+  }
+
+  if (continueExchange && negotiateAssociation) {
+    const std::vector<std::uint8_t> aarq = MakeAarq();
+    dlms::profile::ProfileByteView aarqView;
+    aarqView.data = aarq.empty() ? 0 : &aarq[0];
+    aarqView.size = aarq.size();
+    const dlms::profile::ProfileStatus aarqSendStatus =
+      clientProfile.Channel()->SendApdu(aarqView);
+    EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aarqSendStatus);
+    if (aarqSendStatus != dlms::profile::ProfileStatus::Ok) {
+      continueExchange = false;
+    }
+
+    std::vector<std::uint8_t> aareBytes;
+    if (continueExchange) {
+      const dlms::profile::ProfileStatus aareReceiveStatus =
+        clientProfile.Channel()->ReceiveApdu(aareBytes);
+      EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aareReceiveStatus);
+      if (aareReceiveStatus != dlms::profile::ProfileStatus::Ok) {
+        continueExchange = false;
+      }
+    }
+
+    if (continueExchange) {
+      dlms::apdu::AcseApdu aare = {};
+      const dlms::apdu::ApduStatus decodeStatus =
+        dlms::apdu::DecodeAcseApdu(
+          aareBytes.empty() ? 0 : &aareBytes[0],
+          aareBytes.size(),
+          aare);
+      EXPECT_EQ(dlms::apdu::ApduStatus::Ok, decodeStatus);
+      if (decodeStatus == dlms::apdu::ApduStatus::Ok) {
+        EXPECT_EQ(dlms::apdu::AcseApduKind::Aare, aare.kind);
+        EXPECT_TRUE(aare.aare.hasResult);
+        EXPECT_EQ(0, aare.aare.result);
+      } else {
+        continueExchange = false;
+      }
+    }
   }
 
   dlms::profile::ProfileByteView requestView;
   requestView.data = request.empty() ? 0 : &request[0];
   requestView.size = request.size();
-  const dlms::profile::ProfileStatus sendStatus =
-    clientProfile.Channel()->SendApdu(requestView);
+  dlms::profile::ProfileStatus sendStatus =
+    dlms::profile::ProfileStatus::InternalError;
+  if (continueExchange) {
+    sendStatus = clientProfile.Channel()->SendApdu(requestView);
+  }
 
-  const dlms::profile::ProfileStatus receiveStatus =
-    clientProfile.Channel()->ReceiveApdu(responseBytes);
+  dlms::profile::ProfileStatus receiveStatus =
+    dlms::profile::ProfileStatus::InternalError;
+  if (continueExchange) {
+    receiveStatus = clientProfile.Channel()->ReceiveApdu(responseBytes);
+  }
 
   runtimeThread.join();
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, sendStatus);
@@ -1512,6 +1569,34 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeForwardsOneWrapperGet)
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationThenForwardsGet)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.getData = EncodeLongUnsigned(0x3579u);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeGetRequest(0x82u),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true));
+
+  EXPECT_EQ(1u, upstream.getCalls);
+  EXPECT_EQ(3u, upstream.lastGetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastGetDescriptor.attributeId);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x3579u, response.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeForwardsOneHdlcGet)

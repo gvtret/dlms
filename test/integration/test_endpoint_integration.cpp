@@ -640,6 +640,86 @@ void RunOneTcpListenerExchange(
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
 }
 
+void SendRejectedLowPasswordAarq(
+  std::uint16_t port,
+  const dlms::endpoint::EndpointProfileOptions& profile,
+  const std::vector<std::uint8_t>& credential)
+{
+  dlms::endpoint::EndpointTransportBundle clientTransport;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointTransport(
+              TcpClientOptions(port),
+              clientTransport));
+  dlms::endpoint::EndpointProfileBundle clientProfile;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointProfile(
+              profile,
+              clientTransport,
+              clientProfile));
+  ASSERT_TRUE(clientProfile.Channel() != 0);
+  ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Open());
+
+  const std::vector<std::uint8_t> aarq = MakeLlsAarq(credential);
+  dlms::profile::ProfileByteView aarqView;
+  aarqView.data = aarq.empty() ? 0 : &aarq[0];
+  aarqView.size = aarq.size();
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->SendApdu(aarqView));
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Close());
+}
+
+void RunRejectedTcpServerLowPasswordAssociation(
+  dlms::cosem::LogicalDevice& logicalDevice,
+  const std::vector<std::uint8_t>& serverCredential,
+  const std::vector<std::uint8_t>& clientCredential)
+{
+  dlms::endpoint::EndpointProfileOptions profile =
+    dlms::endpoint::DefaultEndpointProfileOptions();
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(
+              TcpListenerOptions(),
+              profile,
+              listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+
+  dlms::endpoint::ServerEndpointOptions serverOptions =
+    dlms::endpoint::DefaultServerEndpointOptions();
+  serverOptions.transport = TcpListenerOptions();
+  serverOptions.profile = profile;
+  serverOptions.negotiateAssociation = true;
+  serverOptions.security.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::LowPassword;
+  serverOptions.security.password = &serverCredential[0];
+  serverOptions.security.passwordSize = serverCredential.size();
+
+  dlms::endpoint::ServerListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    serverOptions,
+    logicalDevice);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointStatus serverStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread serverThread([&runtime, &serverStatus]() {
+    serverStatus = runtime.RunOnce();
+  });
+
+  ASSERT_NO_FATAL_FAILURE(
+    SendRejectedLowPasswordAarq(
+      listenerBundle.tcp->LocalPort(),
+      profile,
+      clientCredential));
+
+  serverThread.join();
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::AssociationFailed, serverStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+}
+
 void RunOneTcpPushListenerExchange(
   const std::vector<std::uint8_t>& pushApdu,
   RecordingPushHandler& handler,
@@ -767,6 +847,49 @@ void RunOneTcpPushListenerExchange(
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtimeStatus);
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
             clientProfile.Channel()->Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+}
+
+void RunRejectedTcpPushLowPasswordAssociation(
+  RecordingPushHandler& handler,
+  const std::vector<std::uint8_t>& serverCredential,
+  const std::vector<std::uint8_t>& clientCredential)
+{
+  dlms::endpoint::PushListenerEndpointOptions options =
+    dlms::endpoint::DefaultPushListenerEndpointOptions();
+  options.transport = TcpListenerOptions();
+  options.negotiateAssociation = true;
+  options.security.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::LowPassword;
+  options.security.password = &serverCredential[0];
+  options.security.passwordSize = serverCredential.size();
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(options, listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+
+  dlms::endpoint::PushListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    options,
+    handler);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointStatus runtimeStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread runtimeThread([&runtime, &runtimeStatus]() {
+    runtimeStatus = runtime.RunOnce();
+  });
+
+  ASSERT_NO_FATAL_FAILURE(
+    SendRejectedLowPasswordAarq(
+      listenerBundle.tcp->LocalPort(),
+      options.profile,
+      clientCredential));
+
+  runtimeThread.join();
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::AssociationFailed, runtimeStatus);
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
 }
 
@@ -970,6 +1093,53 @@ void RunOneTcpGatewayListenerExchange(
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
 }
 
+void RunRejectedTcpGatewayLowPasswordAssociation(
+  FakeGatewayUpstream& upstream,
+  AllowAllPolicy& policy,
+  const std::vector<std::uint8_t>& serverCredential,
+  const std::vector<std::uint8_t>& clientCredential)
+{
+  dlms::endpoint::GatewayEndpointOptions options =
+    dlms::endpoint::DefaultGatewayEndpointOptions();
+  options.downstream.transport = TcpListenerOptions();
+  options.downstream.negotiateAssociation = true;
+  options.downstream.security.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::LowPassword;
+  options.downstream.security.password = &serverCredential[0];
+  options.downstream.security.passwordSize = serverCredential.size();
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(
+              options.downstream,
+              listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+
+  dlms::endpoint::GatewayListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    options,
+    upstream,
+    policy);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointStatus runtimeStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread runtimeThread([&runtime, &runtimeStatus]() {
+    runtimeStatus = runtime.RunOnce();
+  });
+
+  ASSERT_NO_FATAL_FAILURE(
+    SendRejectedLowPasswordAarq(
+      listenerBundle.tcp->LocalPort(),
+      options.downstream.profile,
+      clientCredential));
+
+  runtimeThread.join();
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::AssociationFailed, runtimeStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+}
+
 } // namespace
 
 TEST(EndpointIntegration, ServerEndpointServesCosemGetThroughProfileChannel)
@@ -1094,6 +1264,25 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociat
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x2345u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeRejectsWrapperLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpServerLowPasswordAssociation(
+      logicalDevice,
+      serverCredential,
+      clientCredential));
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenServesSet)
@@ -1747,6 +1936,27 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperLowPasswordAsso
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeRejectsWrapperLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpPushLowPasswordAssociation(
+      handler,
+      serverCredential,
+      clientCredential));
+
+  EXPECT_EQ(0u, handler.calls);
+}
+
 TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcApdu)
 {
   std::vector<std::uint8_t> pushApdu;
@@ -2005,6 +2215,32 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperLowPasswordA
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x579bu, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeRejectsWrapperLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpGatewayLowPasswordAssociation(
+      upstream,
+      policy,
+      serverCredential,
+      clientCredential));
+
+  EXPECT_FALSE(upstream.IsOpen());
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationThenForwardsSet)

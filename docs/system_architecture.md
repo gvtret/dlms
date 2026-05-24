@@ -864,6 +864,8 @@ MVP success criteria:
 - TCP listener runtime accepts one Wrapper/TCP connection, completes Low
   Password AARQ/AARE association negotiation, and serves a bounded GET
   `RunOnce` path;
+- TCP listener runtime rejects a Wrapper/TCP Low Password AARQ with mismatched
+  credentials before serving requests;
 - TCP listener runtime accepts HDLC-over-TCP connections and serves bounded
   no-session server GET, SET, and ACTION `RunOnce` paths;
 - TCP listener runtime accepts one HDLC-over-TCP no-session connection,
@@ -889,6 +891,8 @@ MVP success criteria:
   APDU;
 - TCP push listener runtime accepts one Wrapper/TCP connection, completes Low
   Password AARQ/AARE association negotiation, and dispatches one raw push APDU;
+- TCP push listener runtime rejects a Wrapper/TCP Low Password AARQ with
+  mismatched credentials before dispatching push APDUs;
 - TCP push listener runtime accepts one HDLC-over-TCP no-session connection and
   dispatches one raw push APDU;
 - TCP push listener runtime accepts one HDLC-over-TCP no-session connection,
@@ -916,6 +920,8 @@ MVP success criteria:
 - TCP gateway listener runtime accepts one Wrapper/TCP downstream connection,
   completes Low Password AARQ/AARE association negotiation, and forwards a
   bounded GET request to an injected upstream.
+- TCP gateway listener runtime rejects a Wrapper/TCP Low Password AARQ with
+  mismatched credentials before opening or invoking the injected upstream.
 - TCP gateway listener runtime accepts HDLC-over-TCP no-session downstream GET,
   SET, and ACTION requests and forwards them to an injected upstream.
 - TCP gateway listener runtime accepts one HDLC-over-TCP no-session downstream
@@ -1019,6 +1025,7 @@ configuration before they run.
 | TCP listener runtime serves Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
+| TCP listener runtime rejects Wrapper/TCP Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP listener runtime serves HDLC-over-TCP no-session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves HDLC-over-TCP no-session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves HDLC-over-TCP no-session Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
@@ -1029,6 +1036,7 @@ configuration before they run.
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP Low Password AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
+| TCP push listener runtime rejects Wrapper/TCP Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session Low Password AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
@@ -1040,6 +1048,7 @@ configuration before they run.
 | TCP gateway listener runtime forwards Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards Wrapper/TCP AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards Wrapper/TCP Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
+| TCP gateway listener runtime rejects Wrapper/TCP Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |

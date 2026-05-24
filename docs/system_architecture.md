@@ -891,10 +891,14 @@ MVP success criteria:
   SET, and ACTION requests and forwards them to an injected upstream.
 - TCP gateway listener runtime accepts one HDLC-over-TCP no-session downstream
   connection, completes no-security AARQ/AARE association negotiation, and
-  forwards a bounded GET request to an injected upstream.
+  forwards bounded GET, SET, and ACTION requests to an injected upstream.
 - TCP gateway listener runtime accepts HDLC-over-TCP explicit SNRM/UA
   downstream GET, SET, and ACTION requests and forwards them to an injected
   upstream.
+- TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
+  downstream connection, completes no-security AARQ/AARE association
+  negotiation, and forwards bounded GET, SET, and ACTION requests to an
+  injected upstream.
 
 ## 8. Required Documentation Per Layer Repository
 
@@ -992,8 +996,9 @@ configuration before they run.
 | TCP gateway listener runtime forwards Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards Wrapper/TCP AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
-| TCP gateway listener runtime forwards HDLC-over-TCP no-session AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime forwards HDLC-over-TCP no-session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 
 The root tests should validate integration only. Unit coverage for each layer
 belongs in that layer's own repository.

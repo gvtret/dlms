@@ -1718,6 +1718,71 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcAssociationThen
   EXPECT_EQ(0x7531u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcAssociationThenForwardsSet)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeSetRequest(0x86u, MakeLongUnsignedData(0x579bu)),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      true));
+
+  EXPECT_EQ(1u, upstream.setCalls);
+  EXPECT_EQ(3u, upstream.lastSetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastSetDescriptor.attributeId);
+  EXPECT_EQ(EncodeLongUnsigned(0x579bu), upstream.lastSetData);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::SetResponseChoice::Normal,
+            response.setResponseAny.choice);
+  EXPECT_EQ(0x86u, response.setResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.setResponseAny.result);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcAssociationThenForwardsAction)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.actionReturnData = EncodeLongUnsigned(0x6420u);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeActionRequest(0x87u, 1u, MakeLongUnsignedData(0x8642u)),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      true));
+
+  EXPECT_EQ(1u, upstream.actionCalls);
+  EXPECT_EQ(3u, upstream.lastActionDescriptor.classId);
+  EXPECT_EQ(1u, upstream.lastActionDescriptor.methodId);
+  EXPECT_TRUE(upstream.lastActionHasParameter);
+  EXPECT_EQ(EncodeLongUnsigned(0x8642u), upstream.lastActionParameter);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::ActionResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::ActionResponseChoice::Normal,
+            response.actionResponseAny.choice);
+  EXPECT_EQ(0x87u, response.actionResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.actionResponseAny.normal.result);
+  EXPECT_TRUE(response.actionResponseAny.normal.hasReturnParameter);
+  EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
+            response.actionResponseAny.normal.returnParameter.type);
+  EXPECT_EQ(0x6420u,
+            response.actionResponseAny.normal.returnParameter.unsignedValue);
+}
+
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeForwardsOneHdlcSessionGet)
 {
   FakeGatewayUpstream upstream;
@@ -1743,6 +1808,99 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeForwardsOneHdlcSessionGet)
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x1357u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociationThenForwardsGet)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.getData = EncodeLongUnsigned(0x9753u);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeGetRequest(0x88u),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true));
+
+  EXPECT_EQ(1u, upstream.getCalls);
+  EXPECT_EQ(3u, upstream.lastGetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastGetDescriptor.attributeId);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
+            response.getResponseAny.result.choice);
+  EXPECT_EQ(0x9753u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociationThenForwardsSet)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeSetRequest(0x89u, MakeLongUnsignedData(0x7531u)),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true));
+
+  EXPECT_EQ(1u, upstream.setCalls);
+  EXPECT_EQ(3u, upstream.lastSetDescriptor.classId);
+  EXPECT_EQ(2u, upstream.lastSetDescriptor.attributeId);
+  EXPECT_EQ(EncodeLongUnsigned(0x7531u), upstream.lastSetData);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::SetResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::SetResponseChoice::Normal,
+            response.setResponseAny.choice);
+  EXPECT_EQ(0x89u, response.setResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.setResponseAny.result);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociationThenForwardsAction)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  upstream.actionReturnData = EncodeLongUnsigned(0x1357u);
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeActionRequest(0x8au, 1u, MakeLongUnsignedData(0x9753u)),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true));
+
+  EXPECT_EQ(1u, upstream.actionCalls);
+  EXPECT_EQ(3u, upstream.lastActionDescriptor.classId);
+  EXPECT_EQ(1u, upstream.lastActionDescriptor.methodId);
+  EXPECT_TRUE(upstream.lastActionHasParameter);
+  EXPECT_EQ(EncodeLongUnsigned(0x9753u), upstream.lastActionParameter);
+
+  const dlms::apdu::XdlmsApdu response = DecodeResponse(responseBytes);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::ActionResponse, response.kind);
+  EXPECT_EQ(dlms::apdu::ActionResponseChoice::Normal,
+            response.actionResponseAny.choice);
+  EXPECT_EQ(0x8au, response.actionResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0u, response.actionResponseAny.normal.result);
+  EXPECT_TRUE(response.actionResponseAny.normal.hasReturnParameter);
+  EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
+            response.actionResponseAny.normal.returnParameter.type);
+  EXPECT_EQ(0x1357u,
+            response.actionResponseAny.normal.returnParameter.unsignedValue);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeForwardsOneWrapperSet)

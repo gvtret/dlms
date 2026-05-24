@@ -864,8 +864,8 @@ MVP success criteria:
 - TCP listener runtime accepts HDLC-over-TCP connections and serves bounded
   no-session server GET, SET, and ACTION `RunOnce` paths;
 - TCP listener runtime accepts one HDLC-over-TCP no-session connection,
-  completes no-security AARQ/AARE association negotiation, and serves a
-  bounded GET `RunOnce` path;
+  completes no-security AARQ/AARE association negotiation, and serves bounded
+  GET, SET, and ACTION `RunOnce` paths;
 - TCP listener runtime accepts HDLC-over-TCP connections, completes explicit
   SNRM/UA data-link setup, and serves bounded GET, SET, and ACTION `RunOnce`
   paths;
@@ -971,7 +971,7 @@ configuration before they run.
 | TCP listener runtime serves Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves HDLC-over-TCP no-session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
-| TCP listener runtime serves HDLC-over-TCP no-session AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
+| TCP listener runtime serves HDLC-over-TCP no-session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |

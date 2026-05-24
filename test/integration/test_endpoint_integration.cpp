@@ -659,6 +659,11 @@ void SendRejectedLowPasswordAarq(
   ASSERT_TRUE(clientProfile.Channel() != 0);
   ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
             clientProfile.Channel()->Open());
+  if (profile.hdlcUseSession) {
+    ASSERT_TRUE(clientProfile.hdlc.get() != 0);
+    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+              clientProfile.hdlc->ConnectDataLink());
+  }
 
   const std::vector<std::uint8_t> aarq = MakeLlsAarq(credential);
   dlms::profile::ProfileByteView aarqView;
@@ -673,10 +678,15 @@ void SendRejectedLowPasswordAarq(
 void RunRejectedTcpServerLowPasswordAssociation(
   dlms::cosem::LogicalDevice& logicalDevice,
   const std::vector<std::uint8_t>& serverCredential,
-  const std::vector<std::uint8_t>& clientCredential)
+  const std::vector<std::uint8_t>& clientCredential,
+  dlms::endpoint::EndpointProfileKind profileKind =
+    dlms::endpoint::EndpointProfileKind::Wrapper,
+  bool hdlcUseSession = false)
 {
   dlms::endpoint::EndpointProfileOptions profile =
     dlms::endpoint::DefaultEndpointProfileOptions();
+  profile.kind = profileKind;
+  profile.hdlcUseSession = hdlcUseSession;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -853,11 +863,16 @@ void RunOneTcpPushListenerExchange(
 void RunRejectedTcpPushLowPasswordAssociation(
   RecordingPushHandler& handler,
   const std::vector<std::uint8_t>& serverCredential,
-  const std::vector<std::uint8_t>& clientCredential)
+  const std::vector<std::uint8_t>& clientCredential,
+  dlms::endpoint::EndpointProfileKind profileKind =
+    dlms::endpoint::EndpointProfileKind::Wrapper,
+  bool hdlcUseSession = false)
 {
   dlms::endpoint::PushListenerEndpointOptions options =
     dlms::endpoint::DefaultPushListenerEndpointOptions();
   options.transport = TcpListenerOptions();
+  options.profile.kind = profileKind;
+  options.profile.hdlcUseSession = hdlcUseSession;
   options.negotiateAssociation = true;
   options.security.authentication =
     dlms::endpoint::EndpointAuthenticationKind::LowPassword;
@@ -1097,11 +1112,16 @@ void RunRejectedTcpGatewayLowPasswordAssociation(
   FakeGatewayUpstream& upstream,
   AllowAllPolicy& policy,
   const std::vector<std::uint8_t>& serverCredential,
-  const std::vector<std::uint8_t>& clientCredential)
+  const std::vector<std::uint8_t>& clientCredential,
+  dlms::endpoint::EndpointProfileKind profileKind =
+    dlms::endpoint::EndpointProfileKind::Wrapper,
+  bool hdlcUseSession = false)
 {
   dlms::endpoint::GatewayEndpointOptions options =
     dlms::endpoint::DefaultGatewayEndpointOptions();
   options.downstream.transport = TcpListenerOptions();
+  options.downstream.profile.kind = profileKind;
+  options.downstream.profile.hdlcUseSession = hdlcUseSession;
   options.downstream.negotiateAssociation = true;
   options.downstream.security.authentication =
     dlms::endpoint::EndpointAuthenticationKind::LowPassword;
@@ -1414,6 +1434,26 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcLowPasswordAssociation
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x8642u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeRejectsHdlcLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpServerLowPasswordAssociation(
+      logicalDevice,
+      serverCredential,
+      clientCredential,
+      dlms::endpoint::EndpointProfileKind::Hdlc));
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcAssociationThenServesSet)
@@ -2023,6 +2063,28 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcLowPasswordAssocia
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeRejectsHdlcLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpPushLowPasswordAssociation(
+      handler,
+      serverCredential,
+      clientCredential,
+      dlms::endpoint::EndpointProfileKind::Hdlc));
+
+  EXPECT_EQ(0u, handler.calls);
+}
+
 TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcSessionApdu)
 {
   std::vector<std::uint8_t> pushApdu;
@@ -2393,6 +2455,33 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcLowPasswordAsso
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeRejectsHdlcLowPasswordCredentialMismatch)
+{
+  const std::uint8_t clientPassword[] = {'p', 'w'};
+  const std::uint8_t serverPassword[] = {'b', 'a', 'd'};
+  const std::vector<std::uint8_t> clientCredential(
+    clientPassword,
+    clientPassword + sizeof(clientPassword));
+  const std::vector<std::uint8_t> serverCredential(
+    serverPassword,
+    serverPassword + sizeof(serverPassword));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  ASSERT_NO_FATAL_FAILURE(
+    RunRejectedTcpGatewayLowPasswordAssociation(
+      upstream,
+      policy,
+      serverCredential,
+      clientCredential,
+      dlms::endpoint::EndpointProfileKind::Hdlc));
+
+  EXPECT_FALSE(upstream.IsOpen());
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcAssociationThenForwardsSet)

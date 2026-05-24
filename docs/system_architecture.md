@@ -875,6 +875,9 @@ MVP success criteria:
 - push listener endpoint receives one APDU and calls user code;
 - TCP push listener runtime accepts one Wrapper/TCP connection and dispatches
   one raw push APDU;
+- TCP push listener runtime accepts one Wrapper/TCP connection, completes
+  no-security AARQ/AARE association negotiation, and dispatches one raw push
+  APDU;
 - TCP push listener runtime accepts one HDLC-over-TCP no-session connection and
   dispatches one raw push APDU;
 - TCP push listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
@@ -989,6 +992,7 @@ configuration before they run.
 | TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
+| TCP push listener runtime dispatches one Wrapper/TCP AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP explicit SNRM/UA session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | UDP push listener runtime dispatches one Wrapper/UDP datagram APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |

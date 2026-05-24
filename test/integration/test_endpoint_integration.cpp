@@ -590,13 +590,15 @@ void RunOneTcpPushListenerExchange(
   RecordingPushHandler& handler,
   dlms::endpoint::EndpointProfileKind profileKind =
     dlms::endpoint::EndpointProfileKind::Wrapper,
-  bool hdlcUseSession = false)
+  bool hdlcUseSession = false,
+  bool negotiateAssociation = false)
 {
   dlms::endpoint::PushListenerEndpointOptions options =
     dlms::endpoint::DefaultPushListenerEndpointOptions();
   options.transport = TcpListenerOptions();
   options.profile.kind = profileKind;
   options.profile.hdlcUseSession = hdlcUseSession;
+  options.negotiateAssociation = negotiateAssociation;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -631,17 +633,69 @@ void RunOneTcpPushListenerExchange(
     runtimeStatus = runtime.RunOnce();
   });
 
+  bool continueExchange = true;
   if (hdlcUseSession) {
-    ASSERT_TRUE(clientProfile.hdlc.get() != 0);
-    ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
-              clientProfile.hdlc->ConnectDataLink());
+    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
+    if (clientProfile.hdlc.get() == 0) {
+      continueExchange = false;
+    } else {
+      const dlms::profile::ProfileStatus connectStatus =
+        clientProfile.hdlc->ConnectDataLink();
+      EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
+      if (connectStatus != dlms::profile::ProfileStatus::Ok) {
+        continueExchange = false;
+      }
+    }
+  }
+
+  if (continueExchange && negotiateAssociation) {
+    const std::vector<std::uint8_t> aarq = MakeAarq();
+    dlms::profile::ProfileByteView aarqView;
+    aarqView.data = aarq.empty() ? 0 : &aarq[0];
+    aarqView.size = aarq.size();
+    const dlms::profile::ProfileStatus aarqSendStatus =
+      clientProfile.Channel()->SendApdu(aarqView);
+    EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aarqSendStatus);
+    if (aarqSendStatus != dlms::profile::ProfileStatus::Ok) {
+      continueExchange = false;
+    }
+
+    std::vector<std::uint8_t> aareBytes;
+    if (continueExchange) {
+      const dlms::profile::ProfileStatus aareReceiveStatus =
+        clientProfile.Channel()->ReceiveApdu(aareBytes);
+      EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aareReceiveStatus);
+      if (aareReceiveStatus != dlms::profile::ProfileStatus::Ok) {
+        continueExchange = false;
+      }
+    }
+
+    if (continueExchange) {
+      dlms::apdu::AcseApdu aare = {};
+      const dlms::apdu::ApduStatus decodeStatus =
+        dlms::apdu::DecodeAcseApdu(
+          aareBytes.empty() ? 0 : &aareBytes[0],
+          aareBytes.size(),
+          aare);
+      EXPECT_EQ(dlms::apdu::ApduStatus::Ok, decodeStatus);
+      if (decodeStatus == dlms::apdu::ApduStatus::Ok) {
+        EXPECT_EQ(dlms::apdu::AcseApduKind::Aare, aare.kind);
+        EXPECT_TRUE(aare.aare.hasResult);
+        EXPECT_EQ(0, aare.aare.result);
+      } else {
+        continueExchange = false;
+      }
+    }
   }
 
   dlms::profile::ProfileByteView pushView;
   pushView.data = pushApdu.empty() ? 0 : &pushApdu[0];
   pushView.size = pushApdu.size();
-  const dlms::profile::ProfileStatus sendStatus =
-    clientProfile.Channel()->SendApdu(pushView);
+  dlms::profile::ProfileStatus sendStatus =
+    dlms::profile::ProfileStatus::InternalError;
+  if (continueExchange) {
+    sendStatus = clientProfile.Channel()->SendApdu(pushView);
+  }
 
   runtimeThread.join();
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, sendStatus);
@@ -1461,6 +1515,27 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneWrapperApdu)
   RecordingPushHandler handler;
   ASSERT_NO_FATAL_FAILURE(
     RunOneTcpPushListenerExchange(pushApdu, handler));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperAssociationThenForwardsOneApdu)
+{
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x06u);
+  pushApdu.push_back(0x99u);
+  pushApdu.push_back(0xaau);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(
+      pushApdu,
+      handler,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true));
 
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(pushApdu, handler.lastApdu);

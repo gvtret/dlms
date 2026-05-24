@@ -1560,6 +1560,27 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcApdu)
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcAssociationThenForwardsOneApdu)
+{
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x07u);
+  pushApdu.push_back(0xbbu);
+  pushApdu.push_back(0xccu);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(
+      pushApdu,
+      handler,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      true));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
 TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcSessionApdu)
 {
   std::vector<std::uint8_t> pushApdu;
@@ -1574,6 +1595,27 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeForwardsOneHdlcSessionApdu)
       pushApdu,
       handler,
       dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionAssociationThenForwardsOneApdu)
+{
+  std::vector<std::uint8_t> pushApdu;
+  pushApdu.push_back(0x0fu);
+  pushApdu.push_back(0x08u);
+  pushApdu.push_back(0xddu);
+  pushApdu.push_back(0xeeu);
+
+  RecordingPushHandler handler;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerExchange(
+      pushApdu,
+      handler,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
       true));
 
   EXPECT_EQ(1u, handler.calls);

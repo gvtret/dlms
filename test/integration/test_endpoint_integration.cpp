@@ -2710,6 +2710,40 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationT
   EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeRlrq(),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsGet)
 {
   const std::uint8_t password[] = {'p', 'w'};
@@ -2963,6 +2997,35 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcAssociationThen
   EXPECT_EQ(0x7531u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcAssociationThenReleases)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeRlrq(),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      true));
+
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcLowPasswordAssociationThenForwardsGet)
 {
   const std::uint8_t password[] = {'p', 'w'};
@@ -2994,6 +3057,40 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcLowPasswordAsso
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeRlrq(),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      true,
+      &credential));
+
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeRejectsHdlcLowPasswordCredentialMismatch)
@@ -3218,6 +3315,35 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociat
   EXPECT_EQ(0x9753u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionAssociationThenReleases)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeRlrq(),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true));
+
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenForwardsGet)
 {
   const std::uint8_t password[] = {'p', 'w'};
@@ -3249,6 +3375,40 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionLowPassw
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x3175u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeRlrq(),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true,
+      &credential));
+
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeRejectsHdlcSessionLowPasswordCredentialMismatch)

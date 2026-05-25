@@ -964,6 +964,10 @@ MVP success criteria:
 - TCP gateway listener runtime accepts one Wrapper/TCP downstream connection,
   completes Low Password AARQ/AARE association negotiation, and forwards
   bounded SET and ACTION requests to an injected upstream.
+- TCP gateway listener runtime accepts one Wrapper/TCP downstream connection,
+  completes Low Password AARQ/AARE association negotiation, and releases the
+  downstream association on a bounded RLRQ/RLRE request without invoking
+  upstream services.
 - TCP gateway listener runtime rejects a Wrapper/TCP Low Password AARQ with
   mismatched credentials before opening or invoking the injected upstream.
 - TCP gateway listener runtime accepts HDLC-over-TCP no-session downstream GET,
@@ -972,11 +976,19 @@ MVP success criteria:
   connection, completes no-security AARQ/AARE association negotiation, and
   forwards bounded GET, SET, and ACTION requests to an injected upstream.
 - TCP gateway listener runtime accepts one HDLC-over-TCP no-session downstream
+  connection, completes no-security AARQ/AARE association negotiation, and
+  releases the downstream association on a bounded RLRQ/RLRE request without
+  invoking upstream services.
+- TCP gateway listener runtime accepts one HDLC-over-TCP no-session downstream
   connection, completes Low Password AARQ/AARE association negotiation, and
   forwards a bounded GET request to an injected upstream.
 - TCP gateway listener runtime accepts one HDLC-over-TCP no-session downstream
   connection, completes Low Password AARQ/AARE association negotiation, and
   forwards bounded SET and ACTION requests to an injected upstream.
+- TCP gateway listener runtime accepts one HDLC-over-TCP no-session downstream
+  connection, completes Low Password AARQ/AARE association negotiation, and
+  releases the downstream association on a bounded RLRQ/RLRE request without
+  invoking upstream services.
 - TCP gateway listener runtime rejects an HDLC-over-TCP no-session Low Password
   AARQ with mismatched credentials before opening or invoking the injected
   upstream.
@@ -988,12 +1000,20 @@ MVP success criteria:
   negotiation, and forwards bounded GET, SET, and ACTION requests to an
   injected upstream.
 - TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
+  downstream connection, completes no-security AARQ/AARE association
+  negotiation, and releases the downstream association on a bounded RLRQ/RLRE
+  request without invoking upstream services.
+- TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
   downstream connection, completes Low Password AARQ/AARE association
   negotiation, and forwards a bounded GET request to an injected upstream.
 - TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
   downstream connection, completes Low Password AARQ/AARE association
   negotiation, and forwards bounded SET and ACTION requests to an injected
   upstream.
+- TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
+  downstream connection, completes Low Password AARQ/AARE association
+  negotiation, and releases the downstream association on a bounded RLRQ/RLRE
+  request without invoking upstream services.
 - TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
   downstream connection and rejects a Low Password AARQ with mismatched
   credentials before opening or invoking the injected upstream.
@@ -1120,16 +1140,21 @@ configuration before they run.
 | TCP gateway listener runtime releases Wrapper/TCP AARQ/AARE then RLRQ/RLRE without upstream service invocation | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP gateway listener runtime forwards Wrapper/TCP Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards Wrapper/TCP Low Password AARQ/AARE then SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms` |
+| TCP gateway listener runtime releases Wrapper/TCP Low Password AARQ/AARE then RLRQ/RLRE without upstream service invocation | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP gateway listener runtime rejects Wrapper/TCP Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime releases HDLC-over-TCP no-session AARQ/AARE then RLRQ/RLRE without upstream service invocation | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP no-session Low Password AARQ/AARE then SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime releases HDLC-over-TCP no-session Low Password AARQ/AARE then RLRQ/RLRE without upstream service invocation | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP gateway listener runtime rejects HDLC-over-TCP no-session Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime releases HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then RLRQ/RLRE without upstream service invocation | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime releases HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then RLRQ/RLRE without upstream service invocation | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP gateway listener runtime rejects HDLC-over-TCP explicit SNRM/UA session Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 
 The root tests should validate integration only. Unit coverage for each layer

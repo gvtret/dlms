@@ -891,6 +891,9 @@ MVP success criteria:
 - TCP listener runtime accepts one HDLC-over-TCP explicit SNRM/UA connection,
   completes Low Password AARQ/AARE association negotiation, and serves a
   bounded GET `RunOnce` path;
+- TCP listener runtime accepts one HDLC-over-TCP explicit SNRM/UA connection,
+  completes Low Password AARQ/AARE association negotiation, and serves bounded
+  SET and ACTION `RunOnce` paths;
 - TCP listener runtime accepts one HDLC-over-TCP explicit SNRM/UA connection
   and rejects a Low Password AARQ with mismatched credentials before serving
   requests;
@@ -965,6 +968,10 @@ MVP success criteria:
 - TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
   downstream connection, completes Low Password AARQ/AARE association
   negotiation, and forwards a bounded GET request to an injected upstream.
+- TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
+  downstream connection, completes Low Password AARQ/AARE association
+  negotiation, and forwards bounded SET and ACTION requests to an injected
+  upstream.
 - TCP gateway listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
   downstream connection and rejects a Low Password AARQ with mismatched
   credentials before opening or invoking the injected upstream.
@@ -1063,6 +1070,7 @@ configuration before they run.
 | TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
+| TCP listener runtime serves HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime rejects HDLC-over-TCP explicit SNRM/UA session Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
@@ -1092,6 +1100,7 @@ configuration before they run.
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
+| TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime rejects HDLC-over-TCP explicit SNRM/UA session Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 
 The root tests should validate integration only. Unit coverage for each layer

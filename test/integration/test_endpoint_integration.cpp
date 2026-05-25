@@ -2517,6 +2517,32 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperAssociationThen
   EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  RecordingPushHandler handler;
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerRelease(
+      handler,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      &credential));
+
+  EXPECT_EQ(0u, handler.calls);
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsOneApdu)
 {
   const std::uint8_t password[] = {'p', 'w'};
@@ -2604,6 +2630,26 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcAssociationThenFor
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcAssociationThenReleases)
+{
+  RecordingPushHandler handler;
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerRelease(
+      handler,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc));
+
+  EXPECT_EQ(0u, handler.calls);
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcLowPasswordAssociationThenForwardsOneApdu)
 {
   const std::uint8_t password[] = {'p', 'w'};
@@ -2628,6 +2674,32 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcLowPasswordAssocia
 
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  RecordingPushHandler handler;
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerRelease(
+      handler,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      &credential));
+
+  EXPECT_EQ(0u, handler.calls);
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
 TEST(EndpointIntegration, TcpPushListenerRuntimeRejectsHdlcLowPasswordCredentialMismatch)
@@ -2693,6 +2765,27 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionAssociation
   EXPECT_EQ(pushApdu, handler.lastApdu);
 }
 
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionAssociationThenReleases)
+{
+  RecordingPushHandler handler;
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerRelease(
+      handler,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true));
+
+  EXPECT_EQ(0u, handler.calls);
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenForwardsOneApdu)
 {
   const std::uint8_t password[] = {'p', 'w'};
@@ -2717,6 +2810,32 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionLowPassword
 
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  RecordingPushHandler handler;
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerRelease(
+      handler,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      &credential));
+
+  EXPECT_EQ(0u, handler.calls);
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
 TEST(EndpointIntegration, TcpPushListenerRuntimeRejectsHdlcSessionLowPasswordCredentialMismatch)

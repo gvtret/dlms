@@ -926,6 +926,9 @@ MVP success criteria:
   on a bounded RLRQ/RLRE request without dispatching a push APDU;
 - TCP push listener runtime accepts one Wrapper/TCP connection, completes Low
   Password AARQ/AARE association negotiation, and dispatches one raw push APDU;
+- TCP push listener runtime accepts one Wrapper/TCP connection, completes Low
+  Password AARQ/AARE association negotiation, and releases the association on
+  a bounded RLRQ/RLRE request without dispatching a push APDU;
 - TCP push listener runtime rejects a Wrapper/TCP Low Password AARQ with
   mismatched credentials before dispatching push APDUs;
 - TCP push listener runtime accepts one HDLC-over-TCP no-session connection and
@@ -934,8 +937,14 @@ MVP success criteria:
   completes no-security AARQ/AARE association negotiation, and dispatches one
   raw push APDU;
 - TCP push listener runtime accepts one HDLC-over-TCP no-session connection,
+  completes no-security AARQ/AARE association negotiation, and releases the
+  association on a bounded RLRQ/RLRE request without dispatching a push APDU;
+- TCP push listener runtime accepts one HDLC-over-TCP no-session connection,
   completes Low Password AARQ/AARE association negotiation, and dispatches one
   raw push APDU;
+- TCP push listener runtime accepts one HDLC-over-TCP no-session connection,
+  completes Low Password AARQ/AARE association negotiation, and releases the
+  association on a bounded RLRQ/RLRE request without dispatching a push APDU;
 - TCP push listener runtime rejects an HDLC-over-TCP no-session Low Password
   AARQ with mismatched credentials before dispatching push APDUs;
 - TCP push listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
@@ -944,8 +953,16 @@ MVP success criteria:
   connection, completes no-security AARQ/AARE association negotiation, and
   dispatches one raw push APDU;
 - TCP push listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
+  connection, completes no-security AARQ/AARE association negotiation, and
+  releases the association on a bounded RLRQ/RLRE request without dispatching
+  a push APDU;
+- TCP push listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
   connection, completes Low Password AARQ/AARE association negotiation, and
   dispatches one raw push APDU;
+- TCP push listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
+  connection, completes Low Password AARQ/AARE association negotiation, and
+  releases the association on a bounded RLRQ/RLRE request without dispatching
+  a push APDU;
 - TCP push listener runtime accepts one HDLC-over-TCP explicit SNRM/UA
   connection and rejects a Low Password AARQ with mismatched credentials before
   dispatching push APDUs;
@@ -1128,14 +1145,19 @@ configuration before they run.
 | TCP push listener runtime dispatches one Wrapper/TCP AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime releases Wrapper/TCP AARQ/AARE then RLRQ/RLRE without push dispatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP Low Password AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
+| TCP push listener runtime releases Wrapper/TCP Low Password AARQ/AARE then RLRQ/RLRE without push dispatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime rejects Wrapper/TCP Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
+| TCP push listener runtime releases HDLC-over-TCP no-session AARQ/AARE then RLRQ/RLRE without push dispatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session Low Password AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
+| TCP push listener runtime releases HDLC-over-TCP no-session Low Password AARQ/AARE then RLRQ/RLRE without push dispatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime rejects HDLC-over-TCP no-session Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP explicit SNRM/UA session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
+| TCP push listener runtime releases HDLC-over-TCP explicit SNRM/UA session AARQ/AARE then RLRQ/RLRE without push dispatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime dispatches one HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
+| TCP push listener runtime releases HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then RLRQ/RLRE without push dispatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP push listener runtime rejects HDLC-over-TCP explicit SNRM/UA session Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | UDP push listener runtime dispatches one Wrapper/UDP datagram APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | Gateway endpoint forwards GET to injected upstream | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms` |

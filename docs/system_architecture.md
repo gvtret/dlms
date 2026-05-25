@@ -921,6 +921,9 @@ MVP success criteria:
 - TCP push listener runtime accepts one Wrapper/TCP connection, completes
   no-security AARQ/AARE association negotiation, and dispatches one raw push
   APDU;
+- TCP push listener runtime accepts one Wrapper/TCP connection, completes
+  no-security AARQ/AARE association negotiation, and releases the association
+  on a bounded RLRQ/RLRE request without dispatching a push APDU;
 - TCP push listener runtime accepts one Wrapper/TCP connection, completes Low
   Password AARQ/AARE association negotiation, and dispatches one raw push APDU;
 - TCP push listener runtime rejects a Wrapper/TCP Low Password AARQ with
@@ -1123,6 +1126,7 @@ configuration before they run.
 | Push listener endpoint dispatches raw push APDU | `dlms-endpoint`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
+| TCP push listener runtime releases Wrapper/TCP AARQ/AARE then RLRQ/RLRE without push dispatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one Wrapper/TCP Low Password AARQ/AARE then APDU | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime rejects Wrapper/TCP Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP push listener runtime dispatches one HDLC-over-TCP no-session APDU | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |

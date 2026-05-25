@@ -870,6 +870,144 @@ void RunOneTcpPushListenerExchange(
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
 }
 
+void RunOneTcpPushListenerRelease(
+  RecordingPushHandler& handler,
+  std::vector<std::uint8_t>& responseBytes,
+  dlms::endpoint::EndpointProfileKind profileKind =
+    dlms::endpoint::EndpointProfileKind::Wrapper,
+  bool hdlcUseSession = false,
+  const std::vector<std::uint8_t>* lowPasswordCredential = 0)
+{
+  dlms::endpoint::PushListenerEndpointOptions options =
+    dlms::endpoint::DefaultPushListenerEndpointOptions();
+  options.transport = TcpListenerOptions();
+  options.profile.kind = profileKind;
+  options.profile.hdlcUseSession = hdlcUseSession;
+  options.negotiateAssociation = true;
+  if (lowPasswordCredential != 0) {
+    options.security.authentication =
+      dlms::endpoint::EndpointAuthenticationKind::LowPassword;
+    options.security.password = &(*lowPasswordCredential)[0];
+    options.security.passwordSize = lowPasswordCredential->size();
+  }
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(options, listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+
+  dlms::endpoint::PushListenerRuntime runtime(
+    *listenerBundle.Listener(),
+    options,
+    handler);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointTransportBundle clientTransport;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointTransport(
+              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              clientTransport));
+  dlms::endpoint::EndpointProfileBundle clientProfile;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointProfile(
+              options.profile,
+              clientTransport,
+              clientProfile));
+  ASSERT_TRUE(clientProfile.Channel() != 0);
+  ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Open());
+
+  dlms::endpoint::EndpointStatus runtimeStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread runtimeThread([&runtime, &runtimeStatus]() {
+    runtimeStatus = runtime.RunOnce();
+  });
+
+  bool continueExchange = true;
+  if (hdlcUseSession) {
+    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
+    if (clientProfile.hdlc.get() == 0) {
+      continueExchange = false;
+    } else {
+      const dlms::profile::ProfileStatus connectStatus =
+        clientProfile.hdlc->ConnectDataLink();
+      EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
+      if (connectStatus != dlms::profile::ProfileStatus::Ok) {
+        continueExchange = false;
+      }
+    }
+  }
+
+  const std::vector<std::uint8_t> aarq =
+    lowPasswordCredential == 0
+      ? MakeAarq()
+      : MakeLlsAarq(*lowPasswordCredential);
+  dlms::profile::ProfileByteView aarqView;
+  aarqView.data = aarq.empty() ? 0 : &aarq[0];
+  aarqView.size = aarq.size();
+  if (continueExchange) {
+    const dlms::profile::ProfileStatus aarqSendStatus =
+      clientProfile.Channel()->SendApdu(aarqView);
+    EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aarqSendStatus);
+    if (aarqSendStatus != dlms::profile::ProfileStatus::Ok) {
+      continueExchange = false;
+    }
+  }
+
+  std::vector<std::uint8_t> aareBytes;
+  if (continueExchange) {
+    const dlms::profile::ProfileStatus aareReceiveStatus =
+      clientProfile.Channel()->ReceiveApdu(aareBytes);
+    EXPECT_EQ(dlms::profile::ProfileStatus::Ok, aareReceiveStatus);
+    if (aareReceiveStatus != dlms::profile::ProfileStatus::Ok) {
+      continueExchange = false;
+    }
+  }
+
+  if (continueExchange) {
+    dlms::apdu::AcseApdu aare = {};
+    const dlms::apdu::ApduStatus decodeStatus =
+      dlms::apdu::DecodeAcseApdu(
+        aareBytes.empty() ? 0 : &aareBytes[0],
+        aareBytes.size(),
+        aare);
+    EXPECT_EQ(dlms::apdu::ApduStatus::Ok, decodeStatus);
+    if (decodeStatus == dlms::apdu::ApduStatus::Ok) {
+      EXPECT_EQ(dlms::apdu::AcseApduKind::Aare, aare.kind);
+      EXPECT_TRUE(aare.aare.hasResult);
+      EXPECT_EQ(0, aare.aare.result);
+    } else {
+      continueExchange = false;
+    }
+  }
+
+  const std::vector<std::uint8_t> rlrq = MakeRlrq();
+  dlms::profile::ProfileByteView rlrqView;
+  rlrqView.data = rlrq.empty() ? 0 : &rlrq[0];
+  rlrqView.size = rlrq.size();
+  if (continueExchange) {
+    const dlms::profile::ProfileStatus rlrqSendStatus =
+      clientProfile.Channel()->SendApdu(rlrqView);
+    EXPECT_EQ(dlms::profile::ProfileStatus::Ok, rlrqSendStatus);
+    if (rlrqSendStatus != dlms::profile::ProfileStatus::Ok) {
+      continueExchange = false;
+    }
+  }
+
+  if (continueExchange) {
+    const dlms::profile::ProfileStatus rlreReceiveStatus =
+      clientProfile.Channel()->ReceiveApdu(responseBytes);
+    EXPECT_EQ(dlms::profile::ProfileStatus::Ok, rlreReceiveStatus);
+  }
+
+  runtimeThread.join();
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtimeStatus);
+  EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
+            clientProfile.Channel()->Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Close());
+}
+
 void RunRejectedTcpPushLowPasswordAssociation(
   RecordingPushHandler& handler,
   const std::vector<std::uint8_t>& serverCredential,
@@ -2360,6 +2498,23 @@ TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperAssociationThen
 
   EXPECT_EQ(1u, handler.calls);
   EXPECT_EQ(pushApdu, handler.lastApdu);
+}
+
+TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperAssociationThenReleases)
+{
+  RecordingPushHandler handler;
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpPushListenerRelease(handler, responseBytes));
+
+  EXPECT_EQ(0u, handler.calls);
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
 TEST(EndpointIntegration, TcpPushListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsOneApdu)

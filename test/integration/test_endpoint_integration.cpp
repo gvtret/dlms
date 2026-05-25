@@ -1284,6 +1284,52 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenRele
   EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcAssociationThenReleases)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeRlrq(),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      true));
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionAssociationThenReleases)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeRlrq(),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true));
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenServesGet)
 {
   const std::uint8_t password[] = {'p', 'w'};

@@ -861,6 +861,9 @@ MVP success criteria:
 - TCP listener runtime accepts one Wrapper/TCP connection, completes
   no-security AARQ/AARE association negotiation, and serves bounded GET, SET,
   and ACTION `RunOnce` paths;
+- TCP listener runtime accepts one Wrapper/TCP connection, completes
+  no-security AARQ/AARE association negotiation, and releases the association
+  on a bounded RLRQ/RLRE `RunOnce` path;
 - TCP listener runtime accepts one Wrapper/TCP connection, completes Low
   Password AARQ/AARE association negotiation, and serves a bounded GET
   `RunOnce` path;
@@ -1059,6 +1062,7 @@ configuration before they run.
 | Server endpoint serves COSEM GET through profile channel | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP AARQ/AARE then GET/SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
+| TCP listener runtime serves Wrapper/TCP AARQ/AARE then RLRQ/RLRE release | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |
 | TCP listener runtime serves Wrapper/TCP Low Password AARQ/AARE then GET | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP Low Password AARQ/AARE then SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime rejects Wrapper/TCP Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile` |

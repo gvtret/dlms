@@ -1330,6 +1330,90 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionAssociationThen
   EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
 }
 
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeRlrq(),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true,
+      &credential));
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeRlrq(),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      false,
+      true,
+      &credential));
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
+TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionLowPasswordAssociationThenReleases)
+{
+  const std::uint8_t password[] = {'p', 'w'};
+  const std::vector<std::uint8_t> credential(
+    password,
+    password + sizeof(password));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpListenerExchange(
+      logicalDevice,
+      MakeRlrq(),
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      true,
+      &credential));
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenServesGet)
 {
   const std::uint8_t password[] = {'p', 'w'};

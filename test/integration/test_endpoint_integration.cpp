@@ -2681,6 +2681,35 @@ TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationT
   EXPECT_EQ(0x3579u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperAssociationThenReleases)
+{
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+
+  std::vector<std::uint8_t> responseBytes;
+  ASSERT_NO_FATAL_FAILURE(
+    RunOneTcpGatewayListenerExchange(
+      MakeRlrq(),
+      upstream,
+      policy,
+      responseBytes,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
+      true));
+
+  EXPECT_EQ(0u, upstream.getCalls);
+  EXPECT_EQ(0u, upstream.setCalls);
+  EXPECT_EQ(0u, upstream.actionCalls);
+
+  dlms::apdu::AcseApdu response = {};
+  ASSERT_EQ(dlms::apdu::ApduStatus::Ok,
+            dlms::apdu::DecodeAcseApdu(
+              responseBytes.empty() ? 0 : &responseBytes[0],
+              responseBytes.size(),
+              response));
+  EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, response.kind);
+}
+
 TEST(EndpointIntegration, TcpGatewayListenerRuntimeNegotiatesWrapperLowPasswordAssociationThenForwardsGet)
 {
   const std::uint8_t password[] = {'p', 'w'};

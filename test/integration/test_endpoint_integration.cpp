@@ -470,6 +470,17 @@ dlms::endpoint::EndpointTransportOptions TcpClientOptions(std::uint16_t port)
   return options;
 }
 
+dlms::endpoint::ClientAttributeDescriptor RegisterValueDescriptor()
+{
+  dlms::endpoint::ClientAttributeDescriptor descriptor =
+    dlms::xdlms::EmptyCosemAttributeDescriptor();
+  descriptor.classId = 3u;
+  descriptor.instanceId =
+    dlms::xdlms::CosemLogicalName(1, 0, 1, 8, 0, 255);
+  descriptor.attributeId = 2u;
+  return descriptor;
+}
+
 dlms::endpoint::EndpointTransportOptions UdpListenerOptions()
 {
   dlms::endpoint::EndpointTransportOptions options =
@@ -1585,6 +1596,136 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociat
   EXPECT_EQ(dlms::apdu::GetDataResultChoice::Data,
             response.getResponseAny.result.choice);
   EXPECT_EQ(0x2345u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacThenServesGet)
+{
+  const std::uint8_t clientTitle[] =
+    {'C', 'L', 'I', 'T', 'I', 'T', 'L', 'E'};
+  const std::uint8_t serverTitle[] =
+    {'S', 'R', 'V', 'T', 'I', 'T', 'L', 'E'};
+  const std::uint8_t authenticationKey[] = {
+    0x40, 0x41, 0x42, 0x43,
+    0x44, 0x45, 0x46, 0x47,
+    0x48, 0x49, 0x4A, 0x4B,
+    0x4C, 0x4D, 0x4E, 0x4F};
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x6a5bu),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  dlms::endpoint::EndpointProfileOptions profile =
+    dlms::endpoint::DefaultEndpointProfileOptions();
+  profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
+  profile.clientSap = 16u;
+  profile.serverSap = 1u;
+
+  dlms::endpoint::ServerEndpointOptions serverOptions =
+    dlms::endpoint::DefaultServerEndpointOptions();
+  serverOptions.transport = TcpListenerOptions();
+  serverOptions.profile = profile;
+  serverOptions.negotiateAssociation = true;
+  serverOptions.security.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::HighGmac;
+  serverOptions.security.systemTitle = serverTitle;
+  serverOptions.security.systemTitleSize = sizeof(serverTitle);
+  serverOptions.security.authenticationKey = authenticationKey;
+  serverOptions.security.authenticationKeySize = sizeof(authenticationKey);
+  serverOptions.security.invocationCounter = 9u;
+
+  dlms::endpoint::EndpointListenerBundle listenerBundle;
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            dlms::endpoint::CreateEndpointListener(
+              serverOptions.transport,
+              serverOptions.profile,
+              listenerBundle));
+  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            listenerBundle.Listener()->Open());
+  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+
+  dlms::endpoint::EndpointStatus acceptStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  dlms::endpoint::EndpointStatus openStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  dlms::endpoint::EndpointStatus hlsStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  dlms::endpoint::EndpointStatus getStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  dlms::endpoint::EndpointStatus releaseStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  dlms::endpoint::EndpointStatus closeStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  std::thread serverThread([&]() {
+    std::unique_ptr<dlms::profile::IApduChannel> channel;
+    acceptStatus = listenerBundle.Listener()->Accept(channel);
+    if (acceptStatus != dlms::endpoint::EndpointStatus::Ok ||
+        channel.get() == 0) {
+      return;
+    }
+
+    dlms::endpoint::ServerEndpoint serverEndpoint(
+      *channel,
+      serverOptions,
+      logicalDevice);
+    openStatus = serverEndpoint.Open();
+    if (openStatus == dlms::endpoint::EndpointStatus::Ok) {
+      hlsStatus = serverEndpoint.RunOnce();
+    }
+    if (hlsStatus == dlms::endpoint::EndpointStatus::Ok) {
+      getStatus = serverEndpoint.RunOnce();
+    }
+    if (getStatus == dlms::endpoint::EndpointStatus::Ok) {
+      releaseStatus = serverEndpoint.RunOnce();
+    }
+    closeStatus = serverEndpoint.Close();
+  });
+
+  dlms::endpoint::ClientEndpointOptions clientOptions =
+    dlms::endpoint::DefaultClientEndpointOptions();
+  clientOptions.transport = TcpClientOptions(listenerBundle.tcp->LocalPort());
+  clientOptions.profile = profile;
+  clientOptions.security.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::HighGmac;
+  clientOptions.security.systemTitle = clientTitle;
+  clientOptions.security.systemTitleSize = sizeof(clientTitle);
+  clientOptions.security.authenticationKey = authenticationKey;
+  clientOptions.security.authenticationKeySize = sizeof(authenticationKey);
+  clientOptions.security.invocationCounter = 3u;
+
+  dlms::endpoint::ClientEndpoint clientEndpoint(clientOptions);
+  const dlms::endpoint::EndpointStatus clientOpenStatus =
+    clientEndpoint.Open();
+  std::vector<std::uint8_t> encodedData;
+  dlms::endpoint::EndpointStatus clientGetStatus =
+    dlms::endpoint::EndpointStatus::InternalError;
+  if (clientOpenStatus == dlms::endpoint::EndpointStatus::Ok) {
+    clientGetStatus =
+      clientEndpoint.Get(RegisterValueDescriptor(), encodedData);
+  }
+  const dlms::endpoint::EndpointStatus clientCloseStatus =
+    clientEndpoint.Close();
+
+  serverThread.join();
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            listenerBundle.Listener()->Close());
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, clientOpenStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, clientGetStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, clientCloseStatus);
+  EXPECT_EQ(EncodeLongUnsigned(0x6a5bu), encodedData);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, acceptStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, openStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, hlsStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, getStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, releaseStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, closeStatus);
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeRejectsWrapperLowPasswordCredentialMismatch)

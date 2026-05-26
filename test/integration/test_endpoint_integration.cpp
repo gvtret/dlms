@@ -1598,7 +1598,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociat
   EXPECT_EQ(0x2345u, response.getResponseAny.result.data.unsignedValue);
 }
 
-TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacThenServesGet)
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThenServesGet)
 {
   const std::uint8_t clientTitle[] =
     {'C', 'L', 'I', 'T', 'I', 'T', 'L', 'E'};
@@ -1609,6 +1609,11 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacThenServesGe
     0x44, 0x45, 0x46, 0x47,
     0x48, 0x49, 0x4A, 0x4B,
     0x4C, 0x4D, 0x4E, 0x4F};
+  const std::uint8_t globalUnicastEncryptionKey[] = {
+    0x10, 0x11, 0x12, 0x13,
+    0x14, 0x15, 0x16, 0x17,
+    0x18, 0x19, 0x1A, 0x1B,
+    0x1C, 0x1D, 0x1E, 0x1F};
   dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
   ASSERT_EQ(
     dlms::cosem::CosemStatus::Ok,
@@ -1637,7 +1642,12 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacThenServesGe
   serverOptions.security.systemTitleSize = sizeof(serverTitle);
   serverOptions.security.authenticationKey = authenticationKey;
   serverOptions.security.authenticationKeySize = sizeof(authenticationKey);
+  serverOptions.security.globalUnicastEncryptionKey =
+    globalUnicastEncryptionKey;
+  serverOptions.security.globalUnicastEncryptionKeySize =
+    sizeof(globalUnicastEncryptionKey);
   serverOptions.security.invocationCounter = 9u;
+  serverOptions.security.cipheredApdu = true;
 
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -1697,7 +1707,12 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacThenServesGe
   clientOptions.security.systemTitleSize = sizeof(clientTitle);
   clientOptions.security.authenticationKey = authenticationKey;
   clientOptions.security.authenticationKeySize = sizeof(authenticationKey);
+  clientOptions.security.globalUnicastEncryptionKey =
+    globalUnicastEncryptionKey;
+  clientOptions.security.globalUnicastEncryptionKeySize =
+    sizeof(globalUnicastEncryptionKey);
   clientOptions.security.invocationCounter = 3u;
+  clientOptions.security.cipheredApdu = true;
 
   dlms::endpoint::ClientEndpoint clientEndpoint(clientOptions);
   const dlms::endpoint::EndpointStatus clientOpenStatus =

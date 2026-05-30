@@ -546,6 +546,7 @@ Class interaction diagram:
 classDiagram
   class SecurityContext {
     +systemTitle
+    +peerSystemTitle
     +suite
     +policy
     +clientSap

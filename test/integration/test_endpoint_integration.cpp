@@ -1720,6 +1720,8 @@ void RunTcpClientEndpointHighGmacCipheredService(
     dlms::endpoint::EndpointAuthenticationKind::HighGmac;
   clientOptions.security.systemTitle = clientTitle;
   clientOptions.security.systemTitleSize = sizeof(clientTitle);
+  clientOptions.security.peerSystemTitle = serverTitle;
+  clientOptions.security.peerSystemTitleSize = sizeof(serverTitle);
   clientOptions.security.authenticationKey = authenticationKey;
   clientOptions.security.authenticationKeySize = sizeof(authenticationKey);
   clientOptions.security.globalUnicastEncryptionKey =

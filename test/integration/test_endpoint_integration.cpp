@@ -1874,6 +1874,56 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesHdlcSessionHighGmacCiphered
   EXPECT_EQ(EncodeLongUnsigned(0x1357u), encodedData);
 }
 
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesHdlcSessionHighGmacCipheredThenServesSet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(
+      EncodeLongUnsigned(0x4321u),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> responseData;
+  ASSERT_NO_FATAL_FAILURE(
+    RunTcpClientEndpointHighGmacCipheredService(
+      logicalDevice,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      CipheredEndpointService::Set,
+      EncodeLongUnsigned(0x2468u),
+      responseData));
+
+  dlms::cosem::CosemByteBuffer stored;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object->ReadAttribute(2u, stored));
+  EXPECT_EQ(EncodeLongUnsigned(0x2468u), stored);
+  EXPECT_TRUE(responseData.empty());
+}
+
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesHdlcSessionHighGmacCipheredThenServesAction)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(EncodeLongUnsigned(0x4321u)));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> returnData;
+  ASSERT_NO_FATAL_FAILURE(
+    RunTcpClientEndpointHighGmacCipheredService(
+      logicalDevice,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      CipheredEndpointService::Action,
+      EncodeLongUnsigned(0x8642u),
+      returnData));
+
+  EXPECT_EQ(EncodeLongUnsigned(0x2468u), returnData);
+  EXPECT_EQ(1u, object->InvokeCount());
+  EXPECT_EQ(1u, object->LastInvokeMethodId());
+  EXPECT_EQ(EncodeLongUnsigned(0x8642u), object->LastInvokeParameter());
+}
+
 TEST(EndpointIntegration, TcpListenerRuntimeRejectsWrapperLowPasswordCredentialMismatch)
 {
   const std::uint8_t clientPassword[] = {'p', 'w'};

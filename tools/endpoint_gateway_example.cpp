@@ -149,5 +149,8 @@ int main()
   ExampleUpstream upstream;
   AllowAllPolicy policy;
   dlms::endpoint::GatewayEndpoint endpoint(downstream, upstream, policy);
-  return endpoint.Open() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;
+  if (endpoint.Open() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  return endpoint.Close() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;
 }

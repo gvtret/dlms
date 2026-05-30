@@ -77,5 +77,8 @@ int main()
   ExampleApduChannel channel;
   ExamplePushHandler handler;
   dlms::endpoint::PushListenerEndpoint endpoint(channel, handler);
-  return endpoint.Open() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;
+  if (endpoint.Open() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  return endpoint.Close() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;
 }

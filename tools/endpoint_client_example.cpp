@@ -1,7 +1,5 @@
 #include "dlms/endpoint/endpoint.hpp"
 
-#include <cstdint>
-
 int main()
 {
   dlms::endpoint::ClientEndpointOptions options =
@@ -14,10 +12,10 @@ int main()
 
   dlms::endpoint::ClientEndpoint client(options);
 
-  dlms::endpoint::ClientAttributeDescriptor descriptor;
-  descriptor.classId = 3u;
-  descriptor.instanceId = dlms::xdlms::CosemLogicalName(1, 0, 1, 8, 0, 255);
-  descriptor.attributeId = 2u;
+  if (dlms::endpoint::ValidateClientEndpointOptions(options) !=
+      dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
 
   return client.IsOpen() ? 1 : 0;
 }

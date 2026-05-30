@@ -89,5 +89,8 @@ int main()
         dlms::cosem::AttributeAccessMode::ReadOnly)));
 
   dlms::endpoint::ServerEndpoint endpoint(channel, logicalDevice);
-  return endpoint.Open() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;
+  if (endpoint.Open() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  return endpoint.Close() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;
 }

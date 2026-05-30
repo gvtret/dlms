@@ -1110,14 +1110,11 @@ The root repository should keep cross-layer tests that prove the layer contracts
 | No-security LN association opens | `dlms-association`, `dlms-apdu`, `dlms-profile` |
 | Normal GET through client service | `dlms-xdlms`, `dlms-association`, `dlms-apdu` |
 | Opt-in live public-client GET over Wrapper/TCP | `dlms-client`, `dlms-association`, `dlms-xdlms`, `dlms-profile`, `dlms-wrapper`, `dlms-transport` |
-
-Live meter checks are not part of the default deterministic suite. They are
-documented in `docs/live_meter_smoke_plan.md` and must require explicit endpoint
-configuration before they run.
 | Server GET APDU reaches COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Server SET APDU writes COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Server ACTION APDU invokes COSEM object | `dlms-xdlms`, `dlms-server`, `dlms-cosem`, `dlms-apdu` |
 | Public-client GET against minimal server | `dlms-client`, `dlms-server`, `dlms-cosem`, `dlms-profile` |
+| Public endpoint client HDLC/TCP no-session GET against server endpoint | `dlms-endpoint`, `dlms-client`, `dlms-association`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | Ciphered GET round trip | `dlms-security`, `dlms-xdlms`, `dlms-server` |
 | Server endpoint serves COSEM GET through profile channel | `dlms-endpoint`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
 | TCP listener runtime serves Wrapper/TCP GET/SET/ACTION | `dlms-endpoint`, `dlms-transport`, `dlms-profile`, `dlms-xdlms`, `dlms-server`, `dlms-cosem` |
@@ -1183,6 +1180,10 @@ configuration before they run.
 | TCP gateway listener runtime forwards HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then SET/ACTION | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc`, `dlms-xdlms` |
 | TCP gateway listener runtime releases HDLC-over-TCP explicit SNRM/UA session Low Password AARQ/AARE then RLRQ/RLRE without upstream service invocation | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
 | TCP gateway listener runtime rejects HDLC-over-TCP explicit SNRM/UA session Low Password credential mismatch | `dlms-endpoint`, `dlms-association`, `dlms-apdu`, `dlms-transport`, `dlms-profile`, `dlms-hdlc`, `dlms-llc` |
+
+Live meter checks are not part of the default deterministic suite. They are
+documented in `docs/live_meter_smoke_plan.md` and must require explicit endpoint
+configuration before they run.
 
 The root tests should validate integration only. Unit coverage for each layer
 belongs in that layer's own repository.

@@ -1618,6 +1618,8 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociat
 
 void RunTcpClientEndpointHighGmacCipheredService(
   dlms::cosem::LogicalDevice& logicalDevice,
+  dlms::endpoint::EndpointProfileKind profileKind,
+  bool hdlcUseSession,
   CipheredEndpointService service,
   const std::vector<std::uint8_t>& requestData,
   std::vector<std::uint8_t>& responseData)
@@ -1639,9 +1641,10 @@ void RunTcpClientEndpointHighGmacCipheredService(
 
   dlms::endpoint::EndpointProfileOptions profile =
     dlms::endpoint::DefaultEndpointProfileOptions();
-  profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
+  profile.kind = profileKind;
   profile.clientSap = 16u;
   profile.serverSap = 1u;
+  profile.hdlcUseSession = hdlcUseSession;
 
   dlms::endpoint::ServerEndpointOptions serverOptions =
     dlms::endpoint::DefaultServerEndpointOptions();
@@ -1786,6 +1789,8 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
   ASSERT_NO_FATAL_FAILURE(
     RunTcpClientEndpointHighGmacCipheredService(
       logicalDevice,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
       CipheredEndpointService::Get,
       std::vector<std::uint8_t>(),
       encodedData));
@@ -1807,6 +1812,8 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
   ASSERT_NO_FATAL_FAILURE(
     RunTcpClientEndpointHighGmacCipheredService(
       logicalDevice,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
       CipheredEndpointService::Set,
       EncodeLongUnsigned(0x4567u),
       responseData));
@@ -1829,6 +1836,8 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
   ASSERT_NO_FATAL_FAILURE(
     RunTcpClientEndpointHighGmacCipheredService(
       logicalDevice,
+      dlms::endpoint::EndpointProfileKind::Wrapper,
+      false,
       CipheredEndpointService::Action,
       EncodeLongUnsigned(0x7531u),
       returnData));
@@ -1837,6 +1846,32 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
   EXPECT_EQ(1u, object->InvokeCount());
   EXPECT_EQ(1u, object->LastInvokeMethodId());
   EXPECT_EQ(EncodeLongUnsigned(0x7531u), object->LastInvokeParameter());
+}
+
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesHdlcSessionHighGmacCipheredThenServesGet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x1357u),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  std::vector<std::uint8_t> encodedData;
+  ASSERT_NO_FATAL_FAILURE(
+    RunTcpClientEndpointHighGmacCipheredService(
+      logicalDevice,
+      dlms::endpoint::EndpointProfileKind::Hdlc,
+      true,
+      CipheredEndpointService::Get,
+      std::vector<std::uint8_t>(),
+      encodedData));
+
+  EXPECT_EQ(EncodeLongUnsigned(0x1357u), encodedData);
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeRejectsWrapperLowPasswordCredentialMismatch)

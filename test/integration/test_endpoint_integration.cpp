@@ -481,6 +481,24 @@ dlms::endpoint::ClientAttributeDescriptor RegisterValueDescriptor()
   return descriptor;
 }
 
+dlms::endpoint::ClientMethodDescriptor RegisterActionDescriptor()
+{
+  dlms::endpoint::ClientMethodDescriptor descriptor =
+    dlms::xdlms::EmptyCosemMethodDescriptor();
+  descriptor.classId = 3u;
+  descriptor.instanceId =
+    dlms::xdlms::CosemLogicalName(1, 0, 1, 8, 0, 255);
+  descriptor.methodId = 1u;
+  return descriptor;
+}
+
+enum class CipheredEndpointService
+{
+  Get,
+  Set,
+  Action
+};
+
 dlms::endpoint::EndpointTransportOptions UdpListenerOptions()
 {
   dlms::endpoint::EndpointTransportOptions options =
@@ -1598,7 +1616,11 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociat
   EXPECT_EQ(0x2345u, response.getResponseAny.result.data.unsignedValue);
 }
 
-TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThenServesGet)
+void RunTcpClientEndpointHighGmacCipheredService(
+  dlms::cosem::LogicalDevice& logicalDevice,
+  CipheredEndpointService service,
+  const std::vector<std::uint8_t>& requestData,
+  std::vector<std::uint8_t>& responseData)
 {
   const std::uint8_t clientTitle[] =
     {'C', 'L', 'I', 'T', 'I', 'T', 'L', 'E'};
@@ -1614,16 +1636,6 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
     0x14, 0x15, 0x16, 0x17,
     0x18, 0x19, 0x1A, 0x1B,
     0x1C, 0x1D, 0x1E, 0x1F};
-  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
-  ASSERT_EQ(
-    dlms::cosem::CosemStatus::Ok,
-    logicalDevice.RegisterObject(
-      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
-        new dlms::cosem::CosemRegisterObject(
-          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
-          EncodeLongUnsigned(0x6a5bu),
-          dlms::cosem::CosemByteBuffer(),
-          dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   dlms::endpoint::EndpointProfileOptions profile =
     dlms::endpoint::DefaultEndpointProfileOptions();
@@ -1666,7 +1678,7 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
     dlms::endpoint::EndpointStatus::InternalError;
   dlms::endpoint::EndpointStatus hlsStatus =
     dlms::endpoint::EndpointStatus::InternalError;
-  dlms::endpoint::EndpointStatus getStatus =
+  dlms::endpoint::EndpointStatus serviceStatus =
     dlms::endpoint::EndpointStatus::InternalError;
   dlms::endpoint::EndpointStatus releaseStatus =
     dlms::endpoint::EndpointStatus::InternalError;
@@ -1689,9 +1701,9 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
       hlsStatus = serverEndpoint.RunOnce();
     }
     if (hlsStatus == dlms::endpoint::EndpointStatus::Ok) {
-      getStatus = serverEndpoint.RunOnce();
+      serviceStatus = serverEndpoint.RunOnce();
     }
-    if (getStatus == dlms::endpoint::EndpointStatus::Ok) {
+    if (serviceStatus == dlms::endpoint::EndpointStatus::Ok) {
       releaseStatus = serverEndpoint.RunOnce();
     }
     closeStatus = serverEndpoint.Close();
@@ -1717,12 +1729,27 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
   dlms::endpoint::ClientEndpoint clientEndpoint(clientOptions);
   const dlms::endpoint::EndpointStatus clientOpenStatus =
     clientEndpoint.Open();
-  std::vector<std::uint8_t> encodedData;
-  dlms::endpoint::EndpointStatus clientGetStatus =
+  dlms::endpoint::EndpointStatus clientServiceStatus =
     dlms::endpoint::EndpointStatus::InternalError;
   if (clientOpenStatus == dlms::endpoint::EndpointStatus::Ok) {
-    clientGetStatus =
-      clientEndpoint.Get(RegisterValueDescriptor(), encodedData);
+    switch (service) {
+      case CipheredEndpointService::Get:
+        clientServiceStatus =
+          clientEndpoint.Get(RegisterValueDescriptor(), responseData);
+        break;
+      case CipheredEndpointService::Set:
+        clientServiceStatus =
+          clientEndpoint.Set(RegisterValueDescriptor(), requestData);
+        break;
+      case CipheredEndpointService::Action:
+        clientServiceStatus =
+          clientEndpoint.Action(
+            RegisterActionDescriptor(),
+            true,
+            requestData,
+            responseData);
+        break;
+    }
   }
   const dlms::endpoint::EndpointStatus clientCloseStatus =
     clientEndpoint.Close();
@@ -1732,15 +1759,84 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
             listenerBundle.Listener()->Close());
 
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, clientOpenStatus);
-  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, clientGetStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, clientServiceStatus);
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, clientCloseStatus);
-  EXPECT_EQ(EncodeLongUnsigned(0x6a5bu), encodedData);
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, acceptStatus);
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, openStatus);
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, hlsStatus);
-  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, getStatus);
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, serviceStatus);
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, releaseStatus);
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, closeStatus);
+}
+
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThenServesGet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(
+    dlms::cosem::CosemStatus::Ok,
+    logicalDevice.RegisterObject(
+      std::shared_ptr<dlms::cosem::CosemRegisterObject>(
+        new dlms::cosem::CosemRegisterObject(
+          dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
+          EncodeLongUnsigned(0x6a5bu),
+          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::AttributeAccessMode::ReadOnly))));
+
+  std::vector<std::uint8_t> encodedData;
+  ASSERT_NO_FATAL_FAILURE(
+    RunTcpClientEndpointHighGmacCipheredService(
+      logicalDevice,
+      CipheredEndpointService::Get,
+      std::vector<std::uint8_t>(),
+      encodedData));
+
+  EXPECT_EQ(EncodeLongUnsigned(0x6a5bu), encodedData);
+}
+
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThenServesSet)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(
+      EncodeLongUnsigned(0x1234u),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> responseData;
+  ASSERT_NO_FATAL_FAILURE(
+    RunTcpClientEndpointHighGmacCipheredService(
+      logicalDevice,
+      CipheredEndpointService::Set,
+      EncodeLongUnsigned(0x4567u),
+      responseData));
+
+  dlms::cosem::CosemByteBuffer stored;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object->ReadAttribute(2u, stored));
+  EXPECT_EQ(EncodeLongUnsigned(0x4567u), stored);
+  EXPECT_TRUE(responseData.empty());
+}
+
+TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThenServesAction)
+{
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  const std::shared_ptr<IntegrationDataObject> object(
+    new IntegrationDataObject(EncodeLongUnsigned(0x1234u)));
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(object));
+
+  std::vector<std::uint8_t> returnData;
+  ASSERT_NO_FATAL_FAILURE(
+    RunTcpClientEndpointHighGmacCipheredService(
+      logicalDevice,
+      CipheredEndpointService::Action,
+      EncodeLongUnsigned(0x7531u),
+      returnData));
+
+  EXPECT_EQ(EncodeLongUnsigned(0x2468u), returnData);
+  EXPECT_EQ(1u, object->InvokeCount());
+  EXPECT_EQ(1u, object->LastInvokeMethodId());
+  EXPECT_EQ(EncodeLongUnsigned(0x7531u), object->LastInvokeParameter());
 }
 
 TEST(EndpointIntegration, TcpListenerRuntimeRejectsWrapperLowPasswordCredentialMismatch)

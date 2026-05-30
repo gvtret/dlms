@@ -89,6 +89,15 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
       target_link_libraries(dlms_endpoint_gateway_example
         PRIVATE
           dlms_endpoint)
+
+      add_test(NAME dlms_endpoint_client_example
+        COMMAND dlms_endpoint_client_example)
+      add_test(NAME dlms_endpoint_server_example
+        COMMAND dlms_endpoint_server_example)
+      add_test(NAME dlms_endpoint_push_listener_example
+        COMMAND dlms_endpoint_push_listener_example)
+      add_test(NAME dlms_endpoint_gateway_example
+        COMMAND dlms_endpoint_gateway_example)
     endif()
 
     if(DLMS_BUILD_LIVE_TESTS AND TARGET dlms_client)

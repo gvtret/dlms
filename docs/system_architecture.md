@@ -33,6 +33,40 @@ The architecture is intentionally layered:
 | C ABI | Optional per layer; stable and documented when present |
 | Documentation | Requirements, API, architecture, and test-plan documents per layer |
 
+## 2.1. Layer Abstraction Contract
+
+Every layer must expose an abstract boundary for the adjacent layer it consumes
+or provides. Applications must be able to replace a concrete layer
+implementation when they need custom transports, storage, security material,
+object models, schedulers, or protocol diagnostics. Concrete default classes are
+allowed, but higher layers must depend on the abstract boundary where a
+runtime dependency crosses a repository boundary.
+
+This rule applies to C++ public APIs first. A C ABI may expose the same boundary
+through callbacks or opaque handles when that layer has a C API. Runtime public
+APIs continue to use status codes and must not require exceptions, global
+singletons, or process-wide configuration to swap implementations.
+
+| Layer | Required abstract boundary |
+|---|---|
+| `dlms-hdlc` | transport-independent codec/session APIs over caller-provided byte buffers; no socket ownership in the codec layer |
+| `dlms-llc` | codec APIs over caller-provided byte buffers; no ownership of HDLC, APDU, or transport objects |
+| `dlms-wrapper` | WPDU codec/stream decoder APIs over caller-provided byte buffers; TCP/UDP implementations remain outside the codec |
+| `dlms-apdu` | ACSE/xDLMS codec APIs over caller-provided buffers and value models; no dependency on transport, association, security, or COSEM storage |
+| `dlms-transport` | byte-stream and datagram interfaces for custom TCP, serial, UDP, test, or embedded transports |
+| `dlms-profile` | `IApduChannel` plus transport interfaces so applications can supply custom profile channels or custom lower I/O |
+| `dlms-association` | association clients/servers over abstract APDU channels and pluggable HLS strategy interfaces |
+| `dlms-xdlms` | client/server service orchestration over abstract APDU channels, association state, server handlers, and optional security processors |
+| `dlms-security` | key-store, invocation-counter, random-source, and HLS strategy interfaces so secret storage and challenge generation can be application-owned |
+| `dlms-cosem` | COSEM object, logical-device, access-right, and registry contracts so applications can implement their own object storage and behavior |
+| `dlms-server` | server dispatch contracts over COSEM object abstractions and xDLMS handler boundaries |
+| `dlms-client` | facade constructors/options that can use injected APDU/association/security components or default concrete composition |
+| `dlms-endpoint` | endpoint listener, gateway upstream, gateway policy, client/server/push abstractions, and factory boundaries for custom runtime composition |
+
+When a layer currently lacks one of these abstract ports, the missing port is a
+production-readiness gap. Add the public interface and deterministic tests
+before adding more concrete behavior that depends on that boundary.
+
 ## 3. Current Implemented Layers
 
 The following repositories already exist or are present in the current workspace:

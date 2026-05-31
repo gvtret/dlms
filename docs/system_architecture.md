@@ -67,6 +67,26 @@ When a layer currently lacks one of these abstract ports, the missing port is a
 production-readiness gap. Add the public interface and deterministic tests
 before adding more concrete behavior that depends on that boundary.
 
+## 2.2. Implemented Abstract Ports
+
+Current public C++ ports that applications can implement or inject:
+
+| Layer | Public abstract port |
+|---|---|
+| `dlms-transport` | `IByteStream`, `IDatagramTransport` |
+| `dlms-profile` | `IApduChannel`, accepted-channel listener integration through endpoint listener APIs |
+| `dlms-association` | `IHighLevelSecurityStrategy`, `IHighLevelSecurityServerStrategy` over abstract APDU channels |
+| `dlms-xdlms` | `IXdlmsAssociationState`, `IXdlmsSecurityProcessor`, `IXdlmsServerHandler` |
+| `dlms-security` | `IKeyStore`, `IInvocationCounterStore`, `IRandomSource` |
+| `dlms-cosem` | `ICosemObject` and object registry contracts |
+| `dlms-server` | `IServerService`, plus xDLMS adapter constructors over that service |
+| `dlms-client` | `IClientXdlmsService` for custom GET/SET/ACTION backends |
+| `dlms-endpoint` | `IApduChannelListener`, `IPushIndicationHandler`, `IGatewayPolicy`, `IGatewayUpstream`, and server endpoint/runtime constructors over `IServerService` |
+
+Concrete classes remain available as default implementations and compatibility
+shortcuts. New higher-level APIs should prefer these ports whenever they store
+or call into another runtime layer.
+
 ## 3. Current Implemented Layers
 
 The following repositories already exist or are present in the current workspace:

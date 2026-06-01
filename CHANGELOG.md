@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.5 - 2026-06-01
+
+- Added GitHub Actions CI metadata that runs the local MSYS2 MinGW clean
+  release verification script on push, pull request, and manual dispatch.
+- Documented that CI uses the same release verification recipe as local
+  release checks.
+
 ## 0.1.4 - 2026-06-01
 
 - Added a local MSYS2 MinGW clean release verification script that configures,

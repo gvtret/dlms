@@ -49,6 +49,8 @@ For a fresh release-style verification from an empty build directory:
 scripts/verify_release_mingw64.sh
 ```
 
+The GitHub Actions CI workflow runs the same script on push and pull request.
+
 ## Install
 
 The root build exports a CMake package named `DLMSFramework`:

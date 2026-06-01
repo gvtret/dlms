@@ -52,6 +52,8 @@ For local release verification on Windows/MSYS2, run
 `scripts/verify_release_mingw64.sh` from an MSYS2 shell. The script creates a
 fresh `build-release-mingw64` tree, configures with MinGW first in `PATH`,
 builds, runs CTest, and builds the package target.
+The GitHub Actions CI workflow uses the same script for push, pull request,
+and manual verification.
 
 Release changes should update:
 

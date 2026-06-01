@@ -2,6 +2,8 @@
 
 #include "dlms/apdu/apdu_writer.hpp"
 #include "dlms/apdu/data.hpp"
+#include "dlms/apdu/get.hpp"
+#include "dlms/apdu/xdlms.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -12,6 +14,13 @@ namespace {
 class ExampleApduChannel : public dlms::profile::IApduChannel
 {
 public:
+  explicit ExampleApduChannel(const std::vector<std::uint8_t>& received)
+    : open_(false)
+    , received_(received)
+    , sent_()
+  {
+  }
+
   dlms::profile::ProfileStatus Open()
   {
     open_ = true;
@@ -56,8 +65,13 @@ public:
     return dlms::profile::ProfileStatus::Ok;
   }
 
+  const std::vector<std::uint8_t>& Sent() const
+  {
+    return sent_;
+  }
+
 private:
-  bool open_ = false;
+  bool open_;
   std::vector<std::uint8_t> received_;
   std::vector<std::uint8_t> sent_;
 };
@@ -74,11 +88,25 @@ std::vector<std::uint8_t> EncodeLongUnsigned(std::uint16_t value)
   return std::vector<std::uint8_t>(buffer, buffer + writer.WrittenSize());
 }
 
+std::vector<std::uint8_t> EncodeGetRequest()
+{
+  const dlms::apdu::XdlmsApdu request =
+    dlms::apdu::MakeGetRequestNormal(
+      0x85u,
+      3u,
+      dlms::apdu::LogicalName(1, 0, 1, 8, 0, 255),
+      2u);
+
+  std::vector<std::uint8_t> output;
+  dlms::apdu::EncodeXdlmsApdu(request, output);
+  return output;
+}
+
 } // namespace
 
 int main()
 {
-  ExampleApduChannel channel;
+  ExampleApduChannel channel(EncodeGetRequest());
   dlms::cosem::LogicalDevice logicalDevice(1u, "example");
   logicalDevice.RegisterObject(
     std::shared_ptr<dlms::cosem::CosemRegisterObject>(
@@ -90,6 +118,12 @@ int main()
 
   dlms::endpoint::ServerEndpoint endpoint(channel, logicalDevice);
   if (endpoint.Open() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  if (endpoint.RunOnce() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  if (channel.Sent().empty()) {
     return 1;
   }
   return endpoint.Close() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;

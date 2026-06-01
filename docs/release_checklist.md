@@ -36,6 +36,9 @@ git push origin v<version>
 Do not create or move a release tag when `VERSION`, `CHANGELOG.md`, and the
 verified package artifact disagree.
 
+When CI runs from a tag push, `dlms_release_tag_check` validates that the tag
+name exactly matches `v<version>` from `VERSION`.
+
 ## CI Artifact
 
 The CI workflow runs the same clean verification script and uploads the

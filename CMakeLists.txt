@@ -29,6 +29,11 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
       -DCHANGELOG_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG.md
       -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckChangelog.cmake)
 
+  add_test(NAME dlms_release_tag_check
+    COMMAND ${CMAKE_COMMAND}
+      -DVERSION_FILE=${CMAKE_CURRENT_SOURCE_DIR}/VERSION
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckReleaseTag.cmake)
+
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-hdlc/CMakeLists.txt" AND
      EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-llc/CMakeLists.txt")
     add_subdirectory(lib/dlms-hdlc)

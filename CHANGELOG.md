@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.8 - 2026-06-01
+
+- Added a release tag consistency CTest that validates `v<version>` tag names
+  against the root `VERSION` when a tag context is present.
+- Extended CI to run release verification for `v*` tag pushes.
+
 ## 0.1.7 - 2026-06-01
 
 - Added release checklist documentation that ties SemVer version bumps,

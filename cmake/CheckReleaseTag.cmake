@@ -1,0 +1,32 @@
+if(NOT DEFINED VERSION_FILE)
+  message(FATAL_ERROR "VERSION_FILE is required")
+endif()
+
+set(DLMS_VERSION_FILE "${VERSION_FILE}")
+include("${CMAKE_CURRENT_LIST_DIR}/DlmsVersion.cmake")
+
+set(DLMS_RELEASE_TAG "")
+
+if(DEFINED ENV{DLMS_RELEASE_TAG} AND NOT "$ENV{DLMS_RELEASE_TAG}" STREQUAL "")
+  set(DLMS_RELEASE_TAG "$ENV{DLMS_RELEASE_TAG}")
+elseif(DEFINED ENV{GITHUB_REF_TYPE} AND "$ENV{GITHUB_REF_TYPE}" STREQUAL "tag" AND
+       DEFINED ENV{GITHUB_REF_NAME} AND NOT "$ENV{GITHUB_REF_NAME}" STREQUAL "")
+  set(DLMS_RELEASE_TAG "$ENV{GITHUB_REF_NAME}")
+elseif(DEFINED ENV{GITHUB_REF} AND "$ENV{GITHUB_REF}" MATCHES "^refs/tags/(.+)$")
+  set(DLMS_RELEASE_TAG "${CMAKE_MATCH_1}")
+endif()
+
+if(DLMS_RELEASE_TAG STREQUAL "")
+  message(STATUS "No release tag context found; skipping DLMS release tag check")
+  return()
+endif()
+
+set(DLMS_EXPECTED_TAG "v${DLMS_VERSION}")
+
+if(NOT DLMS_RELEASE_TAG STREQUAL DLMS_EXPECTED_TAG)
+  message(FATAL_ERROR
+    "Release tag '${DLMS_RELEASE_TAG}' does not match VERSION ${DLMS_VERSION}. "
+    "Expected '${DLMS_EXPECTED_TAG}'.")
+endif()
+
+message(STATUS "DLMS release tag matches VERSION: ${DLMS_RELEASE_TAG}")

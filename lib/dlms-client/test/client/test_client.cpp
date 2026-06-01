@@ -164,6 +164,86 @@ public:
   std::vector<std::uint8_t> lastActionParameter;
 };
 
+class FakeAssociationClient : public dlms::association::IAssociationClient
+{
+public:
+  FakeAssociationClient()
+    : openStatus(dlms::association::AssociationStatus::Ok)
+    , closeStatus(dlms::association::AssociationStatus::Ok)
+    , establishStatus(dlms::association::AssociationStatus::Ok)
+    , releaseStatus(dlms::association::AssociationStatus::Ok)
+    , state(dlms::association::AssociationState::Closed)
+    , openCalls(0)
+    , closeCalls(0)
+    , establishCalls(0)
+    , releaseCalls(0)
+    , result(dlms::association::EmptyAssociationResult())
+  {
+  }
+
+  dlms::association::AssociationStatus Open()
+  {
+    ++openCalls;
+    if (openStatus == dlms::association::AssociationStatus::Ok) {
+      state = dlms::association::AssociationState::Open;
+    }
+    return openStatus;
+  }
+
+  dlms::association::AssociationStatus Close()
+  {
+    ++closeCalls;
+    if (closeStatus == dlms::association::AssociationStatus::Ok) {
+      state = dlms::association::AssociationState::Closed;
+    }
+    return closeStatus;
+  }
+
+  dlms::association::AssociationStatus Establish()
+  {
+    ++establishCalls;
+    if (establishStatus == dlms::association::AssociationStatus::Ok) {
+      state = dlms::association::AssociationState::Associated;
+    }
+    return establishStatus;
+  }
+
+  dlms::association::AssociationStatus Release()
+  {
+    ++releaseCalls;
+    if (releaseStatus == dlms::association::AssociationStatus::Ok) {
+      state = dlms::association::AssociationState::Closed;
+    }
+    return releaseStatus;
+  }
+
+  dlms::association::AssociationState State() const
+  {
+    return state;
+  }
+
+  bool IsAssociated() const
+  {
+    return state == dlms::association::AssociationState::Associated;
+  }
+
+  const dlms::association::AssociationResult& Result() const
+  {
+    return result;
+  }
+
+  dlms::association::AssociationStatus openStatus;
+  dlms::association::AssociationStatus closeStatus;
+  dlms::association::AssociationStatus establishStatus;
+  dlms::association::AssociationStatus releaseStatus;
+  dlms::association::AssociationState state;
+  int openCalls;
+  int closeCalls;
+  int establishCalls;
+  int releaseCalls;
+  dlms::association::AssociationResult result;
+};
+
 std::vector<std::uint8_t> MakeAareBytes()
 {
   const std::uint8_t kAare[] = {
@@ -507,6 +587,30 @@ TEST(DlmsClient, GetCanUseInjectedXdlmsService)
 
   EXPECT_EQ(1, xdlms.getCalls);
   EXPECT_EQ(MakeLongUnsignedBytes(0x1357u), output);
+}
+
+TEST(DlmsClient, CanUseInjectedAssociationInterface)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  FakeXdlmsService xdlms;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+
+  EXPECT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  EXPECT_EQ(dlms::client::ClientStatus::Ok, client.OpenAssociation());
+  EXPECT_TRUE(client.IsAssociated());
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::client::ClientStatus::Ok,
+            client.Get(MakeDescriptor(), output));
+  EXPECT_EQ(MakeLongUnsignedBytes(0x1357u), output);
+
+  EXPECT_EQ(dlms::client::ClientStatus::Ok, client.ReleaseAssociation());
+  EXPECT_EQ(dlms::client::ClientState::Disconnected, client.State());
+  EXPECT_EQ(1, association.openCalls);
+  EXPECT_EQ(1, association.establishCalls);
+  EXPECT_EQ(1, association.releaseCalls);
+  EXPECT_EQ(1, xdlms.getCalls);
 }
 
 TEST(DlmsClient, InjectedSecurityProtectsGetRequest)

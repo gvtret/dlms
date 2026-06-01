@@ -11,6 +11,7 @@
 #include "dlms/security/in_memory_invocation_counter_store.hpp"
 #include "dlms/security/in_memory_key_store.hpp"
 #include "dlms/security/random_source.hpp"
+#include "dlms/xdlms/xdlms_association_state.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -39,13 +40,33 @@ public:
   }
 };
 
+class ClientAssociationXdlmsState
+  : public dlms::xdlms::IXdlmsAssociationState
+{
+public:
+  explicit ClientAssociationXdlmsState(
+    dlms::association::IAssociationClient& association)
+    : association_(association)
+  {
+  }
+
+  bool IsAssociated() const override
+  {
+    return association_.IsAssociated();
+  }
+
+private:
+  dlms::association::IAssociationClient& association_;
+};
+
 class XdlmsClientServiceAdapter : public IClientXdlmsService
 {
 public:
   XdlmsClientServiceAdapter(
     dlms::profile::IApduChannel& channel,
-    dlms::association::AssociationClient& association)
-    : client_(channel, association)
+    dlms::association::IAssociationClient& association)
+    : associationState_(association)
+    , client_(channel, associationState_)
   {
   }
 
@@ -53,7 +74,8 @@ public:
     dlms::profile::IApduChannel& channel,
     dlms::association::AssociationClient& association,
     dlms::security::CipheredApduProcessor& security)
-    : client_(channel, association, security)
+    : associationState_(association)
+    , client_(channel, association, security)
   {
   }
 
@@ -86,6 +108,7 @@ public:
   }
 
 private:
+  ClientAssociationXdlmsState associationState_;
   dlms::xdlms::XdlmsClient client_;
 };
 
@@ -723,6 +746,15 @@ DlmsClient::DlmsClient(const DlmsClientOptions& options)
 DlmsClient::DlmsClient(
   dlms::profile::IApduChannel& channel,
   dlms::association::AssociationClient& association)
+  : DlmsClient(
+      channel,
+      static_cast<dlms::association::IAssociationClient&>(association))
+{
+}
+
+DlmsClient::DlmsClient(
+  dlms::profile::IApduChannel& channel,
+  dlms::association::IAssociationClient& association)
   : ownedStream_()
   , ownedChannel_()
   , ownedSecurityContext_()
@@ -748,6 +780,17 @@ DlmsClient::DlmsClient(
 DlmsClient::DlmsClient(
   dlms::profile::IApduChannel& channel,
   dlms::association::AssociationClient& association,
+  IClientXdlmsService& xdlms)
+  : DlmsClient(
+      channel,
+      static_cast<dlms::association::IAssociationClient&>(association),
+      xdlms)
+{
+}
+
+DlmsClient::DlmsClient(
+  dlms::profile::IApduChannel& channel,
+  dlms::association::IAssociationClient& association,
   IClientXdlmsService& xdlms)
   : ownedStream_()
   , ownedChannel_()

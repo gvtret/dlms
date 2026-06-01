@@ -162,7 +162,16 @@ public:
 
   DlmsClient(
     dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association);
+
+  DlmsClient(
+    dlms::profile::IApduChannel& channel,
     dlms::association::AssociationClient& association,
+    IClientXdlmsService& xdlms);
+
+  DlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association,
     IClientXdlmsService& xdlms);
 
   DlmsClient(
@@ -207,7 +216,9 @@ public:
   establishes the HDLC data link before returning `Ok`. When it is `false`,
   the profile uses no-session HDLC framing.
 - The injected constructor receives an already constructed APDU channel and
-  association client for deterministic tests or external composition.
+  association client for deterministic tests or external composition. New
+  integrations should depend on `dlms::association::IAssociationClient` when
+  they provide their own association lifecycle implementation.
 - The injected xDLMS service constructor keeps facade lifecycle management over
   the supplied APDU channel and association client, but forwards GET/SET/ACTION
   to caller-provided `IClientXdlmsService`.

@@ -75,6 +75,21 @@ and VAA name `0x0007`.
 ## 5. Client
 
 ```cpp
+class IAssociationClient
+{
+public:
+  virtual ~IAssociationClient();
+
+  virtual AssociationStatus Open() = 0;
+  virtual AssociationStatus Close() = 0;
+  virtual AssociationStatus Establish() = 0;
+  virtual AssociationStatus Release() = 0;
+
+  virtual AssociationState State() const = 0;
+  virtual bool IsAssociated() const = 0;
+  virtual const AssociationResult& Result() const = 0;
+};
+
 dlms::association::AssociationClient client(channel, options);
 
 client.Open();
@@ -94,6 +109,10 @@ can still be used as an unconfirmed fallback.
 
 `AssociationClient` does not own the lower channel object. The caller must keep
 the channel alive for the lifetime of the association client.
+
+`AssociationClient` implements `IAssociationClient`. Higher layers should
+depend on the interface when they only need lifecycle/state/result behavior and
+do not need to construct the default ACSE association implementation.
 
 ## 6. Server
 

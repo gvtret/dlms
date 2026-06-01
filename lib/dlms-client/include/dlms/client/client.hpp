@@ -68,7 +68,16 @@ public:
 
   DlmsClient(
     dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association);
+
+  DlmsClient(
+    dlms::profile::IApduChannel& channel,
     dlms::association::AssociationClient& association,
+    IClientXdlmsService& xdlms);
+
+  DlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association,
     IClientXdlmsService& xdlms);
 
   DlmsClient(
@@ -119,7 +128,7 @@ private:
   std::unique_ptr<dlms::security::CipheredApduProcessor> ownedSecurity_;
   std::unique_ptr<IClientXdlmsService> ownedXdlms_;
   dlms::profile::IApduChannel& channel_;
-  dlms::association::AssociationClient& association_;
+  dlms::association::IAssociationClient& association_;
   IClientXdlmsService* xdlms_;
   ClientState state_;
   ClientStatus constructionStatus_;

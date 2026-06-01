@@ -68,6 +68,20 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
       add_subdirectory(lib/dlms-endpoint)
     endif()
 
+    include(cmake/DlmsPackages.cmake)
+
+    if(TARGET dlms_framework)
+      add_executable(dlms_framework_target_smoke
+        tools/framework_target_smoke.cpp)
+      target_compile_features(dlms_framework_target_smoke PRIVATE cxx_std_11)
+      target_link_libraries(dlms_framework_target_smoke
+        PRIVATE
+          dlms_framework)
+
+      add_test(NAME dlms_framework_target_smoke
+        COMMAND dlms_framework_target_smoke)
+    endif()
+
     if(DLMS_BUILD_EXAMPLES AND TARGET dlms_endpoint)
       add_executable(dlms_endpoint_client_example
         tools/endpoint_client_example.cpp)

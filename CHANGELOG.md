@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 - 2026-06-01
+
+- Added GitHub Actions artifact upload for the generated
+  `DLMSFramework-<version>.zip` package after CI release verification passes.
+- Documented that CI preserves the verified ZIP package as a workflow artifact.
+
 ## 0.1.5 - 2026-06-01
 
 - Added GitHub Actions CI metadata that runs the local MSYS2 MinGW clean

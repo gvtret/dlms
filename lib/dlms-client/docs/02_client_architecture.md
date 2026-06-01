@@ -1,0 +1,247 @@
+# dlms-client Architecture
+
+## 1. Scope
+
+`dlms-client` is a facade. It owns application ergonomics and lifecycle
+composition, not protocol semantics.
+
+## 2. Dependencies
+
+```mermaid
+flowchart TB
+  App["Application"]
+  Client["dlms-client<br/>public facade"]
+  XDlms["dlms-xdlms<br/>GET/SET/ACTION services"]
+  Assoc["dlms-association<br/>AA state machine"]
+  Security["dlms-security<br/>APDU protection"]
+  Profile["dlms-profile<br/>APDU channel"]
+  Transport["dlms-transport<br/>TCP/UDP/serial"]
+  Apdu["dlms-apdu<br/>DLMS Data helpers"]
+
+  App --> Client
+  Client --> XDlms
+  Client --> Assoc
+  Client --> Security
+  Client --> Profile
+  Client --> Transport
+  Client --> Apdu
+  XDlms --> Assoc
+  XDlms --> Profile
+```
+
+## 3. Public Modules
+
+- `client_status`: facade status enum and string names.
+- `client_options`: profile, endpoint, SAP, timeout, authentication, and
+  security options.
+- `dlms_client`: lifecycle and GET/SET/ACTION facade.
+- `client_data`: optional encoded DLMS `Data` helper functions.
+
+## 4. Layer Diagram
+
+```mermaid
+flowchart LR
+  Options["DlmsClientOptions"]
+  Client["DlmsClient"]
+  Stream["TcpStreamTransport"]
+  Channel["IApduChannel"]
+  Association["AssociationClient"]
+  Security["CipheredApduProcessor"]
+  Services["IClientXdlmsService"]
+  XdlmsClient["XdlmsClient adapter"]
+
+  Options --> Client
+  Client --> Stream
+  Stream --> Channel
+  Channel --> Client
+  Association --> Client
+  Client --> Association
+  Client --> Security
+  Client --> Services
+  XdlmsClient --> Services
+  XdlmsClient --> Channel
+  XdlmsClient --> Association
+  XdlmsClient --> Security
+```
+
+## 5. Class Interaction Diagram
+
+```mermaid
+classDiagram
+  class DlmsClient {
+    -ClientState state
+    -TcpStreamTransport ownedStream
+    -WrapperTcpProfileChannel ownedChannel
+    -HdlcProfileChannel ownedHdlcChannel
+    -AssociationClient ownedAssociation
+    -InMemoryKeyStore ownedKeys
+    -InMemoryInvocationCounterStore ownedCounters
+    -CipheredApduProcessor ownedSecurity
+    -AssociationClient& association
+    -IClientXdlmsService xdlms
+    +DlmsClient(options)
+    +DlmsClient(IApduChannel, AssociationClient)
+    +DlmsClient(IApduChannel, AssociationClient, IClientXdlmsService)
+    +Connect() ClientStatus
+    +OpenAssociation() ClientStatus
+    +ReleaseAssociation() ClientStatus
+    +Close() ClientStatus
+    +State() ClientState
+    +Get(descriptor, data) ClientStatus
+    +Set(descriptor, data) ClientStatus
+    +Action(descriptor, hasParameter, parameter, returnData) ClientStatus
+  }
+
+  class ClientState {
+    <<enumeration>>
+    Disconnected
+    Connected
+    Associated
+  }
+
+  class DlmsClientOptions
+  class TcpStreamTransport
+  class WrapperTcpProfileChannel
+  class HdlcProfileChannel
+  class IApduChannel
+  class AssociationClient
+  class CipheredApduProcessor
+  class IClientXdlmsService
+
+  DlmsClient --> DlmsClientOptions
+  DlmsClient --> TcpStreamTransport
+  DlmsClient --> WrapperTcpProfileChannel
+  DlmsClient --> HdlcProfileChannel
+  DlmsClient --> ClientState
+  DlmsClient --> IApduChannel
+  DlmsClient --> AssociationClient
+  DlmsClient --> CipheredApduProcessor
+  DlmsClient --> IClientXdlmsService
+```
+
+## 5.1 HDLC/TCP Options-Owned Composition
+
+```mermaid
+sequenceDiagram
+  participant App as Application
+  participant Client as DlmsClient
+  participant Tcp as TcpStreamTransport
+  participant Hdlc as HdlcProfileChannel
+  participant Assoc as AssociationClient
+
+  App->>Client: construct(options profile=HdlcTcp)
+  Client->>Tcp: create TCP stream
+  Client->>Hdlc: create HDLC profile channel
+  Client->>Assoc: create association client over Hdlc
+  App->>Client: Connect()
+  Client->>Hdlc: Open()
+  Hdlc->>Tcp: Open()
+  opt useDataLinkSession
+    Client->>Hdlc: ConnectDataLink()
+  end
+  App->>Client: OpenAssociation()
+  Client->>Assoc: Establish()
+```
+
+`dlms-client` only selects and owns the profile channel. Address encoding,
+optional SNRM/UA negotiation, HDLC retries, LLC headers, and APDU extraction
+remain in `dlms-profile`, `dlms-hdlc`, and `dlms-llc`.
+
+## 6. State Machine
+
+```mermaid
+stateDiagram-v2
+  [*] --> Disconnected
+  Disconnected --> Connected: Connect ok
+  Connected --> Associated: OpenAssociation ok
+  Associated --> Disconnected: ReleaseAssociation ok
+  Connected --> Disconnected: Close
+  Associated --> Disconnected: Close
+```
+
+## 7. Error Model
+
+Public runtime calls return `ClientStatus`. Invalid constructor options are
+stored and returned by `Connect()` because constructors do not throw. The
+options-owned Wrapper/TCP path uses `AssociationClient::Release()`, which sends
+RLRQ, receives RLRE, closes the channel, and returns the facade to
+`Disconnected`.
+
+## 8. Security Composition
+
+```mermaid
+sequenceDiagram
+  participant App as Application
+  participant Client as DlmsClient
+  participant Security as dlms-security
+  participant XDlms as XdlmsClient
+  participant Channel as Wrapper/TCP APDU channel
+
+  App->>Client: construct(options with security)
+  Client->>Client: map association authentication options
+  Client->>Security: install keys, titles, counter
+  App->>Client: Get/Set/Action
+  Client->>XDlms: service call
+  XDlms->>Security: Protect(request APDU)
+  XDlms->>Channel: SendApdu(protected request)
+  Channel-->>XDlms: protected response
+  XDlms->>Security: Unprotect(response APDU)
+  XDlms-->>Client: service result
+  Client-->>App: ClientStatus and encoded Data
+```
+
+`dlms-client` owns ergonomic composition only. `dlms-security` owns key
+validation, AES-GCM, and invocation counter checks. `dlms-xdlms` owns the APDU
+protect/unprotect boundary.
+
+## 9. Association Authentication Composition
+
+```mermaid
+sequenceDiagram
+  participant App as Application
+  participant Client as DlmsClient
+  participant Assoc as AssociationClient
+
+  App->>Client: construct(options with LLS credential)
+  Client->>Assoc: AssociationOptions(authenticationMode=LLS, credential)
+  App->>Client: OpenAssociation()
+  Client->>Assoc: Establish()
+  Assoc-->>Client: AssociationStatus
+```
+
+Association authentication is separate from APDU ciphering. LLS credential
+bytes are copied into the owned association client and are not persisted,
+derived, or transformed by `dlms-client`.
+
+## 10. HLS GMAC Composition
+
+```mermaid
+sequenceDiagram
+  participant App as Application
+  participant Client as DlmsClient
+  participant Assoc as AssociationClient
+  participant HLS as HlsGmacAuthenticator
+  participant XDlms as XdlmsClient
+
+  App->>Client: construct(options with HighLevelSecurityGmac)
+  Client->>Assoc: AssociationOptions(authenticationMode=HLS, strategy)
+  App->>Client: OpenAssociation()
+  Client->>Assoc: Establish()
+  Assoc->>HLS: BuildChallenge()
+  Assoc-->>Client: AssociationResult(StoC)
+  Client->>HLS: BuildResponse(StoC)
+  Client->>XDlms: Action(Association LN.reply_to_HLS_authentication)
+  XDlms-->>Client: server response f(CtoS)
+  Client->>HLS: VerifyResponse(CtoS, response)
+```
+
+The Association LN descriptor is fixed for the first implementation:
+class id `15`, logical name `0.0.40.0.0.255`, method id `1`.
+The invocation parameter is a complete DLMS `Data` octet-string containing the
+GMAC response bytes.
+
+## 11. Test Strategy
+
+The first implementation uses fake lower-layer ports for deterministic unit
+tests. Real loopback and meter-facing tests belong in root integration or manual
+acceptance suites after the facade behavior is stable.

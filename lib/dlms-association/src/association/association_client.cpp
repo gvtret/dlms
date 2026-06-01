@@ -1,0 +1,656 @@
+#include "dlms/association/association_client.hpp"
+
+#include "dlms/apdu/acse.hpp"
+#include "dlms/apdu/initiate.hpp"
+#include "dlms/apdu/xdlms.hpp"
+
+namespace dlms {
+namespace association {
+
+namespace {
+
+constexpr std::uint8_t kSenderAcseRequirementsTag = 0x8A;
+constexpr std::uint8_t kMechanismNameTag = 0x8B;
+constexpr std::uint8_t kCalledApInvocationIdTag = 0xA4;
+constexpr std::uint8_t kCallingApTitleTag = 0xA6;
+constexpr std::uint8_t kRespondingAuthenticationValueTag = 0xAA;
+constexpr std::uint8_t kCallingAuthenticationValueTag = 0xAC;
+constexpr std::uint8_t kCharstringAuthenticationValueTag = 0x80;
+constexpr std::uint8_t kOctetStringTag = 0x04;
+constexpr std::size_t kMaxShortBerAuthenticationValueSize = 125u;
+
+bool IsProfileOk(dlms::profile::ProfileStatus status)
+{
+  return status == dlms::profile::ProfileStatus::Ok ||
+         status == dlms::profile::ProfileStatus::AlreadyOpen;
+}
+
+bool HlsMechanismId(
+  HighLevelSecurityMechanism mechanism,
+  std::uint8_t& mechanismId)
+{
+  switch (mechanism) {
+  case HighLevelSecurityMechanism::HlsHigh:
+    mechanismId = 2u;
+    return true;
+  case HighLevelSecurityMechanism::HlsMd5:
+    mechanismId = 3u;
+    return true;
+  case HighLevelSecurityMechanism::HlsSha1:
+    mechanismId = 4u;
+    return true;
+  case HighLevelSecurityMechanism::HlsGmac:
+    mechanismId = 5u;
+    return true;
+  case HighLevelSecurityMechanism::Unknown:
+    break;
+  }
+  return false;
+}
+
+dlms::apdu::ByteView MakeByteView(const std::vector<std::uint8_t>& bytes)
+{
+  dlms::apdu::ByteView view = {};
+  view.data = bytes.empty() ? 0 : &bytes[0];
+  view.size = bytes.size();
+  return view;
+}
+
+std::size_t CallingAuthenticationValueSize(
+  const dlms::apdu::AarqApdu& aarq)
+{
+  for (std::size_t i = 0u; i < aarq.fields.size(); ++i) {
+    const dlms::apdu::AcseRawField& field = aarq.fields[i];
+    if (field.tag == kCallingAuthenticationValueTag &&
+        field.encoded.data != 0 &&
+        field.encoded.size >= 4u) {
+      return field.encoded.data[3];
+    }
+  }
+  return 0u;
+}
+
+void EmitAssociationTrace(
+  IAssociationTraceSink* sink,
+  AssociationTraceKind kind,
+  AssociationStatus status,
+  const AssociationOptions& options,
+  HighLevelSecurityMechanism hlsMechanism,
+  const dlms::apdu::AarqApdu* aarq,
+  std::size_t encodedAarqSize)
+{
+  if (sink == 0) {
+    return;
+  }
+
+  std::vector<AssociationTraceField> fields;
+  std::size_t authValueSize = 0u;
+  if (aarq != 0) {
+    fields.reserve(aarq->fields.size());
+    for (std::size_t i = 0u; i < aarq->fields.size(); ++i) {
+      AssociationTraceField field = {};
+      field.tag = aarq->fields[i].tag;
+      field.encodedSize = aarq->fields[i].encoded.size;
+      fields.push_back(field);
+    }
+    authValueSize = CallingAuthenticationValueSize(*aarq);
+  }
+
+  AssociationTraceEvent event = {};
+  event.kind = kind;
+  event.status = status;
+  event.applicationContext = options.applicationContext;
+  event.authenticationMode = options.authenticationMode;
+  event.hlsMechanism = hlsMechanism;
+  event.hasProposedQualityOfService =
+    options.hasProposedQualityOfService;
+  event.proposedQualityOfService = options.proposedQualityOfService;
+  event.proposedDlmsVersionNumber = options.proposedDlmsVersionNumber;
+  event.proposedConformance = options.proposedConformance;
+  event.clientMaxReceivePduSize = options.clientMaxReceivePduSize;
+  event.encodedAarqSize = encodedAarqSize;
+  event.callingAuthenticationValueSize = authValueSize;
+  event.fields = fields.empty() ? 0 : &fields[0];
+  event.fieldCount = fields.size();
+  sink->OnAssociationTrace(event);
+}
+
+std::vector<std::uint8_t> MakeSenderAcseRequirementsField()
+{
+  const std::uint8_t field[] = {
+    kSenderAcseRequirementsTag,
+    0x02,
+    0x07,
+    0x80};
+  return std::vector<std::uint8_t>(field, field + sizeof(field));
+}
+
+std::vector<std::uint8_t> MakeLowLevelSecurityMechanismField()
+{
+  const std::uint8_t field[] = {
+    kMechanismNameTag,
+    0x07,
+    0x60,
+    0x85,
+    0x74,
+    0x05,
+    0x08,
+    0x02,
+    0x01};
+  return std::vector<std::uint8_t>(field, field + sizeof(field));
+}
+
+std::vector<std::uint8_t> MakeHighLevelSecurityMechanismField(
+  HighLevelSecurityMechanism mechanism)
+{
+  std::uint8_t mechanismId = 0u;
+  HlsMechanismId(mechanism, mechanismId);
+  const std::uint8_t field[] = {
+    kMechanismNameTag,
+    0x07,
+    0x60,
+    0x85,
+    0x74,
+    0x05,
+    0x08,
+    0x02,
+    mechanismId};
+  return std::vector<std::uint8_t>(field, field + sizeof(field));
+}
+
+std::vector<std::uint8_t> MakeCallingAuthenticationValueField(
+  const std::vector<std::uint8_t>& credential)
+{
+  std::vector<std::uint8_t> field;
+  field.reserve(4u + credential.size());
+  field.push_back(kCallingAuthenticationValueTag);
+  field.push_back(static_cast<std::uint8_t>(credential.size() + 2u));
+  field.push_back(kCharstringAuthenticationValueTag);
+  field.push_back(static_cast<std::uint8_t>(credential.size()));
+  field.insert(field.end(), credential.begin(), credential.end());
+  return field;
+}
+
+std::vector<std::uint8_t> MakeOctetStringField(
+  std::uint8_t tag,
+  const std::vector<std::uint8_t>& value)
+{
+  std::vector<std::uint8_t> field;
+  field.reserve(4u + value.size());
+  field.push_back(tag);
+  field.push_back(static_cast<std::uint8_t>(value.size() + 2u));
+  field.push_back(kOctetStringTag);
+  field.push_back(static_cast<std::uint8_t>(value.size()));
+  field.insert(field.end(), value.begin(), value.end());
+  return field;
+}
+
+void AddRawFields(
+  const std::vector<std::vector<std::uint8_t> >& encodedFields,
+  dlms::apdu::AarqApdu& aarq)
+{
+  for (std::size_t i = 0u; i < encodedFields.size(); ++i) {
+    dlms::apdu::AcseRawField field = {};
+    field.tag = encodedFields[i].empty() ? 0u : encodedFields[i][0];
+    field.encoded = MakeByteView(encodedFields[i]);
+    aarq.fields.push_back(field);
+  }
+}
+
+void AddLlsAuthenticationFields(
+  const AssociationOptions& options,
+  dlms::apdu::AarqApdu& aarq,
+  std::vector<std::vector<std::uint8_t> >& encodedFields)
+{
+  if (options.authenticationMode != AuthenticationMode::LowLevelSecurity) {
+    return;
+  }
+
+  encodedFields.push_back(MakeSenderAcseRequirementsField());
+  encodedFields.push_back(MakeLowLevelSecurityMechanismField());
+  encodedFields.push_back(
+    MakeCallingAuthenticationValueField(options.lowLevelSecurityCredential));
+
+  AddRawFields(encodedFields, aarq);
+}
+
+AssociationStatus AddHlsAuthenticationFields(
+  const AssociationOptions& options,
+  dlms::apdu::AarqApdu& aarq,
+  std::vector<std::vector<std::uint8_t> >& encodedFields,
+  HighLevelSecurityMechanism& selectedMechanism)
+{
+  if (options.authenticationMode != AuthenticationMode::HighLevelSecurity) {
+    return AssociationStatus::Ok;
+  }
+
+  if (options.highLevelSecurity == 0) {
+    return AssociationStatus::UnsupportedAuthentication;
+  }
+
+  const HighLevelSecurityMechanism mechanism =
+    options.highLevelSecurity->Mechanism();
+  selectedMechanism = mechanism;
+  std::uint8_t mechanismId = 0u;
+  if (!HlsMechanismId(mechanism, mechanismId)) {
+    return AssociationStatus::UnsupportedAuthentication;
+  }
+
+  std::vector<std::uint8_t> challenge;
+  if (options.highLevelSecurity->BuildInitialChallenge(challenge) !=
+      AssociationStatus::Ok ||
+      challenge.empty()) {
+    return AssociationStatus::UnsupportedAuthentication;
+  }
+
+  if (challenge.size() > kMaxShortBerAuthenticationValueSize) {
+    return AssociationStatus::InvalidArgument;
+  }
+
+  encodedFields.push_back(MakeSenderAcseRequirementsField());
+  encodedFields.push_back(MakeHighLevelSecurityMechanismField(mechanism));
+  encodedFields.push_back(MakeCallingAuthenticationValueField(challenge));
+
+  AddRawFields(encodedFields, aarq);
+
+  return AssociationStatus::Ok;
+}
+
+bool DecodeAuthenticationValue(
+  const dlms::apdu::AcseRawField& field,
+  std::uint8_t expectedTag,
+  std::vector<std::uint8_t>& output)
+{
+  if (field.tag != expectedTag ||
+      field.encoded.data == 0 ||
+      field.encoded.size < 4u) {
+    return false;
+  }
+
+  const std::uint8_t* bytes = field.encoded.data;
+  const std::size_t size = field.encoded.size;
+  if (bytes[0] != expectedTag ||
+      bytes[1] != size - 2u ||
+      bytes[2] != kCharstringAuthenticationValueTag ||
+      bytes[3] != size - 4u) {
+    return false;
+  }
+
+  output.assign(bytes + 4u, bytes + size);
+  return true;
+}
+
+bool DecodeOctetStringField(
+  const dlms::apdu::AcseRawField& field,
+  std::vector<std::uint8_t>& output)
+{
+  if (field.encoded.data == 0 || field.encoded.size < 4u) {
+    return false;
+  }
+
+  const std::uint8_t* bytes = field.encoded.data;
+  const std::size_t size = field.encoded.size;
+  if (bytes[0] != field.tag ||
+      bytes[1] != size - 2u ||
+      bytes[2] != kOctetStringTag ||
+      bytes[3] != size - 4u) {
+    return false;
+  }
+
+  output.assign(bytes + 4u, bytes + size);
+  return true;
+}
+
+} // namespace
+
+AssociationClient::AssociationClient(
+  dlms::profile::IApduChannel& channel,
+  const AssociationOptions& options)
+  : channel_(channel)
+  , options_(options)
+  , state_(AssociationState::Closed)
+  , result_(EmptyAssociationResult())
+{
+}
+
+AssociationStatus AssociationClient::Open()
+{
+  if (state_ != AssociationState::Closed) {
+    return AssociationStatus::Ok;
+  }
+
+  const dlms::profile::ProfileStatus status = channel_.Open();
+  if (!IsProfileOk(status)) {
+    return AssociationStatus::ChannelOpenFailed;
+  }
+
+  result_ = EmptyAssociationResult();
+  state_ = AssociationState::Open;
+  return AssociationStatus::Ok;
+}
+
+AssociationStatus AssociationClient::Close()
+{
+  if (state_ == AssociationState::Closed) {
+    return AssociationStatus::Ok;
+  }
+
+  const dlms::profile::ProfileStatus status = channel_.Close();
+  if (status != dlms::profile::ProfileStatus::Ok) {
+    return AssociationStatus::ChannelCloseFailed;
+  }
+
+  result_ = EmptyAssociationResult();
+  state_ = AssociationState::Closed;
+  return AssociationStatus::Ok;
+}
+
+AssociationStatus AssociationClient::Establish()
+{
+  if (state_ == AssociationState::Closed) {
+    return AssociationStatus::InvalidState;
+  }
+
+  if (state_ == AssociationState::Associated) {
+    return AssociationStatus::AlreadyAssociated;
+  }
+
+  const AssociationStatus optionStatus = ValidateOptions();
+  if (optionStatus != AssociationStatus::Ok) {
+    return optionStatus;
+  }
+
+  state_ = AssociationState::Associating;
+  result_ = EmptyAssociationResult();
+
+  std::vector<std::uint8_t> aarq;
+  const AssociationStatus buildStatus = BuildAarq(aarq);
+  if (buildStatus != AssociationStatus::Ok) {
+    EmitAssociationTrace(options_.traceSink,
+                         AssociationTraceKind::AarqBuildFailed,
+                         buildStatus,
+                         options_,
+                         HighLevelSecurityMechanism::Unknown,
+                         0,
+                         0u);
+    state_ = AssociationState::Open;
+    return buildStatus;
+  }
+
+  dlms::profile::ProfileByteView view = {aarq.empty() ? 0 : &aarq[0], aarq.size()};
+  const dlms::profile::ProfileStatus sendStatus = channel_.SendApdu(view);
+  if (sendStatus != dlms::profile::ProfileStatus::Ok) {
+    state_ = AssociationState::Open;
+    return AssociationStatus::SendFailed;
+  }
+
+  std::vector<std::uint8_t> aare;
+  const dlms::profile::ProfileStatus receiveStatus = channel_.ReceiveApdu(aare);
+  if (receiveStatus != dlms::profile::ProfileStatus::Ok) {
+    EmitAssociationTrace(options_.traceSink,
+                         AssociationTraceKind::AareReceiveFailed,
+                         AssociationStatus::ReceiveFailed,
+                         options_,
+                         HighLevelSecurityMechanism::Unknown,
+                         0,
+                         0u);
+    state_ = AssociationState::Open;
+    return AssociationStatus::ReceiveFailed;
+  }
+
+  const AssociationStatus decodeStatus = DecodeAare(aare);
+  if (decodeStatus != AssociationStatus::Ok) {
+    state_ = AssociationState::Open;
+    return decodeStatus;
+  }
+
+  state_ = AssociationState::Associated;
+  return AssociationStatus::Ok;
+}
+
+AssociationStatus AssociationClient::Release()
+{
+  if (state_ != AssociationState::Associated) {
+    return AssociationStatus::InvalidState;
+  }
+
+  std::vector<std::uint8_t> rlrq;
+  const AssociationStatus buildStatus = BuildRlrq(rlrq);
+  if (buildStatus != AssociationStatus::Ok) {
+    return buildStatus;
+  }
+
+  dlms::profile::ProfileByteView view = {rlrq.empty() ? 0 : &rlrq[0], rlrq.size()};
+  const dlms::profile::ProfileStatus sendStatus = channel_.SendApdu(view);
+  if (sendStatus != dlms::profile::ProfileStatus::Ok) {
+    return AssociationStatus::SendFailed;
+  }
+
+  std::vector<std::uint8_t> rlre;
+  const dlms::profile::ProfileStatus receiveStatus = channel_.ReceiveApdu(rlre);
+  if (receiveStatus != dlms::profile::ProfileStatus::Ok) {
+    return AssociationStatus::ReceiveFailed;
+  }
+
+  const AssociationStatus decodeStatus = DecodeRlre(rlre);
+  if (decodeStatus != AssociationStatus::Ok) {
+    return decodeStatus;
+  }
+
+  const dlms::profile::ProfileStatus closeStatus = channel_.Close();
+  if (closeStatus != dlms::profile::ProfileStatus::Ok) {
+    return AssociationStatus::ChannelCloseFailed;
+  }
+
+  result_ = EmptyAssociationResult();
+  state_ = AssociationState::Closed;
+  return AssociationStatus::Ok;
+}
+
+AssociationState AssociationClient::State() const
+{
+  return state_;
+}
+
+bool AssociationClient::IsAssociated() const
+{
+  return state_ == AssociationState::Associated;
+}
+
+const AssociationResult& AssociationClient::Result() const
+{
+  return result_;
+}
+
+AssociationStatus AssociationClient::BuildAarq(
+  std::vector<std::uint8_t>& output) const
+{
+  dlms::apdu::InitiateRequest request =
+    dlms::apdu::MakeDefaultInitiateRequest();
+  request.hasProposedQualityOfService =
+    options_.hasProposedQualityOfService;
+  request.proposedQualityOfService = options_.proposedQualityOfService;
+  request.proposedDlmsVersionNumber = options_.proposedDlmsVersionNumber;
+  request.proposedConformance = options_.proposedConformance;
+  request.clientMaxReceivePduSize = options_.clientMaxReceivePduSize;
+
+  const dlms::apdu::XdlmsApdu xdlms(request);
+  dlms::apdu::AcseApdu aarq =
+    dlms::apdu::MakeAarqWithInitiateRequest(xdlms);
+  std::vector<std::vector<std::uint8_t> > encodedFields;
+  std::vector<std::vector<std::uint8_t> > titleFields;
+  AddLlsAuthenticationFields(options_, aarq.aarq, encodedFields);
+  if (!options_.callingApplicationTitle.empty()) {
+    titleFields.push_back(
+      MakeOctetStringField(
+        kCallingApTitleTag,
+        options_.callingApplicationTitle));
+    AddRawFields(titleFields, aarq.aarq);
+  }
+  HighLevelSecurityMechanism hlsMechanism = HighLevelSecurityMechanism::Unknown;
+  const AssociationStatus hlsStatus =
+    AddHlsAuthenticationFields(options_,
+                               aarq.aarq,
+                               encodedFields,
+                               hlsMechanism);
+  if (hlsStatus != AssociationStatus::Ok) {
+    return hlsStatus;
+  }
+
+  const dlms::apdu::ApduStatus status =
+    dlms::apdu::EncodeAcseApdu(aarq, output);
+  const AssociationStatus associationStatus =
+    status == dlms::apdu::ApduStatus::Ok
+    ? AssociationStatus::Ok
+    : AssociationStatus::EncodeFailed;
+  EmitAssociationTrace(options_.traceSink,
+                       associationStatus == AssociationStatus::Ok
+                         ? AssociationTraceKind::AarqBuilt
+                         : AssociationTraceKind::AarqBuildFailed,
+                       associationStatus,
+                       options_,
+                       hlsMechanism,
+                       associationStatus == AssociationStatus::Ok
+                         ? &aarq.aarq
+                         : 0,
+                       associationStatus == AssociationStatus::Ok
+                         ? output.size()
+                         : 0u);
+  return associationStatus;
+}
+
+AssociationStatus AssociationClient::DecodeAare(
+  const std::vector<std::uint8_t>& input)
+{
+  if (input.empty()) {
+    return AssociationStatus::DecodeFailed;
+  }
+
+  dlms::apdu::AcseApdu apdu = {};
+  const dlms::apdu::ApduStatus status =
+    dlms::apdu::DecodeAcseApdu(&input[0], input.size(), apdu);
+  if (status != dlms::apdu::ApduStatus::Ok ||
+      apdu.kind != dlms::apdu::AcseApduKind::Aare) {
+    return AssociationStatus::DecodeFailed;
+  }
+
+  result_.hasAareResult = apdu.aare.hasResult;
+  result_.aareResult = apdu.aare.result;
+  result_.hasAareDiagnostic = apdu.aare.hasDiagnostic;
+  result_.aareDiagnostic = apdu.aare.diagnostic;
+
+  if (apdu.aare.hasResult && apdu.aare.result != 0) {
+    return AssociationStatus::AssociationRejected;
+  }
+
+  if (apdu.aare.initiateResponse.negotiatedDlmsVersionNumber == 0 ||
+      apdu.aare.initiateResponse.serverMaxReceivePduSize == 0) {
+    return AssociationStatus::NegotiationFailed;
+  }
+
+  result_.negotiatedDlmsVersionNumber =
+    apdu.aare.initiateResponse.negotiatedDlmsVersionNumber;
+  result_.negotiatedConformance =
+    apdu.aare.initiateResponse.negotiatedConformance;
+  result_.serverMaxReceivePduSize =
+    apdu.aare.initiateResponse.serverMaxReceivePduSize;
+  result_.vaaName = apdu.aare.initiateResponse.vaaName;
+  result_.respondingApplicationTitle.clear();
+
+  for (std::size_t i = 0u; i < apdu.aare.fields.size(); ++i) {
+    if (apdu.aare.fields[i].tag == kCalledApInvocationIdTag ||
+        apdu.aare.fields[i].tag == kCallingApTitleTag) {
+      std::vector<std::uint8_t> title;
+      if (DecodeOctetStringField(apdu.aare.fields[i], title)) {
+        result_.respondingApplicationTitle = title;
+        break;
+      }
+    }
+  }
+
+  if (options_.authenticationMode == AuthenticationMode::HighLevelSecurity) {
+    result_.highLevelSecurityServerChallenge.clear();
+    for (std::size_t i = 0u; i < apdu.aare.fields.size(); ++i) {
+      if (apdu.aare.fields[i].tag == kRespondingAuthenticationValueTag) {
+        if (!DecodeAuthenticationValue(
+              apdu.aare.fields[i],
+              kRespondingAuthenticationValueTag,
+              result_.highLevelSecurityServerChallenge) ||
+            result_.highLevelSecurityServerChallenge.empty()) {
+          return AssociationStatus::DecodeFailed;
+        }
+        return AssociationStatus::Ok;
+      }
+    }
+    return AssociationStatus::DecodeFailed;
+  }
+
+  return AssociationStatus::Ok;
+}
+
+AssociationStatus AssociationClient::BuildRlrq(
+  std::vector<std::uint8_t>& output) const
+{
+  const dlms::apdu::AcseApdu rlrq = dlms::apdu::MakeRlrq();
+  const dlms::apdu::ApduStatus status =
+    dlms::apdu::EncodeAcseApdu(rlrq, output);
+  return status == dlms::apdu::ApduStatus::Ok
+    ? AssociationStatus::Ok
+    : AssociationStatus::EncodeFailed;
+}
+
+AssociationStatus AssociationClient::DecodeRlre(
+  const std::vector<std::uint8_t>& input) const
+{
+  if (input.empty()) {
+    return AssociationStatus::DecodeFailed;
+  }
+
+  dlms::apdu::AcseApdu apdu = {};
+  const dlms::apdu::ApduStatus status =
+    dlms::apdu::DecodeAcseApdu(&input[0], input.size(), apdu);
+  if (status != dlms::apdu::ApduStatus::Ok ||
+      apdu.kind != dlms::apdu::AcseApduKind::Rlre) {
+    return AssociationStatus::DecodeFailed;
+  }
+
+  return AssociationStatus::Ok;
+}
+
+AssociationStatus AssociationClient::ValidateOptions() const
+{
+  if (options_.applicationContext != ApplicationContext::LogicalNameNoCiphering) {
+    return AssociationStatus::UnsupportedApplicationContext;
+  }
+
+  if (options_.authenticationMode == AuthenticationMode::LowLevelSecurity) {
+    if (options_.lowLevelSecurityCredential.empty()) {
+      return AssociationStatus::UnsupportedAuthentication;
+    }
+    if (options_.lowLevelSecurityCredential.size() >
+        kMaxShortBerAuthenticationValueSize) {
+      return AssociationStatus::InvalidArgument;
+    }
+  }
+
+  if (options_.authenticationMode == AuthenticationMode::HighLevelSecurity) {
+    if (!options_.callingApplicationTitle.empty() &&
+        options_.callingApplicationTitle.size() >
+          kMaxShortBerAuthenticationValueSize) {
+      return AssociationStatus::InvalidArgument;
+    }
+    if (options_.highLevelSecurity == 0) {
+      return AssociationStatus::UnsupportedAuthentication;
+    }
+  }
+
+  if (options_.proposedDlmsVersionNumber == 0 ||
+      options_.clientMaxReceivePduSize == 0) {
+    return AssociationStatus::InvalidArgument;
+  }
+
+  return AssociationStatus::Ok;
+}
+
+} // namespace association
+} // namespace dlms

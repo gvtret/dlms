@@ -1,0 +1,87 @@
+#pragma once
+
+#include "dlms/association/association_client.hpp"
+#include "dlms/profile/apdu_channel.hpp"
+#include "dlms/xdlms/xdlms_association_state.hpp"
+#include "dlms/xdlms/xdlms_security_processor.hpp"
+#include "dlms/xdlms/xdlms_types.hpp"
+
+namespace dlms {
+namespace security {
+class CipheredApduProcessor;
+}
+namespace xdlms {
+
+class XdlmsClient
+{
+public:
+  XdlmsClient(
+    dlms::profile::IApduChannel& channel,
+    IXdlmsAssociationState& association);
+
+  XdlmsClient(
+    dlms::profile::IApduChannel& channel,
+    IXdlmsAssociationState& association,
+    IXdlmsSecurityProcessor& security);
+
+  XdlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::AssociationClient& association);
+
+  XdlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::AssociationClient& association,
+    IXdlmsSecurityProcessor& security);
+
+  XdlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::AssociationClient& association,
+    dlms::security::CipheredApduProcessor& security);
+
+  XdlmsStatus Get(
+    const CosemAttributeDescriptor& descriptor,
+    GetResult& result);
+
+  XdlmsStatus Get(
+    const CosemAttributeDescriptor& descriptor,
+    const ServiceOptions& options,
+    GetResult& result);
+
+  XdlmsStatus Set(
+    const CosemAttributeDescriptor& descriptor,
+    const std::vector<std::uint8_t>& encodedData,
+    SetResult& result);
+
+  XdlmsStatus Set(
+    const CosemAttributeDescriptor& descriptor,
+    const std::vector<std::uint8_t>& encodedData,
+    const ServiceOptions& options,
+    SetResult& result);
+
+  XdlmsStatus Action(
+    const CosemMethodDescriptor& descriptor,
+    bool hasParameter,
+    const std::vector<std::uint8_t>& encodedParameter,
+    ActionResult& result);
+
+  XdlmsStatus Action(
+    const CosemMethodDescriptor& descriptor,
+    bool hasParameter,
+    const std::vector<std::uint8_t>& encodedParameter,
+    const ServiceOptions& options,
+    ActionResult& result);
+
+private:
+  XdlmsClient(const XdlmsClient&);
+  XdlmsClient& operator=(const XdlmsClient&);
+
+  dlms::profile::IApduChannel& channel_;
+  IXdlmsAssociationState* association_;
+  dlms::association::AssociationClient* legacyAssociation_;
+  IXdlmsSecurityProcessor* security_;
+  dlms::security::CipheredApduProcessor* legacySecurity_;
+  InvokeIdAllocator invokeIds_;
+};
+
+} // namespace xdlms
+} // namespace dlms

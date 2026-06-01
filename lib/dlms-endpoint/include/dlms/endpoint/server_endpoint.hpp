@@ -1,0 +1,95 @@
+#pragma once
+
+#include "dlms/endpoint/endpoint_options.hpp"
+#include "dlms/endpoint/endpoint_status.hpp"
+
+#include "dlms/association/association_server.hpp"
+#include "dlms/cosem/cosem.hpp"
+#include "dlms/profile/apdu_channel.hpp"
+#include "dlms/server/server.hpp"
+#include "dlms/xdlms/xdlms_server.hpp"
+
+#include <memory>
+#include <vector>
+
+namespace dlms {
+namespace security {
+class CipheredApduProcessor;
+class InMemoryInvocationCounterStore;
+class InMemoryKeyStore;
+struct SecurityContext;
+}
+namespace endpoint {
+
+class ServerEndpointHlsHighStrategy;
+class ServerEndpointHlsGmacStrategy;
+
+class ServerEndpoint
+{
+public:
+  ServerEndpoint(
+    dlms::profile::IApduChannel& channel,
+    dlms::cosem::LogicalDevice& logicalDevice);
+
+  ServerEndpoint(
+    dlms::profile::IApduChannel& channel,
+    dlms::server::IServerService& server);
+
+  ServerEndpoint(
+    dlms::profile::IApduChannel& channel,
+    const ServerEndpointOptions& options,
+    dlms::cosem::LogicalDevice& logicalDevice);
+
+  ServerEndpoint(
+    dlms::profile::IApduChannel& channel,
+    const ServerEndpointOptions& options,
+    dlms::server::IServerService& server);
+  ~ServerEndpoint();
+
+  EndpointStatus Open();
+  EndpointStatus RunOnce();
+  EndpointStatus Close();
+
+  bool IsOpen() const;
+  dlms::server::ServerContext& Context();
+  const dlms::server::ServerContext& Context() const;
+
+private:
+  ServerEndpoint(const ServerEndpoint&);
+  ServerEndpoint& operator=(const ServerEndpoint&);
+
+  void ConfigureAssociationContext();
+  void ConfigureXdlmsProcessor();
+  EndpointStatus ApplyCipheredAssociationContext();
+  EndpointStatus NegotiateAssociation();
+  bool IsReleaseRequest(const std::vector<std::uint8_t>& requestApdu) const;
+  EndpointStatus ReleaseAssociation(
+    const std::vector<std::uint8_t>& requestApdu);
+  EndpointStatus HandleHlsReply(
+    const std::vector<std::uint8_t>& requestApdu,
+    std::vector<std::uint8_t>& responseApdu,
+    bool& handled);
+
+  dlms::profile::IApduChannel& channel_;
+  ServerEndpointOptions options_;
+  std::unique_ptr<dlms::association::AssociationServer> association_;
+  std::unique_ptr<ServerEndpointHlsHighStrategy> hlsHigh_;
+  std::unique_ptr<ServerEndpointHlsGmacStrategy> hlsGmac_;
+  dlms::server::ServerContext context_;
+  dlms::server::DlmsServer server_;
+  dlms::server::XdlmsServerAdapter adapter_;
+  dlms::xdlms::XdlmsServerDispatcher dispatcher_;
+  std::unique_ptr<dlms::security::SecurityContext> securityContext_;
+  std::unique_ptr<dlms::security::InMemoryKeyStore> keys_;
+  std::unique_ptr<dlms::security::InMemoryInvocationCounterStore> counters_;
+  std::unique_ptr<dlms::security::CipheredApduProcessor> security_;
+  std::unique_ptr<dlms::xdlms::XdlmsServerApduProcessor> processor_;
+  bool open_;
+  bool hlsPending_;
+};
+
+EndpointStatus MapProfileStatus(dlms::profile::ProfileStatus status);
+EndpointStatus MapXdlmsStatus(dlms::xdlms::XdlmsStatus status);
+
+} // namespace endpoint
+} // namespace dlms

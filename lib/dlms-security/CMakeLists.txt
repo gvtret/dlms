@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION 3.16)
+
+include("${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/DlmsVersion.cmake")
+
+project(dlms_security
+  VERSION ${DLMS_PROJECT_VERSION}
+  LANGUAGES C CXX)
+
+option(DLMS_BUILD_TESTS "Build GoogleTest tests" ON)
+option(DLMS_USE_SYSTEM_GTEST "Use system-installed GoogleTest" OFF)
+
+find_package(OpenSSL REQUIRED)
+
+add_library(dlms_security
+  src/security/ciphered_apdu_processor.cpp
+  src/security/hls_high_authenticator.cpp
+  src/security/hls_gmac_authenticator.cpp
+  src/security/in_memory_invocation_counter_store.cpp
+  src/security/in_memory_key_store.cpp
+  src/security/suite0_aes_gcm.cpp
+  src/security/security_status.cpp
+  src/security/security_types.cpp)
+
+target_compile_features(dlms_security PUBLIC cxx_std_11)
+
+target_include_directories(dlms_security
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+target_link_libraries(dlms_security
+  PUBLIC
+    OpenSSL::Crypto)
+
+set(DLMS_SECURITY_HAS_API ON CACHE INTERNAL
+  "dlms-security exposes the security API required by upper-layer integration tests")
+
+if(DLMS_BUILD_TESTS AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
+  enable_testing()
+  add_subdirectory(test)
+endif()

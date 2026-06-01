@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 
+include(cmake/DlmsVersion.cmake)
+
 project(dlms_integration
-  VERSION 0.1.0
+  VERSION ${DLMS_PROJECT_VERSION}
   LANGUAGES C CXX)
 
 option(DLMS_BUILD_INTEGRATION_TESTS "Build cross-library integration tests" ON)
@@ -11,6 +13,11 @@ option(DLMS_BUILD_EXAMPLES "Build example programs" ON)
 
 if(DLMS_BUILD_INTEGRATION_TESTS)
   enable_testing()
+
+  add_test(NAME dlms_semver_check
+    COMMAND ${CMAKE_COMMAND}
+      -DVERSION_FILE=${CMAKE_CURRENT_SOURCE_DIR}/VERSION
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckSemver.cmake)
 
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-hdlc/CMakeLists.txt" AND
      EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-llc/CMakeLists.txt")

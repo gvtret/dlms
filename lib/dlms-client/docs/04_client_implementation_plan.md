@@ -1,0 +1,236 @@
+# dlms-client Implementation Plan
+
+## Phase 0. Documentation
+
+Deliverables:
+
+- requirements;
+- public API contract;
+- architecture diagrams;
+- state-machine diagram;
+- test plan;
+- implementation plan;
+- minimal CMake interface target.
+
+Commit message:
+
+```text
+docs(client): define public client facade
+```
+
+## Phase 1. Status And Options
+
+Deliverables:
+
+- `ClientStatus`;
+- status name helper;
+- `DlmsClientOptions`;
+- option validation;
+- default options helper;
+- unit tests.
+
+Commit message:
+
+```text
+feat(client): add facade status and options
+```
+
+## Phase 2. Injected-Channel Facade
+
+Deliverables:
+
+- `DlmsClient` over externally supplied `IApduChannel` and
+  `AssociationClient`;
+- lifecycle state machine;
+- GET/SET/ACTION forwarding to `XdlmsClient`;
+- fake-channel tests.
+
+Commit message:
+
+```text
+feat(client): add injected channel facade
+```
+
+## Phase 3. Wrapper/TCP Factory
+
+Deliverables:
+
+- Wrapper/TCP transport/profile construction from `DlmsClientOptions`;
+- ownership model for transport, profile channel, association, and xDLMS client;
+- lifecycle tests with fakes or loopback.
+
+Commit message:
+
+```text
+feat(client): compose wrapper tcp client
+```
+
+## Phase 4. Root Integration
+
+Deliverables:
+
+- root submodule entry;
+- root CMake wiring;
+- root integration test for public-client GET against the minimal server path;
+- full root build and test run.
+
+Commit message:
+
+```text
+test: cover public client get integration
+```
+
+## Phase 5. SET/ACTION Integration
+
+Deliverables:
+
+- root integration tests for public-client SET and ACTION;
+- error-path tests for service rejection.
+
+Commit message:
+
+```text
+test: cover public client set action integration
+```
+
+## Phase 6. Security Options Documentation
+
+Deliverables:
+
+- public security option requirements;
+- API contract for `ClientSecurityMode::AuthenticatedAndEncrypted`;
+- architecture sequence for client/security/xDLMS composition;
+- status mapping and test plan for security failures.
+
+Commit message:
+
+```text
+docs(client): define security options
+```
+
+## Phase 7. Injected Security Facade
+
+Deliverables:
+
+- injected constructor accepting `CipheredApduProcessor`;
+- `ClientStatus::SecurityFailed`;
+- xDLMS security failure mapping;
+- focused tests for protected GET and authentication failure using injected
+  channel composition.
+
+Commit message:
+
+```text
+feat(client): add injected security facade
+```
+
+## Phase 8. Options-Owned Security Composition
+
+Deliverables:
+
+- `ClientSecurityOptions`;
+- validation for protected mode;
+- options constructor ownership of key store, counter store, security context,
+  and ciphered APDU processor;
+- tests proving options-owned protected client construction.
+
+Commit message:
+
+```text
+feat(client): compose security options
+```
+
+## Phase 9. LLS Client Options Documentation
+
+Deliverables:
+
+- public association authentication option requirements;
+- API contract for `ClientAuthenticationMode::LowLevelSecurity`;
+- architecture sequence for client-to-association credential forwarding;
+- test plan for validation and AARQ forwarding.
+
+Commit message:
+
+```text
+docs(client): define LLS association options
+```
+
+## Phase 10. LLS Client Options Implementation
+
+Deliverables:
+
+- public LLS option structs;
+- validation for missing and oversized credentials;
+- options-owned association composition using LLS credentials;
+- focused tests for AARQ forwarding.
+
+Commit message:
+
+```text
+feat(client): pass LLS credentials to association
+```
+
+## Phase 11. HLS GMAC Client Options Documentation
+
+Deliverables:
+
+- public API contract for `ClientAuthenticationMode::HighLevelSecurityGmac`;
+- architecture sequence for AARQ/AARE plus Association LN pass-3/pass-4;
+- validation rules for system titles, authentication key, and random source;
+- test plan for xDLMS ACTION orchestration and server response verification.
+
+Commit message:
+
+```text
+docs(client): define HLS GMAC options
+```
+
+## Phase 12. HLS GMAC Client Options Implementation
+
+Deliverables:
+
+- HLS GMAC association strategy adapter;
+- OpenSSL-backed production random source from the MinGW toolchain;
+- options-owned HLS GMAC composition;
+- `OpenAssociation()` pass-3/pass-4 xDLMS ACTION orchestration;
+- focused tests for challenge forwarding, ACTION descriptor/parameter, and
+  verification failures.
+
+Commit message:
+
+```text
+feat(client): orchestrate HLS GMAC association
+```
+
+## Phase 13. HDLC/TCP Profile Documentation
+
+Deliverables:
+
+- public API contract for `ClientProfile::HdlcTcp`;
+- HDLC/TCP endpoint option requirements;
+- architecture sequence for TCP open plus HDLC data-link connect;
+- test plan for validation and lifecycle composition.
+
+Commit message:
+
+```text
+docs(client): define HDLC TCP profile option
+```
+
+## Phase 14. HDLC/TCP Profile Implementation
+
+Deliverables:
+
+- `ClientProfile::HdlcTcp`;
+- `HdlcTcpEndpoint` options;
+- validation for HDLC/TCP endpoint fields;
+- options-owned composition of `TcpStreamTransport`, `HdlcProfileChannel`,
+  `AssociationClient`, and `XdlmsClient`;
+- `Connect()` data-link establishment for HDLC/TCP;
+- focused unit tests.
+
+Commit message:
+
+```text
+feat(client): compose HDLC TCP profile
+```

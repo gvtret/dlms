@@ -5,10 +5,10 @@
 This document describes the target architecture of the DLMS/COSEM framework
 hosted by this integration repository.
 
-The root repository is an integration workspace. Each protocol or service layer
-is expected to live in its own self-contained repository under `lib/`, following
-the existing pattern used by `dlms-hdlc`, `dlms-llc`, `dlms-wrapper`, and
-`dlms-apdu`.
+The root repository is the canonical monorepository. Each protocol or service
+layer lives as a self-contained component directory under `lib/`, but Git
+history, release versioning, and cross-layer integration are owned by the root
+repository.
 
 The architecture is intentionally layered:
 
@@ -22,8 +22,8 @@ The architecture is intentionally layered:
 
 | Area | Decision |
 |---|---|
-| Repository model | One self-contained repository per layer |
-| Integration repository | Root `dlms` repository wires layers together and hosts cross-layer tests |
+| Repository model | One root monorepository with self-contained component directories under `lib/` |
+| Integration repository | Root `dlms` repository owns all source, versioning, and cross-layer tests |
 | Language | C++11 unless a layer explicitly documents otherwise |
 | Build system | CMake 3.16+ |
 | Runtime errors | Status codes only |
@@ -31,7 +31,8 @@ The architecture is intentionally layered:
 | Tests | GoogleTest for C++ layers |
 | Dependencies | Downward-only dependencies; no dependency cycles |
 | C ABI | Optional per layer; stable and documented when present |
-| Documentation | Requirements, API, architecture, and test-plan documents per layer |
+| Documentation | Requirements, API, architecture, and test-plan documents per component |
+| Versioning | One root SemVer source in `VERSION`; see `docs/versioning.md` |
 
 ## 2.1. Layer Abstraction Contract
 
@@ -40,7 +41,7 @@ or provides. Applications must be able to replace a concrete layer
 implementation when they need custom transports, storage, security material,
 object models, schedulers, or protocol diagnostics. Concrete default classes are
 allowed, but higher layers must depend on the abstract boundary where a
-runtime dependency crosses a repository boundary.
+runtime dependency crosses a component boundary.
 
 This rule applies to C++ public APIs first. A C ABI may expose the same boundary
 through callbacks or opaque handles when that layer has a C API. Runtime public
@@ -106,11 +107,18 @@ These examples are intentionally deterministic and do not require a live meter.
 Loopback and live-meter coverage belongs in integration tests or opt-in smoke
 tests when it requires network timing or external hardware.
 
+## 2.4. Consolidation And Versioning
+
+The project uses one Git repository and one SemVer release stream. The
+component boundaries below remain design and public API boundaries; they are no
+longer separate repository boundaries. See `docs/architecture_consolidation.md`
+for the monorepo decision and `docs/versioning.md` for the release policy.
+
 ## 3. Current Implemented Layers
 
-The following repositories already exist or are present in the current workspace:
+The following component directories are present in the current workspace:
 
-| Repository | Responsibility |
+| Component | Responsibility |
 |---|---|
 | `lib/dlms-hdlc` | HDLC Type 3 frame codec, stream decoder, segmentation support, and transport-independent HDLC session state machine |
 | `lib/dlms-llc` | DLMS/COSEM LLC LPDU codec for the 3-layer HDLC-based profile |
@@ -131,10 +139,10 @@ orchestration, COSEM object storage, access-right decisions, or cryptographic
 execution. `dlms-transport` owns protocol-neutral I/O only, while
 `dlms-profile` binds lower codecs and transports into opaque APDU channels.
 
-## 4. Target Repository Map
+## 4. Target Component Map
 
 ```text
-dlms                         integration workspace
+dlms                         monorepository and release root
 lib/dlms-common              shared byte views, buffers, status helpers
 lib/dlms-hdlc                HDLC codec and session state machine
 lib/dlms-llc                 LLC codec
@@ -1112,9 +1120,9 @@ MVP success criteria:
   downstream connection and rejects a Low Password AARQ with mismatched
   credentials before opening or invoking the injected upstream.
 
-## 8. Required Documentation Per Layer Repository
+## 8. Required Documentation Per Component
 
-Each layer repository should include:
+Each layer component should include:
 
 ```text
 README.md
@@ -1258,5 +1266,5 @@ Live meter checks are not part of the default deterministic suite. They are
 documented in `docs/live_meter_smoke_plan.md` and must require explicit endpoint
 configuration before they run.
 
-The root tests should validate integration only. Unit coverage for each layer
-belongs in that layer's own repository.
+The root tests should validate integration across components. Unit coverage for
+each layer belongs next to that component under `lib/`.

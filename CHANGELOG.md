@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 - 2026-06-01
+
+- Added a default CTest check that requires the current root `VERSION` to have
+  a matching `CHANGELOG.md` release entry.
+- Documented the changelog requirement in the SemVer release rules.
+
 ## 0.1.1 - 2026-06-01
 
 - Documented the root monorepo quickstart, component map, build/test workflow,

@@ -23,6 +23,12 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
       -DVERSION_FILE=${CMAKE_CURRENT_SOURCE_DIR}/VERSION
       -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckSemver.cmake)
 
+  add_test(NAME dlms_changelog_check
+    COMMAND ${CMAKE_COMMAND}
+      -DVERSION_FILE=${CMAKE_CURRENT_SOURCE_DIR}/VERSION
+      -DCHANGELOG_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGELOG.md
+      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/CheckChangelog.cmake)
+
   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-hdlc/CMakeLists.txt" AND
      EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/dlms-llc/CMakeLists.txt")
     add_subdirectory(lib/dlms-hdlc)

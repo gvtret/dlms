@@ -43,11 +43,14 @@ not public API unless they are documented as extension points.
 
 Every release candidate must pass the default root CTest suite. The
 `dlms_semver_check` CTest validates that `VERSION` is a valid SemVer string.
+The `dlms_changelog_check` CTest validates that the current `VERSION` has a
+matching `CHANGELOG.md` release entry.
 
 Release changes should update:
 
 - `VERSION`;
-- release notes or migration notes when behavior changes;
+- `CHANGELOG.md`;
+- migration notes when behavior changes;
 - any public documentation affected by the compatibility scope.
 
 The root repository is authoritative after the submodule flattening. Former

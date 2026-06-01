@@ -43,4 +43,5 @@ name exactly matches `v<version>` from `VERSION`.
 
 The CI workflow runs the same clean verification script and uploads the
 generated `DLMSFramework-<version>.zip` file as `DLMSFramework-package`.
-Use that artifact as the release package source for the matching tag.
+For `v<version>` tag pushes, CI also publishes a GitHub release and attaches the
+same verified ZIP package as the release asset.

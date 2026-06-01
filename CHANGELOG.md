@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.9 - 2026-06-01
+
+- Added CI release publication for `v*` tag pushes, attaching the verified
+  `DLMSFramework-<version>.zip` package artifact to the GitHub release.
+- Documented that tagged releases publish the same ZIP artifact that passed
+  clean release verification.
+
 ## 0.1.8 - 2026-06-01
 
 - Added a release tag consistency CTest that validates `v<version>` tag names

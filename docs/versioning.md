@@ -56,7 +56,9 @@ For local release verification on Windows/MSYS2, run
 fresh `build-release-mingw64` tree, configures with MinGW first in `PATH`,
 builds, runs CTest, and builds the package target.
 The GitHub Actions CI workflow uses the same script for push, pull request,
-and manual verification, then uploads the verified ZIP package artifact.
+manual verification, and `v*` tag pushes, then uploads the verified ZIP package
+artifact. For `v<version>` tag pushes, CI publishes a GitHub release with the
+same verified ZIP attached.
 Tagged release steps are documented in `docs/release_checklist.md`.
 
 Release changes should update:

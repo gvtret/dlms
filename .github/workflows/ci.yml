@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   mingw64-release:
@@ -46,3 +46,11 @@ jobs:
           name: DLMSFramework-package
           path: build-release-mingw64/DLMSFramework-*.zip
           if-no-files-found: error
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build-release-mingw64/DLMSFramework-*.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: true

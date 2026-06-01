@@ -76,6 +76,13 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
         PRIVATE
           dlms_endpoint)
 
+      add_executable(dlms_endpoint_custom_server_example
+        tools/endpoint_custom_server_example.cpp)
+      target_compile_features(dlms_endpoint_custom_server_example PRIVATE cxx_std_11)
+      target_link_libraries(dlms_endpoint_custom_server_example
+        PRIVATE
+          dlms_endpoint)
+
       add_executable(dlms_endpoint_push_listener_example
         tools/endpoint_push_listener_example.cpp)
       target_compile_features(dlms_endpoint_push_listener_example PRIVATE cxx_std_11)
@@ -94,6 +101,8 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
         COMMAND dlms_endpoint_client_example)
       add_test(NAME dlms_endpoint_server_example
         COMMAND dlms_endpoint_server_example)
+      add_test(NAME dlms_endpoint_custom_server_example
+        COMMAND dlms_endpoint_custom_server_example)
       add_test(NAME dlms_endpoint_push_listener_example
         COMMAND dlms_endpoint_push_listener_example)
       add_test(NAME dlms_endpoint_gateway_example

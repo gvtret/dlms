@@ -45,6 +45,9 @@ Every release candidate must pass the default root CTest suite. The
 `dlms_semver_check` CTest validates that `VERSION` is a valid SemVer string.
 The `dlms_changelog_check` CTest validates that the current `VERSION` has a
 matching `CHANGELOG.md` release entry.
+The package smoke tests validate that the installed `DLMSFramework` CMake
+package is consumable and that the root build can produce a non-empty ZIP
+package artifact.
 
 Release changes should update:
 

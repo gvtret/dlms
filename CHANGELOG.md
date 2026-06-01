@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.3 - 2026-06-01
+
+- Added a default CTest smoke check that builds the root `DLMSFramework` ZIP
+  package artifact and verifies that it is produced.
+- Documented package artifact verification in the SemVer release rules and
+  install quickstart.
+
 ## 0.1.2 - 2026-06-01
 
 - Added a default CTest check that requires the current root `VERSION` to have

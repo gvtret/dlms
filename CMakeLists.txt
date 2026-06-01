@@ -153,6 +153,20 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
           -DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
           -DGENERATOR=${CMAKE_GENERATOR}
           -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/PackageInstallSmoke.cmake)
+
+      set(CPACK_PACKAGE_NAME "DLMSFramework")
+      set(CPACK_PACKAGE_VENDOR "DLMS Framework")
+      set(CPACK_PACKAGE_CONTACT "DLMS Framework maintainers")
+      set(CPACK_PACKAGE_VERSION "${DLMS_VERSION}")
+      set(CPACK_PACKAGE_FILE_NAME "DLMSFramework-${DLMS_VERSION}")
+      set(CPACK_GENERATOR "ZIP")
+      include(CPack)
+
+      add_test(NAME dlms_package_artifact_smoke
+        COMMAND ${CMAKE_COMMAND}
+          -DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+          -DPACKAGE_FILE=${CMAKE_CURRENT_BINARY_DIR}/DLMSFramework-${DLMS_VERSION}.zip
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/PackageArtifactSmoke.cmake)
     endif()
 
     if(TARGET dlms_framework)

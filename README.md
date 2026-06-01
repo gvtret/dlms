@@ -49,6 +49,7 @@ The root build exports a CMake package named `DLMSFramework`:
 
 ```sh
 cmake --install build-mingw64 --prefix /tmp/dlms-install
+cmake --build build-mingw64 --target package
 ```
 
 Consumer projects can then use:

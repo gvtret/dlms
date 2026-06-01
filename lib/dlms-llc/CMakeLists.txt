@@ -24,7 +24,8 @@ target_compile_features(dlms_llc PUBLIC cxx_std_11)
 
 target_include_directories(dlms_llc
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
 set(DLMS_LLC_HAS_CODEC_API ON CACHE INTERNAL
   "dlms-llc exposes the codec API required by root integration tests")

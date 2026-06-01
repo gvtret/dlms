@@ -24,7 +24,8 @@ target_compile_features(dlms_hdlc PUBLIC cxx_std_11)
 
 target_include_directories(dlms_hdlc
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
 if(DLMS_BUILD_C_API)
   target_sources(dlms_hdlc

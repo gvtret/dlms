@@ -30,7 +30,8 @@ target_compile_features(dlms_transport PUBLIC cxx_std_11)
 
 target_include_directories(dlms_transport
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
 if(WIN32)
   target_link_libraries(dlms_transport

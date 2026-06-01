@@ -28,7 +28,8 @@ target_compile_features(dlms_association PUBLIC cxx_std_11)
 
 target_include_directories(dlms_association
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
 target_link_libraries(dlms_association
   PUBLIC

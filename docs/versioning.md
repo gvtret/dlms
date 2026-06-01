@@ -10,6 +10,9 @@ component projects use the same numeric `MAJOR.MINOR.PATCH` project version.
 The full SemVer string may also include prerelease or build metadata, for
 example `0.2.0-alpha.1` or `1.0.0+build.7`.
 
+The installed `DLMSFramework` CMake package version is generated from the same
+root SemVer source.
+
 ## SemVer Policy
 
 Until `1.0.0`, the framework is still pre-stable. Minor releases may change

@@ -6,10 +6,14 @@ project(dlms_integration
   VERSION ${DLMS_PROJECT_VERSION}
   LANGUAGES C CXX)
 
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 option(DLMS_BUILD_INTEGRATION_TESTS "Build cross-library integration tests" ON)
 option(DLMS_USE_SYSTEM_GTEST "Use system-installed GoogleTest" OFF)
 option(DLMS_BUILD_LIVE_TESTS "Build opt-in live meter smoke tests" OFF)
 option(DLMS_BUILD_EXAMPLES "Build example programs" ON)
+option(DLMS_INSTALL "Install the DLMS framework CMake package" ON)
 
 if(DLMS_BUILD_INTEGRATION_TESTS)
   enable_testing()
@@ -69,6 +73,81 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
     endif()
 
     include(cmake/DlmsPackages.cmake)
+
+    if(DLMS_INSTALL AND TARGET dlms_framework)
+      set(DLMS_COMPONENT_TARGETS
+        dlms_hdlc
+        dlms_llc
+        dlms_wrapper
+        dlms_apdu
+        dlms_transport
+        dlms_profile
+        dlms_association
+        dlms_security
+        dlms_xdlms
+        dlms_cosem
+        dlms_server
+        dlms_client
+        dlms_endpoint)
+
+      set(DLMS_PACKAGE_TARGETS
+        dlms_codec
+        dlms_io
+        dlms_protocol
+        dlms_cosem_server
+        dlms_runtime
+        dlms_framework)
+
+      install(TARGETS ${DLMS_COMPONENT_TARGETS} ${DLMS_PACKAGE_TARGETS}
+        EXPORT DLMSFrameworkTargets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+      foreach(dlms_include_dir
+          lib/dlms-hdlc/include
+          lib/dlms-llc/include
+          lib/dlms-wrapper/include
+          lib/dlms-apdu/include
+          lib/dlms-transport/include
+          lib/dlms-profile/include
+          lib/dlms-association/include
+          lib/dlms-security/include
+          lib/dlms-xdlms/include
+          lib/dlms-cosem/include
+          lib/dlms-server/include
+          lib/dlms-client/include
+          lib/dlms-endpoint/include)
+        install(DIRECTORY ${dlms_include_dir}/
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+      endforeach()
+
+      configure_package_config_file(
+        cmake/DLMSFrameworkConfig.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/DLMSFrameworkConfig.cmake
+        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/DLMSFramework)
+
+      write_basic_package_version_file(
+        ${CMAKE_CURRENT_BINARY_DIR}/DLMSFrameworkConfigVersion.cmake
+        VERSION ${PROJECT_VERSION}
+        COMPATIBILITY SameMajorVersion)
+
+      install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/DLMSFrameworkConfig.cmake
+        ${CMAKE_CURRENT_BINARY_DIR}/DLMSFrameworkConfigVersion.cmake
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/DLMSFramework)
+
+      install(EXPORT DLMSFrameworkTargets
+        NAMESPACE dlms::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/DLMSFramework)
+
+      add_test(NAME dlms_package_install_smoke
+        COMMAND ${CMAKE_COMMAND}
+          -DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+          -DGENERATOR=${CMAKE_GENERATOR}
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/PackageInstallSmoke.cmake)
+    endif()
 
     if(TARGET dlms_framework)
       add_executable(dlms_framework_target_smoke

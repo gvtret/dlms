@@ -21,7 +21,8 @@ target_compile_features(dlms_cosem PUBLIC cxx_std_11)
 
 target_include_directories(dlms_cosem
   PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>)
 
 set(DLMS_COSEM_HAS_OBJECT_MODEL_API ON CACHE INTERNAL
   "dlms-cosem exposes the COSEM object model API")

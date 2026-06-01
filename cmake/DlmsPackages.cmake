@@ -10,6 +10,10 @@ function(dlms_add_interface_package package_name)
 
   if(NOT TARGET ${package_name})
     add_library(${package_name} INTERFACE)
+    string(REGEX REPLACE "^dlms_" "" package_export_name "${package_name}")
+    set_target_properties(${package_name}
+      PROPERTIES
+        EXPORT_NAME ${package_export_name})
     target_link_libraries(${package_name}
       INTERFACE
         ${package_targets})

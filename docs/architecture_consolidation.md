@@ -40,6 +40,15 @@ The root CMake build exposes matching aggregate interface targets:
 | `dlms_runtime` / `dlms::runtime` | `dlms_client`, `dlms_endpoint` |
 | `dlms_framework` / `dlms::framework` | all aggregate targets above |
 
+The root install step exports these targets as a CMake package named
+`DLMSFramework`. A downstream CMake project can consume the installed framework
+with:
+
+```cmake
+find_package(DLMSFramework REQUIRED CONFIG)
+target_link_libraries(app PRIVATE dlms::framework)
+```
+
 This is a packaging plan, not an instruction to merge responsibilities. A file
 move or target rename should happen only when it reduces real maintenance cost
 and can be verified without changing protocol behavior.
@@ -60,5 +69,7 @@ The initial migration uses a flattening approach:
 - Default root CMake configure, build, and CTest continue to pass.
 - Root `VERSION` is the single SemVer source of truth.
 - Aggregate CMake package targets compile and link through a root smoke test.
+- The installed `DLMSFramework` CMake package configures and links a downstream
+  smoke consumer through `dlms::framework`.
 - Documentation no longer tells contributors to create one repository per
   layer.

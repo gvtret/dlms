@@ -87,6 +87,25 @@ Concrete classes remain available as default implementations and compatibility
 shortcuts. New higher-level APIs should prefer these ports whenever they store
 or call into another runtime layer.
 
+## 2.3. Compile-Tested Public Examples
+
+The root build registers small example executables in CTest so public
+composition paths keep compiling and running:
+
+| Example | Demonstrated boundary |
+|---|---|
+| `dlms_endpoint_client_example` | client endpoint options validation and default client facade construction |
+| `dlms_endpoint_server_example` | server endpoint construction over a caller-provided APDU channel and logical device |
+| `dlms_endpoint_custom_server_example` | `ServerEndpoint` over caller-provided `dlms::server::IServerService` |
+| `dlms_endpoint_custom_server_listener_example` | `ServerListenerRuntime` over caller-provided `IApduChannelListener` and `dlms::server::IServerService` |
+| `dlms_client_custom_xdlms_service_example` | `DlmsClient` over caller-provided `dlms::client::IClientXdlmsService` |
+| `dlms_endpoint_push_listener_example` | `PushListenerEndpoint` over caller-provided `IPushIndicationHandler` |
+| `dlms_endpoint_gateway_example` | `GatewayEndpoint` over caller-provided `IGatewayUpstream` and `IGatewayPolicy` |
+
+These examples are intentionally deterministic and do not require a live meter.
+Loopback and live-meter coverage belongs in integration tests or opt-in smoke
+tests when it requires network timing or external hardware.
+
 ## 3. Current Implemented Layers
 
 The following repositories already exist or are present in the current workspace:

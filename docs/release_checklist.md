@@ -1,0 +1,43 @@
+# Release Checklist
+
+Use this checklist for every tagged framework release.
+
+## Before Tagging
+
+1. Choose the next SemVer according to `docs/versioning.md`.
+2. Update `VERSION`.
+3. Add a matching `CHANGELOG.md` entry.
+4. Update migration notes or public documentation when behavior changes.
+5. Run local clean verification from an MSYS2 MinGW shell:
+
+```sh
+scripts/verify_release_mingw64.sh
+```
+
+The script must pass configure, build, CTest, and package creation. The expected
+package path is:
+
+```text
+build-release-mingw64/DLMSFramework-<version>.zip
+```
+
+## Tagging
+
+Create release tags from `master` only after the release commit is pushed and
+the CI workflow has passed.
+
+Use a `v`-prefixed SemVer tag that exactly matches `VERSION`:
+
+```sh
+git tag -a v<version> -m "DLMSFramework <version>"
+git push origin v<version>
+```
+
+Do not create or move a release tag when `VERSION`, `CHANGELOG.md`, and the
+verified package artifact disagree.
+
+## CI Artifact
+
+The CI workflow runs the same clean verification script and uploads the
+generated `DLMSFramework-<version>.zip` file as `DLMSFramework-package`.
+Use that artifact as the release package source for the matching tag.

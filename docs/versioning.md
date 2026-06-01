@@ -54,6 +54,7 @@ fresh `build-release-mingw64` tree, configures with MinGW first in `PATH`,
 builds, runs CTest, and builds the package target.
 The GitHub Actions CI workflow uses the same script for push, pull request,
 and manual verification, then uploads the verified ZIP package artifact.
+Tagged release steps are documented in `docs/release_checklist.md`.
 
 Release changes should update:
 

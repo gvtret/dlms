@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7 - 2026-06-01
+
+- Added release checklist documentation that ties SemVer version bumps,
+  changelog entries, clean verification, Git tags, and CI package artifacts
+  into one release procedure.
+
 ## 0.1.6 - 2026-06-01
 
 - Added GitHub Actions artifact upload for the generated

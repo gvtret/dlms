@@ -82,12 +82,15 @@ Aggregate targets are available for narrower linking:
 ## Versioning
 
 The canonical framework version is stored in `VERSION` and follows SemVer.
-See `docs/versioning.md` for the compatibility policy.
+See `docs/versioning.md` for the compatibility policy and
+`docs/release_checklist.md` for tagged release steps.
 
 ## Documentation
 
 - `docs/system_architecture.md` describes the full layered architecture.
 - `docs/architecture_consolidation.md` documents the monorepo and package
   consolidation decision.
+- `docs/release_checklist.md` defines the release checklist for SemVer tags and
+  package artifacts.
 - Each component keeps its own requirements, API, architecture, and test-plan
   documents under `lib/<component>/docs`.

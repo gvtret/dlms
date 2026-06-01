@@ -43,6 +43,12 @@ cmake --build build-mingw64
 ctest --test-dir build-mingw64 --output-on-failure
 ```
 
+For a fresh release-style verification from an empty build directory:
+
+```sh
+scripts/verify_release_mingw64.sh
+```
+
 ## Install
 
 The root build exports a CMake package named `DLMSFramework`:

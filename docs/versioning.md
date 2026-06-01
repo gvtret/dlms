@@ -48,6 +48,10 @@ matching `CHANGELOG.md` release entry.
 The package smoke tests validate that the installed `DLMSFramework` CMake
 package is consumable and that the root build can produce a non-empty ZIP
 package artifact.
+For local release verification on Windows/MSYS2, run
+`scripts/verify_release_mingw64.sh` from an MSYS2 shell. The script creates a
+fresh `build-release-mingw64` tree, configures with MinGW first in `PATH`,
+builds, runs CTest, and builds the package target.
 
 Release changes should update:
 

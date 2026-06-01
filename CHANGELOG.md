@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.4 - 2026-06-01
+
+- Added a local MSYS2 MinGW clean release verification script that configures,
+  builds, tests, and packages the root framework from a fresh build directory.
+- Documented the release verification script in the README and SemVer release
+  rules.
+
 ## 0.1.3 - 2026-06-01
 
 - Added a default CTest smoke check that builds the root `DLMSFramework` ZIP

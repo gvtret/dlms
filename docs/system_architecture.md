@@ -94,7 +94,7 @@ composition paths keep compiling and running:
 
 | Example | Demonstrated boundary |
 |---|---|
-| `dlms_endpoint_client_example` | client endpoint options validation and default client facade construction |
+| `dlms_endpoint_client_example` | default `ClientEndpoint` Open/GET/Close against a bounded local Wrapper/TCP server endpoint |
 | `dlms_endpoint_server_example` | server endpoint construction over a caller-provided APDU channel and logical device |
 | `dlms_endpoint_custom_server_example` | `ServerEndpoint` over caller-provided `dlms::server::IServerService` |
 | `dlms_endpoint_custom_server_listener_example` | `ServerListenerRuntime` over caller-provided `IApduChannelListener` and `dlms::server::IServerService` |

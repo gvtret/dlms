@@ -8,6 +8,12 @@ namespace {
 class ExampleApduChannel : public dlms::profile::IApduChannel
 {
 public:
+  explicit ExampleApduChannel(const std::vector<std::uint8_t>& received)
+    : open_(false)
+    , received_(received)
+  {
+  }
+
   dlms::profile::ProfileStatus Open()
   {
     open_ = true;
@@ -51,8 +57,13 @@ public:
     return dlms::profile::ProfileStatus::Ok;
   }
 
+  const std::vector<std::uint8_t>& Received() const
+  {
+    return received_;
+  }
+
 private:
-  bool open_ = false;
+  bool open_;
   std::vector<std::uint8_t> received_;
 };
 
@@ -66,6 +77,11 @@ public:
     return dlms::endpoint::EndpointStatus::Ok;
   }
 
+  const std::vector<std::uint8_t>& LastApdu() const
+  {
+    return lastApdu_;
+  }
+
 private:
   std::vector<std::uint8_t> lastApdu_;
 };
@@ -74,10 +90,21 @@ private:
 
 int main()
 {
-  ExampleApduChannel channel;
+  const std::uint8_t kPushApdu[] = {0x0Fu, 0x01u, 0x00u};
+  const std::vector<std::uint8_t> pushApdu(
+    kPushApdu,
+    kPushApdu + sizeof(kPushApdu));
+
+  ExampleApduChannel channel(pushApdu);
   ExamplePushHandler handler;
   dlms::endpoint::PushListenerEndpoint endpoint(channel, handler);
   if (endpoint.Open() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  if (endpoint.RunOnce() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  if (handler.LastApdu() != channel.Received()) {
     return 1;
   }
   return endpoint.Close() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;

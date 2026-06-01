@@ -2,6 +2,8 @@
 
 #include "dlms/apdu/apdu_writer.hpp"
 #include "dlms/apdu/data.hpp"
+#include "dlms/apdu/get.hpp"
+#include "dlms/apdu/xdlms.hpp"
 
 #include <cstdint>
 #include <vector>
@@ -11,6 +13,13 @@ namespace {
 class ExampleApduChannel : public dlms::profile::IApduChannel
 {
 public:
+  explicit ExampleApduChannel(const std::vector<std::uint8_t>& received)
+    : open_(false)
+    , received_(received)
+    , sent_()
+  {
+  }
+
   dlms::profile::ProfileStatus Open()
   {
     open_ = true;
@@ -55,8 +64,13 @@ public:
     return dlms::profile::ProfileStatus::Ok;
   }
 
+  const std::vector<std::uint8_t>& Sent() const
+  {
+    return sent_;
+  }
+
 private:
-  bool open_ = false;
+  bool open_;
   std::vector<std::uint8_t> received_;
   std::vector<std::uint8_t> sent_;
 };
@@ -73,9 +87,29 @@ std::vector<std::uint8_t> EncodeLongUnsigned(std::uint16_t value)
   return std::vector<std::uint8_t>(buffer, buffer + writer.WrittenSize());
 }
 
+std::vector<std::uint8_t> EncodeGetRequest()
+{
+  const dlms::apdu::XdlmsApdu request =
+    dlms::apdu::MakeGetRequestNormal(
+      0x85u,
+      3u,
+      dlms::apdu::LogicalName(1, 0, 1, 8, 0, 255),
+      2u);
+
+  std::vector<std::uint8_t> output;
+  dlms::apdu::EncodeXdlmsApdu(request, output);
+  return output;
+}
+
 class ExampleUpstream : public dlms::endpoint::IGatewayUpstream
 {
 public:
+  ExampleUpstream()
+    : open_(false)
+    , getCalls_(0u)
+  {
+  }
+
   dlms::endpoint::EndpointStatus Open()
   {
     open_ = true;
@@ -97,6 +131,7 @@ public:
     const dlms::endpoint::ClientAttributeDescriptor&,
     std::vector<std::uint8_t>& encodedData)
   {
+    ++getCalls_;
     encodedData = EncodeLongUnsigned(2300u);
     return dlms::endpoint::EndpointStatus::Ok;
   }
@@ -118,8 +153,14 @@ public:
     return dlms::endpoint::EndpointStatus::Ok;
   }
 
+  std::size_t GetCalls() const
+  {
+    return getCalls_;
+  }
+
 private:
-  bool open_ = false;
+  bool open_;
+  std::size_t getCalls_;
 };
 
 class AllowAllPolicy : public dlms::endpoint::IGatewayPolicy
@@ -145,11 +186,17 @@ public:
 
 int main()
 {
-  ExampleApduChannel downstream;
+  ExampleApduChannel downstream(EncodeGetRequest());
   ExampleUpstream upstream;
   AllowAllPolicy policy;
   dlms::endpoint::GatewayEndpoint endpoint(downstream, upstream, policy);
   if (endpoint.Open() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  if (endpoint.RunOnce() != dlms::endpoint::EndpointStatus::Ok) {
+    return 1;
+  }
+  if (upstream.GetCalls() != 1u || downstream.Sent().empty()) {
     return 1;
   }
   return endpoint.Close() == dlms::endpoint::EndpointStatus::Ok ? 0 : 1;

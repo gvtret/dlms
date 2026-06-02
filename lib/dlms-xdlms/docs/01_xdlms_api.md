@@ -7,6 +7,9 @@ Public headers:
 ```text
 include/dlms/xdlms/xdlms_status.hpp
 include/dlms/xdlms/xdlms_types.hpp
+include/dlms/xdlms/xdlms_association_state.hpp
+include/dlms/xdlms/xdlms_security_processor_interface.hpp
+include/dlms/xdlms/xdlms_security_processor.hpp
 include/dlms/xdlms/xdlms_client.hpp
 include/dlms/xdlms/xdlms_server.hpp
 ```
@@ -118,8 +121,12 @@ constructors remain available as source-compatible shortcuts over the default
 
 When constructed with an `IXdlmsSecurityProcessor`, the client protects
 encoded request APDUs before `SendApdu()` and unprotects received response
-APDUs before xDLMS decode. `CipheredXdlmsSecurityProcessor` adapts the default
-`dlms-security` implementation. Existing constructors that accept
+APDUs before xDLMS decode. Applications that only implement the abstract
+security port can include
+`dlms/xdlms/xdlms_security_processor_interface.hpp`.
+`CipheredXdlmsSecurityProcessor`, declared in
+`dlms/xdlms/xdlms_security_processor.hpp`, adapts the default `dlms-security`
+implementation. Existing constructors that accept
 `dlms::security::CipheredApduProcessor` remain available as compatibility
 shortcuts; internally they adapt the concrete object to the same
 `IXdlmsSecurityProcessor` path. The public GET/SET/ACTION service contract does

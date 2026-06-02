@@ -1,7 +1,7 @@
 #pragma once
 
 #include "dlms/xdlms/xdlms_status.hpp"
-#include "dlms/xdlms/xdlms_security_processor.hpp"
+#include "dlms/xdlms/xdlms_security_processor_interface.hpp"
 #include "dlms/xdlms/xdlms_types.hpp"
 
 #include <cstdint>

@@ -67,7 +67,10 @@ XdlmsServerApduProcessor(XdlmsServerDispatcher& dispatcher,
 
 The caller owns the security context, keys, invocation counters, and system
 titles. The xDLMS layer only invokes `Protect()` and `Unprotect()`. Callers
-that use `dlms::security::CipheredApduProcessor` can wrap it with
+that only implement the abstract port can include
+`dlms/xdlms/xdlms_security_processor_interface.hpp`. Callers that use
+`dlms::security::CipheredApduProcessor` can include
+`dlms/xdlms/xdlms_security_processor.hpp` and wrap it with
 `CipheredXdlmsSecurityProcessor` or use the concrete compatibility overloads.
 
 ## 4. Status Mapping

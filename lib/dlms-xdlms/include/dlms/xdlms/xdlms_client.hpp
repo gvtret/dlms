@@ -3,7 +3,7 @@
 #include "dlms/association/association_client_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/xdlms/xdlms_association_state.hpp"
-#include "dlms/xdlms/xdlms_security_processor.hpp"
+#include "dlms/xdlms/xdlms_security_processor_interface.hpp"
 #include "dlms/xdlms/xdlms_types.hpp"
 
 #include <memory>

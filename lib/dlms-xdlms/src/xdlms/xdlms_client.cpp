@@ -8,6 +8,7 @@
 #include "dlms/apdu/xdlms.hpp"
 #include "dlms/association/association_client.hpp"
 #include "dlms/security/ciphered_apdu_processor.hpp"
+#include "dlms/xdlms/xdlms_security_processor.hpp"
 
 namespace dlms {
 namespace xdlms {

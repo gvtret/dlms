@@ -88,7 +88,28 @@ Concrete classes remain available as default implementations and compatibility
 shortcuts. New higher-level APIs should prefer these ports whenever they store
 or call into another runtime layer.
 
-## 2.3. Compile-Tested Public Examples
+## 2.3. Public Header Audit Rules
+
+Remaining concrete class names in public headers are acceptable only in these
+cases:
+
+- the class is the default implementation exported by its own layer, such as a
+  transport, profile channel, association client/server, security store, or
+  xDLMS dispatcher;
+- the declaration is a source-compatible convenience overload that adapts to an
+  abstract port internally, such as `AssociationClient&` or
+  `CipheredApduProcessor&` shortcuts;
+- the class is an explicit adapter from a default implementation to an abstract
+  port, such as `AssociationClientXdlmsAssociationState` or
+  `CipheredXdlmsSecurityProcessor`;
+- the type is an options/value type, not runtime implementation ownership.
+
+Any higher-layer data member, owned state, or factory result that crosses a
+layer boundary should use the public abstract port instead of the concrete
+default class. If a concrete type does not fit one of the categories above, it
+is a modernization gap.
+
+## 2.4. Compile-Tested Public Examples
 
 The root build registers small example executables in CTest so public
 composition paths keep compiling and running:
@@ -577,7 +598,7 @@ Class interaction diagram:
 ```mermaid
 classDiagram
   class XdlmsClient {
-    -AssociationClient* association
+    -IXdlmsAssociationState* association
     -InvokeIdAllocator invokeIds
     -BlockTransferManager blocks
     +get()
@@ -593,6 +614,11 @@ classDiagram
   class BlockTransferManager {
     +send_blocks()
     +receive_blocks()
+  }
+
+  class IXdlmsAssociationState {
+    <<interface>>
+    +is_associated()
   }
 
   class IXdlmsServerDispatcher {
@@ -616,7 +642,7 @@ classDiagram
     +securityOptions
   }
 
-  XdlmsClient --> AssociationClient
+  XdlmsClient --> IXdlmsAssociationState
   XdlmsClient --> InvokeIdAllocator
   XdlmsClient --> BlockTransferManager
   XdlmsClient --> ServiceOptions

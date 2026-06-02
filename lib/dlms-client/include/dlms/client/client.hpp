@@ -5,7 +5,6 @@
 
 #include "dlms/association/association_client_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
-#include "dlms/transport/tcp_stream_transport.hpp"
 #include "dlms/xdlms/xdlms_client.hpp"
 
 #include <cstdint>
@@ -15,12 +14,6 @@
 namespace dlms {
 namespace security {
 class CipheredApduProcessor;
-class HlsHighAuthenticator;
-class HlsGmacAuthenticator;
-class InMemoryInvocationCounterStore;
-class InMemoryKeyStore;
-class IRandomSource;
-struct SecurityContext;
 }
 namespace association {
 class AssociationClient;
@@ -30,7 +23,7 @@ class IXdlmsSecurityProcessor;
 }
 namespace client {
 
-class ClientHlsAssociationStrategy;
+class DlmsClientOwnedState;
 
 enum class ClientState
 {
@@ -125,19 +118,7 @@ private:
   DlmsClient(const DlmsClient&);
   DlmsClient& operator=(const DlmsClient&);
 
-  std::unique_ptr<dlms::transport::TcpStreamTransport> ownedStream_;
-  std::unique_ptr<dlms::profile::IApduChannel> ownedChannel_;
-  std::unique_ptr<dlms::security::SecurityContext> ownedSecurityContext_;
-  std::unique_ptr<dlms::security::InMemoryKeyStore> ownedKeys_;
-  std::unique_ptr<dlms::security::InMemoryInvocationCounterStore>
-    ownedCounters_;
-  std::unique_ptr<dlms::security::IRandomSource> ownedRandom_;
-  std::unique_ptr<dlms::security::HlsHighAuthenticator> ownedHlsHigh_;
-  std::unique_ptr<dlms::security::HlsGmacAuthenticator> ownedHlsGmac_;
-  std::unique_ptr<ClientHlsAssociationStrategy> ownedHlsStrategy_;
-  std::unique_ptr<dlms::association::AssociationClient> ownedAssociation_;
-  std::unique_ptr<dlms::security::CipheredApduProcessor> ownedSecurity_;
-  std::unique_ptr<IClientXdlmsService> ownedXdlms_;
+  std::unique_ptr<DlmsClientOwnedState> owned_;
   dlms::profile::IApduChannel& channel_;
   dlms::association::IAssociationClient& association_;
   IClientXdlmsService* xdlms_;

@@ -74,13 +74,7 @@ flowchart LR
 classDiagram
   class DlmsClient {
     -ClientState state
-    -TcpStreamTransport ownedStream
-    -WrapperTcpProfileChannel ownedChannel
-    -HdlcProfileChannel ownedHdlcChannel
-    -AssociationClient ownedAssociation
-    -InMemoryKeyStore ownedKeys
-    -InMemoryInvocationCounterStore ownedCounters
-    -CipheredApduProcessor ownedSecurity
+    -DlmsClientOwnedState owned
     -IAssociationClient& association
     -IClientXdlmsService xdlms
     +DlmsClient(options)
@@ -137,6 +131,11 @@ The options-owned constructor still creates the default concrete
 as source-compatible shortcuts. Security injection follows the same rule through
 `dlms::xdlms::IXdlmsSecurityProcessor`; the `CipheredApduProcessor&` overload is
 kept as a shortcut for the default security implementation.
+
+Default transport, profile, association, HLS, and ciphering objects are kept in
+private owned state. The public client header exposes lifecycle ports and
+compatibility overload declarations, but it does not require default transport
+or security-storage implementation headers for custom integrations.
 
 ## 5.1 HDLC/TCP Options-Owned Composition
 

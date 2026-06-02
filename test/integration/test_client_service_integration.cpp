@@ -1,5 +1,6 @@
 #include "dlms/apdu/apdu_writer.hpp"
 #include "dlms/apdu/data.hpp"
+#include "dlms/association/association_client.hpp"
 #include "dlms/client/client.hpp"
 #include "dlms/cosem/cosem.hpp"
 #include "dlms/profile/apdu_channel.hpp"

@@ -1,6 +1,7 @@
 #include "dlms/client/client.hpp"
 
 #include "dlms/apdu/data.hpp"
+#include "dlms/association/association_client.hpp"
 #include "dlms/association/association_types.hpp"
 #include "dlms/profile/hdlc_profile_channel.hpp"
 #include "dlms/profile/profile_types.hpp"

@@ -116,7 +116,26 @@ classDiagram
     +Result() AssociationResult
   }
 
+  class IAssociationClient {
+    +Open() AssociationStatus
+    +Close() AssociationStatus
+    +Establish() AssociationStatus
+    +Release() AssociationStatus
+    +State() AssociationState
+    +Result() AssociationResult
+  }
+
   class AssociationServer {
+    +Open() AssociationStatus
+    +Close() AssociationStatus
+    +Accept() AssociationStatus
+    +Release() AssociationStatus
+    +Release(vector~uint8_t~) AssociationStatus
+    +State() AssociationState
+    +Result() AssociationResult
+  }
+
+  class IAssociationServer {
     +Open() AssociationStatus
     +Close() AssociationStatus
     +Accept() AssociationStatus
@@ -141,10 +160,12 @@ classDiagram
     +DecodeAcseApdu()
   }
 
+  AssociationClient --|> IAssociationClient
   AssociationClient --> IApduChannel
   AssociationClient --> AssociationOptions
   AssociationClient --> AssociationResult
   AssociationClient --> dlms_apdu
+  AssociationServer --|> IAssociationServer
   AssociationServer --> IApduChannel
   AssociationServer --> AssociationServerOptions
   AssociationServer --> AssociationResult

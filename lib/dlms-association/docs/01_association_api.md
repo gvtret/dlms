@@ -4,11 +4,18 @@
 
 ```text
 include/dlms/association/association_client.hpp
+include/dlms/association/association_client_interface.hpp
 include/dlms/association/association_server.hpp
+include/dlms/association/association_server_interface.hpp
 include/dlms/association/association_c_api.h
 include/dlms/association/association_status.hpp
 include/dlms/association/association_types.hpp
 ```
+
+Applications that implement custom association lifecycles should include the
+interface headers. The concrete `association_client.hpp` and
+`association_server.hpp` headers include those interfaces and provide the
+default ACSE-backed implementations.
 
 ## 2. Status
 
@@ -111,8 +118,9 @@ can still be used as an unconfirmed fallback.
 the channel alive for the lifetime of the association client.
 
 `AssociationClient` implements `IAssociationClient`. Higher layers should
-depend on the interface when they only need lifecycle/state/result behavior and
-do not need to construct the default ACSE association implementation.
+include `association_client_interface.hpp` and depend on the interface when
+they only need lifecycle/state/result behavior and do not need to construct the
+default ACSE association implementation.
 
 ## 6. Server
 
@@ -185,8 +193,9 @@ Pass-3/pass-4 execution remains outside `dlms-association`.
 the channel alive for the lifetime of the association server.
 
 `AssociationServer` implements `IAssociationServer`. Endpoint and other
-runtime composition layers should depend on the interface when they only need
-server-side association lifecycle/state/result behavior.
+runtime composition layers should include `association_server_interface.hpp`
+and depend on the interface when they only need server-side association
+lifecycle/state/result behavior.
 
 ## 7. C API
 

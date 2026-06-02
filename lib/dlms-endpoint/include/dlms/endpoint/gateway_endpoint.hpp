@@ -4,7 +4,7 @@
 #include "dlms/endpoint/endpoint_options.hpp"
 #include "dlms/endpoint/endpoint_status.hpp"
 
-#include "dlms/association/association_server.hpp"
+#include "dlms/association/association_server_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/xdlms/xdlms_server.hpp"
 

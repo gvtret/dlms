@@ -1,12 +1,15 @@
 #pragma once
 
-#include "dlms/association/association_client.hpp"
+#include "dlms/association/association_client_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/xdlms/xdlms_association_state.hpp"
 #include "dlms/xdlms/xdlms_security_processor.hpp"
 #include "dlms/xdlms/xdlms_types.hpp"
 
 namespace dlms {
+namespace association {
+class AssociationClient;
+}
 namespace security {
 class CipheredApduProcessor;
 }

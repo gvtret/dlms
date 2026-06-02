@@ -1,5 +1,6 @@
 #include "dlms/endpoint/gateway_endpoint.hpp"
 
+#include "dlms/association/association_server.hpp"
 #include "dlms/apdu/acse.hpp"
 #include "dlms/endpoint/server_endpoint.hpp"
 

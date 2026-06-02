@@ -107,7 +107,9 @@ for the client lifetime.
 The preferred association dependency is `IXdlmsAssociationState`, which lets an
 embedding application provide its own association layer. Constructors accepting
 `dlms::association::IAssociationClient` are available as convenience shortcuts
-when the caller already owns an association lifecycle object. The legacy
+when the caller already owns an association lifecycle object; applications can
+include `dlms/association/association_client_interface.hpp` for that contract
+without including the default concrete association client. The legacy
 `AssociationClient` constructors remain available as source-compatible
 shortcuts over the default `dlms-association` implementation.
 

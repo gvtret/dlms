@@ -6,6 +6,7 @@
 #include "dlms/apdu/get.hpp"
 #include "dlms/apdu/set.hpp"
 #include "dlms/apdu/xdlms.hpp"
+#include "dlms/association/association_client.hpp"
 #include "dlms/security/ciphered_apdu_processor.hpp"
 
 namespace dlms {

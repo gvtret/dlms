@@ -3,6 +3,7 @@
 #include "dlms/apdu/acse.hpp"
 #include "dlms/apdu/data.hpp"
 #include "dlms/apdu/xdlms.hpp"
+#include "dlms/association/association_server.hpp"
 #include "dlms/security/ciphered_apdu_processor.hpp"
 #include "dlms/security/hls_gmac_authenticator.hpp"
 #include "dlms/security/hls_high_authenticator.hpp"

@@ -1,9 +1,10 @@
 #pragma once
 
+#include "dlms/association/association_client_interface.hpp"
+
 namespace dlms {
 namespace association {
 class AssociationClient;
-class IAssociationClient;
 }
 namespace xdlms {
 

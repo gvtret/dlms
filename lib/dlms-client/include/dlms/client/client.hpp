@@ -3,7 +3,7 @@
 #include "dlms/client/client_options.hpp"
 #include "dlms/client/client_status.hpp"
 
-#include "dlms/association/association_client.hpp"
+#include "dlms/association/association_client_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/transport/tcp_stream_transport.hpp"
 #include "dlms/xdlms/xdlms_client.hpp"
@@ -21,6 +21,9 @@ class InMemoryInvocationCounterStore;
 class InMemoryKeyStore;
 class IRandomSource;
 struct SecurityContext;
+}
+namespace association {
+class AssociationClient;
 }
 namespace xdlms {
 class IXdlmsSecurityProcessor;

@@ -8,10 +8,12 @@ Public headers:
 include/dlms/endpoint/endpoint.hpp
 include/dlms/endpoint/endpoint_status.hpp
 include/dlms/endpoint/endpoint_options.hpp
+include/dlms/endpoint/endpoint_descriptors.hpp
 include/dlms/endpoint/client_endpoint.hpp
 include/dlms/endpoint/server_endpoint.hpp
 include/dlms/endpoint/push_indication_handler.hpp
 include/dlms/endpoint/push_listener_endpoint.hpp
+include/dlms/endpoint/gateway_interfaces.hpp
 include/dlms/endpoint/gateway_endpoint.hpp
 include/dlms/endpoint/apdu_channel_listener.hpp
 include/dlms/endpoint/listener_runtime.hpp
@@ -140,9 +142,13 @@ plain; ciphered APDUs start with subsequent GET, SET, and ACTION services.
 ## Client Endpoint
 
 ```cpp
-using ClientAttributeDescriptor = dlms::client::CosemAttributeDescriptor;
-using ClientMethodDescriptor = dlms::client::CosemMethodDescriptor;
+using ClientAttributeDescriptor = dlms::xdlms::CosemAttributeDescriptor;
+using ClientMethodDescriptor = dlms::xdlms::CosemMethodDescriptor;
 ```
+
+Endpoint client/gateway descriptors live in `endpoint_descriptors.hpp`.
+`client_endpoint.hpp` includes that descriptor header for source
+compatibility.
 
 ```cpp
 class ClientEndpoint
@@ -397,6 +403,11 @@ public:
   bool IsOpen() const;
 };
 ```
+
+`IGatewayPolicy` and `IGatewayUpstream` live in `gateway_interfaces.hpp`.
+Applications that only implement gateway policy or upstream forwarding can
+include that interface header without including `GatewayEndpoint` or
+`ClientEndpoint`.
 
 `GatewayEndpoint` receives one downstream xDLMS request APDU from a
 caller-provided channel, uses `dlms-xdlms` server processing to decode it into a

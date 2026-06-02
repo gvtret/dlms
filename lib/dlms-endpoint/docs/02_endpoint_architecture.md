@@ -180,6 +180,9 @@ sequenceDiagram
 processor in private endpoint-owned state. Applications customize gateway
 behavior through `IGatewayPolicy` and `IGatewayUpstream`, not by implementing
 the xDLMS server handler directly.
+The gateway policy/upstream ports live in their own public header and use the
+shared endpoint descriptor aliases, so custom gateway implementations do not
+need concrete gateway or client endpoint declarations.
 
 ## Listener Runtime Flow
 
@@ -223,6 +226,10 @@ with the selected server service implementation.
 `PushListenerRuntime` depends on the `IPushIndicationHandler` callback port.
 That port lives in a separate public header, so callback implementations do not
 need the concrete `PushListenerEndpoint` declaration.
+
+`GatewayListenerRuntime` depends on `IGatewayPolicy` and `IGatewayUpstream`
+from `gateway_interfaces.hpp`; the concrete `GatewayEndpoint` declaration is
+only needed by the runtime implementation that constructs it.
 
 For UDP push listener runtime, `Accept()` means "provide a Wrapper/UDP APDU
 channel over the already-open datagram listener" rather than a connection

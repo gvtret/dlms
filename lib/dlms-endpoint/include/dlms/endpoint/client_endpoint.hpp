@@ -1,10 +1,10 @@
 #pragma once
 
+#include "dlms/endpoint/endpoint_descriptors.hpp"
 #include "dlms/endpoint/endpoint_options.hpp"
 #include "dlms/endpoint/endpoint_status.hpp"
 
 #include "dlms/client/client_status.hpp"
-#include "dlms/xdlms/xdlms_types.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -13,9 +13,6 @@
 
 namespace dlms {
 namespace endpoint {
-
-using ClientAttributeDescriptor = dlms::xdlms::CosemAttributeDescriptor;
-using ClientMethodDescriptor = dlms::xdlms::CosemMethodDescriptor;
 
 class ClientEndpointOwnedState;
 

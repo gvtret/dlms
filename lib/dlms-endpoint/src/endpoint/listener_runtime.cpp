@@ -1,5 +1,6 @@
 #include "dlms/endpoint/listener_runtime.hpp"
 
+#include "dlms/endpoint/gateway_endpoint.hpp"
 #include "dlms/endpoint/push_listener_endpoint.hpp"
 
 namespace dlms {

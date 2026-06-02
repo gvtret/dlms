@@ -3,7 +3,7 @@
 #include "dlms/endpoint/apdu_channel_listener.hpp"
 #include "dlms/endpoint/endpoint_options.hpp"
 #include "dlms/endpoint/endpoint_status.hpp"
-#include "dlms/endpoint/gateway_endpoint.hpp"
+#include "dlms/endpoint/gateway_interfaces.hpp"
 #include "dlms/endpoint/push_indication_handler.hpp"
 #include "dlms/endpoint/server_endpoint.hpp"
 

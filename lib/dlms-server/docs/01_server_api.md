@@ -8,10 +8,15 @@ Public headers:
 include/dlms/server/server_status.hpp
 include/dlms/server/server_types.hpp
 include/dlms/server/server_context.hpp
+include/dlms/server/server_service_interface.hpp
 include/dlms/server/service_dispatcher.hpp
 include/dlms/server/dlms_server.hpp
 include/dlms/server/xdlms_server_adapter.hpp
 ```
+
+Applications implementing only a custom GET/SET/ACTION backend can include
+`server_service_interface.hpp`. Applications using the default logical-device
+dispatcher facade include `dlms_server.hpp` or the aggregate `server.hpp`.
 
 No C ABI is planned for the first implementation.
 
@@ -117,7 +122,7 @@ public:
 ## 7. Server Facade
 
 `IServerService` is the abstract service boundary for server-side
-GET/SET/ACTION dispatch:
+GET/SET/ACTION dispatch. It lives in `server_service_interface.hpp`:
 
 ```cpp
 class IServerService
@@ -132,7 +137,8 @@ public:
 };
 ```
 
-`DlmsServer` is the default implementation over `CosemServiceDispatcher`:
+`DlmsServer` lives in `dlms_server.hpp` and is the default implementation over
+`CosemServiceDispatcher`:
 
 ```cpp
 class DlmsServer : public IServerService
@@ -231,7 +237,7 @@ classDiagram
   }
 
   class XdlmsServerAdapter {
-    -DlmsServer& server
+    -IServerService& server
     +HandleGet()
     +HandleSet()
   }

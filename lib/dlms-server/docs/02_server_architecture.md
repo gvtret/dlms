@@ -38,6 +38,15 @@ Active adapter dependencies:
 
 - `dlms-xdlms` for server-side normal GET indication and handler contracts.
 
+Public module split:
+
+- `server_service_interface` owns the abstract `IServerService`
+  GET/SET/ACTION backend port;
+- `dlms_server` owns the default `DlmsServer` facade over
+  `CosemServiceDispatcher`;
+- `xdlms_server_adapter` consumes `IServerService`, with the `DlmsServer&`
+  constructor kept as a source-compatible shortcut.
+
 Deferred dependencies:
 
 - `dlms-association` for server association state when stable;
@@ -142,6 +151,8 @@ sequenceDiagram
 
 `XdlmsServerAdapter` is the only `dlms-server` module that knows about
 `dlms-xdlms`. The core dispatcher remains testable with server request models.
+Custom server backends can include `server_service_interface.hpp` without
+pulling in the default `DlmsServer` facade header.
 
 ## 8. xDLMS SET Adapter Flow
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dlms/server/dlms_server.hpp"
+#include "dlms/server/server_service_interface.hpp"
 #include "dlms/server/server_status.hpp"
 #include "dlms/xdlms/xdlms_server.hpp"
 
@@ -8,6 +8,8 @@
 
 namespace dlms {
 namespace server {
+
+class DlmsServer;
 
 class XdlmsServerAdapter : public dlms::xdlms::IXdlmsServerHandler
 {

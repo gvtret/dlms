@@ -32,4 +32,6 @@ dlms::server::ServerGetResponse response =
 
 Custom server backends can implement `dlms::server::IServerService` and pass
 that implementation to `XdlmsServerAdapter` or higher endpoint composition
-layers without using the default logical-device dispatcher.
+layers without using the default logical-device dispatcher. Such backends can
+include `dlms/server/server_service_interface.hpp`; `dlms/server/dlms_server.hpp`
+is needed only for the default `DlmsServer` facade.

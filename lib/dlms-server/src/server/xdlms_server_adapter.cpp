@@ -1,5 +1,7 @@
 #include "dlms/server/xdlms_server_adapter.hpp"
 
+#include "dlms/server/dlms_server.hpp"
+
 namespace {
 
 dlms::cosem::CosemLogicalName ToCosemLogicalName(

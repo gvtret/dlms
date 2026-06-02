@@ -211,6 +211,9 @@ ownership to applications.
 `IApduChannelListener::LocalPort()` is part of the listener port so callers can
 bind clients to ephemeral listener ports without depending on a TCP or UDP
 implementation class.
+The listener port lives in its own public header; concrete listener factories
+and runtime classes consume that same port without requiring callers to include
+both APIs.
 
 `ServerListenerRuntime` supports both default logical-device dispatch and a
 caller-provided `dlms::server::IServerService`. The runtime owns only listener

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dlms/endpoint/listener_runtime.hpp"
+#include "dlms/endpoint/apdu_channel_listener.hpp"
 #include "dlms/endpoint/endpoint_options.hpp"
 
 #include "dlms/profile/apdu_channel.hpp"

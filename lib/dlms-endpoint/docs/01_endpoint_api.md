@@ -12,6 +12,7 @@ include/dlms/endpoint/client_endpoint.hpp
 include/dlms/endpoint/server_endpoint.hpp
 include/dlms/endpoint/push_listener_endpoint.hpp
 include/dlms/endpoint/gateway_endpoint.hpp
+include/dlms/endpoint/apdu_channel_listener.hpp
 include/dlms/endpoint/listener_runtime.hpp
 include/dlms/endpoint/endpoint_factories.hpp
 ```
@@ -509,10 +510,12 @@ public:
 };
 ```
 
-`IApduChannelListener` abstracts the transport/profile accept step. The
-endpoint layer only controls lifecycle and accepted APDU-channel ownership; TCP
-accept, Wrapper/HDLC construction, and serial details stay in the lower layers
-or caller-provided adapters.
+`IApduChannelListener` lives in `apdu_channel_listener.hpp` and abstracts the
+transport/profile accept step. The endpoint layer only controls lifecycle and
+accepted APDU-channel ownership; TCP accept, Wrapper/HDLC construction, and
+serial details stay in the lower layers or caller-provided adapters. Factory
+users can include this listener-port header without including the runtime
+classes.
 
 `ServerListenerRuntime`, `PushListenerRuntime`, and `GatewayListenerRuntime`
 accept one channel per `RunOnce()` and then delegate to `ServerEndpoint`,

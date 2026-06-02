@@ -105,9 +105,11 @@ or optional security processor. The caller must keep all supplied objects alive
 for the client lifetime.
 
 The preferred association dependency is `IXdlmsAssociationState`, which lets an
-embedding application provide its own association layer. The legacy
-`AssociationClient` constructors remain available as compatibility shortcuts
-over the default `dlms-association` implementation.
+embedding application provide its own association layer. Constructors accepting
+`dlms::association::IAssociationClient` are available as convenience shortcuts
+when the caller already owns an association lifecycle object. The legacy
+`AssociationClient` constructors remain available as source-compatible
+shortcuts over the default `dlms-association` implementation.
 
 When constructed with an `IXdlmsSecurityProcessor`, the client protects
 encoded request APDUs before `SendApdu()` and unprotects received response

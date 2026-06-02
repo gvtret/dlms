@@ -3,6 +3,7 @@
 namespace dlms {
 namespace association {
 class AssociationClient;
+class IAssociationClient;
 }
 namespace xdlms {
 
@@ -20,10 +21,13 @@ public:
   explicit AssociationClientXdlmsAssociationState(
     dlms::association::AssociationClient& association);
 
+  explicit AssociationClientXdlmsAssociationState(
+    dlms::association::IAssociationClient& association);
+
   bool IsAssociated() const;
 
 private:
-  dlms::association::AssociationClient& association_;
+  dlms::association::IAssociationClient& association_;
 };
 
 } // namespace xdlms

@@ -30,7 +30,16 @@ public:
 
   XdlmsClient(
     dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association);
+
+  XdlmsClient(
+    dlms::profile::IApduChannel& channel,
     dlms::association::AssociationClient& association,
+    IXdlmsSecurityProcessor& security);
+
+  XdlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association,
     IXdlmsSecurityProcessor& security);
 
   XdlmsClient(
@@ -77,7 +86,7 @@ private:
 
   dlms::profile::IApduChannel& channel_;
   IXdlmsAssociationState* association_;
-  dlms::association::AssociationClient* legacyAssociation_;
+  dlms::association::IAssociationClient* legacyAssociation_;
   IXdlmsSecurityProcessor* security_;
   dlms::security::CipheredApduProcessor* legacySecurity_;
   InvokeIdAllocator invokeIds_;

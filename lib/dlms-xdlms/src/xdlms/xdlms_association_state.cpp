@@ -11,6 +11,13 @@ IXdlmsAssociationState::~IXdlmsAssociationState()
 
 AssociationClientXdlmsAssociationState::AssociationClientXdlmsAssociationState(
   dlms::association::AssociationClient& association)
+  : AssociationClientXdlmsAssociationState(
+      static_cast<dlms::association::IAssociationClient&>(association))
+{
+}
+
+AssociationClientXdlmsAssociationState::AssociationClientXdlmsAssociationState(
+  dlms::association::IAssociationClient& association)
   : association_(association)
 {
 }

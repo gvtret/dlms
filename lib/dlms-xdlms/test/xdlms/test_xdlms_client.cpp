@@ -120,6 +120,60 @@ private:
   bool associated_;
 };
 
+class FakeAssociationClient : public dlms::association::IAssociationClient
+{
+public:
+  explicit FakeAssociationClient(bool associated)
+    : associated_(associated)
+    , result_(dlms::association::EmptyAssociationResult())
+  {
+  }
+
+  dlms::association::AssociationStatus Open()
+  {
+    return dlms::association::AssociationStatus::Ok;
+  }
+
+  dlms::association::AssociationStatus Close()
+  {
+    associated_ = false;
+    return dlms::association::AssociationStatus::Ok;
+  }
+
+  dlms::association::AssociationStatus Establish()
+  {
+    associated_ = true;
+    return dlms::association::AssociationStatus::Ok;
+  }
+
+  dlms::association::AssociationStatus Release()
+  {
+    associated_ = false;
+    return dlms::association::AssociationStatus::Ok;
+  }
+
+  dlms::association::AssociationState State() const
+  {
+    return associated_
+      ? dlms::association::AssociationState::Associated
+      : dlms::association::AssociationState::Closed;
+  }
+
+  bool IsAssociated() const
+  {
+    return associated_;
+  }
+
+  const dlms::association::AssociationResult& Result() const
+  {
+    return result_;
+  }
+
+private:
+  bool associated_;
+  dlms::association::AssociationResult result_;
+};
+
 std::vector<std::uint8_t> MakeAareBytes()
 {
   const std::uint8_t kAare[] = {
@@ -374,6 +428,23 @@ TEST(XdlmsClient, GetCanUseAbstractAssociationState)
 {
   FakeApduChannel channel;
   FakeAssociationState association(true);
+  channel.nextReceive = MakeDataResponse(0x81u);
+
+  dlms::xdlms::XdlmsClient client(channel, association);
+  dlms::xdlms::GetResult result;
+
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            client.Get(MakeDescriptor(), result));
+
+  EXPECT_EQ(1, channel.sendCalls);
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_TRUE(result.hasData);
+}
+
+TEST(XdlmsClient, GetCanUseAbstractAssociationClientShortcut)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association(true);
   channel.nextReceive = MakeDataResponse(0x81u);
 
   dlms::xdlms::XdlmsClient client(channel, association);

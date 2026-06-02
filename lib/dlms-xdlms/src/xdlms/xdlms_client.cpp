@@ -505,7 +505,7 @@ XdlmsStatus CopyFinalActionResponse(
 
 bool IsAssociated(
   IXdlmsAssociationState* association,
-  dlms::association::AssociationClient* legacyAssociation)
+  dlms::association::IAssociationClient* legacyAssociation)
 {
   return association != 0
     ? association->IsAssociated()
@@ -542,6 +542,15 @@ XdlmsClient::XdlmsClient(
 XdlmsClient::XdlmsClient(
   dlms::profile::IApduChannel& channel,
   dlms::association::AssociationClient& association)
+  : XdlmsClient(
+      channel,
+      static_cast<dlms::association::IAssociationClient&>(association))
+{
+}
+
+XdlmsClient::XdlmsClient(
+  dlms::profile::IApduChannel& channel,
+  dlms::association::IAssociationClient& association)
   : channel_(channel)
   , association_(0)
   , legacyAssociation_(&association)
@@ -554,6 +563,17 @@ XdlmsClient::XdlmsClient(
 XdlmsClient::XdlmsClient(
   dlms::profile::IApduChannel& channel,
   dlms::association::AssociationClient& association,
+  IXdlmsSecurityProcessor& security)
+  : XdlmsClient(
+      channel,
+      static_cast<dlms::association::IAssociationClient&>(association),
+      security)
+{
+}
+
+XdlmsClient::XdlmsClient(
+  dlms::profile::IApduChannel& channel,
+  dlms::association::IAssociationClient& association,
   IXdlmsSecurityProcessor& security)
   : channel_(channel)
   , association_(0)

@@ -88,6 +88,15 @@ Concrete classes remain available as default implementations and compatibility
 shortcuts. New higher-level APIs should prefer these ports whenever they store
 or call into another runtime layer.
 
+The implementation now keeps user-implemented ports in narrow headers where a
+separate default facade or runtime class would otherwise be pulled in. Current
+examples include `logical_device_interface.hpp`,
+`client_xdlms_service_interface.hpp`, `server_service_interface.hpp`,
+`xdlms_association_state_interface.hpp`,
+`xdlms_security_processor_interface.hpp`, and endpoint-specific
+`apdu_channel_listener.hpp`, `push_indication_handler.hpp`, and
+`gateway_interfaces.hpp`.
+
 ## 2.3. Public Header Audit Rules
 
 Remaining concrete class names in public headers are acceptable only in these
@@ -108,6 +117,14 @@ Any higher-layer data member, owned state, or factory result that crosses a
 layer boundary should use the public abstract port instead of the concrete
 default class. If a concrete type does not fit one of the categories above, it
 is a modernization gap.
+
+Final modernization audit status: remaining concrete names in public headers
+fit the allowed categories above. Notable remaining cases are default
+implementation classes such as `AssociationClient`, `AssociationServer`,
+`LogicalDevice`, `DlmsServer`, profile channel classes, endpoint facade/factory
+classes, source-compatible shortcut overloads that adapt to abstract ports, and
+explicit adapter classes such as `XdlmsServerAdapter` or
+`CipheredXdlmsSecurityProcessor`.
 
 ## 2.4. Compile-Tested Public Examples
 

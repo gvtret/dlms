@@ -45,7 +45,8 @@ flowchart LR
   Client["DlmsClient"]
   Stream["TcpStreamTransport"]
   Channel["IApduChannel"]
-  Association["AssociationClient"]
+  Association["IAssociationClient"]
+  DefaultAssociation["AssociationClient<br/>default implementation"]
   Security["CipheredApduProcessor"]
   Services["IClientXdlmsService"]
   XdlmsClient["XdlmsClient adapter"]
@@ -54,6 +55,7 @@ flowchart LR
   Client --> Stream
   Stream --> Channel
   Channel --> Client
+  DefaultAssociation --> Association
   Association --> Client
   Client --> Association
   Client --> Security
@@ -77,11 +79,11 @@ classDiagram
     -InMemoryKeyStore ownedKeys
     -InMemoryInvocationCounterStore ownedCounters
     -CipheredApduProcessor ownedSecurity
-    -AssociationClient& association
+    -IAssociationClient& association
     -IClientXdlmsService xdlms
     +DlmsClient(options)
-    +DlmsClient(IApduChannel, AssociationClient)
-    +DlmsClient(IApduChannel, AssociationClient, IClientXdlmsService)
+    +DlmsClient(IApduChannel, IAssociationClient)
+    +DlmsClient(IApduChannel, IAssociationClient, IClientXdlmsService)
     +Connect() ClientStatus
     +OpenAssociation() ClientStatus
     +ReleaseAssociation() ClientStatus
@@ -104,6 +106,7 @@ classDiagram
   class WrapperTcpProfileChannel
   class HdlcProfileChannel
   class IApduChannel
+  class IAssociationClient
   class AssociationClient
   class CipheredApduProcessor
   class IClientXdlmsService
@@ -114,10 +117,16 @@ classDiagram
   DlmsClient --> HdlcProfileChannel
   DlmsClient --> ClientState
   DlmsClient --> IApduChannel
-  DlmsClient --> AssociationClient
+  DlmsClient --> IAssociationClient
+  AssociationClient --|> IAssociationClient
   DlmsClient --> CipheredApduProcessor
   DlmsClient --> IClientXdlmsService
 ```
+
+The options-owned constructor still creates the default concrete
+`AssociationClient`. Injected constructors can use any implementation of
+`IAssociationClient`; concrete `AssociationClient&` overloads remain available
+as source-compatible shortcuts.
 
 ## 5.1 HDLC/TCP Options-Owned Composition
 

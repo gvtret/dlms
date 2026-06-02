@@ -489,10 +489,23 @@ classDiagram
     +abort()
   }
 
+  class IAssociationClient {
+    +open()
+    +release()
+    +isAssociated()
+  }
+
   class AssociationServer {
     -AssociationState state
     +handle_aarq()
     +build_aare()
+  }
+
+  class IAssociationServer {
+    +open()
+    +accept()
+    +release()
+    +isAssociated()
   }
 
   class AssociationContext {
@@ -515,6 +528,8 @@ classDiagram
     Aborted
   }
 
+  AssociationClient --|> IAssociationClient
+  AssociationServer --|> IAssociationServer
   AssociationClient --> AssociationContext
   AssociationServer --> AssociationContext
   AssociationClient --> AssociationState

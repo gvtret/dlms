@@ -495,23 +495,14 @@ XdlmsStatus CopyFinalActionResponse(
   return status == XdlmsStatus::Ok ? XdlmsStatus::Ok : status;
 }
 
-bool IsAssociated(
-  IXdlmsAssociationState* association,
-  dlms::association::IAssociationClient* legacyAssociation)
-{
-  return association != 0
-    ? association->IsAssociated()
-    : legacyAssociation->IsAssociated();
-}
-
 } // namespace
 
 XdlmsClient::XdlmsClient(
   dlms::profile::IApduChannel& channel,
   IXdlmsAssociationState& association)
   : channel_(channel)
+  , ownedAssociation_()
   , association_(&association)
-  , legacyAssociation_(0)
   , ownedSecurity_()
   , security_(0)
   , invokeIds_()
@@ -523,8 +514,8 @@ XdlmsClient::XdlmsClient(
   IXdlmsAssociationState& association,
   IXdlmsSecurityProcessor& security)
   : channel_(channel)
+  , ownedAssociation_()
   , association_(&association)
-  , legacyAssociation_(0)
   , ownedSecurity_()
   , security_(&security)
   , invokeIds_()
@@ -544,8 +535,8 @@ XdlmsClient::XdlmsClient(
   dlms::profile::IApduChannel& channel,
   dlms::association::IAssociationClient& association)
   : channel_(channel)
-  , association_(0)
-  , legacyAssociation_(&association)
+  , ownedAssociation_(new AssociationClientXdlmsAssociationState(association))
+  , association_(ownedAssociation_.get())
   , ownedSecurity_()
   , security_(0)
   , invokeIds_()
@@ -568,8 +559,8 @@ XdlmsClient::XdlmsClient(
   dlms::association::IAssociationClient& association,
   IXdlmsSecurityProcessor& security)
   : channel_(channel)
-  , association_(0)
-  , legacyAssociation_(&association)
+  , ownedAssociation_(new AssociationClientXdlmsAssociationState(association))
+  , association_(ownedAssociation_.get())
   , ownedSecurity_()
   , security_(&security)
   , invokeIds_()
@@ -581,8 +572,10 @@ XdlmsClient::XdlmsClient(
   dlms::association::AssociationClient& association,
   dlms::security::CipheredApduProcessor& security)
   : channel_(channel)
-  , association_(0)
-  , legacyAssociation_(&association)
+  , ownedAssociation_(
+      new AssociationClientXdlmsAssociationState(
+        static_cast<dlms::association::IAssociationClient&>(association)))
+  , association_(ownedAssociation_.get())
   , ownedSecurity_(new CipheredXdlmsSecurityProcessor(security))
   , security_(ownedSecurity_.get())
   , invokeIds_()
@@ -608,7 +601,7 @@ XdlmsStatus XdlmsClient::Get(
     return status;
   }
 
-  if (!IsAssociated(association_, legacyAssociation_)) {
+  if (!association_->IsAssociated()) {
     return XdlmsStatus::NotAssociated;
   }
 
@@ -725,7 +718,7 @@ XdlmsStatus XdlmsClient::Set(
       return status;
     }
 
-    if (!IsAssociated(association_, legacyAssociation_)) {
+    if (!association_->IsAssociated()) {
       return XdlmsStatus::NotAssociated;
     }
 
@@ -784,7 +777,7 @@ XdlmsStatus XdlmsClient::Set(
   if (!options.allowBlockTransfer) {
     return XdlmsStatus::BlockTransferRequired;
   }
-  if (!IsAssociated(association_, legacyAssociation_)) {
+  if (!association_->IsAssociated()) {
     return XdlmsStatus::NotAssociated;
   }
 
@@ -890,7 +883,7 @@ XdlmsStatus XdlmsClient::Action(
     return XdlmsStatus::BlockTransferRequired;
   }
 
-  if (!IsAssociated(association_, legacyAssociation_)) {
+  if (!association_->IsAssociated()) {
     return XdlmsStatus::NotAssociated;
   }
 

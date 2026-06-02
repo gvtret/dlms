@@ -100,18 +100,21 @@ dlms::xdlms::GetResult result;
 const dlms::xdlms::XdlmsStatus status = client.Get(descriptor, result);
 ```
 
-`XdlmsClient` does not own the association-state object, profile APDU channel,
-or optional security processor. The caller must keep all supplied objects alive
-for the client lifetime.
+When constructed directly with an `IXdlmsAssociationState&`, `XdlmsClient` does
+not own the association-state object. The caller must keep the supplied APDU
+channel, association-state object, and optional security processor alive for
+the client lifetime.
 
 The preferred association dependency is `IXdlmsAssociationState`, which lets an
 embedding application provide its own association layer. Constructors accepting
 `dlms::association::IAssociationClient` are available as convenience shortcuts
 when the caller already owns an association lifecycle object; applications can
 include `dlms/association/association_client_interface.hpp` for that contract
-without including the default concrete association client. The legacy
-`AssociationClient` constructors remain available as source-compatible
-shortcuts over the default `dlms-association` implementation.
+without including the default concrete association client. Those shortcuts own
+a small `AssociationClientXdlmsAssociationState` adapter and then use the same
+`IXdlmsAssociationState` path internally. The legacy `AssociationClient`
+constructors remain available as source-compatible shortcuts over the default
+`dlms-association` implementation.
 
 When constructed with an `IXdlmsSecurityProcessor`, the client protects
 encoded request APDUs before `SendApdu()` and unprotects received response

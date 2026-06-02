@@ -372,8 +372,10 @@ not share buffers.
 
 ## 13. Ownership
 
-`XdlmsClient` stores non-owning references to the association and profile APDU
-channel boundaries and may store a non-owning reference to the abstract
+`XdlmsClient` stores non-owning references to the profile APDU channel and the
+abstract `IXdlmsAssociationState` port. Convenience constructors that accept
+`IAssociationClient` own only a small adapter to that same association-state
+port. The client may also store a non-owning reference to the abstract
 `IXdlmsSecurityProcessor` port. Server dispatch stores non-owning access to an
 xDLMS server handler. The server APDU processor stores a non-owning reference
 to the abstract `IXdlmsServerDispatcher` port and may also store a non-owning

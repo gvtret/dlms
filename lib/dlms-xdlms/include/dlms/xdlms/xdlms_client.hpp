@@ -90,8 +90,8 @@ private:
   XdlmsClient& operator=(const XdlmsClient&);
 
   dlms::profile::IApduChannel& channel_;
+  std::unique_ptr<IXdlmsAssociationState> ownedAssociation_;
   IXdlmsAssociationState* association_;
-  dlms::association::IAssociationClient* legacyAssociation_;
   std::unique_ptr<IXdlmsSecurityProcessor> ownedSecurity_;
   IXdlmsSecurityProcessor* security_;
   InvokeIdAllocator invokeIds_;

@@ -75,14 +75,14 @@ Current public C++ ports that applications can implement or inject:
 | Layer | Public abstract port |
 |---|---|
 | `dlms-transport` | `IByteStream`, `IDatagramTransport` |
-| `dlms-profile` | `IApduChannel`, accepted-channel listener integration through endpoint listener APIs |
+| `dlms-profile` | `IApduChannel`, `IHdlcDataLinkSession`, accepted-channel listener integration through endpoint listener APIs |
 | `dlms-association` | `IAssociationClient`, `IAssociationServer`, `IHighLevelSecurityStrategy`, `IHighLevelSecurityServerStrategy` over abstract APDU channels |
-| `dlms-xdlms` | `IXdlmsAssociationState`, `IXdlmsSecurityProcessor`, `IXdlmsServerHandler` |
+| `dlms-xdlms` | `IXdlmsAssociationState`, `IXdlmsSecurityProcessor`, `IXdlmsServerHandler`, `IXdlmsServerDispatcher` |
 | `dlms-security` | `IKeyStore`, `IInvocationCounterStore`, `IRandomSource` |
 | `dlms-cosem` | `ICosemObject` and object registry contracts |
 | `dlms-server` | `IServerService`, plus xDLMS adapter constructors over that service |
 | `dlms-client` | constructors over `IAssociationClient`, `IClientXdlmsService`, and `IXdlmsSecurityProcessor` for custom association, GET/SET/ACTION, and APDU security backends |
-| `dlms-endpoint` | endpoint association ownership through `IAssociationServer`, `IApduChannelListener`, `IPushIndicationHandler`, `IGatewayPolicy`, `IGatewayUpstream`, and server endpoint/runtime constructors over `IServerService` |
+| `dlms-endpoint` | endpoint association ownership through `IAssociationServer`, `IApduChannelListener`, `IPushIndicationHandler`, `IGatewayPolicy`, `IGatewayUpstream`, abstract transport/profile/listener factory bundle ownership, and server endpoint/runtime constructors over `IServerService` |
 
 Concrete classes remain available as default implementations and compatibility
 shortcuts. New higher-level APIs should prefer these ports whenever they store
@@ -425,6 +425,13 @@ classDiagram
     +receive_apdu(vector<uint8_t>&)
   }
 
+  class IHdlcDataLinkSession {
+    <<interface>>
+    +connect_data_link()
+    +accept_data_link()
+    +disconnect_data_link()
+  }
+
   class WrapperTcpProfileChannel {
     -IByteStream* stream
     -WrapperStreamDecoder decoder
@@ -443,6 +450,7 @@ classDiagram
   IApduChannel <|.. WrapperTcpProfileChannel
   IApduChannel <|.. WrapperUdpProfileChannel
   IApduChannel <|.. HdlcProfileChannel
+  IHdlcDataLinkSession <|.. HdlcProfileChannel
 
   WrapperTcpProfileChannel --> WrapperStreamDecoder
   HdlcProfileChannel --> HdlcSession
@@ -587,6 +595,13 @@ classDiagram
     +receive_blocks()
   }
 
+  class IXdlmsServerDispatcher {
+    <<interface>>
+    +dispatch_get()
+    +dispatch_set()
+    +dispatch_action()
+  }
+
   class XdlmsServerDispatcher {
     -CosemAccessPort* cosem
     -BlockTransferManager blocks
@@ -605,6 +620,7 @@ classDiagram
   XdlmsClient --> InvokeIdAllocator
   XdlmsClient --> BlockTransferManager
   XdlmsClient --> ServiceOptions
+  XdlmsServerDispatcher --|> IXdlmsServerDispatcher
   XdlmsServerDispatcher --> BlockTransferManager
   XdlmsServerDispatcher --> ServiceOptions
 ```

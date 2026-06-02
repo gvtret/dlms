@@ -5,6 +5,7 @@
 #include "dlms/xdlms/xdlms_types.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace dlms {
@@ -134,8 +135,8 @@ public:
 
 private:
   XdlmsServerDispatcher& dispatcher_;
+  std::unique_ptr<IXdlmsSecurityProcessor> ownedSecurity_;
   IXdlmsSecurityProcessor* security_;
-  dlms::security::CipheredApduProcessor* legacySecurity_;
   ServiceOptions options_;
   GetResponseBlockState getBlocks_;
   SetRequestBlockState setBlocks_;

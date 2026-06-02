@@ -6,6 +6,8 @@
 #include "dlms/xdlms/xdlms_security_processor.hpp"
 #include "dlms/xdlms/xdlms_types.hpp"
 
+#include <memory>
+
 namespace dlms {
 namespace association {
 class AssociationClient;
@@ -90,8 +92,8 @@ private:
   dlms::profile::IApduChannel& channel_;
   IXdlmsAssociationState* association_;
   dlms::association::IAssociationClient* legacyAssociation_;
+  std::unique_ptr<IXdlmsSecurityProcessor> ownedSecurity_;
   IXdlmsSecurityProcessor* security_;
-  dlms::security::CipheredApduProcessor* legacySecurity_;
   InvokeIdAllocator invokeIds_;
 };
 

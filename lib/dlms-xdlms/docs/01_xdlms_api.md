@@ -118,8 +118,9 @@ encoded request APDUs before `SendApdu()` and unprotects received response
 APDUs before xDLMS decode. `CipheredXdlmsSecurityProcessor` adapts the default
 `dlms-security` implementation. Existing constructors that accept
 `dlms::security::CipheredApduProcessor` remain available as compatibility
-shortcuts. The public GET/SET/ACTION service contract does not otherwise
-change.
+shortcuts; internally they adapt the concrete object to the same
+`IXdlmsSecurityProcessor` path. The public GET/SET/ACTION service contract does
+not otherwise change.
 
 ## 5. Server
 
@@ -218,7 +219,8 @@ only when encoding succeeds. When constructed with an
 `IXdlmsSecurityProcessor`, the processor unprotects the request before xDLMS
 decode and protects the encoded response before returning it. Constructors
 accepting `dlms::security::CipheredApduProcessor` are retained as
-compatibility shortcuts over the default security implementation.
+compatibility shortcuts over the default security implementation and are
+adapted internally to the `IXdlmsSecurityProcessor` port.
 Options-aware constructors set processor-local block transfer limits while
 still deriving confirmed/high-priority flags from each incoming invoke id byte.
 

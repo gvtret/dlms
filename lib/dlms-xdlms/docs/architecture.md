@@ -371,7 +371,9 @@ not share buffers.
 channel boundaries and may store a non-owning reference to the abstract
 `IXdlmsSecurityProcessor` port. Server dispatch stores non-owning access to an
 xDLMS server handler. The server APDU processor may also store a non-owning
-security processor reference. The layer does not own transport resources,
+security processor reference. Compatibility constructors that accept the
+default concrete ciphered APDU processor own only a small adapter to the same
+abstract security port. The layer does not own transport resources,
 association lifetime, security material, or COSEM object storage.
 Block-transfer state is limited to one client service call or one active server
 APDU processor sequence.

@@ -385,23 +385,35 @@ private:
   mutable std::vector<std::uint8_t> serverChallenge_;
 };
 
+class ServerEndpointOwnedState
+{
+public:
+  ~ServerEndpointOwnedState();
+
+  std::unique_ptr<ServerEndpointHlsHighStrategy> hlsHigh;
+  std::unique_ptr<ServerEndpointHlsGmacStrategy> hlsGmac;
+  std::unique_ptr<dlms::xdlms::XdlmsServerDispatcher> dispatcher;
+  std::unique_ptr<dlms::security::SecurityContext> securityContext;
+  std::unique_ptr<dlms::security::InMemoryKeyStore> keys;
+  std::unique_ptr<dlms::security::InMemoryInvocationCounterStore> counters;
+  std::unique_ptr<dlms::security::CipheredApduProcessor> security;
+  std::unique_ptr<dlms::xdlms::XdlmsServerApduProcessor> processor;
+};
+
+ServerEndpointOwnedState::~ServerEndpointOwnedState()
+{
+}
+
 ServerEndpoint::ServerEndpoint(
   dlms::profile::IApduChannel& channel,
   dlms::cosem::LogicalDevice& logicalDevice)
   : channel_(channel)
   , options_(DefaultServerEndpointOptions())
   , association_()
-  , hlsHigh_()
-  , hlsGmac_()
   , context_()
   , server_(context_)
   , adapter_(server_)
-  , dispatcher_(adapter_)
-  , securityContext_()
-  , keys_()
-  , counters_()
-  , security_()
-  , processor_()
+  , owned_(new ServerEndpointOwnedState())
   , open_(false)
   , hlsPending_(false)
 {
@@ -416,17 +428,10 @@ ServerEndpoint::ServerEndpoint(
   : channel_(channel)
   , options_(DefaultServerEndpointOptions())
   , association_()
-  , hlsHigh_()
-  , hlsGmac_()
   , context_()
   , server_(context_)
   , adapter_(server)
-  , dispatcher_(adapter_)
-  , securityContext_()
-  , keys_()
-  , counters_()
-  , security_()
-  , processor_()
+  , owned_(new ServerEndpointOwnedState())
   , open_(false)
   , hlsPending_(false)
 {
@@ -441,17 +446,10 @@ ServerEndpoint::ServerEndpoint(
   : channel_(channel)
   , options_(options)
   , association_()
-  , hlsHigh_()
-  , hlsGmac_()
   , context_()
   , server_(context_)
   , adapter_(server_)
-  , dispatcher_(adapter_)
-  , securityContext_()
-  , keys_()
-  , counters_()
-  , security_()
-  , processor_()
+  , owned_(new ServerEndpointOwnedState())
   , open_(false)
   , hlsPending_(false)
 {
@@ -467,17 +465,10 @@ ServerEndpoint::ServerEndpoint(
   : channel_(channel)
   , options_(options)
   , association_()
-  , hlsHigh_()
-  , hlsGmac_()
   , context_()
   , server_(context_)
   , adapter_(server)
-  , dispatcher_(adapter_)
-  , securityContext_()
-  , keys_()
-  , counters_()
-  , security_()
-  , processor_()
+  , owned_(new ServerEndpointOwnedState())
   , open_(false)
   , hlsPending_(false)
 {
@@ -501,36 +492,44 @@ void ServerEndpoint::ConfigureAssociationContext()
 
 void ServerEndpoint::ConfigureXdlmsProcessor()
 {
+  owned_->processor.reset();
+  owned_->security.reset();
+  owned_->counters.reset();
+  owned_->keys.reset();
+  owned_->securityContext.reset();
+  owned_->dispatcher.reset(new dlms::xdlms::XdlmsServerDispatcher(adapter_));
+
   if (!options_.security.cipheredApdu) {
-    processor_.reset(new dlms::xdlms::XdlmsServerApduProcessor(dispatcher_));
+    owned_->processor.reset(
+      new dlms::xdlms::XdlmsServerApduProcessor(*owned_->dispatcher));
     return;
   }
 
-  securityContext_.reset(
+  owned_->securityContext.reset(
     new dlms::security::SecurityContext(
       dlms::security::EmptySecurityContext()));
-  securityContext_->policy =
+  owned_->securityContext->policy =
     dlms::security::SecurityPolicy::AuthenticatedAndEncrypted;
-  securityContext_->role = dlms::security::SecurityRole::Server;
-  securityContext_->clientSap = options_.profile.clientSap;
-  securityContext_->serverSap = options_.profile.serverSap;
+  owned_->securityContext->role = dlms::security::SecurityRole::Server;
+  owned_->securityContext->clientSap = options_.profile.clientSap;
+  owned_->securityContext->serverSap = options_.profile.serverSap;
   for (std::size_t i = 0u;
        i < 8u && i < options_.security.systemTitleSize;
        ++i) {
-    securityContext_->localSystemTitle[i] =
+    owned_->securityContext->localSystemTitle[i] =
       options_.security.systemTitle[i];
   }
   for (std::size_t i = 0u;
        i < 8u && i < options_.security.peerSystemTitleSize;
        ++i) {
-    securityContext_->remoteSystemTitle[i] =
+    owned_->securityContext->remoteSystemTitle[i] =
       options_.security.peerSystemTitle[i];
   }
 
-  keys_.reset(new dlms::security::InMemoryKeyStore());
+  owned_->keys.reset(new dlms::security::InMemoryKeyStore());
   if (options_.security.globalUnicastEncryptionKey != 0 &&
       options_.security.globalUnicastEncryptionKeySize == 16u) {
-    keys_->SetKey(
+    owned_->keys->SetKey(
       MakeSecurityKey(
         dlms::security::SecurityKeyRole::GlobalUnicastEncryption,
         options_.security.globalUnicastEncryptionKey,
@@ -538,22 +537,25 @@ void ServerEndpoint::ConfigureXdlmsProcessor()
   }
   if (options_.security.authenticationKey != 0 &&
       options_.security.authenticationKeySize == 16u) {
-    keys_->SetKey(
+    owned_->keys->SetKey(
       MakeSecurityKey(
         dlms::security::SecurityKeyRole::Authentication,
         options_.security.authenticationKey,
         options_.security.authenticationKeySize));
   }
 
-  counters_.reset(new dlms::security::InMemoryInvocationCounterStore());
-  counters_->SetLocalCounter(options_.security.invocationCounter + 2u);
-  security_.reset(
+  owned_->counters.reset(
+    new dlms::security::InMemoryInvocationCounterStore());
+  owned_->counters->SetLocalCounter(options_.security.invocationCounter + 2u);
+  owned_->security.reset(
     new dlms::security::CipheredApduProcessor(
-      *securityContext_,
-      *keys_,
-      *counters_));
-  processor_.reset(
-    new dlms::xdlms::XdlmsServerApduProcessor(dispatcher_, *security_));
+      *owned_->securityContext,
+      *owned_->keys,
+      *owned_->counters));
+  owned_->processor.reset(
+    new dlms::xdlms::XdlmsServerApduProcessor(
+      *owned_->dispatcher,
+      *owned_->security));
 }
 
 EndpointStatus ServerEndpoint::ApplyCipheredAssociationContext()
@@ -561,7 +563,7 @@ EndpointStatus ServerEndpoint::ApplyCipheredAssociationContext()
   if (!options_.security.cipheredApdu) {
     return EndpointStatus::Ok;
   }
-  if (securityContext_.get() == 0 || association_.get() == 0) {
+  if (owned_->securityContext.get() == 0 || association_.get() == 0) {
     return EndpointStatus::InternalError;
   }
   const std::vector<std::uint8_t>& title =
@@ -570,7 +572,7 @@ EndpointStatus ServerEndpoint::ApplyCipheredAssociationContext()
     return EndpointStatus::SecurityFailed;
   }
   for (std::size_t i = 0u; i < 8u; ++i) {
-    securityContext_->remoteSystemTitle[i] = title[i];
+    owned_->securityContext->remoteSystemTitle[i] = title[i];
   }
   return EndpointStatus::Ok;
 }
@@ -587,28 +589,28 @@ EndpointStatus ServerEndpoint::NegotiateAssociation()
     return EndpointStatus::AssociationFailed;
   }
 
-  hlsHigh_.reset();
-  hlsGmac_.reset();
+  owned_->hlsHigh.reset();
+  owned_->hlsGmac.reset();
   if (options_.security.authentication ==
       EndpointAuthenticationKind::HighPassword) {
-    hlsHigh_.reset(
+    owned_->hlsHigh.reset(
       new ServerEndpointHlsHighStrategy(
         options_.security.password,
         options_.security.passwordSize));
   } else if (options_.security.authentication ==
              EndpointAuthenticationKind::HighGmac) {
-    hlsGmac_.reset(
+    owned_->hlsGmac.reset(
       new ServerEndpointHlsGmacStrategy(
         options_.profile,
         options_.security));
   }
 
   const dlms::association::IHighLevelSecurityServerStrategy* hls =
-    hlsHigh_.get() != 0
+    owned_->hlsHigh.get() != 0
       ? static_cast<const dlms::association::IHighLevelSecurityServerStrategy*>(
-          hlsHigh_.get())
+          owned_->hlsHigh.get())
       : static_cast<const dlms::association::IHighLevelSecurityServerStrategy*>(
-          hlsGmac_.get());
+          owned_->hlsGmac.get());
 
   std::unique_ptr<dlms::association::AssociationServer> association(
     new dlms::association::AssociationServer(
@@ -631,7 +633,7 @@ EndpointStatus ServerEndpoint::NegotiateAssociation()
     return status;
   }
 
-  hlsPending_ = hlsHigh_.get() != 0 || hlsGmac_.get() != 0;
+  hlsPending_ = owned_->hlsHigh.get() != 0 || owned_->hlsGmac.get() != 0;
   if (hlsPending_) {
     context_.ClearAssociationContext();
   } else {
@@ -667,8 +669,8 @@ EndpointStatus ServerEndpoint::ReleaseAssociation(
     MapAssociationStatus(association_->Release(requestApdu));
   if (status == EndpointStatus::Ok) {
     association_.reset();
-    hlsHigh_.reset();
-    hlsGmac_.reset();
+    owned_->hlsHigh.reset();
+    owned_->hlsGmac.reset();
     hlsPending_ = false;
     context_.ClearAssociationContext();
     open_ = false;
@@ -683,20 +685,20 @@ EndpointStatus ServerEndpoint::HandleHlsReply(
 {
   handled = false;
   if (!hlsPending_ ||
-      (hlsHigh_.get() == 0 && hlsGmac_.get() == 0) ||
+      (owned_->hlsHigh.get() == 0 && owned_->hlsGmac.get() == 0) ||
       requestApdu.empty()) {
     return EndpointStatus::Ok;
   }
 
   std::vector<std::uint8_t> plainRequest = requestApdu;
   if (options_.security.cipheredApdu) {
-    if (security_.get() == 0) {
+    if (owned_->security.get() == 0) {
       return EndpointStatus::InternalError;
     }
     dlms::security::SecurityByteView protectedRequest;
     protectedRequest.data = &requestApdu[0];
     protectedRequest.size = requestApdu.size();
-    security_->Unprotect(protectedRequest, plainRequest);
+    owned_->security->Unprotect(protectedRequest, plainRequest);
     if (plainRequest.empty()) {
       plainRequest = requestApdu;
     }
@@ -730,17 +732,17 @@ EndpointStatus ServerEndpoint::HandleHlsReply(
       clientResponseView.data + clientResponseView.size);
   }
 
-  EndpointStatus status = hlsHigh_.get() != 0
-    ? hlsHigh_->VerifyClientResponse(clientResponse)
-    : hlsGmac_->VerifyClientResponse(clientResponse);
+  EndpointStatus status = owned_->hlsHigh.get() != 0
+    ? owned_->hlsHigh->VerifyClientResponse(clientResponse)
+    : owned_->hlsGmac->VerifyClientResponse(clientResponse);
   if (status != EndpointStatus::Ok) {
     return status;
   }
 
   std::vector<std::uint8_t> serverResponse;
-  status = hlsHigh_.get() != 0
-    ? hlsHigh_->BuildServerResponse(serverResponse)
-    : hlsGmac_->BuildServerResponse(serverResponse);
+  status = owned_->hlsHigh.get() != 0
+    ? owned_->hlsHigh->BuildServerResponse(serverResponse)
+    : owned_->hlsGmac->BuildServerResponse(serverResponse);
   if (status != EndpointStatus::Ok) {
     return status;
   }
@@ -827,7 +829,8 @@ EndpointStatus ServerEndpoint::RunOnce()
 
   if (!handled) {
     status =
-      MapXdlmsStatus(processor_->ProcessRequest(requestApdu, responseApdu));
+      MapXdlmsStatus(
+        owned_->processor->ProcessRequest(requestApdu, responseApdu));
   }
   if (status != EndpointStatus::Ok) {
     return status;
@@ -848,8 +851,8 @@ EndpointStatus ServerEndpoint::Close()
   const EndpointStatus status = MapProfileStatus(channel_.Close());
   if (status == EndpointStatus::Ok) {
     association_.reset();
-    hlsHigh_.reset();
-    hlsGmac_.reset();
+    owned_->hlsHigh.reset();
+    owned_->hlsGmac.reset();
     hlsPending_ = false;
     open_ = false;
   }

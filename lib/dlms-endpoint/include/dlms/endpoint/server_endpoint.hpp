@@ -7,22 +7,15 @@
 #include "dlms/cosem/cosem.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/server/server.hpp"
-#include "dlms/xdlms/xdlms_server.hpp"
+#include "dlms/xdlms/xdlms_status.hpp"
 
 #include <memory>
 #include <vector>
 
 namespace dlms {
-namespace security {
-class CipheredApduProcessor;
-class InMemoryInvocationCounterStore;
-class InMemoryKeyStore;
-struct SecurityContext;
-}
 namespace endpoint {
 
-class ServerEndpointHlsHighStrategy;
-class ServerEndpointHlsGmacStrategy;
+class ServerEndpointOwnedState;
 
 class ServerEndpoint
 {
@@ -73,17 +66,10 @@ private:
   dlms::profile::IApduChannel& channel_;
   ServerEndpointOptions options_;
   std::unique_ptr<dlms::association::IAssociationServer> association_;
-  std::unique_ptr<ServerEndpointHlsHighStrategy> hlsHigh_;
-  std::unique_ptr<ServerEndpointHlsGmacStrategy> hlsGmac_;
   dlms::server::ServerContext context_;
   dlms::server::DlmsServer server_;
   dlms::server::XdlmsServerAdapter adapter_;
-  dlms::xdlms::XdlmsServerDispatcher dispatcher_;
-  std::unique_ptr<dlms::security::SecurityContext> securityContext_;
-  std::unique_ptr<dlms::security::InMemoryKeyStore> keys_;
-  std::unique_ptr<dlms::security::InMemoryInvocationCounterStore> counters_;
-  std::unique_ptr<dlms::security::CipheredApduProcessor> security_;
-  std::unique_ptr<dlms::xdlms::XdlmsServerApduProcessor> processor_;
+  std::unique_ptr<ServerEndpointOwnedState> owned_;
   bool open_;
   bool hlsPending_;
 };

@@ -176,6 +176,11 @@ sequenceDiagram
   Gateway-->>Downstream: response APDU
 ```
 
+`GatewayEndpoint` keeps the xDLMS server handler, dispatcher, and APDU
+processor in private endpoint-owned state. Applications customize gateway
+behavior through `IGatewayPolicy` and `IGatewayUpstream`, not by implementing
+the xDLMS server handler directly.
+
 ## Listener Runtime Flow
 
 ```mermaid

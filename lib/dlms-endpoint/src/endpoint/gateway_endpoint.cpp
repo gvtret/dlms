@@ -3,6 +3,7 @@
 #include "dlms/association/association_server.hpp"
 #include "dlms/apdu/acse.hpp"
 #include "dlms/endpoint/server_endpoint.hpp"
+#include "dlms/xdlms/xdlms_server.hpp"
 
 #include <utility>
 
@@ -115,6 +116,101 @@ EndpointStatus ClientEndpointGatewayUpstream::Action(
     encodedReturnParameter);
 }
 
+class GatewayEndpointServerHandler
+  : public dlms::xdlms::IXdlmsServerHandler
+{
+public:
+  GatewayEndpointServerHandler(
+    IGatewayUpstream& upstream,
+    IGatewayPolicy& policy)
+    : upstream_(upstream)
+    , policy_(policy)
+  {
+  }
+
+  dlms::xdlms::XdlmsStatus HandleGet(
+    const dlms::xdlms::GetIndication& indication,
+    dlms::xdlms::GetResult& result) override
+  {
+    result = dlms::xdlms::EmptyGetResult();
+    result.invokeId = indication.invokeId;
+
+    if (!policy_.AllowGet(indication.descriptor)) {
+      result.hasAccessResult = true;
+      result.accessResult = kAccessDeniedResult;
+      return dlms::xdlms::XdlmsStatus::Ok;
+    }
+
+    result.hasData = true;
+    return MapEndpointStatusToXdlmsStatus(
+      upstream_.Get(indication.descriptor, result.data));
+  }
+
+  dlms::xdlms::XdlmsStatus HandleSet(
+    const dlms::xdlms::SetIndication& indication,
+    dlms::xdlms::SetResult& result) override
+  {
+    result = dlms::xdlms::EmptySetResult();
+    result.invokeId = indication.invokeId;
+
+    if (!policy_.AllowSet(indication.descriptor)) {
+      result.accessResult = kAccessDeniedResult;
+      return dlms::xdlms::XdlmsStatus::Ok;
+    }
+
+    const EndpointStatus status =
+      upstream_.Set(indication.descriptor, indication.data);
+    result.accessResult = 0u;
+    return MapEndpointStatusToXdlmsStatus(status);
+  }
+
+  dlms::xdlms::XdlmsStatus HandleAction(
+    const dlms::xdlms::ActionIndication& indication,
+    dlms::xdlms::ActionResult& result) override
+  {
+    result = dlms::xdlms::EmptyActionResult();
+    result.invokeId = indication.invokeId;
+
+    if (!policy_.AllowAction(indication.descriptor)) {
+      result.actionResult = kAccessDeniedResult;
+      return dlms::xdlms::XdlmsStatus::Ok;
+    }
+
+    const EndpointStatus status =
+      upstream_.Action(
+        indication.descriptor,
+        indication.hasParameter,
+        indication.parameter,
+        result.data);
+    if (status == EndpointStatus::Ok && !result.data.empty()) {
+      result.hasData = true;
+    }
+    result.actionResult = 0u;
+    return MapEndpointStatusToXdlmsStatus(status);
+  }
+
+private:
+  IGatewayUpstream& upstream_;
+  IGatewayPolicy& policy_;
+};
+
+class GatewayEndpointOwnedState
+{
+public:
+  GatewayEndpointOwnedState(
+    IGatewayUpstream& upstream,
+    IGatewayPolicy& policy)
+    : handler(upstream, policy)
+    , dispatcher(handler)
+    , processor(dispatcher)
+  {
+  }
+
+  GatewayEndpointServerHandler handler;
+  dlms::xdlms::XdlmsServerDispatcher dispatcher;
+  dlms::xdlms::XdlmsServerApduProcessor processor;
+};
+
 GatewayEndpoint::GatewayEndpoint(
   dlms::profile::IApduChannel& downstreamChannel,
   IGatewayUpstream& upstream,
@@ -124,8 +220,7 @@ GatewayEndpoint::GatewayEndpoint(
   , association_()
   , upstream_(upstream)
   , policy_(policy)
-  , dispatcher_(*this)
-  , processor_(dispatcher_)
+  , owned_(new GatewayEndpointOwnedState(upstream_, policy_))
   , open_(false)
 {
 }
@@ -140,9 +235,12 @@ GatewayEndpoint::GatewayEndpoint(
   , association_()
   , upstream_(upstream)
   , policy_(policy)
-  , dispatcher_(*this)
-  , processor_(dispatcher_)
+  , owned_(new GatewayEndpointOwnedState(upstream_, policy_))
   , open_(false)
+{
+}
+
+GatewayEndpoint::~GatewayEndpoint()
 {
 }
 
@@ -270,7 +368,8 @@ EndpointStatus GatewayEndpoint::RunOnce()
     return ReleaseDownstreamAssociation(requestApdu);
   }
 
-  status = MapXdlmsStatus(processor_.ProcessRequest(requestApdu, responseApdu));
+  status =
+    MapXdlmsStatus(owned_->processor.ProcessRequest(requestApdu, responseApdu));
   if (status != EndpointStatus::Ok) {
     return status;
   }
@@ -302,67 +401,6 @@ EndpointStatus GatewayEndpoint::Close()
 bool GatewayEndpoint::IsOpen() const
 {
   return open_;
-}
-
-dlms::xdlms::XdlmsStatus GatewayEndpoint::HandleGet(
-  const dlms::xdlms::GetIndication& indication,
-  dlms::xdlms::GetResult& result)
-{
-  result = dlms::xdlms::EmptyGetResult();
-  result.invokeId = indication.invokeId;
-
-  if (!policy_.AllowGet(indication.descriptor)) {
-    result.hasAccessResult = true;
-    result.accessResult = kAccessDeniedResult;
-    return dlms::xdlms::XdlmsStatus::Ok;
-  }
-
-  result.hasData = true;
-  return MapEndpointStatusToXdlmsStatus(
-    upstream_.Get(indication.descriptor, result.data));
-}
-
-dlms::xdlms::XdlmsStatus GatewayEndpoint::HandleSet(
-  const dlms::xdlms::SetIndication& indication,
-  dlms::xdlms::SetResult& result)
-{
-  result = dlms::xdlms::EmptySetResult();
-  result.invokeId = indication.invokeId;
-
-  if (!policy_.AllowSet(indication.descriptor)) {
-    result.accessResult = kAccessDeniedResult;
-    return dlms::xdlms::XdlmsStatus::Ok;
-  }
-
-  const EndpointStatus status =
-    upstream_.Set(indication.descriptor, indication.data);
-  result.accessResult = 0u;
-  return MapEndpointStatusToXdlmsStatus(status);
-}
-
-dlms::xdlms::XdlmsStatus GatewayEndpoint::HandleAction(
-  const dlms::xdlms::ActionIndication& indication,
-  dlms::xdlms::ActionResult& result)
-{
-  result = dlms::xdlms::EmptyActionResult();
-  result.invokeId = indication.invokeId;
-
-  if (!policy_.AllowAction(indication.descriptor)) {
-    result.actionResult = kAccessDeniedResult;
-    return dlms::xdlms::XdlmsStatus::Ok;
-  }
-
-  const EndpointStatus status =
-    upstream_.Action(
-      indication.descriptor,
-      indication.hasParameter,
-      indication.parameter,
-      result.data);
-  if (status == EndpointStatus::Ok && !result.data.empty()) {
-    result.hasData = true;
-  }
-  result.actionResult = 0u;
-  return MapEndpointStatusToXdlmsStatus(status);
 }
 
 dlms::xdlms::XdlmsStatus MapEndpointStatusToXdlmsStatus(

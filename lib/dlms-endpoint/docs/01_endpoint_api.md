@@ -398,6 +398,9 @@ Denied requests are encoded as xDLMS access/action result `access-denied`.
 
 The gateway layer composes downstream request handling and upstream client
 calls. It does not implement COSEM object semantics or own listener transport.
+Its internal xDLMS server handler and APDU processor are private
+implementation state; the public endpoint contract is the downstream channel,
+`IGatewayUpstream`, and `IGatewayPolicy`.
 `Close()` reports an upstream close failure when one occurs, but still attempts
 to close the downstream channel and clears local gateway state if downstream
 close succeeds.

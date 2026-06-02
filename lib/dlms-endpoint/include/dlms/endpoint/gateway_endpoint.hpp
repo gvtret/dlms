@@ -6,7 +6,7 @@
 
 #include "dlms/association/association_server_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
-#include "dlms/xdlms/xdlms_server.hpp"
+#include "dlms/xdlms/xdlms_status.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -14,6 +14,8 @@
 
 namespace dlms {
 namespace endpoint {
+
+class GatewayEndpointOwnedState;
 
 class IGatewayPolicy
 {
@@ -81,7 +83,7 @@ private:
   ClientEndpoint& client_;
 };
 
-class GatewayEndpoint : private dlms::xdlms::IXdlmsServerHandler
+class GatewayEndpoint
 {
 public:
   GatewayEndpoint(
@@ -94,6 +96,7 @@ public:
     const GatewayEndpointOptions& options,
     IGatewayUpstream& upstream,
     IGatewayPolicy& policy);
+  ~GatewayEndpoint();
 
   EndpointStatus Open();
   EndpointStatus RunOnce();
@@ -110,25 +113,12 @@ private:
   EndpointStatus ReleaseDownstreamAssociation(
     const std::vector<std::uint8_t>& requestApdu);
 
-  dlms::xdlms::XdlmsStatus HandleGet(
-    const dlms::xdlms::GetIndication& indication,
-    dlms::xdlms::GetResult& result);
-
-  dlms::xdlms::XdlmsStatus HandleSet(
-    const dlms::xdlms::SetIndication& indication,
-    dlms::xdlms::SetResult& result);
-
-  dlms::xdlms::XdlmsStatus HandleAction(
-    const dlms::xdlms::ActionIndication& indication,
-    dlms::xdlms::ActionResult& result);
-
   dlms::profile::IApduChannel& downstreamChannel_;
   GatewayEndpointOptions options_;
   std::unique_ptr<dlms::association::IAssociationServer> association_;
   IGatewayUpstream& upstream_;
   IGatewayPolicy& policy_;
-  dlms::xdlms::XdlmsServerDispatcher dispatcher_;
-  dlms::xdlms::XdlmsServerApduProcessor processor_;
+  std::unique_ptr<GatewayEndpointOwnedState> owned_;
   bool open_;
 };
 

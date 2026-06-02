@@ -157,8 +157,10 @@ public:
 `HandleSet` implementation returns `UnsupportedFeature`, allowing existing
 GET-only handlers to remain valid until they explicitly support SET.
 
-`XdlmsServerDispatcher` validates the indication, calls the handler, and keeps
-the response invoke id aligned with the request.
+`IXdlmsServerDispatcher` is the abstract server dispatch port consumed by
+`XdlmsServerApduProcessor`. `XdlmsServerDispatcher` is the default
+implementation: it validates the indication, calls the handler, and keeps the
+response invoke id aligned with the request.
 
 ```cpp
 dlms::xdlms::XdlmsServerDispatcher dispatcher(handler);
@@ -188,6 +190,9 @@ const dlms::xdlms::XdlmsStatus status = dispatcher.DispatchSet(indication, resul
 The handler contract is intentionally independent from `dlms-server`; the
 server repo can implement an adapter without making `dlms-xdlms` depend on
 higher layers.
+Applications can also implement `IXdlmsServerDispatcher` directly when they
+need custom dispatch validation or routing without using the default
+`XdlmsServerDispatcher`.
 
 ## 6. Server APDU Boundary
 
@@ -363,6 +368,11 @@ classDiagram
     +HandleSet(SetIndication, SetResult&) XdlmsStatus
   }
 
+  class IXdlmsServerDispatcher {
+    +DispatchGet(GetIndication, GetResult&) XdlmsStatus
+    +DispatchSet(SetIndication, SetResult&) XdlmsStatus
+  }
+
   class XdlmsServerDispatcher {
     +DispatchGet(GetIndication, GetResult&) XdlmsStatus
     +DispatchSet(SetIndication, SetResult&) XdlmsStatus
@@ -400,11 +410,12 @@ classDiagram
   SetIndication --> ServiceOptions
   SetIndication --> CosemAttributeDescriptor
   XdlmsServerDispatcher --> IXdlmsServerHandler
+  XdlmsServerDispatcher ..|> IXdlmsServerDispatcher
   XdlmsServerDispatcher --> GetIndication
   XdlmsServerDispatcher --> GetResult
   XdlmsServerDispatcher --> SetIndication
   XdlmsServerDispatcher --> SetResult
-  XdlmsServerApduProcessor --> XdlmsServerDispatcher
+  XdlmsServerApduProcessor --> IXdlmsServerDispatcher
   XdlmsServerApduProcessor --> GetResponseBlockState
   XdlmsClient --> IXdlmsSecurityProcessor
   XdlmsServerApduProcessor --> IXdlmsSecurityProcessor

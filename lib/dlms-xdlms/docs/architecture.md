@@ -65,6 +65,10 @@ classDiagram
     +DispatchGet(GetIndication, GetResult&) XdlmsStatus
   }
 
+  class IXdlmsServerDispatcher {
+    +DispatchGet(GetIndication, GetResult&) XdlmsStatus
+  }
+
   class IXdlmsServerHandler {
     +HandleGet(GetIndication, GetResult&) XdlmsStatus
   }
@@ -85,6 +89,7 @@ classDiagram
   XdlmsClient --> InvokeIdAllocator
   XdlmsClient --> dlms_apdu
   XdlmsServerDispatcher --> IXdlmsServerHandler
+  XdlmsServerDispatcher ..|> IXdlmsServerDispatcher
   XdlmsServerDispatcher --> GetIndication
   XdlmsServerDispatcher --> GetResult
 ```
@@ -94,7 +99,7 @@ classDiagram
 ```mermaid
 sequenceDiagram
   participant Apdu as APDU Decoder Boundary
-  participant Dispatcher as XdlmsServerDispatcher
+  participant Dispatcher as IXdlmsServerDispatcher
   participant Handler as IXdlmsServerHandler
   participant Server as dlms-server Adapter
 
@@ -117,7 +122,7 @@ sequenceDiagram
   participant Caller as Profile or Association Boundary
   participant Processor as XdlmsServerApduProcessor
   participant Apdu as dlms-apdu
-  participant Dispatcher as XdlmsServerDispatcher
+  participant Dispatcher as IXdlmsServerDispatcher
   participant Handler as IXdlmsServerHandler
 
   Caller->>Processor: ProcessRequest(requestApdu)
@@ -140,7 +145,7 @@ layers.
 ```mermaid
 sequenceDiagram
   participant Boundary as Decoded SET Boundary
-  participant Dispatcher as XdlmsServerDispatcher
+  participant Dispatcher as IXdlmsServerDispatcher
   participant Handler as IXdlmsServerHandler
   participant Server as dlms-server Adapter
 
@@ -164,7 +169,7 @@ sequenceDiagram
   participant Caller as Profile or Association Boundary
   participant Processor as XdlmsServerApduProcessor
   participant Apdu as dlms-apdu
-  participant Dispatcher as XdlmsServerDispatcher
+  participant Dispatcher as IXdlmsServerDispatcher
   participant Handler as IXdlmsServerHandler
 
   Caller->>Processor: ProcessRequest(requestApdu)
@@ -209,7 +214,7 @@ sequenceDiagram
   participant Caller as Association or Server Boundary
   participant Processor as XdlmsServerApduProcessor
   participant Security as IXdlmsSecurityProcessor
-  participant Dispatcher as XdlmsServerDispatcher
+  participant Dispatcher as IXdlmsServerDispatcher
 
   Caller->>Processor: ProcessRequest(ciphered request)
   Processor->>Security: Unprotect(requestApdu)
@@ -370,7 +375,8 @@ not share buffers.
 `XdlmsClient` stores non-owning references to the association and profile APDU
 channel boundaries and may store a non-owning reference to the abstract
 `IXdlmsSecurityProcessor` port. Server dispatch stores non-owning access to an
-xDLMS server handler. The server APDU processor may also store a non-owning
+xDLMS server handler. The server APDU processor stores a non-owning reference
+to the abstract `IXdlmsServerDispatcher` port and may also store a non-owning
 security processor reference. Compatibility constructors that accept the
 default concrete ciphered APDU processor own only a small adapter to the same
 abstract security port. The layer does not own transport resources,

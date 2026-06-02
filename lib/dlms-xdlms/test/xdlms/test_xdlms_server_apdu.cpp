@@ -75,6 +75,49 @@ public:
   dlms::xdlms::ActionResult actionResult;
 };
 
+class FakeServerDispatcher : public dlms::xdlms::IXdlmsServerDispatcher
+{
+public:
+  FakeServerDispatcher()
+    : calls(0)
+    , result(dlms::xdlms::EmptyGetResult())
+    , lastIndication(dlms::xdlms::EmptyGetIndication())
+  {
+  }
+
+  dlms::xdlms::XdlmsStatus DispatchGet(
+    const dlms::xdlms::GetIndication& indication,
+    dlms::xdlms::GetResult& output)
+  {
+    ++calls;
+    lastIndication = indication;
+    output = result;
+    return dlms::xdlms::XdlmsStatus::Ok;
+  }
+
+  dlms::xdlms::XdlmsStatus DispatchSet(
+    const dlms::xdlms::SetIndication& indication,
+    dlms::xdlms::SetResult& output)
+  {
+    (void)indication;
+    (void)output;
+    return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+  }
+
+  dlms::xdlms::XdlmsStatus DispatchAction(
+    const dlms::xdlms::ActionIndication& indication,
+    dlms::xdlms::ActionResult& output)
+  {
+    (void)indication;
+    (void)output;
+    return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+  }
+
+  int calls;
+  dlms::xdlms::GetResult result;
+  dlms::xdlms::GetIndication lastIndication;
+};
+
 std::vector<std::uint8_t> EncodeApdu(const dlms::apdu::XdlmsApdu& apdu)
 {
   std::vector<std::uint8_t> output;
@@ -320,6 +363,28 @@ TEST(XdlmsServerApduProcessor, ProcessGetRequestNormalEncodesDataResponse)
   EXPECT_EQ(dlms::apdu::DlmsDataType::LongUnsigned,
             decoded.getResponseAny.result.data.type);
   EXPECT_EQ(0x1234u, decoded.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(XdlmsServerApduProcessor, CanUseCustomServerDispatcherPort)
+{
+  FakeServerDispatcher dispatcher;
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  std::vector<std::uint8_t> response;
+  dispatcher.result.hasData = true;
+  dispatcher.result.data = MakeEncodedLongUnsigned(0x2345u);
+
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            processor.ProcessRequest(MakeGetRequest(0x85u), response));
+
+  ASSERT_EQ(1, dispatcher.calls);
+  EXPECT_EQ(5u, dispatcher.lastIndication.invokeId);
+  EXPECT_TRUE(dispatcher.lastIndication.options.confirmed);
+
+  const dlms::apdu::XdlmsApdu decoded = DecodeResponse(response);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, decoded.kind);
+  EXPECT_EQ(0x85u, decoded.getResponseAny.invokeIdAndPriority);
+  EXPECT_EQ(0x2345u,
+            decoded.getResponseAny.result.data.unsignedValue);
 }
 
 TEST(XdlmsServerApduProcessor, GetResponseBlocksAreServedByGetNext)

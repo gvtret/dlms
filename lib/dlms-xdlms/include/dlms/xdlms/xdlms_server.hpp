@@ -86,7 +86,25 @@ public:
     ActionResult& result);
 };
 
-class XdlmsServerDispatcher
+class IXdlmsServerDispatcher
+{
+public:
+  virtual ~IXdlmsServerDispatcher();
+
+  virtual XdlmsStatus DispatchGet(
+    const GetIndication& indication,
+    GetResult& result) = 0;
+
+  virtual XdlmsStatus DispatchSet(
+    const SetIndication& indication,
+    SetResult& result) = 0;
+
+  virtual XdlmsStatus DispatchAction(
+    const ActionIndication& indication,
+    ActionResult& result) = 0;
+};
+
+class XdlmsServerDispatcher : public IXdlmsServerDispatcher
 {
 public:
   explicit XdlmsServerDispatcher(IXdlmsServerHandler& handler);
@@ -110,22 +128,22 @@ private:
 class XdlmsServerApduProcessor
 {
 public:
-  explicit XdlmsServerApduProcessor(XdlmsServerDispatcher& dispatcher);
+  explicit XdlmsServerApduProcessor(IXdlmsServerDispatcher& dispatcher);
   XdlmsServerApduProcessor(
-    XdlmsServerDispatcher& dispatcher,
+    IXdlmsServerDispatcher& dispatcher,
     const ServiceOptions& options);
   XdlmsServerApduProcessor(
-    XdlmsServerDispatcher& dispatcher,
+    IXdlmsServerDispatcher& dispatcher,
     IXdlmsSecurityProcessor& security);
   XdlmsServerApduProcessor(
-    XdlmsServerDispatcher& dispatcher,
+    IXdlmsServerDispatcher& dispatcher,
     IXdlmsSecurityProcessor& security,
     const ServiceOptions& options);
   XdlmsServerApduProcessor(
-    XdlmsServerDispatcher& dispatcher,
+    IXdlmsServerDispatcher& dispatcher,
     dlms::security::CipheredApduProcessor& security);
   XdlmsServerApduProcessor(
-    XdlmsServerDispatcher& dispatcher,
+    IXdlmsServerDispatcher& dispatcher,
     dlms::security::CipheredApduProcessor& security,
     const ServiceOptions& options);
 
@@ -134,7 +152,7 @@ public:
     std::vector<std::uint8_t>& responseApdu);
 
 private:
-  XdlmsServerDispatcher& dispatcher_;
+  IXdlmsServerDispatcher& dispatcher_;
   std::unique_ptr<IXdlmsSecurityProcessor> ownedSecurity_;
   IXdlmsSecurityProcessor* security_;
   ServiceOptions options_;

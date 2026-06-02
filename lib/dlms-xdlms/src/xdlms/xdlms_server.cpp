@@ -363,7 +363,7 @@ XdlmsStatus EncodeActionNextPblockResponse(
 
 XdlmsStatus ProcessGetRequest(
   const dlms::apdu::XdlmsApdu& request,
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   const ServiceOptions& processorOptions,
   GetResponseBlockState& getBlocks,
   std::vector<std::uint8_t>& responseApdu)
@@ -433,7 +433,7 @@ XdlmsStatus ProcessGetRequest(
 
 XdlmsStatus ProcessSetRequest(
   const dlms::apdu::XdlmsApdu& request,
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   const ServiceOptions& processorOptions,
   SetRequestBlockState& setBlocks,
   std::vector<std::uint8_t>& responseApdu)
@@ -621,7 +621,7 @@ XdlmsStatus ProcessSetRequest(
 
 XdlmsStatus ProcessActionRequest(
   const dlms::apdu::XdlmsApdu& request,
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   const ServiceOptions& processorOptions,
   ActionRequestBlockState& actionBlocks,
   std::vector<std::uint8_t>& responseApdu)
@@ -839,6 +839,10 @@ XdlmsStatus IXdlmsServerHandler::HandleAction(
   return XdlmsStatus::UnsupportedFeature;
 }
 
+IXdlmsServerDispatcher::~IXdlmsServerDispatcher()
+{
+}
+
 XdlmsServerDispatcher::XdlmsServerDispatcher(IXdlmsServerHandler& handler)
   : handler_(handler)
 {
@@ -928,7 +932,7 @@ XdlmsStatus XdlmsServerDispatcher::DispatchAction(
 }
 
 XdlmsServerApduProcessor::XdlmsServerApduProcessor(
-  XdlmsServerDispatcher& dispatcher)
+  IXdlmsServerDispatcher& dispatcher)
   : dispatcher_(dispatcher)
   , ownedSecurity_()
   , security_(0)
@@ -940,7 +944,7 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
 }
 
 XdlmsServerApduProcessor::XdlmsServerApduProcessor(
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   const ServiceOptions& options)
   : dispatcher_(dispatcher)
   , ownedSecurity_()
@@ -953,7 +957,7 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
 }
 
 XdlmsServerApduProcessor::XdlmsServerApduProcessor(
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   IXdlmsSecurityProcessor& security)
   : dispatcher_(dispatcher)
   , ownedSecurity_()
@@ -966,7 +970,7 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
 }
 
 XdlmsServerApduProcessor::XdlmsServerApduProcessor(
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   IXdlmsSecurityProcessor& security,
   const ServiceOptions& options)
   : dispatcher_(dispatcher)
@@ -980,7 +984,7 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
 }
 
 XdlmsServerApduProcessor::XdlmsServerApduProcessor(
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   dlms::security::CipheredApduProcessor& security)
   : dispatcher_(dispatcher)
   , ownedSecurity_(new CipheredXdlmsSecurityProcessor(security))
@@ -993,7 +997,7 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
 }
 
 XdlmsServerApduProcessor::XdlmsServerApduProcessor(
-  XdlmsServerDispatcher& dispatcher,
+  IXdlmsServerDispatcher& dispatcher,
   dlms::security::CipheredApduProcessor& security,
   const ServiceOptions& options)
   : dispatcher_(dispatcher)

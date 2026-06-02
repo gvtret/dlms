@@ -252,8 +252,9 @@ the default logical-device dispatcher or the supplied server service.
 When `negotiateAssociation` is `true`, `Open()` composes
 `dlms-association::AssociationServer` over the same APDU channel before the
 first service APDU. It receives one AARQ, emits one AARE, then stores the
-negotiated context in `ServerContext`. Endpoint code does not decode ACSE or
-construct AARE itself.
+negotiated context in `ServerContext`. Endpoint stores the negotiated
+association through `dlms::association::IAssociationServer`; endpoint code does
+not decode ACSE or construct AARE itself.
 
 After negotiated association, `RunOnce()` treats an incoming RLRQ as a
 server-side release request. It delegates RLRE emission and channel close to
@@ -316,9 +317,10 @@ By default `PushListenerEndpointOptions::negotiateAssociation` is `false`,
 preserving the raw already-associated push APDU path. When enabled, `Open()`
 composes `dlms-association::AssociationServer` over the same APDU channel
 before the first raw push APDU is dispatched. Endpoint code still does not
-decode ACSE or construct AARE itself. The initial push listener composition is
-no-security LN or configured Low Password, matching the current association
-server contract.
+decode ACSE or construct AARE itself, and stores the negotiated association
+through `dlms::association::IAssociationServer`. The initial push listener
+composition is no-security LN or configured Low Password, matching the current
+association server contract.
 
 After negotiated association, `RunOnce()` treats an incoming RLRQ as a
 server-side release request. It delegates RLRE emission and channel close to
@@ -406,9 +408,10 @@ By default `GatewayEndpointOptions::downstream.negotiateAssociation` is
 `dlms-association::AssociationServer` over the downstream APDU channel before
 opening the upstream path. It accepts one downstream AARQ, emits one AARE, and
 then `RunOnce()` forwards the first xDLMS service APDU. Endpoint code still
-does not decode ACSE or construct AARE itself. The gateway composition supports
-no-security LN and configured Low Password, matching the current association
-server contract.
+does not decode ACSE or construct AARE itself, and stores the negotiated
+association through `dlms::association::IAssociationServer`. The gateway
+composition supports no-security LN and configured Low Password, matching the
+current association server contract.
 
 After downstream association negotiation, `RunOnce()` treats an incoming RLRQ
 as a downstream release request. It delegates RLRE emission and downstream

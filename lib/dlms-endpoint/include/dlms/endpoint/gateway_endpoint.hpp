@@ -124,7 +124,7 @@ private:
 
   dlms::profile::IApduChannel& downstreamChannel_;
   GatewayEndpointOptions options_;
-  std::unique_ptr<dlms::association::AssociationServer> association_;
+  std::unique_ptr<dlms::association::IAssociationServer> association_;
   IGatewayUpstream& upstream_;
   IGatewayPolicy& policy_;
   dlms::xdlms::XdlmsServerDispatcher dispatcher_;

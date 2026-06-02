@@ -51,7 +51,7 @@ private:
 
   dlms::profile::IApduChannel& channel_;
   PushListenerEndpointOptions options_;
-  std::unique_ptr<dlms::association::AssociationServer> association_;
+  std::unique_ptr<dlms::association::IAssociationServer> association_;
   IPushIndicationHandler& handler_;
   bool open_;
 };

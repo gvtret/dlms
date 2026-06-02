@@ -72,7 +72,7 @@ private:
 
   dlms::profile::IApduChannel& channel_;
   ServerEndpointOptions options_;
-  std::unique_ptr<dlms::association::AssociationServer> association_;
+  std::unique_ptr<dlms::association::IAssociationServer> association_;
   std::unique_ptr<ServerEndpointHlsHighStrategy> hlsHigh_;
   std::unique_ptr<ServerEndpointHlsGmacStrategy> hlsGmac_;
   dlms::server::ServerContext context_;

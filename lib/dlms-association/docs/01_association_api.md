@@ -117,6 +117,23 @@ do not need to construct the default ACSE association implementation.
 ## 6. Server
 
 ```cpp
+class IAssociationServer
+{
+public:
+  virtual ~IAssociationServer();
+
+  virtual AssociationStatus Open() = 0;
+  virtual AssociationStatus Close() = 0;
+  virtual AssociationStatus Accept() = 0;
+  virtual AssociationStatus Release() = 0;
+  virtual AssociationStatus Release(
+    const std::vector<std::uint8_t>& rlrq) = 0;
+
+  virtual AssociationState State() const = 0;
+  virtual bool IsAssociated() const = 0;
+  virtual const AssociationResult& Result() const = 0;
+};
+
 dlms::association::AssociationServer server(channel, options);
 
 server.Open();
@@ -166,6 +183,10 @@ Pass-3/pass-4 execution remains outside `dlms-association`.
 
 `AssociationServer` does not own the lower channel object. The caller must keep
 the channel alive for the lifetime of the association server.
+
+`AssociationServer` implements `IAssociationServer`. Endpoint and other
+runtime composition layers should depend on the interface when they only need
+server-side association lifecycle/state/result behavior.
 
 ## 7. C API
 

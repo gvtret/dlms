@@ -8,22 +8,41 @@
 namespace dlms {
 namespace association {
 
-class AssociationServer
+class IAssociationServer
+{
+public:
+  virtual ~IAssociationServer()
+  {
+  }
+
+  virtual AssociationStatus Open() = 0;
+  virtual AssociationStatus Close() = 0;
+  virtual AssociationStatus Accept() = 0;
+  virtual AssociationStatus Release() = 0;
+  virtual AssociationStatus Release(
+    const std::vector<std::uint8_t>& rlrq) = 0;
+
+  virtual AssociationState State() const = 0;
+  virtual bool IsAssociated() const = 0;
+  virtual const AssociationResult& Result() const = 0;
+};
+
+class AssociationServer : public IAssociationServer
 {
 public:
   AssociationServer(
     dlms::profile::IApduChannel& channel,
     const AssociationServerOptions& options);
 
-  AssociationStatus Open();
-  AssociationStatus Close();
-  AssociationStatus Accept();
-  AssociationStatus Release();
-  AssociationStatus Release(const std::vector<std::uint8_t>& rlrq);
+  AssociationStatus Open() override;
+  AssociationStatus Close() override;
+  AssociationStatus Accept() override;
+  AssociationStatus Release() override;
+  AssociationStatus Release(const std::vector<std::uint8_t>& rlrq) override;
 
-  AssociationState State() const;
-  bool IsAssociated() const;
-  const AssociationResult& Result() const;
+  AssociationState State() const override;
+  bool IsAssociated() const override;
+  const AssociationResult& Result() const override;
 
 private:
   AssociationServer(const AssociationServer&);

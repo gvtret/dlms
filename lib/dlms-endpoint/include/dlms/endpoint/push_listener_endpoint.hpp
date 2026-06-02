@@ -2,6 +2,7 @@
 
 #include "dlms/endpoint/endpoint_options.hpp"
 #include "dlms/endpoint/endpoint_status.hpp"
+#include "dlms/endpoint/push_indication_handler.hpp"
 
 #include "dlms/association/association_server_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
@@ -12,15 +13,6 @@
 
 namespace dlms {
 namespace endpoint {
-
-class IPushIndicationHandler
-{
-public:
-  virtual ~IPushIndicationHandler();
-
-  virtual EndpointStatus OnPushApdu(
-    const std::vector<std::uint8_t>& apdu) = 0;
-};
 
 class PushListenerEndpoint
 {

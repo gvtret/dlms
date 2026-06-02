@@ -220,6 +220,10 @@ caller-provided `dlms::server::IServerService`. The runtime owns only listener
 lifecycle and accepted-channel orchestration; service dispatch ownership stays
 with the selected server service implementation.
 
+`PushListenerRuntime` depends on the `IPushIndicationHandler` callback port.
+That port lives in a separate public header, so callback implementations do not
+need the concrete `PushListenerEndpoint` declaration.
+
 For UDP push listener runtime, `Accept()` means "provide a Wrapper/UDP APDU
 channel over the already-open datagram listener" rather than a connection
 accept. The UDP listener owns socket lifecycle; the borrowed channel close is a

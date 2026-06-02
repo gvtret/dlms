@@ -12,9 +12,6 @@
 #include <vector>
 
 namespace dlms {
-namespace client {
-struct DlmsClientOptions;
-}
 namespace endpoint {
 
 using ClientAttributeDescriptor = dlms::xdlms::CosemAttributeDescriptor;
@@ -51,8 +48,7 @@ private:
   ClientEndpoint(const ClientEndpoint&);
   ClientEndpoint& operator=(const ClientEndpoint&);
 
-  EndpointStatus MakeClientOptions(
-    dlms::client::DlmsClientOptions& output) const;
+  EndpointStatus CreateClient();
 
   ClientEndpointOptions options_;
   std::string host_;

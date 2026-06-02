@@ -74,8 +74,7 @@ ClientEndpoint::~ClientEndpoint()
   Close();
 }
 
-EndpointStatus ClientEndpoint::MakeClientOptions(
-  dlms::client::DlmsClientOptions& output) const
+EndpointStatus ClientEndpoint::CreateClient()
 {
   EndpointStatus status = ValidateClientEndpointOptions(options_);
   if (status != EndpointStatus::Ok) {
@@ -86,28 +85,30 @@ EndpointStatus ClientEndpoint::MakeClientOptions(
     return EndpointStatus::UnsupportedProfile;
   }
 
-  output = dlms::client::DefaultDlmsClientOptions();
-  output.clientSap = options_.profile.clientSap;
-  output.serverSap = options_.profile.serverSap;
-  output.connectTimeoutMs = options_.transport.timeoutMs;
-  output.requestTimeoutMs = options_.transport.timeoutMs;
+  dlms::client::DlmsClientOptions clientOptions =
+    dlms::client::DefaultDlmsClientOptions();
+  clientOptions.clientSap = options_.profile.clientSap;
+  clientOptions.serverSap = options_.profile.serverSap;
+  clientOptions.connectTimeoutMs = options_.transport.timeoutMs;
+  clientOptions.requestTimeoutMs = options_.transport.timeoutMs;
 
   switch (options_.profile.kind) {
     case EndpointProfileKind::Wrapper:
-      output.profile = dlms::client::ClientProfile::WrapperTcp;
-      output.wrapperTcp.host = options_.transport.host;
-      output.wrapperTcp.port = options_.transport.port;
-      output.wrapperTcp.sourceWPort = options_.profile.clientSap;
-      output.wrapperTcp.destinationWPort = options_.profile.serverSap;
+      clientOptions.profile = dlms::client::ClientProfile::WrapperTcp;
+      clientOptions.wrapperTcp.host = options_.transport.host;
+      clientOptions.wrapperTcp.port = options_.transport.port;
+      clientOptions.wrapperTcp.sourceWPort = options_.profile.clientSap;
+      clientOptions.wrapperTcp.destinationWPort = options_.profile.serverSap;
       break;
     case EndpointProfileKind::Hdlc:
-      output.profile = dlms::client::ClientProfile::HdlcTcp;
-      output.hdlcTcp.host = options_.transport.host;
-      output.hdlcTcp.port = options_.transport.port;
-      output.hdlcTcp.clientAddress =
+      clientOptions.profile = dlms::client::ClientProfile::HdlcTcp;
+      clientOptions.hdlcTcp.host = options_.transport.host;
+      clientOptions.hdlcTcp.port = options_.transport.port;
+      clientOptions.hdlcTcp.clientAddress =
         static_cast<std::uint8_t>(options_.profile.clientSap);
-      output.hdlcTcp.logicalDeviceAddress = options_.profile.serverSap;
-      output.hdlcTcp.useDataLinkSession = options_.profile.hdlcUseSession;
+      clientOptions.hdlcTcp.logicalDeviceAddress = options_.profile.serverSap;
+      clientOptions.hdlcTcp.useDataLinkSession =
+        options_.profile.hdlcUseSession;
       break;
     default:
       return EndpointStatus::UnsupportedProfile;
@@ -115,65 +116,55 @@ EndpointStatus ClientEndpoint::MakeClientOptions(
 
   switch (options_.security.authentication) {
     case EndpointAuthenticationKind::None:
-      output.authenticationMode =
+      clientOptions.authenticationMode =
         dlms::client::ClientAuthenticationMode::None;
       break;
     case EndpointAuthenticationKind::LowPassword:
-      output.authenticationMode =
+      clientOptions.authenticationMode =
         dlms::client::ClientAuthenticationMode::LowLevelSecurity;
-      output.lowLevelSecurity.credential =
+      clientOptions.lowLevelSecurity.credential =
         password_.empty() ? 0 : &password_[0];
-      output.lowLevelSecurity.credentialSize = password_.size();
+      clientOptions.lowLevelSecurity.credentialSize = password_.size();
       break;
     case EndpointAuthenticationKind::HighPassword:
-      output.authenticationMode =
+      clientOptions.authenticationMode =
         dlms::client::ClientAuthenticationMode::HighLevelSecurity;
-      output.highLevelSecurity.password =
+      clientOptions.highLevelSecurity.password =
         password_.empty() ? 0 : &password_[0];
-      output.highLevelSecurity.passwordSize = password_.size();
+      clientOptions.highLevelSecurity.passwordSize = password_.size();
       break;
     case EndpointAuthenticationKind::HighGmac:
-      output.authenticationMode =
+      clientOptions.authenticationMode =
         dlms::client::ClientAuthenticationMode::HighLevelSecurityGmac;
       if (options_.security.cipheredApdu) {
-        output.securityMode =
+        clientOptions.securityMode =
           dlms::client::ClientSecurityMode::AuthenticatedAndEncrypted;
       }
-      output.security.invocationCounter =
+      clientOptions.security.invocationCounter =
         options_.security.invocationCounter;
       for (std::size_t i = 0u; i < systemTitle_.size() && i < 8u; ++i) {
-        output.security.clientSystemTitle[i] = systemTitle_[i];
+        clientOptions.security.clientSystemTitle[i] = systemTitle_[i];
       }
       for (std::size_t i = 0u; i < peerSystemTitle_.size() && i < 8u; ++i) {
-        output.security.serverSystemTitle[i] = peerSystemTitle_[i];
+        clientOptions.security.serverSystemTitle[i] = peerSystemTitle_[i];
       }
       for (std::size_t i = 0u;
            i < globalUnicastEncryptionKey_.size() && i < 16u;
            ++i) {
-        output.security.globalUnicastEncryptionKey[i] =
+        clientOptions.security.globalUnicastEncryptionKey[i] =
           globalUnicastEncryptionKey_[i];
       }
       for (std::size_t i = 0u; i < authenticationKey_.size() && i < 16u;
            ++i) {
-        output.security.authenticationKey[i] = authenticationKey_[i];
+        clientOptions.security.authenticationKey[i] = authenticationKey_[i];
       }
       break;
     default:
       return EndpointStatus::InvalidArgument;
   }
 
-  return MapClientStatus(dlms::client::ValidateDlmsClientOptions(output));
-}
-
-EndpointStatus ClientEndpoint::Open()
-{
-  if (owned_->client.get() != 0 && owned_->client->IsAssociated()) {
-    return EndpointStatus::Ok;
-  }
-
-  dlms::client::DlmsClientOptions clientOptions =
-    dlms::client::DefaultDlmsClientOptions();
-  EndpointStatus status = MakeClientOptions(clientOptions);
+  status = MapClientStatus(
+    dlms::client::ValidateDlmsClientOptions(clientOptions));
   if (status != EndpointStatus::Ok) {
     return status;
   }
@@ -194,6 +185,15 @@ EndpointStatus ClientEndpoint::Open()
 
   owned_->client = std::move(client);
   return EndpointStatus::Ok;
+}
+
+EndpointStatus ClientEndpoint::Open()
+{
+  if (owned_->client.get() != 0 && owned_->client->IsAssociated()) {
+    return EndpointStatus::Ok;
+  }
+
+  return CreateClient();
 }
 
 EndpointStatus ClientEndpoint::Close()

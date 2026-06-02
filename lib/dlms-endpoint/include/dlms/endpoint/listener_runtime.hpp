@@ -7,7 +7,7 @@
 #include "dlms/endpoint/push_indication_handler.hpp"
 #include "dlms/endpoint/server_endpoint.hpp"
 
-#include "dlms/cosem/cosem.hpp"
+#include "dlms/cosem/logical_device_interface.hpp"
 
 namespace dlms {
 namespace endpoint {

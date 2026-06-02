@@ -19,6 +19,11 @@ flowchart TD
 does not decode APDUs. It receives already resolved COSEM descriptors and
 returns encoded xDLMS data bytes plus COSEM status values.
 
+The logical-device dispatch port is split from the default in-memory logical
+device implementation. Custom storage backends can include
+`logical_device_interface.hpp` and implement `ILogicalDevice`; applications
+that want the default registry-backed model include `logical_device.hpp`.
+
 ## 2. Read Attribute Flow
 
 ```mermaid

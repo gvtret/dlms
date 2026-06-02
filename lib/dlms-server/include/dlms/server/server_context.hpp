@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dlms/cosem/cosem.hpp"
+#include "dlms/cosem/logical_device_interface.hpp"
 #include "dlms/server/server_types.hpp"
 
 namespace dlms {

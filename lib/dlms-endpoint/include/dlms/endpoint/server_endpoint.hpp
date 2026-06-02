@@ -4,7 +4,7 @@
 #include "dlms/endpoint/endpoint_status.hpp"
 
 #include "dlms/association/association_server_interface.hpp"
-#include "dlms/cosem/cosem.hpp"
+#include "dlms/cosem/logical_device_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/server/server_context.hpp"
 #include "dlms/server/server_service_interface.hpp"

@@ -9,6 +9,7 @@ include/dlms/cosem/cosem_status.hpp
 include/dlms/cosem/cosem_types.hpp
 include/dlms/cosem/cosem_object.hpp
 include/dlms/cosem/object_registry.hpp
+include/dlms/cosem/logical_device_interface.hpp
 include/dlms/cosem/logical_device.hpp
 include/dlms/cosem/simple_objects.hpp
 ```
@@ -142,8 +143,11 @@ public:
 };
 ```
 
-`LogicalDevice` is the default implementation over `ObjectRegistry` and
-implements `ILogicalDevice`.
+`ILogicalDevice` lives in `logical_device_interface.hpp`. Applications that
+only implement custom COSEM storage can include that interface header without
+including the default logical/physical device declarations. `LogicalDevice`
+lives in `logical_device.hpp`, is the default implementation over
+`ObjectRegistry`, and implements `ILogicalDevice`.
 
 ## 8. Module Diagram
 

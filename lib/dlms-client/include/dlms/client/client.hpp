@@ -22,6 +22,9 @@ class InMemoryKeyStore;
 class IRandomSource;
 struct SecurityContext;
 }
+namespace xdlms {
+class IXdlmsSecurityProcessor;
+}
 namespace client {
 
 class ClientHlsAssociationStrategy;
@@ -84,6 +87,11 @@ public:
     dlms::profile::IApduChannel& channel,
     dlms::association::AssociationClient& association,
     dlms::security::CipheredApduProcessor& security);
+
+  DlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association,
+    dlms::xdlms::IXdlmsSecurityProcessor& security);
 
   ~DlmsClient();
 

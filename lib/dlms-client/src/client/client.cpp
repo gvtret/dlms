@@ -12,6 +12,7 @@
 #include "dlms/security/in_memory_key_store.hpp"
 #include "dlms/security/random_source.hpp"
 #include "dlms/xdlms/xdlms_association_state.hpp"
+#include "dlms/xdlms/xdlms_security_processor.hpp"
 
 #include <cstddef>
 #include <memory>
@@ -76,6 +77,15 @@ public:
     dlms::security::CipheredApduProcessor& security)
     : associationState_(association)
     , client_(channel, association, security)
+  {
+  }
+
+  XdlmsClientServiceAdapter(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association,
+    dlms::xdlms::IXdlmsSecurityProcessor& security)
+    : associationState_(association)
+    , client_(channel, associationState_, security)
   {
   }
 
@@ -818,6 +828,32 @@ DlmsClient::DlmsClient(
   dlms::profile::IApduChannel& channel,
   dlms::association::AssociationClient& association,
   dlms::security::CipheredApduProcessor& security)
+  : ownedStream_()
+  , ownedChannel_()
+  , ownedSecurityContext_()
+  , ownedKeys_()
+  , ownedCounters_()
+  , ownedRandom_()
+  , ownedHlsHigh_()
+  , ownedHlsGmac_()
+  , ownedHlsStrategy_()
+  , ownedAssociation_()
+  , ownedSecurity_()
+  , ownedXdlms_(new XdlmsClientServiceAdapter(channel, association, security))
+  , channel_(channel)
+  , association_(association)
+  , xdlms_(ownedXdlms_.get())
+  , state_(ClientState::Disconnected)
+  , constructionStatus_(ClientStatus::Ok)
+  , hlsAuthentication_(false)
+  , ownsHdlcDataLinkSession_(false)
+{
+}
+
+DlmsClient::DlmsClient(
+  dlms::profile::IApduChannel& channel,
+  dlms::association::IAssociationClient& association,
+  dlms::xdlms::IXdlmsSecurityProcessor& security)
   : ownedStream_()
   , ownedChannel_()
   , ownedSecurityContext_()

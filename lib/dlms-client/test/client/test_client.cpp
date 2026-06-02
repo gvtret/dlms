@@ -8,6 +8,7 @@
 #include "dlms/security/ciphered_apdu_processor.hpp"
 #include "dlms/security/in_memory_invocation_counter_store.hpp"
 #include "dlms/security/in_memory_key_store.hpp"
+#include "dlms/xdlms/xdlms_security_processor.hpp"
 
 #include <gtest/gtest.h>
 
@@ -242,6 +243,44 @@ public:
   int establishCalls;
   int releaseCalls;
   dlms::association::AssociationResult result;
+};
+
+class FakeXdlmsSecurityProcessor
+  : public dlms::xdlms::IXdlmsSecurityProcessor
+{
+public:
+  FakeXdlmsSecurityProcessor()
+    : protectStatus(dlms::security::SecurityStatus::Ok)
+    , unprotectStatus(dlms::security::SecurityStatus::Ok)
+    , protectCalls(0)
+    , unprotectCalls(0)
+  {
+  }
+
+  dlms::security::SecurityStatus Protect(
+    dlms::security::SecurityByteView plainApdu,
+    std::vector<std::uint8_t>& protectedApdu) const
+  {
+    ++protectCalls;
+    protectedApdu.assign(plainApdu.data, plainApdu.data + plainApdu.size);
+    return protectStatus;
+  }
+
+  dlms::security::SecurityStatus Unprotect(
+    dlms::security::SecurityByteView protectedApdu,
+    std::vector<std::uint8_t>& plainApdu) const
+  {
+    ++unprotectCalls;
+    plainApdu.assign(
+      protectedApdu.data,
+      protectedApdu.data + protectedApdu.size);
+    return unprotectStatus;
+  }
+
+  dlms::security::SecurityStatus protectStatus;
+  dlms::security::SecurityStatus unprotectStatus;
+  mutable int protectCalls;
+  mutable int unprotectCalls;
 };
 
 std::vector<std::uint8_t> MakeAareBytes()
@@ -664,6 +703,28 @@ TEST(DlmsClient, InjectedSecurityProtectsGetRequest)
               plainRequest.size(),
               request));
   EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetRequest, request.kind);
+}
+
+TEST(DlmsClient, CanUseInjectedAssociationAndSecurityInterfaces)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  FakeXdlmsSecurityProcessor security;
+  dlms::client::DlmsClient client(channel, association, security);
+
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.OpenAssociation());
+  channel.nextReceive = MakeGetResponse(0x81u);
+
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::client::ClientStatus::Ok,
+            client.Get(MakeDescriptor(), output));
+  EXPECT_EQ(MakeLongUnsignedBytes(0x2468u), output);
+
+  EXPECT_EQ(1, security.protectCalls);
+  EXPECT_EQ(1, security.unprotectCalls);
+  EXPECT_EQ(1, association.openCalls);
+  EXPECT_EQ(1, association.establishCalls);
 }
 
 TEST(DlmsClient, MapsInjectedSecurityFailure)

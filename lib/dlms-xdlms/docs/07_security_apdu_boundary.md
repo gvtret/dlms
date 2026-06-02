@@ -40,7 +40,9 @@ XdlmsClient(profile::IApduChannel& channel,
 XdlmsServerApduProcessor(XdlmsServerDispatcher& dispatcher);
 ```
 
-New security constructors add a non-owning `dlms-security` processor reference:
+Security constructors add a non-owning processor reference. The primary
+runtime boundary is `IXdlmsSecurityProcessor`; concrete ciphering remains
+available as a source-compatible shortcut for the default implementation:
 
 ```cpp
 XdlmsClient(profile::IApduChannel& channel,
@@ -48,15 +50,25 @@ XdlmsClient(profile::IApduChannel& channel,
             IXdlmsSecurityProcessor& security);
 
 XdlmsClient(profile::IApduChannel& channel,
+            association::IAssociationClient& association,
+            IXdlmsSecurityProcessor& security);
+
+XdlmsClient(profile::IApduChannel& channel,
             association::AssociationClient& association,
             security::CipheredApduProcessor& security);
 
 XdlmsServerApduProcessor(XdlmsServerDispatcher& dispatcher,
-                         security::CipheredApduProcessor& security);
+                         IXdlmsSecurityProcessor& security);
+
+XdlmsServerApduProcessor(XdlmsServerDispatcher& dispatcher,
+                         IXdlmsSecurityProcessor& security,
+                         const ServiceOptions& options);
 ```
 
 The caller owns the security context, keys, invocation counters, and system
-titles. The xDLMS layer only invokes `Protect()` and `Unprotect()`.
+titles. The xDLMS layer only invokes `Protect()` and `Unprotect()`. Callers
+that use `dlms::security::CipheredApduProcessor` can wrap it with
+`CipheredXdlmsSecurityProcessor` or use the concrete compatibility overloads.
 
 ## 4. Status Mapping
 

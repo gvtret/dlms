@@ -81,7 +81,7 @@ Current public C++ ports that applications can implement or inject:
 | `dlms-security` | `IKeyStore`, `IInvocationCounterStore`, `IRandomSource` |
 | `dlms-cosem` | `ICosemObject` and object registry contracts |
 | `dlms-server` | `IServerService`, plus xDLMS adapter constructors over that service |
-| `dlms-client` | constructors over `IAssociationClient` and `IClientXdlmsService` for custom association and GET/SET/ACTION backends |
+| `dlms-client` | constructors over `IAssociationClient`, `IClientXdlmsService`, and `IXdlmsSecurityProcessor` for custom association, GET/SET/ACTION, and APDU security backends |
 | `dlms-endpoint` | endpoint association ownership through `IAssociationServer`, `IApduChannelListener`, `IPushIndicationHandler`, `IGatewayPolicy`, `IGatewayUpstream`, and server endpoint/runtime constructors over `IServerService` |
 
 Concrete classes remain available as default implementations and compatibility

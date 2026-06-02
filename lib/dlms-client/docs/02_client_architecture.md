@@ -47,7 +47,8 @@ flowchart LR
   Channel["IApduChannel"]
   Association["IAssociationClient"]
   DefaultAssociation["AssociationClient<br/>default implementation"]
-  Security["CipheredApduProcessor"]
+  Security["IXdlmsSecurityProcessor"]
+  DefaultSecurity["CipheredXdlmsSecurityProcessor<br/>or CipheredApduProcessor shortcut"]
   Services["IClientXdlmsService"]
   XdlmsClient["XdlmsClient adapter"]
 
@@ -58,6 +59,7 @@ flowchart LR
   DefaultAssociation --> Association
   Association --> Client
   Client --> Association
+  DefaultSecurity --> Security
   Client --> Security
   Client --> Services
   XdlmsClient --> Services
@@ -84,6 +86,7 @@ classDiagram
     +DlmsClient(options)
     +DlmsClient(IApduChannel, IAssociationClient)
     +DlmsClient(IApduChannel, IAssociationClient, IClientXdlmsService)
+    +DlmsClient(IApduChannel, IAssociationClient, IXdlmsSecurityProcessor)
     +Connect() ClientStatus
     +OpenAssociation() ClientStatus
     +ReleaseAssociation() ClientStatus
@@ -108,6 +111,8 @@ classDiagram
   class IApduChannel
   class IAssociationClient
   class AssociationClient
+  class IXdlmsSecurityProcessor
+  class CipheredXdlmsSecurityProcessor
   class CipheredApduProcessor
   class IClientXdlmsService
 
@@ -119,6 +124,9 @@ classDiagram
   DlmsClient --> IApduChannel
   DlmsClient --> IAssociationClient
   AssociationClient --|> IAssociationClient
+  DlmsClient --> IXdlmsSecurityProcessor
+  CipheredXdlmsSecurityProcessor --|> IXdlmsSecurityProcessor
+  CipheredXdlmsSecurityProcessor --> CipheredApduProcessor
   DlmsClient --> CipheredApduProcessor
   DlmsClient --> IClientXdlmsService
 ```
@@ -126,7 +134,9 @@ classDiagram
 The options-owned constructor still creates the default concrete
 `AssociationClient`. Injected constructors can use any implementation of
 `IAssociationClient`; concrete `AssociationClient&` overloads remain available
-as source-compatible shortcuts.
+as source-compatible shortcuts. Security injection follows the same rule through
+`dlms::xdlms::IXdlmsSecurityProcessor`; the `CipheredApduProcessor&` overload is
+kept as a shortcut for the default security implementation.
 
 ## 5.1 HDLC/TCP Options-Owned Composition
 

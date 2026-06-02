@@ -179,6 +179,11 @@ public:
     dlms::association::AssociationClient& association,
     dlms::security::CipheredApduProcessor& security);
 
+  DlmsClient(
+    dlms::profile::IApduChannel& channel,
+    dlms::association::IAssociationClient& association,
+    dlms::xdlms::IXdlmsSecurityProcessor& security);
+
   ClientStatus Connect();
   ClientStatus OpenAssociation();
   ClientStatus ReleaseAssociation();
@@ -223,7 +228,10 @@ public:
   the supplied APDU channel and association client, but forwards GET/SET/ACTION
   to caller-provided `IClientXdlmsService`.
 - The injected security constructor also receives an already constructed
-  `CipheredApduProcessor`.
+  xDLMS security processor. New integrations should depend on
+  `dlms::xdlms::IXdlmsSecurityProcessor` when they provide their own
+  protection/unprotection implementation; the `CipheredApduProcessor` overload
+  remains a compatibility shortcut for the default security implementation.
 - `Connect()` opens the APDU channel through `AssociationClient`.
 - `OpenAssociation()` requires a connected channel.
 - `Get()`, `Set()`, and `Action()` require an established association.

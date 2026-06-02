@@ -167,10 +167,11 @@ public:
 };
 ```
 
-`ClientEndpoint` owns the composed transport/profile/client objects. It
-supports Wrapper/TCP and HDLC/TCP client composition; serial client endpoints
-remain unsupported by the public endpoint facade. Client endpoint validation
-returns `UnsupportedProfile` for non-TCP transports.
+`ClientEndpoint` owns the composed transport/profile/client objects behind
+private endpoint state. It supports Wrapper/TCP and HDLC/TCP client
+composition; serial client endpoints remain unsupported by the public endpoint
+facade. Client endpoint validation returns `UnsupportedProfile` for non-TCP
+transports.
 `Close()` first attempts graceful association release. If that release fails,
 it still closes and drops the local client resources, then returns the release
 error to the caller.

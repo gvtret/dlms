@@ -3,7 +3,8 @@
 #include "dlms/endpoint/endpoint_options.hpp"
 #include "dlms/endpoint/endpoint_status.hpp"
 
-#include "dlms/client/client.hpp"
+#include "dlms/client/client_status.hpp"
+#include "dlms/xdlms/xdlms_types.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -11,10 +12,15 @@
 #include <vector>
 
 namespace dlms {
+namespace client {
+struct DlmsClientOptions;
+}
 namespace endpoint {
 
-using ClientAttributeDescriptor = dlms::client::CosemAttributeDescriptor;
-using ClientMethodDescriptor = dlms::client::CosemMethodDescriptor;
+using ClientAttributeDescriptor = dlms::xdlms::CosemAttributeDescriptor;
+using ClientMethodDescriptor = dlms::xdlms::CosemMethodDescriptor;
+
+class ClientEndpointOwnedState;
 
 class ClientEndpoint
 {
@@ -56,7 +62,7 @@ private:
   std::vector<std::uint8_t> peerSystemTitle_;
   std::vector<std::uint8_t> globalUnicastEncryptionKey_;
   std::vector<std::uint8_t> authenticationKey_;
-  std::unique_ptr<dlms::client::DlmsClient> client_;
+  std::unique_ptr<ClientEndpointOwnedState> owned_;
 };
 
 EndpointStatus MapClientStatus(dlms::client::ClientStatus status);

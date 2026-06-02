@@ -1,5 +1,7 @@
 #include "dlms/endpoint/client_endpoint.hpp"
 
+#include "dlms/client/client.hpp"
+
 namespace {
 
 std::vector<std::uint8_t> CopyBytes(
@@ -16,6 +18,12 @@ std::vector<std::uint8_t> CopyBytes(
 
 namespace dlms {
 namespace endpoint {
+
+class ClientEndpointOwnedState
+{
+public:
+  std::unique_ptr<dlms::client::DlmsClient> client;
+};
 
 ClientEndpoint::ClientEndpoint(const ClientEndpointOptions& options)
   : options_(options)
@@ -38,6 +46,7 @@ ClientEndpoint::ClientEndpoint(const ClientEndpointOptions& options)
       CopyBytes(
         options.security.authenticationKey,
         options.security.authenticationKeySize))
+  , owned_(new ClientEndpointOwnedState())
 {
   options_.transport.host = host_.c_str();
   options_.transport.serialDevice = serialDevice_.c_str();
@@ -158,7 +167,7 @@ EndpointStatus ClientEndpoint::MakeClientOptions(
 
 EndpointStatus ClientEndpoint::Open()
 {
-  if (client_.get() != 0 && client_->IsAssociated()) {
+  if (owned_->client.get() != 0 && owned_->client->IsAssociated()) {
     return EndpointStatus::Ok;
   }
 
@@ -183,28 +192,28 @@ EndpointStatus ClientEndpoint::Open()
     return status;
   }
 
-  client_ = std::move(client);
+  owned_->client = std::move(client);
   return EndpointStatus::Ok;
 }
 
 EndpointStatus ClientEndpoint::Close()
 {
-  if (client_.get() == 0) {
+  if (owned_->client.get() == 0) {
     return EndpointStatus::Ok;
   }
 
   const EndpointStatus releaseStatus =
-    MapClientStatus(client_->ReleaseAssociation());
-  const EndpointStatus closeStatus = MapClientStatus(client_->Close());
+    MapClientStatus(owned_->client->ReleaseAssociation());
+  const EndpointStatus closeStatus = MapClientStatus(owned_->client->Close());
   if (closeStatus == EndpointStatus::Ok) {
-    client_.reset();
+    owned_->client.reset();
   }
   return releaseStatus == EndpointStatus::Ok ? closeStatus : releaseStatus;
 }
 
 bool ClientEndpoint::IsOpen() const
 {
-  return client_.get() != 0 && client_->IsAssociated();
+  return owned_->client.get() != 0 && owned_->client->IsAssociated();
 }
 
 EndpointStatus ClientEndpoint::Get(
@@ -215,7 +224,7 @@ EndpointStatus ClientEndpoint::Get(
   if (!IsOpen()) {
     return EndpointStatus::InvalidState;
   }
-  return MapClientStatus(client_->Get(descriptor, encodedData));
+  return MapClientStatus(owned_->client->Get(descriptor, encodedData));
 }
 
 EndpointStatus ClientEndpoint::Set(
@@ -225,7 +234,7 @@ EndpointStatus ClientEndpoint::Set(
   if (!IsOpen()) {
     return EndpointStatus::InvalidState;
   }
-  return MapClientStatus(client_->Set(descriptor, encodedData));
+  return MapClientStatus(owned_->client->Set(descriptor, encodedData));
 }
 
 EndpointStatus ClientEndpoint::Action(
@@ -239,7 +248,7 @@ EndpointStatus ClientEndpoint::Action(
     return EndpointStatus::InvalidState;
   }
   return MapClientStatus(
-    client_->Action(
+    owned_->client->Action(
       descriptor,
       hasParameter,
       encodedParameter,

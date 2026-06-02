@@ -287,6 +287,10 @@ classDiagram
     +Close()
   }
 
+  class ClientEndpointOwnedState {
+    -DlmsClient client
+  }
+
   class ServerEndpoint {
     +Open()
     +RunOnce()
@@ -353,6 +357,7 @@ classDiagram
   class IPushIndicationHandler
   class IServerService
 
+  ClientEndpoint --> ClientEndpointOwnedState
   ClientEndpoint --> EndpointTransportFactory
   ClientEndpoint --> EndpointProfileFactory
   ClientEndpoint --> EndpointSecurityFactory

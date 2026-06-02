@@ -34,6 +34,8 @@ flowchart TB
 - `client_status`: facade status enum and string names.
 - `client_options`: profile, endpoint, SAP, timeout, authentication, and
   security options.
+- `client_xdlms_service_interface`: abstract GET/SET/ACTION backend contract
+  for custom client service implementations.
 - `dlms_client`: lifecycle and GET/SET/ACTION facade.
 - `client_data`: optional encoded DLMS `Data` helper functions.
 
@@ -133,9 +135,12 @@ as source-compatible shortcuts. Security injection follows the same rule through
 kept as a shortcut for the default security implementation.
 
 Default transport, profile, association, HLS, and ciphering objects are kept in
-private owned state. The public client header exposes lifecycle ports and
-compatibility overload declarations, but it does not require default transport
-or security-storage implementation headers for custom integrations.
+private owned state. The public client facade header exposes lifecycle ports
+and compatibility overload declarations, but it does not require default
+transport or security-storage implementation headers for custom integrations.
+Applications that only implement a custom GET/SET/ACTION backend can include
+`client_xdlms_service_interface.hpp` without including the concrete
+`DlmsClient` facade declaration.
 
 ## 5.1 HDLC/TCP Options-Owned Composition
 

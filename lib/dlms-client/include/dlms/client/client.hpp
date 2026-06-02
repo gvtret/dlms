@@ -2,12 +2,11 @@
 
 #include "dlms/client/client_options.hpp"
 #include "dlms/client/client_status.hpp"
+#include "dlms/client/client_xdlms_service_interface.hpp"
 
 #include "dlms/association/association_client_interface.hpp"
 #include "dlms/profile/apdu_channel.hpp"
-#include "dlms/xdlms/xdlms_client.hpp"
 
-#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -30,30 +29,6 @@ enum class ClientState
   Disconnected,
   Connected,
   Associated
-};
-
-using CosemAttributeDescriptor = dlms::xdlms::CosemAttributeDescriptor;
-using CosemMethodDescriptor = dlms::xdlms::CosemMethodDescriptor;
-
-class IClientXdlmsService
-{
-public:
-  virtual ~IClientXdlmsService();
-
-  virtual dlms::xdlms::XdlmsStatus Get(
-    const CosemAttributeDescriptor& descriptor,
-    dlms::xdlms::GetResult& result) = 0;
-
-  virtual dlms::xdlms::XdlmsStatus Set(
-    const CosemAttributeDescriptor& descriptor,
-    const std::vector<std::uint8_t>& encodedData,
-    dlms::xdlms::SetResult& result) = 0;
-
-  virtual dlms::xdlms::XdlmsStatus Action(
-    const CosemMethodDescriptor& descriptor,
-    bool hasParameter,
-    const std::vector<std::uint8_t>& encodedParameter,
-    dlms::xdlms::ActionResult& result) = 0;
 };
 
 class DlmsClient

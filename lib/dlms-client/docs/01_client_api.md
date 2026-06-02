@@ -1,5 +1,20 @@
 # dlms-client API
 
+## 0. Public Headers
+
+Public headers:
+
+```text
+include/dlms/client/client_status.hpp
+include/dlms/client/client_options.hpp
+include/dlms/client/client_xdlms_service_interface.hpp
+include/dlms/client/client.hpp
+```
+
+Applications that implement only the GET/SET/ACTION backend can include
+`client_xdlms_service_interface.hpp`. Applications that use the facade include
+`client.hpp`, which remains a source-compatible umbrella for the facade API.
+
 ## 1. Status Model
 
 `ClientStatus` is the public status enum for the facade.
@@ -127,7 +142,7 @@ GET, SET, and ACTION values cross the facade boundary as complete encoded DLMS
 `Data` bytes, including the type tag. Typed convenience helpers may be added
 later, but they must remain thin wrappers over this encoded-data API.
 
-## 4. Client Class
+## 4. Client Service Interface
 
 ```cpp
 class IClientXdlmsService
@@ -150,7 +165,11 @@ public:
     const std::vector<std::uint8_t>& encodedParameter,
     dlms::xdlms::ActionResult& result) = 0;
 };
+```
 
+## 5. Client Class
+
+```cpp
 class DlmsClient
 {
 public:

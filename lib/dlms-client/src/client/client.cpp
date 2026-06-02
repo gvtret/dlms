@@ -14,6 +14,7 @@
 #include "dlms/security/random_source.hpp"
 #include "dlms/transport/tcp_stream_transport.hpp"
 #include "dlms/xdlms/xdlms_association_state.hpp"
+#include "dlms/xdlms/xdlms_client.hpp"
 #include "dlms/xdlms/xdlms_security_processor.hpp"
 
 #include <cstddef>

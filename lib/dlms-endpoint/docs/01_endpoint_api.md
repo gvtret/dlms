@@ -184,7 +184,7 @@ class ServerEndpoint
 public:
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,
@@ -193,7 +193,7 @@ public:
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,
     const ServerEndpointOptions& options,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,
@@ -211,13 +211,14 @@ public:
 
 `ServerEndpoint` runs the already-associated server APDU path over a caller
 provided `dlms::profile::IApduChannel`. It does not own COSEM object storage:
-the caller owns the logical device and registered objects. By default
+the caller owns the logical device port and registered objects. By default
 `ServerEndpointOptions::negotiateAssociation` is `false`, preserving the
 already-associated path for callers that have already completed ACSE
 association negotiation.
 
 The logical-device constructors compose the default `dlms::server::DlmsServer`
-dispatcher. The `IServerService&` constructors keep the endpoint lifecycle,
+dispatcher over `dlms::cosem::ILogicalDevice`. The `IServerService&`
+constructors keep the endpoint lifecycle,
 association, security, and xDLMS APDU processing in `dlms-endpoint`, but route
 decoded GET/SET/ACTION requests to a caller-provided server implementation.
 
@@ -229,7 +230,7 @@ class ServerListenerRuntime
 public:
   ServerListenerRuntime(
     IApduChannelListener& listener,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerListenerRuntime(
     IApduChannelListener& listener,
@@ -238,7 +239,7 @@ public:
   ServerListenerRuntime(
     IApduChannelListener& listener,
     const ServerEndpointOptions& options,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerListenerRuntime(
     IApduChannelListener& listener,
@@ -445,7 +446,7 @@ class ServerListenerRuntime
 public:
   ServerListenerRuntime(
     IApduChannelListener& listener,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerListenerRuntime(
     IApduChannelListener& listener,
@@ -454,7 +455,7 @@ public:
   ServerListenerRuntime(
     IApduChannelListener& listener,
     const ServerEndpointOptions& options,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerListenerRuntime(
     IApduChannelListener& listener,

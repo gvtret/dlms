@@ -89,13 +89,16 @@ public:
   void SetAccessContext(const dlms::cosem::CosemAccessContext& context);
   dlms::cosem::CosemAccessContext AccessContext() const;
 
-  void AttachLogicalDevice(dlms::cosem::LogicalDevice* logicalDevice);
-  dlms::cosem::LogicalDevice* LogicalDevice();
-  const dlms::cosem::LogicalDevice* LogicalDevice() const;
+  void AttachLogicalDevice(dlms::cosem::ILogicalDevice* logicalDevice);
+  dlms::cosem::ILogicalDevice* LogicalDevice();
+  const dlms::cosem::ILogicalDevice* LogicalDevice() const;
 };
 ```
 
-The context does not own the logical device.
+The context does not own the logical device. The default
+`dlms::cosem::LogicalDevice` implements `ILogicalDevice`, and applications can
+inject a custom implementation when object storage lives outside the default
+COSEM registry.
 
 ## 6. Service Dispatcher
 
@@ -194,7 +197,7 @@ classDiagram
   class ServerContext {
     -bool associated
     -CosemAccessContext access
-    -LogicalDevice* logicalDevice
+    -ILogicalDevice* logicalDevice
     +SetAssociated()
     +IsAssociated()
     +AttachLogicalDevice()

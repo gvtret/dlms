@@ -19,7 +19,7 @@ EndpointStatus EnsureAcceptedChannel(
 
 ServerListenerRuntime::ServerListenerRuntime(
   IApduChannelListener& listener,
-  dlms::cosem::LogicalDevice& logicalDevice)
+  dlms::cosem::ILogicalDevice& logicalDevice)
   : listener_(listener)
   , options_(DefaultServerEndpointOptions())
   , logicalDevice_(&logicalDevice)
@@ -42,7 +42,7 @@ ServerListenerRuntime::ServerListenerRuntime(
 ServerListenerRuntime::ServerListenerRuntime(
   IApduChannelListener& listener,
   const ServerEndpointOptions& options,
-  dlms::cosem::LogicalDevice& logicalDevice)
+  dlms::cosem::ILogicalDevice& logicalDevice)
   : listener_(listener)
   , options_(options)
   , logicalDevice_(&logicalDevice)

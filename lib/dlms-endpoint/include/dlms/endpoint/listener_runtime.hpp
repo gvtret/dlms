@@ -34,7 +34,7 @@ class ServerListenerRuntime
 public:
   ServerListenerRuntime(
     IApduChannelListener& listener,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerListenerRuntime(
     IApduChannelListener& listener,
@@ -43,7 +43,7 @@ public:
   ServerListenerRuntime(
     IApduChannelListener& listener,
     const ServerEndpointOptions& options,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerListenerRuntime(
     IApduChannelListener& listener,
@@ -62,7 +62,7 @@ private:
 
   IApduChannelListener& listener_;
   ServerEndpointOptions options_;
-  dlms::cosem::LogicalDevice* logicalDevice_;
+  dlms::cosem::ILogicalDevice* logicalDevice_;
   dlms::server::IServerService* server_;
   bool open_;
 };

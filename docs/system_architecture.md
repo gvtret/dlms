@@ -79,7 +79,7 @@ Current public C++ ports that applications can implement or inject:
 | `dlms-association` | `IAssociationClient`, `IAssociationServer`, `IHighLevelSecurityStrategy`, `IHighLevelSecurityServerStrategy` over abstract APDU channels |
 | `dlms-xdlms` | `IXdlmsAssociationState`, `IXdlmsSecurityProcessor`, `IXdlmsServerHandler`, `IXdlmsServerDispatcher` |
 | `dlms-security` | `IKeyStore`, `IInvocationCounterStore`, `IRandomSource` |
-| `dlms-cosem` | `ICosemObject` and object registry contracts |
+| `dlms-cosem` | `ICosemObject`, `ILogicalDevice`, and object registry contracts |
 | `dlms-server` | `IServerService`, plus xDLMS adapter constructors over that service |
 | `dlms-client` | constructors over `IAssociationClient`, `IClientXdlmsService`, and `IXdlmsSecurityProcessor` for custom association, GET/SET/ACTION, and APDU security backends |
 | `dlms-endpoint` | endpoint association ownership through `IAssociationServer`, `IApduChannelListener`, `IPushIndicationHandler`, `IGatewayPolicy`, `IGatewayUpstream`, abstract transport/profile/listener factory bundle ownership, and server endpoint/runtime constructors over `IServerService` |
@@ -765,6 +765,13 @@ classDiagram
     +objectRegistry
   }
 
+  class ILogicalDevice {
+    <<interface>>
+    +read_attribute()
+    +write_attribute()
+    +invoke_method()
+  }
+
   class CosemObject {
     +classId
     +version
@@ -792,6 +799,7 @@ classDiagram
   }
 
   PhysicalDevice --> LogicalDevice
+  LogicalDevice --|> ILogicalDevice
   LogicalDevice --> ObjectRegistry
   ObjectRegistry --> CosemObject
   AssociationView --> AccessRights
@@ -844,6 +852,13 @@ classDiagram
     +handle_action()
   }
 
+  class ILogicalDevice {
+    <<interface>>
+    +read_attribute()
+    +write_attribute()
+    +invoke_method()
+  }
+
   class ResponseBuilder {
     +make_get_response()
     +make_set_response()
@@ -851,6 +866,7 @@ classDiagram
   }
 
   DlmsServer --> CosemServiceDispatcher
+  CosemServiceDispatcher --> ILogicalDevice
   CosemServiceDispatcher --> ResponseBuilder
 ```
 

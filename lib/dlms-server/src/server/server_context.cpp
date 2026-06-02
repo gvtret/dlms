@@ -52,17 +52,17 @@ dlms::cosem::CosemAccessContext ServerContext::AccessContext() const
 }
 
 void ServerContext::AttachLogicalDevice(
-  dlms::cosem::LogicalDevice* logicalDevice)
+  dlms::cosem::ILogicalDevice* logicalDevice)
 {
   logicalDevice_ = logicalDevice;
 }
 
-dlms::cosem::LogicalDevice* ServerContext::LogicalDevice()
+dlms::cosem::ILogicalDevice* ServerContext::LogicalDevice()
 {
   return logicalDevice_;
 }
 
-const dlms::cosem::LogicalDevice* ServerContext::LogicalDevice() const
+const dlms::cosem::ILogicalDevice* ServerContext::LogicalDevice() const
 {
   return logicalDevice_;
 }

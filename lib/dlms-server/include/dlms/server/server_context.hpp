@@ -24,14 +24,14 @@ public:
   dlms::cosem::CosemAccessContext AccessContext() const;
 
   void AttachLogicalDevice(
-    dlms::cosem::LogicalDevice* logicalDevice);
-  dlms::cosem::LogicalDevice* LogicalDevice();
-  const dlms::cosem::LogicalDevice* LogicalDevice() const;
+    dlms::cosem::ILogicalDevice* logicalDevice);
+  dlms::cosem::ILogicalDevice* LogicalDevice();
+  const dlms::cosem::ILogicalDevice* LogicalDevice() const;
 
 private:
   ServerAssociationContext association_;
   dlms::cosem::CosemAccessContext accessContext_;
-  dlms::cosem::LogicalDevice* logicalDevice_;
+  dlms::cosem::ILogicalDevice* logicalDevice_;
 };
 
 } // namespace server

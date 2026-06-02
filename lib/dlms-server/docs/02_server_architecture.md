@@ -57,7 +57,7 @@ sequenceDiagram
   participant Caller as xDLMS/APDU server boundary
   participant Dispatcher as CosemServiceDispatcher
   participant Context as ServerContext
-  participant Device as LogicalDevice
+  participant Device as ILogicalDevice
   participant Object as ICosemObject
 
   Caller->>Dispatcher: HandleGet(request)
@@ -77,7 +77,7 @@ sequenceDiagram
   participant Caller as xDLMS/APDU server boundary
   participant Dispatcher as CosemServiceDispatcher
   participant Context as ServerContext
-  participant Device as LogicalDevice
+  participant Device as ILogicalDevice
 
   Caller->>Dispatcher: HandleSet(request)
   Dispatcher->>Context: IsAssociated()
@@ -94,7 +94,7 @@ sequenceDiagram
   participant Caller as xDLMS/APDU server boundary
   participant Dispatcher as CosemServiceDispatcher
   participant Context as ServerContext
-  participant Device as LogicalDevice
+  participant Device as ILogicalDevice
 
   Caller->>Dispatcher: HandleAction(request)
   Dispatcher->>Context: IsAssociated()
@@ -127,7 +127,7 @@ sequenceDiagram
   participant Adapter as XdlmsServerAdapter
   participant Facade as IServerService
   participant Dispatch as CosemServiceDispatcher
-  participant Device as LogicalDevice
+  participant Device as ILogicalDevice
 
   XD->>Adapter: HandleGet(GetIndication)
   Adapter->>Adapter: Map descriptor to ServerGetRequest
@@ -151,7 +151,7 @@ sequenceDiagram
   participant Adapter as XdlmsServerAdapter
   participant Facade as IServerService
   participant Dispatch as CosemServiceDispatcher
-  participant Device as LogicalDevice
+  participant Device as ILogicalDevice
 
   XD->>Adapter: HandleSet(SetIndication)
   Adapter->>Adapter: Map descriptor and value to ServerSetRequest
@@ -174,7 +174,7 @@ write decision.
 classDiagram
   class ServerContext {
     -bool associated
-    -LogicalDevice* logicalDevice
+    -ILogicalDevice* logicalDevice
     -CosemAccessContext accessContext
   }
 

@@ -23,7 +23,7 @@ ServerGetResponse CosemServiceDispatcher::HandleGet(
       request.invokeId, ServerStatus::NotAssociated);
   }
 
-  const dlms::cosem::LogicalDevice* logicalDevice =
+  const dlms::cosem::ILogicalDevice* logicalDevice =
     context_.LogicalDevice();
   if (!logicalDevice) {
     return MakeServerGetResponse(
@@ -57,7 +57,7 @@ ServerSetResponse CosemServiceDispatcher::HandleSet(
       request.invokeId, ServerStatus::NotAssociated);
   }
 
-  dlms::cosem::LogicalDevice* logicalDevice = context_.LogicalDevice();
+  dlms::cosem::ILogicalDevice* logicalDevice = context_.LogicalDevice();
   if (!logicalDevice) {
     return MakeServerSetResponse(
       request.invokeId, ServerStatus::NoLogicalDevice);
@@ -85,7 +85,7 @@ ServerActionResponse CosemServiceDispatcher::HandleAction(
       request.invokeId, ServerStatus::NotAssociated);
   }
 
-  dlms::cosem::LogicalDevice* logicalDevice = context_.LogicalDevice();
+  dlms::cosem::ILogicalDevice* logicalDevice = context_.LogicalDevice();
   if (!logicalDevice) {
     return MakeServerActionResponse(
       request.invokeId, ServerStatus::NoLogicalDevice);

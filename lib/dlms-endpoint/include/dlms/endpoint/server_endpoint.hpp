@@ -22,7 +22,7 @@ class ServerEndpoint
 public:
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,
@@ -31,7 +31,7 @@ public:
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,
     const ServerEndpointOptions& options,
-    dlms::cosem::LogicalDevice& logicalDevice);
+    dlms::cosem::ILogicalDevice& logicalDevice);
 
   ServerEndpoint(
     dlms::profile::IApduChannel& channel,

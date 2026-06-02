@@ -115,10 +115,47 @@ registry.InvokeMethod(method, input, output);
 registry.BuildAssociationView(view);
 ```
 
-## 7. Module Diagram
+## 7. Logical Device Interface
+
+`ILogicalDevice` is the abstract server dispatch boundary for applications
+that own their COSEM storage outside the default in-memory `LogicalDevice`:
+
+```cpp
+class ILogicalDevice
+{
+public:
+  virtual ~ILogicalDevice();
+
+  virtual CosemStatus ReadAttribute(
+    const CosemAttributeDescriptor& descriptor,
+    const CosemAccessContext& context,
+    CosemByteBuffer& output) const = 0;
+  virtual CosemStatus WriteAttribute(
+    const CosemAttributeDescriptor& descriptor,
+    const CosemAccessContext& context,
+    const CosemByteBuffer& input) = 0;
+  virtual CosemStatus InvokeMethod(
+    const CosemMethodDescriptor& descriptor,
+    const CosemAccessContext& context,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output) = 0;
+};
+```
+
+`LogicalDevice` is the default implementation over `ObjectRegistry` and
+implements `ILogicalDevice`.
+
+## 8. Module Diagram
 
 ```mermaid
 classDiagram
+  class ILogicalDevice {
+    <<interface>>
+    +ReadAttribute()
+    +WriteAttribute()
+    +InvokeMethod()
+  }
+
   class LogicalDevice {
     -ObjectRegistry registry
     -uint16 sap
@@ -149,12 +186,13 @@ classDiagram
     +methodAccess
   }
 
+  LogicalDevice --|> ILogicalDevice
   LogicalDevice --> ObjectRegistry
   ObjectRegistry --> ICosemObject
   ICosemObject --> CosemAccessRights
 ```
 
-## 8. Simple Interface Objects
+## 9. Simple Interface Objects
 
 `simple_objects.hpp` adds reusable in-memory implementations for the first
 concrete COSEM interface classes:

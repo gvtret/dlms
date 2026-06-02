@@ -56,7 +56,7 @@ sequenceDiagram
   participant Adapter as XdlmsServerAdapter
   participant Facade as DlmsServer
   participant Dispatch as CosemServiceDispatcher
-  participant Device as LogicalDevice
+  participant Device as ILogicalDevice
   participant Object as ICosemObject
 
   XD->>Adapter: HandleAction(ActionIndication)

@@ -82,7 +82,7 @@ classDiagram
   class ServerContext {
     -ServerAssociationContext association
     -CosemAccessContext access
-    -LogicalDevice* logicalDevice
+    -ILogicalDevice* logicalDevice
     +SetAssociationContext()
     +AssociationContext()
     +ClearAssociationContext()

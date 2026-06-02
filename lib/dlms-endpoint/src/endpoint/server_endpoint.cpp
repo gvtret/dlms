@@ -406,7 +406,7 @@ ServerEndpointOwnedState::~ServerEndpointOwnedState()
 
 ServerEndpoint::ServerEndpoint(
   dlms::profile::IApduChannel& channel,
-  dlms::cosem::LogicalDevice& logicalDevice)
+  dlms::cosem::ILogicalDevice& logicalDevice)
   : channel_(channel)
   , options_(DefaultServerEndpointOptions())
   , association_()
@@ -442,7 +442,7 @@ ServerEndpoint::ServerEndpoint(
 ServerEndpoint::ServerEndpoint(
   dlms::profile::IApduChannel& channel,
   const ServerEndpointOptions& options,
-  dlms::cosem::LogicalDevice& logicalDevice)
+  dlms::cosem::ILogicalDevice& logicalDevice)
   : channel_(channel)
   , options_(options)
   , association_()

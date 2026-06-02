@@ -129,6 +129,53 @@ public:
   dlms::cosem::CosemByteBuffer lastActionInput;
 };
 
+class CustomLogicalDevice : public dlms::cosem::ILogicalDevice
+{
+public:
+  CustomLogicalDevice()
+    : readCount(0u)
+    , writeCount(0u)
+    , invokeCount(0u)
+  {
+    data.push_back(0xA1u);
+  }
+
+  dlms::cosem::CosemStatus ReadAttribute(
+    const dlms::cosem::CosemAttributeDescriptor&,
+    const dlms::cosem::CosemAccessContext&,
+    dlms::cosem::CosemByteBuffer& output) const
+  {
+    ++readCount;
+    output = data;
+    return dlms::cosem::CosemStatus::Ok;
+  }
+
+  dlms::cosem::CosemStatus WriteAttribute(
+    const dlms::cosem::CosemAttributeDescriptor&,
+    const dlms::cosem::CosemAccessContext&,
+    const dlms::cosem::CosemByteBuffer&)
+  {
+    ++writeCount;
+    return dlms::cosem::CosemStatus::Ok;
+  }
+
+  dlms::cosem::CosemStatus InvokeMethod(
+    const dlms::cosem::CosemMethodDescriptor&,
+    const dlms::cosem::CosemAccessContext&,
+    const dlms::cosem::CosemByteBuffer&,
+    dlms::cosem::CosemByteBuffer& output)
+  {
+    ++invokeCount;
+    output.clear();
+    return dlms::cosem::CosemStatus::Ok;
+  }
+
+  mutable std::size_t readCount;
+  std::size_t writeCount;
+  std::size_t invokeCount;
+  dlms::cosem::CosemByteBuffer data;
+};
+
 dlms::cosem::CosemAttributeDescriptor MakeAttribute(
   const dlms::cosem::CosemObjectKey& key,
   std::uint8_t attributeId)
@@ -225,6 +272,24 @@ TEST(CosemServiceDispatcher, GetRequiresLogicalDevice)
 
   EXPECT_EQ(dlms::server::ServerStatus::NoLogicalDevice, response.status);
   EXPECT_FALSE(response.hasData);
+}
+
+TEST(CosemServiceDispatcher, GetCanUseCustomLogicalDevicePort)
+{
+  dlms::server::ServerContext context;
+  CustomLogicalDevice logicalDevice;
+  dlms::server::CosemServiceDispatcher dispatcher(context);
+
+  context.SetAssociated(true);
+  context.AttachLogicalDevice(&logicalDevice);
+
+  const dlms::server::ServerGetResponse response =
+    dispatcher.HandleGet(MakeGetRequest(GetTestObject::MakeKey(1u, 1u), 2u));
+
+  ASSERT_EQ(dlms::server::ServerStatus::Ok, response.status);
+  ASSERT_TRUE(response.hasData);
+  EXPECT_EQ(logicalDevice.data, response.data);
+  EXPECT_EQ(1u, logicalDevice.readCount);
 }
 
 TEST(CosemServiceDispatcher, GetMapsMissingDeniedAndObjectErrors)

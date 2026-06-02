@@ -6,7 +6,8 @@
 #include "dlms/association/association_server_interface.hpp"
 #include "dlms/cosem/cosem.hpp"
 #include "dlms/profile/apdu_channel.hpp"
-#include "dlms/server/server.hpp"
+#include "dlms/server/server_context.hpp"
+#include "dlms/server/server_service_interface.hpp"
 #include "dlms/xdlms/xdlms_status.hpp"
 
 #include <memory>
@@ -67,8 +68,6 @@ private:
   ServerEndpointOptions options_;
   std::unique_ptr<dlms::association::IAssociationServer> association_;
   dlms::server::ServerContext context_;
-  dlms::server::DlmsServer server_;
-  dlms::server::XdlmsServerAdapter adapter_;
   std::unique_ptr<ServerEndpointOwnedState> owned_;
   bool open_;
   bool hlsPending_;

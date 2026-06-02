@@ -217,10 +217,12 @@ already-associated path for callers that have already completed ACSE
 association negotiation.
 
 The logical-device constructors compose the default `dlms::server::DlmsServer`
-dispatcher over `dlms::cosem::ILogicalDevice`. The `IServerService&`
-constructors keep the endpoint lifecycle,
-association, security, and xDLMS APDU processing in `dlms-endpoint`, but route
-decoded GET/SET/ACTION requests to a caller-provided server implementation.
+dispatcher over `dlms::cosem::ILogicalDevice` as private endpoint-owned state.
+The `IServerService&` constructors keep the endpoint lifecycle, association,
+security, and xDLMS APDU processing in `dlms-endpoint`, but route decoded
+GET/SET/ACTION requests to a caller-provided server implementation. In both
+modes the public header exposes the server-service port, not the concrete
+xDLMS server adapter used by the default composition.
 
 `ServerListenerRuntime` mirrors this boundary for accepted channels:
 

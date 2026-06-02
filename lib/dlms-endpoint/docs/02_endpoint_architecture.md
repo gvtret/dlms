@@ -119,10 +119,10 @@ server invocation counters consumed by AARE challenge and HLS server reply so
 the first ciphered service response cannot be rejected as replay by the client.
 If `peerSystemTitle` is configured, it is installed as the initial remote
 system title and may be replaced by the negotiated AARQ title during HLS.
-These default security and xDLMS processor objects are private endpoint-owned
-implementation state; the public `ServerEndpoint` header exposes the channel
-and server-service ports without requiring default security implementation
-types.
+These default server facade, xDLMS adapter, security, and xDLMS processor
+objects are private endpoint-owned implementation state; the public
+`ServerEndpoint` header exposes the channel and server-service ports without
+requiring default server, adapter, or security implementation types.
 
 `ServerEndpoint` can also be constructed with a caller-provided
 `dlms::server::IServerService`. In that mode the endpoint still owns channel
@@ -297,6 +297,11 @@ classDiagram
     +Close()
   }
 
+  class ServerEndpointOwnedState {
+    -DlmsServer server
+    -XdlmsServerAdapter adapter
+  }
+
   class PushListenerEndpoint {
     +Open()
     +RunOnce()
@@ -365,6 +370,7 @@ classDiagram
   ServerEndpoint --> EndpointProfileFactory
   ServerEndpoint --> EndpointSecurityFactory
   ServerEndpoint --> IServerService
+  ServerEndpoint --> ServerEndpointOwnedState
   PushListenerEndpoint --> Profile
   PushListenerEndpoint --> IPushIndicationHandler
   GatewayEndpoint --> Profile

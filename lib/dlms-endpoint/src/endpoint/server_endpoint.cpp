@@ -10,6 +10,8 @@
 #include "dlms/security/in_memory_invocation_counter_store.hpp"
 #include "dlms/security/in_memory_key_store.hpp"
 #include "dlms/security/random_source.hpp"
+#include "dlms/server/dlms_server.hpp"
+#include "dlms/server/xdlms_server_adapter.hpp"
 
 #include <limits>
 #include <openssl/rand.h>
@@ -388,8 +390,11 @@ private:
 class ServerEndpointOwnedState
 {
 public:
+  explicit ServerEndpointOwnedState(dlms::server::ServerContext& context);
   ~ServerEndpointOwnedState();
 
+  dlms::server::DlmsServer server;
+  std::unique_ptr<dlms::server::XdlmsServerAdapter> adapter;
   std::unique_ptr<ServerEndpointHlsHighStrategy> hlsHigh;
   std::unique_ptr<ServerEndpointHlsGmacStrategy> hlsGmac;
   std::unique_ptr<dlms::xdlms::XdlmsServerDispatcher> dispatcher;
@@ -399,6 +404,21 @@ public:
   std::unique_ptr<dlms::security::CipheredApduProcessor> security;
   std::unique_ptr<dlms::xdlms::XdlmsServerApduProcessor> processor;
 };
+
+ServerEndpointOwnedState::ServerEndpointOwnedState(
+  dlms::server::ServerContext& context)
+  : server(context)
+  , adapter()
+  , hlsHigh()
+  , hlsGmac()
+  , dispatcher()
+  , securityContext()
+  , keys()
+  , counters()
+  , security()
+  , processor()
+{
+}
 
 ServerEndpointOwnedState::~ServerEndpointOwnedState()
 {
@@ -411,13 +431,13 @@ ServerEndpoint::ServerEndpoint(
   , options_(DefaultServerEndpointOptions())
   , association_()
   , context_()
-  , server_(context_)
-  , adapter_(server_)
-  , owned_(new ServerEndpointOwnedState())
+  , owned_(new ServerEndpointOwnedState(context_))
   , open_(false)
   , hlsPending_(false)
 {
   context_.AttachLogicalDevice(&logicalDevice);
+  owned_->adapter.reset(
+    new dlms::server::XdlmsServerAdapter(owned_->server));
   ConfigureXdlmsProcessor();
   ConfigureAssociationContext();
 }
@@ -429,12 +449,11 @@ ServerEndpoint::ServerEndpoint(
   , options_(DefaultServerEndpointOptions())
   , association_()
   , context_()
-  , server_(context_)
-  , adapter_(server)
-  , owned_(new ServerEndpointOwnedState())
+  , owned_(new ServerEndpointOwnedState(context_))
   , open_(false)
   , hlsPending_(false)
 {
+  owned_->adapter.reset(new dlms::server::XdlmsServerAdapter(server));
   ConfigureXdlmsProcessor();
   ConfigureAssociationContext();
 }
@@ -447,13 +466,13 @@ ServerEndpoint::ServerEndpoint(
   , options_(options)
   , association_()
   , context_()
-  , server_(context_)
-  , adapter_(server_)
-  , owned_(new ServerEndpointOwnedState())
+  , owned_(new ServerEndpointOwnedState(context_))
   , open_(false)
   , hlsPending_(false)
 {
   context_.AttachLogicalDevice(&logicalDevice);
+  owned_->adapter.reset(
+    new dlms::server::XdlmsServerAdapter(owned_->server));
   ConfigureXdlmsProcessor();
   ConfigureAssociationContext();
 }
@@ -466,12 +485,11 @@ ServerEndpoint::ServerEndpoint(
   , options_(options)
   , association_()
   , context_()
-  , server_(context_)
-  , adapter_(server)
-  , owned_(new ServerEndpointOwnedState())
+  , owned_(new ServerEndpointOwnedState(context_))
   , open_(false)
   , hlsPending_(false)
 {
+  owned_->adapter.reset(new dlms::server::XdlmsServerAdapter(server));
   ConfigureXdlmsProcessor();
   ConfigureAssociationContext();
 }
@@ -497,7 +515,8 @@ void ServerEndpoint::ConfigureXdlmsProcessor()
   owned_->counters.reset();
   owned_->keys.reset();
   owned_->securityContext.reset();
-  owned_->dispatcher.reset(new dlms::xdlms::XdlmsServerDispatcher(adapter_));
+  owned_->dispatcher.reset(
+    new dlms::xdlms::XdlmsServerDispatcher(*owned_->adapter));
 
   if (!options_.security.cipheredApdu) {
     owned_->processor.reset(

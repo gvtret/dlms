@@ -1,20 +1,13 @@
 #pragma once
 
 #include "dlms/association/association_client_interface.hpp"
+#include "dlms/xdlms/xdlms_association_state_interface.hpp"
 
 namespace dlms {
 namespace association {
 class AssociationClient;
 }
 namespace xdlms {
-
-class IXdlmsAssociationState
-{
-public:
-  virtual ~IXdlmsAssociationState();
-
-  virtual bool IsAssociated() const = 0;
-};
 
 class AssociationClientXdlmsAssociationState : public IXdlmsAssociationState
 {

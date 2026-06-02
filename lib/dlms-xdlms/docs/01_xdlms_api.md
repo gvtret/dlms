@@ -7,6 +7,7 @@ Public headers:
 ```text
 include/dlms/xdlms/xdlms_status.hpp
 include/dlms/xdlms/xdlms_types.hpp
+include/dlms/xdlms/xdlms_association_state_interface.hpp
 include/dlms/xdlms/xdlms_association_state.hpp
 include/dlms/xdlms/xdlms_security_processor_interface.hpp
 include/dlms/xdlms/xdlms_security_processor.hpp
@@ -112,9 +113,12 @@ The preferred association dependency is `IXdlmsAssociationState`, which lets an
 embedding application provide its own association layer. Constructors accepting
 `dlms::association::IAssociationClient` are available as convenience shortcuts
 when the caller already owns an association lifecycle object; applications can
-include `dlms/association/association_client_interface.hpp` for that contract
-without including the default concrete association client. Those shortcuts own
-a small `AssociationClientXdlmsAssociationState` adapter and then use the same
+include `dlms/xdlms/xdlms_association_state_interface.hpp` when they implement
+only the xDLMS association-state port, or
+`dlms/association/association_client_interface.hpp` for the association-client
+shortcut contract without including the default concrete association client.
+Those shortcuts own a small `AssociationClientXdlmsAssociationState` adapter,
+declared in `dlms/xdlms/xdlms_association_state.hpp`, and then use the same
 `IXdlmsAssociationState` path internally. The legacy `AssociationClient`
 constructors remain available as source-compatible shortcuts over the default
 `dlms-association` implementation.

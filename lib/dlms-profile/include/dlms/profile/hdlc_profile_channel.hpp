@@ -4,6 +4,7 @@
 #include "dlms/hdlc/hdlc_session.hpp"
 #include "dlms/hdlc/hdlc_stream_decoder.hpp"
 #include "dlms/profile/apdu_channel.hpp"
+#include "dlms/profile/hdlc_data_link_session.hpp"
 #include "dlms/transport/byte_stream.hpp"
 #include "dlms/transport/timer_scheduler.hpp"
 
@@ -15,7 +16,7 @@
 namespace dlms {
 namespace profile {
 
-class HdlcProfileChannel : public IApduChannel
+class HdlcProfileChannel : public IApduChannel, public IHdlcDataLinkSession
 {
 public:
   HdlcProfileChannel(

@@ -4,16 +4,10 @@
 #include "dlms/endpoint/endpoint_options.hpp"
 
 #include "dlms/profile/apdu_channel.hpp"
-#include "dlms/profile/hdlc_profile_channel.hpp"
-#include "dlms/profile/wrapper_tcp_profile_channel.hpp"
-#include "dlms/profile/wrapper_udp_profile_channel.hpp"
+#include "dlms/profile/hdlc_data_link_session.hpp"
 #include "dlms/security/security_types.hpp"
 #include "dlms/transport/byte_stream.hpp"
 #include "dlms/transport/datagram_transport.hpp"
-#include "dlms/transport/serial_transport.hpp"
-#include "dlms/transport/tcp_server_transport.hpp"
-#include "dlms/transport/tcp_stream_transport.hpp"
-#include "dlms/transport/udp_transport.hpp"
 
 #include <cstdint>
 #include <memory>
@@ -21,6 +15,9 @@
 
 namespace dlms {
 namespace endpoint {
+
+class EndpointTcpProfileListenerState;
+class EndpointUdpPushProfileListenerState;
 
 class EndpointTransportBundle
 {
@@ -32,9 +29,8 @@ public:
   dlms::transport::IByteStream* ByteStream() const;
   dlms::transport::IDatagramTransport* Datagram() const;
 
-  std::unique_ptr<dlms::transport::TcpStreamTransport> tcp;
-  std::unique_ptr<dlms::transport::UdpTransport> udp;
-  std::unique_ptr<dlms::transport::SerialTransport> serial;
+  std::unique_ptr<dlms::transport::IByteStream> byteStream;
+  std::unique_ptr<dlms::transport::IDatagramTransport> datagram;
 
 private:
   EndpointTransportBundle(const EndpointTransportBundle&);
@@ -49,10 +45,10 @@ public:
   void Reset();
 
   dlms::profile::IApduChannel* Channel() const;
+  dlms::profile::IHdlcDataLinkSession* HdlcDataLink() const;
 
-  std::unique_ptr<dlms::profile::WrapperTcpProfileChannel> wrapperTcp;
-  std::unique_ptr<dlms::profile::WrapperUdpProfileChannel> wrapperUdp;
-  std::unique_ptr<dlms::profile::HdlcProfileChannel> hdlc;
+  std::unique_ptr<dlms::profile::IApduChannel> channel;
+  dlms::profile::IHdlcDataLinkSession* hdlcDataLink;
 
 private:
   EndpointProfileBundle(const EndpointProfileBundle&);
@@ -82,7 +78,7 @@ private:
   EndpointTransportOptions transportOptions_;
   EndpointProfileOptions profileOptions_;
   std::string host_;
-  std::unique_ptr<dlms::transport::TcpServerTransport> tcp_;
+  std::unique_ptr<EndpointTcpProfileListenerState> state_;
 };
 
 class EndpointUdpPushProfileListener : public IApduChannelListener
@@ -109,7 +105,7 @@ private:
   EndpointTransportOptions transportOptions_;
   EndpointProfileOptions profileOptions_;
   std::string host_;
-  std::unique_ptr<dlms::transport::UdpTransport> udp_;
+  std::unique_ptr<EndpointUdpPushProfileListenerState> state_;
 };
 
 class EndpointListenerBundle
@@ -121,8 +117,7 @@ public:
 
   IApduChannelListener* Listener() const;
 
-  std::unique_ptr<EndpointTcpProfileListener> tcp;
-  std::unique_ptr<EndpointUdpPushProfileListener> udpPush;
+  std::unique_ptr<IApduChannelListener> listener;
 
 private:
   EndpointListenerBundle(const EndpointListenerBundle&);

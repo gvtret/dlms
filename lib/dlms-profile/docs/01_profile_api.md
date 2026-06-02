@@ -40,6 +40,21 @@ ProfileStatus ReceiveApdu(std::vector<std::uint8_t>& apdu);
 ProfileStatus ReceiveApdu(ProfileMutableBuffer output);
 ```
 
+HDLC data-link session control is exposed separately through
+`IHdlcDataLinkSession`:
+
+```cpp
+ProfileStatus ConnectDataLink();
+ProfileStatus AcceptDataLink();
+ProfileStatus DisconnectDataLink();
+```
+
+`HdlcProfileChannel` implements both `IApduChannel` and
+`IHdlcDataLinkSession`. Callers that only exchange APDUs depend on
+`IApduChannel`; callers that explicitly run an HDLC data-link session can use
+the additional `IHdlcDataLinkSession` port without depending on the concrete
+channel class.
+
 ## Concrete Channels
 
 - `WrapperTcpProfileChannel` uses `IByteStream`, `EncodeWpdu`, and

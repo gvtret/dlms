@@ -1,6 +1,13 @@
 #include "dlms/endpoint/endpoint_factories.hpp"
 
+#include "dlms/profile/hdlc_profile_channel.hpp"
 #include "dlms/profile/profile_types.hpp"
+#include "dlms/profile/wrapper_tcp_profile_channel.hpp"
+#include "dlms/profile/wrapper_udp_profile_channel.hpp"
+#include "dlms/transport/serial_transport.hpp"
+#include "dlms/transport/tcp_server_transport.hpp"
+#include "dlms/transport/tcp_stream_transport.hpp"
+#include "dlms/transport/udp_transport.hpp"
 
 #include <utility>
 #include <vector>
@@ -312,50 +319,59 @@ void CopySystemTitle(
 namespace dlms {
 namespace endpoint {
 
+class EndpointTcpProfileListenerState
+{
+public:
+  std::unique_ptr<dlms::transport::TcpServerTransport> tcp;
+};
+
+class EndpointUdpPushProfileListenerState
+{
+public:
+  std::unique_ptr<dlms::transport::UdpTransport> udp;
+};
+
 EndpointTransportBundle::EndpointTransportBundle()
 {
 }
 
 void EndpointTransportBundle::Reset()
 {
-  tcp.reset();
-  udp.reset();
-  serial.reset();
+  byteStream.reset();
+  datagram.reset();
 }
 
 dlms::transport::IByteStream* EndpointTransportBundle::ByteStream() const
 {
-  if (tcp.get() != 0) {
-    return tcp.get();
-  }
-  return serial.get();
+  return byteStream.get();
 }
 
 dlms::transport::IDatagramTransport* EndpointTransportBundle::Datagram() const
 {
-  return udp.get();
+  return datagram.get();
 }
 
 EndpointProfileBundle::EndpointProfileBundle()
+  : channel()
+  , hdlcDataLink(0)
 {
 }
 
 void EndpointProfileBundle::Reset()
 {
-  wrapperTcp.reset();
-  wrapperUdp.reset();
-  hdlc.reset();
+  channel.reset();
+  hdlcDataLink = 0;
 }
 
 dlms::profile::IApduChannel* EndpointProfileBundle::Channel() const
 {
-  if (wrapperTcp.get() != 0) {
-    return wrapperTcp.get();
-  }
-  if (wrapperUdp.get() != 0) {
-    return wrapperUdp.get();
-  }
-  return hdlc.get();
+  return channel.get();
+}
+
+dlms::profile::IHdlcDataLinkSession*
+EndpointProfileBundle::HdlcDataLink() const
+{
+  return hdlcDataLink;
 }
 
 EndpointTcpProfileListener::EndpointTcpProfileListener(
@@ -364,6 +380,7 @@ EndpointTcpProfileListener::EndpointTcpProfileListener(
   : transportOptions_(transport)
   , profileOptions_(profile)
   , host_(transport.host == 0 ? "" : transport.host)
+  , state_(new EndpointTcpProfileListenerState())
 {
   transportOptions_.host = host_.c_str();
 }
@@ -404,31 +421,31 @@ EndpointStatus EndpointTcpProfileListener::Open()
     return status;
   }
 
-  tcp_ = std::move(tcp);
+  state_->tcp = std::move(tcp);
   return EndpointStatus::Ok;
 }
 
 EndpointStatus EndpointTcpProfileListener::Close()
 {
-  if (tcp_.get() == 0) {
+  if (state_->tcp.get() == 0) {
     return EndpointStatus::Ok;
   }
 
-  const EndpointStatus status = MapTransportStatus(tcp_->Close());
+  const EndpointStatus status = MapTransportStatus(state_->tcp->Close());
   if (status == EndpointStatus::Ok) {
-    tcp_.reset();
+    state_->tcp.reset();
   }
   return status;
 }
 
 bool EndpointTcpProfileListener::IsOpen() const
 {
-  return tcp_.get() != 0 && tcp_->IsOpen();
+  return state_->tcp.get() != 0 && state_->tcp->IsOpen();
 }
 
 std::uint16_t EndpointTcpProfileListener::LocalPort() const
 {
-  return tcp_.get() == 0 ? 0u : tcp_->LocalPort();
+  return state_->tcp.get() == 0 ? 0u : state_->tcp->LocalPort();
 }
 
 EndpointStatus EndpointTcpProfileListener::Accept(
@@ -436,12 +453,12 @@ EndpointStatus EndpointTcpProfileListener::Accept(
 {
   channel.reset();
 
-  if (tcp_.get() == 0) {
+  if (state_->tcp.get() == 0) {
     return EndpointStatus::InvalidState;
   }
 
   std::unique_ptr<dlms::transport::IByteStream> stream;
-  EndpointStatus status = MapTransportStatus(tcp_->Accept(stream));
+  EndpointStatus status = MapTransportStatus(state_->tcp->Accept(stream));
   if (status != EndpointStatus::Ok) {
     return status;
   }
@@ -487,6 +504,7 @@ EndpointUdpPushProfileListener::EndpointUdpPushProfileListener(
   : transportOptions_(transport)
   , profileOptions_(profile)
   , host_(transport.host == 0 ? "" : transport.host)
+  , state_(new EndpointUdpPushProfileListenerState())
 {
   transportOptions_.host = host_.c_str();
 }
@@ -521,31 +539,31 @@ EndpointStatus EndpointUdpPushProfileListener::Open()
     return status;
   }
 
-  udp_ = std::move(udp);
+  state_->udp = std::move(udp);
   return EndpointStatus::Ok;
 }
 
 EndpointStatus EndpointUdpPushProfileListener::Close()
 {
-  if (udp_.get() == 0) {
+  if (state_->udp.get() == 0) {
     return EndpointStatus::Ok;
   }
 
-  const EndpointStatus status = MapTransportStatus(udp_->Close());
+  const EndpointStatus status = MapTransportStatus(state_->udp->Close());
   if (status == EndpointStatus::Ok) {
-    udp_.reset();
+    state_->udp.reset();
   }
   return status;
 }
 
 bool EndpointUdpPushProfileListener::IsOpen() const
 {
-  return udp_.get() != 0 && udp_->IsOpen();
+  return state_->udp.get() != 0 && state_->udp->IsOpen();
 }
 
 std::uint16_t EndpointUdpPushProfileListener::LocalPort() const
 {
-  return udp_.get() == 0 ? 0u : udp_->LocalPort();
+  return state_->udp.get() == 0 ? 0u : state_->udp->LocalPort();
 }
 
 EndpointStatus EndpointUdpPushProfileListener::Accept(
@@ -553,7 +571,7 @@ EndpointStatus EndpointUdpPushProfileListener::Accept(
 {
   channel.reset();
 
-  if (udp_.get() == 0) {
+  if (state_->udp.get() == 0) {
     return EndpointStatus::InvalidState;
   }
 
@@ -566,7 +584,9 @@ EndpointStatus EndpointUdpPushProfileListener::Accept(
   const dlms::profile::ApduChannelOptions channelOptions =
     MakeAcceptedApduChannelOptions(profileOptions_);
   std::unique_ptr<dlms::profile::IApduChannel> profile(
-    new dlms::profile::WrapperUdpProfileChannel(*udp_, channelOptions));
+    new dlms::profile::WrapperUdpProfileChannel(
+      *state_->udp,
+      channelOptions));
 
   channel.reset(new BorrowedEndpointProfileChannel(std::move(profile)));
   return EndpointStatus::Ok;
@@ -578,16 +598,12 @@ EndpointListenerBundle::EndpointListenerBundle()
 
 void EndpointListenerBundle::Reset()
 {
-  tcp.reset();
-  udpPush.reset();
+  listener.reset();
 }
 
 IApduChannelListener* EndpointListenerBundle::Listener() const
 {
-  if (tcp.get() != 0) {
-    return tcp.get();
-  }
-  return udpPush.get();
+  return listener.get();
 }
 
 EndpointStatus CreateEndpointTransport(
@@ -609,7 +625,7 @@ EndpointStatus CreateEndpointTransport(
       transportOptions.connectTimeout = Duration(options.timeoutMs);
       transportOptions.readTimeout = Duration(options.timeoutMs);
       transportOptions.writeTimeout = Duration(options.timeoutMs);
-      output.tcp.reset(
+      output.byteStream.reset(
         new dlms::transport::TcpStreamTransport(transportOptions));
       return EndpointStatus::Ok;
     }
@@ -619,7 +635,8 @@ EndpointStatus CreateEndpointTransport(
       transportOptions.remotePort = options.port;
       transportOptions.receiveTimeout = Duration(options.timeoutMs);
       transportOptions.sendTimeout = Duration(options.timeoutMs);
-      output.udp.reset(new dlms::transport::UdpTransport(transportOptions));
+      output.datagram.reset(
+        new dlms::transport::UdpTransport(transportOptions));
       return EndpointStatus::Ok;
     }
     case EndpointTransportKind::Serial: {
@@ -628,7 +645,7 @@ EndpointStatus CreateEndpointTransport(
       transportOptions.baudRate = options.baudRate;
       transportOptions.readTimeout = Duration(options.timeoutMs);
       transportOptions.writeTimeout = Duration(options.timeoutMs);
-      output.serial.reset(
+      output.byteStream.reset(
         new dlms::transport::SerialTransport(transportOptions));
       return EndpointStatus::Ok;
     }
@@ -655,14 +672,14 @@ EndpointStatus CreateEndpointProfile(
   switch (options.kind) {
     case EndpointProfileKind::Wrapper:
       if (transport.ByteStream() != 0) {
-        output.wrapperTcp.reset(
+        output.channel.reset(
           new dlms::profile::WrapperTcpProfileChannel(
             *transport.ByteStream(),
             channelOptions));
         return EndpointStatus::Ok;
       }
       if (transport.Datagram() != 0) {
-        output.wrapperUdp.reset(
+        output.channel.reset(
           new dlms::profile::WrapperUdpProfileChannel(
             *transport.Datagram(),
             channelOptions));
@@ -673,10 +690,14 @@ EndpointStatus CreateEndpointProfile(
       if (transport.ByteStream() == 0) {
         return EndpointStatus::InvalidState;
       }
-      output.hdlc.reset(
-        new dlms::profile::HdlcProfileChannel(
-          *transport.ByteStream(),
-          channelOptions));
+      {
+        std::unique_ptr<dlms::profile::HdlcProfileChannel> hdlc(
+          new dlms::profile::HdlcProfileChannel(
+            *transport.ByteStream(),
+            channelOptions));
+        output.hdlcDataLink = hdlc.get();
+        output.channel = std::move(hdlc);
+      }
       return EndpointStatus::Ok;
     default:
       return EndpointStatus::UnsupportedProfile;
@@ -699,7 +720,7 @@ EndpointStatus CreateEndpointListener(
   }
 
   output.Reset();
-  output.tcp.reset(new EndpointTcpProfileListener(transport, profile));
+  output.listener.reset(new EndpointTcpProfileListener(transport, profile));
   return EndpointStatus::Ok;
 }
 
@@ -730,7 +751,7 @@ EndpointStatus CreateEndpointListener(
       return status;
     }
     output.Reset();
-    output.udpPush.reset(
+    output.listener.reset(
       new EndpointUdpPushProfileListener(options.transport, options.profile));
     return EndpointStatus::Ok;
   }

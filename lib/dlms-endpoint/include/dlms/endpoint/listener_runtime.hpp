@@ -9,6 +9,7 @@
 #include "dlms/cosem/cosem.hpp"
 #include "dlms/profile/apdu_channel.hpp"
 
+#include <cstdint>
 #include <memory>
 
 namespace dlms {
@@ -22,6 +23,7 @@ public:
   virtual EndpointStatus Open() = 0;
   virtual EndpointStatus Close() = 0;
   virtual bool IsOpen() const = 0;
+  virtual std::uint16_t LocalPort() const = 0;
 
   virtual EndpointStatus Accept(
     std::unique_ptr<dlms::profile::IApduChannel>& channel) = 0;

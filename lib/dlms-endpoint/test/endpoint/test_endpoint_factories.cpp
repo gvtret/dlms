@@ -87,22 +87,23 @@ void ExpectAcceptsLoopbackChannel(
               TcpListenerOptions(),
               profile,
               bundle));
-  ASSERT_TRUE(bundle.tcp.get() != 0);
-  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, bundle.tcp->Open());
-  ASSERT_NE(0u, bundle.tcp->LocalPort());
+  ASSERT_TRUE(bundle.Listener() != 0);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, bundle.Listener()->Open());
+  ASSERT_NE(0u, bundle.Listener()->LocalPort());
 
   dlms::transport::TcpStreamTransport client(
-    TcpClientOptions(bundle.tcp->LocalPort()));
+    TcpClientOptions(bundle.Listener()->LocalPort()));
   ASSERT_EQ(dlms::transport::TransportStatus::Ok, client.Open());
 
   std::unique_ptr<dlms::profile::IApduChannel> channel;
-  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, bundle.tcp->Accept(channel));
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            bundle.Listener()->Accept(channel));
   ASSERT_TRUE(channel.get() != 0);
   EXPECT_TRUE(channel->IsOpen());
 
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, channel->Close());
   EXPECT_EQ(dlms::transport::TransportStatus::Ok, client.Close());
-  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, bundle.tcp->Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, bundle.Listener()->Close());
 }
 
 } // namespace
@@ -113,26 +114,23 @@ TEST(EndpointFactories, CreatesTransportBundlesWithoutOpeningThem)
 
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(TcpOptions(), transport));
-  EXPECT_TRUE(transport.tcp.get() != 0);
   EXPECT_TRUE(transport.ByteStream() != 0);
   EXPECT_TRUE(transport.Datagram() == 0);
-  EXPECT_FALSE(transport.tcp->IsOpen());
+  EXPECT_FALSE(transport.ByteStream()->IsOpen());
 
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(UdpOptions(), transport));
-  EXPECT_TRUE(transport.udp.get() != 0);
   EXPECT_TRUE(transport.ByteStream() == 0);
   EXPECT_TRUE(transport.Datagram() != 0);
-  EXPECT_FALSE(transport.udp->IsOpen());
+  EXPECT_FALSE(transport.Datagram()->IsOpen());
 
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
               SerialOptions(),
               transport));
-  EXPECT_TRUE(transport.serial.get() != 0);
   EXPECT_TRUE(transport.ByteStream() != 0);
   EXPECT_TRUE(transport.Datagram() == 0);
-  EXPECT_FALSE(transport.serial->IsOpen());
+  EXPECT_FALSE(transport.ByteStream()->IsOpen());
 }
 
 TEST(EndpointFactories, RejectsInvalidTransportOptions)
@@ -162,8 +160,8 @@ TEST(EndpointFactories, CreatesProfileBundlesForMatchingTransports)
               profile,
               transport,
               bundle));
-  EXPECT_TRUE(bundle.wrapperTcp.get() != 0);
   EXPECT_TRUE(bundle.Channel() != 0);
+  EXPECT_TRUE(bundle.HdlcDataLink() == 0);
   EXPECT_FALSE(bundle.Channel()->IsOpen());
 
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -173,8 +171,8 @@ TEST(EndpointFactories, CreatesProfileBundlesForMatchingTransports)
               profile,
               transport,
               bundle));
-  EXPECT_TRUE(bundle.wrapperUdp.get() != 0);
   EXPECT_TRUE(bundle.Channel() != 0);
+  EXPECT_TRUE(bundle.HdlcDataLink() == 0);
   EXPECT_FALSE(bundle.Channel()->IsOpen());
 
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -187,8 +185,8 @@ TEST(EndpointFactories, CreatesProfileBundlesForMatchingTransports)
               profile,
               transport,
               bundle));
-  EXPECT_TRUE(bundle.hdlc.get() != 0);
   EXPECT_TRUE(bundle.Channel() != 0);
+  EXPECT_TRUE(bundle.HdlcDataLink() != 0);
   EXPECT_FALSE(bundle.Channel()->IsOpen());
 }
 
@@ -219,10 +217,9 @@ TEST(EndpointFactories, CreatesTcpProfileListenerBundleWithoutOpeningIt)
               TcpListenerOptions(),
               dlms::endpoint::DefaultEndpointProfileOptions(),
               bundle));
-  ASSERT_TRUE(bundle.tcp.get() != 0);
   EXPECT_TRUE(bundle.Listener() != 0);
-  EXPECT_FALSE(bundle.tcp->IsOpen());
-  EXPECT_EQ(0u, bundle.tcp->LocalPort());
+  EXPECT_FALSE(bundle.Listener()->IsOpen());
+  EXPECT_EQ(0u, bundle.Listener()->LocalPort());
 }
 
 TEST(EndpointFactories, CreatesUdpPushProfileListenerBundleWithoutOpeningIt)
@@ -234,10 +231,9 @@ TEST(EndpointFactories, CreatesUdpPushProfileListenerBundleWithoutOpeningIt)
   dlms::endpoint::EndpointListenerBundle bundle;
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointListener(options, bundle));
-  ASSERT_TRUE(bundle.udpPush.get() != 0);
   EXPECT_TRUE(bundle.Listener() != 0);
-  EXPECT_FALSE(bundle.udpPush->IsOpen());
-  EXPECT_EQ(0u, bundle.udpPush->LocalPort());
+  EXPECT_FALSE(bundle.Listener()->IsOpen());
+  EXPECT_EQ(0u, bundle.Listener()->LocalPort());
 }
 
 TEST(EndpointFactories, RejectsNonTcpProfileListeners)
@@ -293,15 +289,15 @@ TEST(EndpointFactories, UdpPushProfileListenerAcceptsWrapperChannel)
             dlms::endpoint::CreateEndpointListener(
               listenerOptions,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.udpPush.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
-            listenerBundle.udpPush->Open());
-  ASSERT_NE(0u, listenerBundle.udpPush->LocalPort());
+            listenerBundle.Listener()->Open());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointTransportBundle senderTransport;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
-              UdpSenderOptions(listenerBundle.udpPush->LocalPort()),
+              UdpSenderOptions(listenerBundle.Listener()->LocalPort()),
               senderTransport));
   dlms::endpoint::EndpointProfileBundle senderProfile;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -315,7 +311,7 @@ TEST(EndpointFactories, UdpPushProfileListenerAcceptsWrapperChannel)
 
   std::unique_ptr<dlms::profile::IApduChannel> accepted;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
-            listenerBundle.udpPush->Accept(accepted));
+            listenerBundle.Listener()->Accept(accepted));
   ASSERT_TRUE(accepted.get() != 0);
   EXPECT_TRUE(accepted->IsOpen());
 
@@ -330,11 +326,11 @@ TEST(EndpointFactories, UdpPushProfileListenerAcceptsWrapperChannel)
   EXPECT_EQ(std::vector<std::uint8_t>(apdu, apdu + sizeof(apdu)), received);
 
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, accepted->Close());
-  EXPECT_TRUE(listenerBundle.udpPush->IsOpen());
+  EXPECT_TRUE(listenerBundle.Listener()->IsOpen());
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
             senderProfile.Channel()->Close());
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
-            listenerBundle.udpPush->Close());
+            listenerBundle.Listener()->Close());
 }
 
 TEST(EndpointFactories, TcpProfileListenerAcceptsHdlcSessionChannel)
@@ -350,12 +346,13 @@ TEST(EndpointFactories, TcpProfileListenerAcceptsHdlcSessionChannel)
               TcpListenerOptions(),
               profile,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
-  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, listenerBundle.tcp->Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
+            listenerBundle.Listener()->Open());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointTransportOptions clientOptions = TcpOptions();
-  clientOptions.port = listenerBundle.tcp->LocalPort();
+  clientOptions.port = listenerBundle.Listener()->LocalPort();
 
   dlms::endpoint::EndpointTransportBundle clientTransport;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -368,13 +365,14 @@ TEST(EndpointFactories, TcpProfileListenerAcceptsHdlcSessionChannel)
               profile,
               clientTransport,
               clientProfile));
-  ASSERT_TRUE(clientProfile.hdlc.get() != 0);
+  ASSERT_TRUE(clientProfile.Channel() != 0);
+  ASSERT_TRUE(clientProfile.HdlcDataLink() != 0);
   ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
-            clientProfile.hdlc->Open());
+            clientProfile.Channel()->Open());
 
   std::unique_ptr<dlms::profile::IApduChannel> accepted;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
-            listenerBundle.tcp->Accept(accepted));
+            listenerBundle.Listener()->Accept(accepted));
   ASSERT_TRUE(accepted.get() != 0);
 
   dlms::profile::ProfileStatus serverOpen =
@@ -383,7 +381,7 @@ TEST(EndpointFactories, TcpProfileListenerAcceptsHdlcSessionChannel)
     serverOpen = accepted->Open();
   });
   const dlms::profile::ProfileStatus clientConnect =
-    clientProfile.hdlc->ConnectDataLink();
+    clientProfile.HdlcDataLink()->ConnectDataLink();
   serverOpenThread.join();
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, clientConnect);
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, serverOpen);
@@ -397,7 +395,7 @@ TEST(EndpointFactories, TcpProfileListenerAcceptsHdlcSessionChannel)
     serverReceive = accepted->ReceiveApdu(received);
   });
   const dlms::profile::ProfileStatus clientSend =
-    clientProfile.hdlc->SendApdu(
+    clientProfile.Channel()->SendApdu(
       dlms::profile::ProfileByteView{ apdu, sizeof(apdu) });
   serverReceiveThread.join();
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, clientSend);
@@ -406,9 +404,9 @@ TEST(EndpointFactories, TcpProfileListenerAcceptsHdlcSessionChannel)
 
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok, accepted->Close());
   EXPECT_EQ(dlms::profile::ProfileStatus::Ok,
-            clientProfile.hdlc->Close());
+            clientProfile.Channel()->Close());
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,
-            listenerBundle.tcp->Close());
+            listenerBundle.Listener()->Close());
 }
 
 TEST(EndpointFactories, CreatesSecurityBundleFromEndpointOptions)

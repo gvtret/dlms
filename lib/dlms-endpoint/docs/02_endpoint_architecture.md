@@ -208,6 +208,9 @@ Listener runtime classes own only endpoint orchestration. The listener adapter
 owns how a profile channel is accepted or constructed. Each `RunOnce()` handles
 at most one accepted channel, which keeps tests deterministic and leaves thread
 ownership to applications.
+`IApduChannelListener::LocalPort()` is part of the listener port so callers can
+bind clients to ephemeral listener ports without depending on a TCP or UDP
+implementation class.
 
 `ServerListenerRuntime` supports both default logical-device dispatch and a
 caller-provided `dlms::server::IServerService`. The runtime owns only listener
@@ -242,6 +245,13 @@ sequenceDiagram
 The concrete listener adapter does not implement TCP accept or profile
 encoding. It maps endpoint options into lower-layer objects and owns the
 accepted stream/channel lifetime.
+
+Endpoint factory bundles keep default composition private by exposing only
+layer interfaces: `IByteStream`/`IDatagramTransport` for transport,
+`IApduChannel` plus optional `IHdlcDataLinkSession` for profile, and
+`IApduChannelListener` for listeners. This keeps applications free to replace
+any layer implementation with their own object that satisfies the same
+abstract port.
 
 For HDLC listener channels, endpoint profile options choose between the default
 no-session APDU framing and explicit HDLC data-link setup. With
@@ -299,6 +309,7 @@ classDiagram
     +Open()
     +Accept()
     +Close()
+    +LocalPort()
   }
 
   class ServerListenerRuntime {

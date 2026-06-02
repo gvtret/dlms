@@ -556,7 +556,7 @@ void RunOneTcpListenerExchange(
               TcpListenerOptions(),
               profile,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::ServerEndpointOptions serverOptions =
     dlms::endpoint::DefaultServerEndpointOptions();
@@ -575,12 +575,12 @@ void RunOneTcpListenerExchange(
     serverOptions,
     logicalDevice);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointTransportBundle clientTransport;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
-              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              TcpClientOptions(listenerBundle.Listener()->LocalPort()),
               clientTransport));
   dlms::endpoint::EndpointProfileBundle clientProfile;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -600,12 +600,12 @@ void RunOneTcpListenerExchange(
 
   bool continueExchange = true;
   if (hdlcUseSession) {
-    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
-    if (clientProfile.hdlc.get() == 0) {
+    EXPECT_TRUE(clientProfile.HdlcDataLink() != 0);
+    if (clientProfile.HdlcDataLink() == 0) {
       continueExchange = false;
     } else {
       const dlms::profile::ProfileStatus connectStatus =
-        clientProfile.hdlc->ConnectDataLink();
+        clientProfile.HdlcDataLink()->ConnectDataLink();
       EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
       if (connectStatus != dlms::profile::ProfileStatus::Ok) {
         continueExchange = false;
@@ -699,9 +699,9 @@ void SendRejectedLowPasswordAarq(
   ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
             clientProfile.Channel()->Open());
   if (profile.hdlcUseSession) {
-    ASSERT_TRUE(clientProfile.hdlc.get() != 0);
+    ASSERT_TRUE(clientProfile.HdlcDataLink() != 0);
     ASSERT_EQ(dlms::profile::ProfileStatus::Ok,
-              clientProfile.hdlc->ConnectDataLink());
+              clientProfile.HdlcDataLink()->ConnectDataLink());
   }
 
   const std::vector<std::uint8_t> aarq = MakeLlsAarq(credential);
@@ -733,7 +733,7 @@ void RunRejectedTcpServerLowPasswordAssociation(
               TcpListenerOptions(),
               profile,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::ServerEndpointOptions serverOptions =
     dlms::endpoint::DefaultServerEndpointOptions();
@@ -750,7 +750,7 @@ void RunRejectedTcpServerLowPasswordAssociation(
     serverOptions,
     logicalDevice);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointStatus serverStatus =
     dlms::endpoint::EndpointStatus::InternalError;
@@ -760,7 +760,7 @@ void RunRejectedTcpServerLowPasswordAssociation(
 
   ASSERT_NO_FATAL_FAILURE(
     SendRejectedLowPasswordAarq(
-      listenerBundle.tcp->LocalPort(),
+      listenerBundle.Listener()->LocalPort(),
       profile,
       clientCredential));
 
@@ -794,19 +794,19 @@ void RunOneTcpPushListenerExchange(
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointListener(options, listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::PushListenerRuntime runtime(
     *listenerBundle.Listener(),
     options,
     handler);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointTransportBundle clientTransport;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
-              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              TcpClientOptions(listenerBundle.Listener()->LocalPort()),
               clientTransport));
   dlms::endpoint::EndpointProfileBundle clientProfile;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -826,12 +826,12 @@ void RunOneTcpPushListenerExchange(
 
   bool continueExchange = true;
   if (hdlcUseSession) {
-    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
-    if (clientProfile.hdlc.get() == 0) {
+    EXPECT_TRUE(clientProfile.HdlcDataLink() != 0);
+    if (clientProfile.HdlcDataLink() == 0) {
       continueExchange = false;
     } else {
       const dlms::profile::ProfileStatus connectStatus =
-        clientProfile.hdlc->ConnectDataLink();
+        clientProfile.HdlcDataLink()->ConnectDataLink();
       EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
       if (connectStatus != dlms::profile::ProfileStatus::Ok) {
         continueExchange = false;
@@ -923,19 +923,19 @@ void RunOneTcpPushListenerRelease(
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointListener(options, listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::PushListenerRuntime runtime(
     *listenerBundle.Listener(),
     options,
     handler);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointTransportBundle clientTransport;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
-              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              TcpClientOptions(listenerBundle.Listener()->LocalPort()),
               clientTransport));
   dlms::endpoint::EndpointProfileBundle clientProfile;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -955,12 +955,12 @@ void RunOneTcpPushListenerRelease(
 
   bool continueExchange = true;
   if (hdlcUseSession) {
-    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
-    if (clientProfile.hdlc.get() == 0) {
+    EXPECT_TRUE(clientProfile.HdlcDataLink() != 0);
+    if (clientProfile.HdlcDataLink() == 0) {
       continueExchange = false;
     } else {
       const dlms::profile::ProfileStatus connectStatus =
-        clientProfile.hdlc->ConnectDataLink();
+        clientProfile.HdlcDataLink()->ConnectDataLink();
       EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
       if (connectStatus != dlms::profile::ProfileStatus::Ok) {
         continueExchange = false;
@@ -1059,14 +1059,14 @@ void RunRejectedTcpPushLowPasswordAssociation(
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointListener(options, listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::PushListenerRuntime runtime(
     *listenerBundle.Listener(),
     options,
     handler);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointStatus runtimeStatus =
     dlms::endpoint::EndpointStatus::InternalError;
@@ -1076,7 +1076,7 @@ void RunRejectedTcpPushLowPasswordAssociation(
 
   ASSERT_NO_FATAL_FAILURE(
     SendRejectedLowPasswordAarq(
-      listenerBundle.tcp->LocalPort(),
+      listenerBundle.Listener()->LocalPort(),
       options.profile,
       clientCredential));
 
@@ -1097,19 +1097,19 @@ void RunOneUdpPushListenerExchange(
   dlms::endpoint::EndpointListenerBundle listenerBundle;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointListener(options, listenerBundle));
-  ASSERT_TRUE(listenerBundle.udpPush.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::PushListenerRuntime runtime(
     *listenerBundle.Listener(),
     options,
     handler);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.udpPush->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointTransportBundle clientTransport;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
-              UdpClientOptions(listenerBundle.udpPush->LocalPort()),
+              UdpClientOptions(listenerBundle.Listener()->LocalPort()),
               clientTransport));
   dlms::endpoint::EndpointProfileBundle clientProfile;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -1172,7 +1172,7 @@ void RunOneTcpGatewayListenerExchange(
             dlms::endpoint::CreateEndpointListener(
               options.downstream,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::GatewayListenerRuntime runtime(
     *listenerBundle.Listener(),
@@ -1180,12 +1180,12 @@ void RunOneTcpGatewayListenerExchange(
     upstream,
     policy);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointTransportBundle clientTransport;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             dlms::endpoint::CreateEndpointTransport(
-              TcpClientOptions(listenerBundle.tcp->LocalPort()),
+              TcpClientOptions(listenerBundle.Listener()->LocalPort()),
               clientTransport));
   dlms::endpoint::EndpointProfileBundle clientProfile;
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
@@ -1205,12 +1205,12 @@ void RunOneTcpGatewayListenerExchange(
 
   bool continueExchange = true;
   if (hdlcUseSession) {
-    EXPECT_TRUE(clientProfile.hdlc.get() != 0);
-    if (clientProfile.hdlc.get() == 0) {
+    EXPECT_TRUE(clientProfile.HdlcDataLink() != 0);
+    if (clientProfile.HdlcDataLink() == 0) {
       continueExchange = false;
     } else {
       const dlms::profile::ProfileStatus connectStatus =
-        clientProfile.hdlc->ConnectDataLink();
+        clientProfile.HdlcDataLink()->ConnectDataLink();
       EXPECT_EQ(dlms::profile::ProfileStatus::Ok, connectStatus);
       if (connectStatus != dlms::profile::ProfileStatus::Ok) {
         continueExchange = false;
@@ -1310,7 +1310,7 @@ void RunRejectedTcpGatewayLowPasswordAssociation(
             dlms::endpoint::CreateEndpointListener(
               options.downstream,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
 
   dlms::endpoint::GatewayListenerRuntime runtime(
     *listenerBundle.Listener(),
@@ -1318,7 +1318,7 @@ void RunRejectedTcpGatewayLowPasswordAssociation(
     upstream,
     policy);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointStatus runtimeStatus =
     dlms::endpoint::EndpointStatus::InternalError;
@@ -1328,7 +1328,7 @@ void RunRejectedTcpGatewayLowPasswordAssociation(
 
   ASSERT_NO_FATAL_FAILURE(
     SendRejectedLowPasswordAarq(
-      listenerBundle.tcp->LocalPort(),
+      listenerBundle.Listener()->LocalPort(),
       options.downstream.profile,
       clientCredential));
 
@@ -1613,10 +1613,10 @@ TEST(EndpointIntegration, TcpClientEndpointUsesHdlcWithoutDataLinkSessionThenSer
               serverOptions.transport,
               serverOptions.profile,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             listenerBundle.Listener()->Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointStatus acceptStatus =
     dlms::endpoint::EndpointStatus::InternalError;
@@ -1652,7 +1652,8 @@ TEST(EndpointIntegration, TcpClientEndpointUsesHdlcWithoutDataLinkSessionThenSer
 
   dlms::endpoint::ClientEndpointOptions clientOptions =
     dlms::endpoint::DefaultClientEndpointOptions();
-  clientOptions.transport = TcpClientOptions(listenerBundle.tcp->LocalPort());
+  clientOptions.transport =
+    TcpClientOptions(listenerBundle.Listener()->LocalPort());
   clientOptions.profile = profile;
 
   dlms::endpoint::ClientEndpoint clientEndpoint(clientOptions);
@@ -1714,10 +1715,10 @@ TEST(EndpointIntegration, TcpClientEndpointCloseCleansUpAfterReleaseFailure)
               serverOptions.transport,
               serverOptions.profile,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             listenerBundle.Listener()->Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointStatus acceptStatus =
     dlms::endpoint::EndpointStatus::InternalError;
@@ -1748,7 +1749,8 @@ TEST(EndpointIntegration, TcpClientEndpointCloseCleansUpAfterReleaseFailure)
 
   dlms::endpoint::ClientEndpointOptions clientOptions =
     dlms::endpoint::DefaultClientEndpointOptions();
-  clientOptions.transport = TcpClientOptions(listenerBundle.tcp->LocalPort());
+  clientOptions.transport =
+    TcpClientOptions(listenerBundle.Listener()->LocalPort());
   clientOptions.profile = profile;
 
   dlms::endpoint::ClientEndpoint clientEndpoint(clientOptions);
@@ -1869,10 +1871,10 @@ void RunTcpClientEndpointHighGmacCipheredService(
               serverOptions.transport,
               serverOptions.profile,
               listenerBundle));
-  ASSERT_TRUE(listenerBundle.tcp.get() != 0);
+  ASSERT_TRUE(listenerBundle.Listener() != 0);
   ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok,
             listenerBundle.Listener()->Open());
-  ASSERT_NE(0u, listenerBundle.tcp->LocalPort());
+  ASSERT_NE(0u, listenerBundle.Listener()->LocalPort());
 
   dlms::endpoint::EndpointStatus acceptStatus =
     dlms::endpoint::EndpointStatus::InternalError;
@@ -1913,7 +1915,8 @@ void RunTcpClientEndpointHighGmacCipheredService(
 
   dlms::endpoint::ClientEndpointOptions clientOptions =
     dlms::endpoint::DefaultClientEndpointOptions();
-  clientOptions.transport = TcpClientOptions(listenerBundle.tcp->LocalPort());
+  clientOptions.transport =
+    TcpClientOptions(listenerBundle.Listener()->LocalPort());
   clientOptions.profile = profile;
   clientOptions.security.authentication =
     dlms::endpoint::EndpointAuthenticationKind::HighGmac;

@@ -433,6 +433,7 @@ public:
   virtual EndpointStatus Open() = 0;
   virtual EndpointStatus Close() = 0;
   virtual bool IsOpen() const = 0;
+  virtual std::uint16_t LocalPort() const = 0;
 
   virtual EndpointStatus Accept(
     std::unique_ptr<dlms::profile::IApduChannel>& channel) = 0;
@@ -555,8 +556,29 @@ public:
   void Reset();
   IApduChannelListener* Listener() const;
 
-  std::unique_ptr<EndpointTcpProfileListener> tcp;
-  std::unique_ptr<EndpointUdpPushProfileListener> udpPush;
+  std::unique_ptr<IApduChannelListener> listener;
+};
+
+class EndpointTransportBundle
+{
+public:
+  void Reset();
+  dlms::transport::IByteStream* ByteStream() const;
+  dlms::transport::IDatagramTransport* Datagram() const;
+
+  std::unique_ptr<dlms::transport::IByteStream> byteStream;
+  std::unique_ptr<dlms::transport::IDatagramTransport> datagram;
+};
+
+class EndpointProfileBundle
+{
+public:
+  void Reset();
+  dlms::profile::IApduChannel* Channel() const;
+  dlms::profile::IHdlcDataLinkSession* HdlcDataLink() const;
+
+  std::unique_ptr<dlms::profile::IApduChannel> channel;
+  dlms::profile::IHdlcDataLinkSession* hdlcDataLink;
 };
 
 struct EndpointSecurityBundle
@@ -597,3 +619,11 @@ stream and the profile channel, so runtime callers only handle
 runtime only. `Accept()` returns a Wrapper/UDP APDU channel over the listener
 datagram transport; endpoint channel `Close()` does not close the UDP listener,
 so caller-controlled runtime lifecycle remains on the listener.
+
+Factory bundles expose lower-layer resources through abstract layer ports.
+`EndpointTransportBundle` owns either an `IByteStream` or an
+`IDatagramTransport`, `EndpointProfileBundle` owns an `IApduChannel`, and HDLC
+profiles expose an optional `IHdlcDataLinkSession*` when explicit data-link
+session control is available. `EndpointListenerBundle` owns only an
+`IApduChannelListener`. Concrete default transports and profile channels are
+created in the endpoint factory implementation, not exposed as bundle fields.

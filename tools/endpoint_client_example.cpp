@@ -65,8 +65,7 @@ int main()
         serverOptions.transport,
         serverOptions.profile,
         listener) != dlms::endpoint::EndpointStatus::Ok ||
-      listener.Listener() == 0 ||
-      listener.tcp.get() == 0) {
+      listener.Listener() == 0) {
     return 1;
   }
   if (listener.Listener()->Open() != dlms::endpoint::EndpointStatus::Ok) {
@@ -76,7 +75,7 @@ int main()
   dlms::endpoint::ClientEndpointOptions options =
     dlms::endpoint::DefaultClientEndpointOptions();
   options.transport.host = "127.0.0.1";
-  options.transport.port = listener.tcp->LocalPort();
+  options.transport.port = listener.Listener()->LocalPort();
   options.profile.kind = dlms::endpoint::EndpointProfileKind::Wrapper;
   options.security.authentication =
     dlms::endpoint::EndpointAuthenticationKind::None;

@@ -109,6 +109,11 @@ public:
     return open_;
   }
 
+  std::uint16_t LocalPort() const
+  {
+    return 0u;
+  }
+
   dlms::endpoint::EndpointStatus Accept(
     std::unique_ptr<dlms::profile::IApduChannel>& channel)
   {

@@ -462,6 +462,30 @@ TEST(ListenerRuntime, ServerRuntimeRejectsNullAcceptedChannel)
             runtime.RunOnce());
 }
 
+TEST(ListenerRuntime, ServerRuntimeClosesAcceptedChannelWhenEndpointOpenFails)
+{
+  FakeApduChannelListener listener;
+  const std::shared_ptr<ChannelState> channelState(new ChannelState());
+  listener.nextChannel = MakeChannel(channelState);
+
+  dlms::endpoint::ServerEndpointOptions options =
+    dlms::endpoint::DefaultServerEndpointOptions();
+  options.profile.clientSap = 0u;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  dlms::endpoint::ServerListenerRuntime runtime(
+    listener,
+    options,
+    logicalDevice);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            runtime.RunOnce());
+  EXPECT_EQ(1u, listener.acceptCalls);
+  EXPECT_EQ(0u, channelState->openCalls);
+  EXPECT_EQ(1u, channelState->closeCalls);
+  EXPECT_FALSE(channelState->open);
+}
+
 TEST(ListenerRuntime, ServerRuntimeAcceptsOneChannelAndRunsServerEndpoint)
 {
   FakeApduChannelListener listener;
@@ -542,6 +566,28 @@ TEST(ListenerRuntime, PushRuntimeAcceptsOneChannelAndDispatchesPushApdu)
   EXPECT_EQ(channelState->nextReceive, handler.lastApdu);
 }
 
+TEST(ListenerRuntime, PushRuntimeClosesAcceptedChannelWhenEndpointOpenFails)
+{
+  FakeApduChannelListener listener;
+  const std::shared_ptr<ChannelState> channelState(new ChannelState());
+  listener.nextChannel = MakeChannel(channelState);
+
+  dlms::endpoint::PushListenerEndpointOptions options =
+    dlms::endpoint::DefaultPushListenerEndpointOptions();
+  options.profile.clientSap = 0u;
+  RecordingPushHandler handler;
+  dlms::endpoint::PushListenerRuntime runtime(listener, options, handler);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            runtime.RunOnce());
+  EXPECT_EQ(1u, listener.acceptCalls);
+  EXPECT_EQ(0u, channelState->openCalls);
+  EXPECT_EQ(1u, channelState->closeCalls);
+  EXPECT_FALSE(channelState->open);
+  EXPECT_EQ(0u, handler.calls);
+}
+
 TEST(ListenerRuntime, GatewayRuntimeAcceptsOneChannelAndForwardsGet)
 {
   FakeApduChannelListener listener;
@@ -566,4 +612,31 @@ TEST(ListenerRuntime, GatewayRuntimeAcceptsOneChannelAndForwardsGet)
   const dlms::apdu::XdlmsApdu response = DecodeResponse(channelState->sent);
   EXPECT_EQ(dlms::apdu::XdlmsApduKind::GetResponse, response.kind);
   EXPECT_EQ(0x4321u, response.getResponseAny.result.data.unsignedValue);
+}
+
+TEST(ListenerRuntime, GatewayRuntimeClosesAcceptedChannelWhenEndpointOpenFails)
+{
+  FakeApduChannelListener listener;
+  const std::shared_ptr<ChannelState> channelState(new ChannelState());
+  listener.nextChannel = MakeChannel(channelState);
+
+  dlms::endpoint::GatewayEndpointOptions options =
+    dlms::endpoint::DefaultGatewayEndpointOptions();
+  options.downstream.profile.clientSap = 0u;
+  FakeGatewayUpstream upstream;
+  AllowAllPolicy policy;
+  dlms::endpoint::GatewayListenerRuntime runtime(
+    listener,
+    options,
+    upstream,
+    policy);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, runtime.Open());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            runtime.RunOnce());
+  EXPECT_EQ(1u, listener.acceptCalls);
+  EXPECT_EQ(0u, channelState->openCalls);
+  EXPECT_EQ(1u, channelState->closeCalls);
+  EXPECT_FALSE(channelState->open);
+  EXPECT_FALSE(upstream.IsOpen());
 }

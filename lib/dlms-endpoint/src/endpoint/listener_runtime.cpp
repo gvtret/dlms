@@ -104,6 +104,7 @@ EndpointStatus ServerListenerRuntime::RunOnce()
   }
   status = endpoint->Open();
   if (status != EndpointStatus::Ok) {
+    channel->Close();
     return status;
   }
 
@@ -184,6 +185,7 @@ EndpointStatus PushListenerRuntime::RunOnce()
   PushListenerEndpoint endpoint(*channel, options_, handler_);
   status = endpoint.Open();
   if (status != EndpointStatus::Ok) {
+    channel->Close();
     return status;
   }
 
@@ -268,6 +270,7 @@ EndpointStatus GatewayListenerRuntime::RunOnce()
   GatewayEndpoint endpoint(*channel, options_, upstream_, policy_);
   status = endpoint.Open();
   if (status != EndpointStatus::Ok) {
+    channel->Close();
     return status;
   }
 

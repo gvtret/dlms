@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.2 - 2026-06-05
+
+- Fixed listener runtimes to close accepted APDU channels when constructing or
+  opening the per-connection server, push, or gateway endpoint fails.
+- Added listener runtime regression coverage for accepted-channel cleanup on
+  endpoint open failures.
+
 ## 0.3.1 - 2026-06-05
 
 - Added install-tree package consumer examples for `dlms::codec`,

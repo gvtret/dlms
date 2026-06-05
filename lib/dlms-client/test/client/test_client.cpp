@@ -652,6 +652,119 @@ TEST(DlmsClient, CanUseInjectedAssociationInterface)
   EXPECT_EQ(1, xdlms.getCalls);
 }
 
+TEST(DlmsClient, InjectedAssociationOpenFailureKeepsDisconnected)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  association.openStatus =
+    dlms::association::AssociationStatus::ChannelOpenFailed;
+  FakeXdlmsService xdlms;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+
+  EXPECT_EQ(dlms::client::ClientStatus::ChannelOpenFailed,
+            client.Connect());
+
+  EXPECT_EQ(dlms::client::ClientState::Disconnected, client.State());
+  EXPECT_FALSE(client.IsConnected());
+  EXPECT_EQ(1, association.openCalls);
+  EXPECT_EQ(0, association.establishCalls);
+}
+
+TEST(DlmsClient, InjectedAssociationEstablishFailureKeepsConnected)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  association.establishStatus =
+    dlms::association::AssociationStatus::ReceiveFailed;
+  FakeXdlmsService xdlms;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  EXPECT_EQ(dlms::client::ClientStatus::ReceiveFailed,
+            client.OpenAssociation());
+
+  EXPECT_EQ(dlms::client::ClientState::Connected, client.State());
+  EXPECT_TRUE(client.IsConnected());
+  EXPECT_FALSE(client.IsAssociated());
+  EXPECT_EQ(1, association.openCalls);
+  EXPECT_EQ(1, association.establishCalls);
+  EXPECT_EQ(0, xdlms.getCalls);
+}
+
+TEST(DlmsClient, InjectedAssociationReleaseFailureKeepsAssociated)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  association.releaseStatus =
+    dlms::association::AssociationStatus::SendFailed;
+  FakeXdlmsService xdlms;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.OpenAssociation());
+  EXPECT_EQ(dlms::client::ClientStatus::SendFailed,
+            client.ReleaseAssociation());
+
+  EXPECT_EQ(dlms::client::ClientState::Associated, client.State());
+  EXPECT_TRUE(client.IsAssociated());
+  EXPECT_EQ(1, association.releaseCalls);
+}
+
+TEST(DlmsClient, InjectedAssociationCloseFailureKeepsState)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  association.closeStatus =
+    dlms::association::AssociationStatus::ChannelCloseFailed;
+  FakeXdlmsService xdlms;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  EXPECT_EQ(dlms::client::ClientStatus::InternalError, client.Close());
+
+  EXPECT_EQ(dlms::client::ClientState::Connected, client.State());
+  EXPECT_TRUE(client.IsConnected());
+  EXPECT_EQ(1, association.closeCalls);
+}
+
+TEST(DlmsClient, InjectedXdlmsFailuresPreserveAssociationAndOutputs)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  FakeXdlmsService xdlms;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.OpenAssociation());
+
+  std::vector<std::uint8_t> output;
+  output.push_back(0xAAu);
+  xdlms.getStatus = dlms::xdlms::XdlmsStatus::ReceiveFailed;
+  EXPECT_EQ(dlms::client::ClientStatus::ReceiveFailed,
+            client.Get(MakeDescriptor(), output));
+  EXPECT_TRUE(output.empty());
+
+  xdlms.setStatus = dlms::xdlms::XdlmsStatus::ServiceRejected;
+  EXPECT_EQ(dlms::client::ClientStatus::ServiceRejected,
+            client.Set(MakeDescriptor(), MakeLongUnsignedBytes(1u)));
+
+  output.push_back(0xBBu);
+  xdlms.actionStatus = dlms::xdlms::XdlmsStatus::SecurityFailed;
+  EXPECT_EQ(dlms::client::ClientStatus::SecurityFailed,
+            client.Action(
+              MakeMethodDescriptor(),
+              false,
+              std::vector<std::uint8_t>(),
+              output));
+  EXPECT_TRUE(output.empty());
+
+  EXPECT_EQ(dlms::client::ClientState::Associated, client.State());
+  EXPECT_TRUE(client.IsAssociated());
+  EXPECT_EQ(1, xdlms.getCalls);
+  EXPECT_EQ(1, xdlms.setCalls);
+  EXPECT_EQ(1, xdlms.actionCalls);
+}
+
 TEST(DlmsClient, InjectedSecurityProtectsGetRequest)
 {
   dlms::security::InMemoryKeyStore keys;

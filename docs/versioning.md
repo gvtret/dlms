@@ -68,6 +68,13 @@ Release changes should update:
 - migration notes when behavior changes;
 - any public documentation affected by the compatibility scope.
 
+After the layer-modernization pass, any change that affects the installed
+headers, documented extension interfaces, exported CMake targets, release
+artifacts, or promised runtime behavior must classify the compatibility impact
+before merge and update `VERSION` plus `CHANGELOG.md` in the same change. Purely
+internal refactors may leave the version unchanged only when they do not alter
+the public compatibility scope above.
+
 The root repository is authoritative after the submodule flattening. Former
 standalone layer repositories are archive sources for history before the
 monorepo migration; new work should land in the root repository.

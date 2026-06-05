@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 - 2026-06-05
+
+- Completed the layer modernization pass with narrow abstract interface headers
+  for client xDLMS services, server services, endpoint listeners, push/gateway
+  ports, and COSEM logical-device dispatch.
+- Kept default implementations source-compatible while allowing users to
+  implement custom layer ports without including concrete runtime classes.
+- Documented the final layer audit and interface header inventory in the system
+  architecture guide.
+
 ## 0.1.9 - 2026-06-01
 
 - Added CI release publication for `v*` tag pushes, attaching the verified

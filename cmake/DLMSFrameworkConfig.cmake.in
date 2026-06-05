@@ -5,4 +5,21 @@ find_dependency(OpenSSL)
 
 include("${CMAKE_CURRENT_LIST_DIR}/DLMSFrameworkTargets.cmake")
 
+set(DLMSFramework_SUPPORTED_COMPONENTS
+  codec
+  io
+  protocol
+  cosem_server
+  runtime
+  framework)
+
+foreach(DLMSFramework_component IN LISTS DLMSFramework_FIND_COMPONENTS)
+  if(DLMSFramework_component IN_LIST DLMSFramework_SUPPORTED_COMPONENTS AND
+     TARGET "dlms::${DLMSFramework_component}")
+    set(DLMSFramework_${DLMSFramework_component}_FOUND TRUE)
+  else()
+    set(DLMSFramework_${DLMSFramework_component}_FOUND FALSE)
+  endif()
+endforeach()
+
 check_required_components(DLMSFramework)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 - 2026-06-05
+
+- Added CMake package component support for the documented aggregate targets:
+  `codec`, `io`, `protocol`, `cosem_server`, `runtime`, and `framework`.
+- Extended the install package smoke test to require those components through
+  `find_package(DLMSFramework COMPONENTS ...)`.
+
 ## 0.2.2 - 2026-06-05
 
 - Added `README.md`, `CHANGELOG.md`, and `VERSION` to the installed

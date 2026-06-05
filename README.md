@@ -68,6 +68,13 @@ find_package(DLMSFramework REQUIRED CONFIG)
 target_link_libraries(app PRIVATE dlms::framework)
 ```
 
+The package also supports CMake components for the aggregate targets:
+
+```cmake
+find_package(DLMSFramework REQUIRED CONFIG COMPONENTS runtime)
+target_link_libraries(app PRIVATE dlms::runtime)
+```
+
 Aggregate targets are available for narrower linking:
 
 | Target | Scope |

@@ -25,7 +25,14 @@ file(WRITE "${CONSUMER_DIR}/CMakeLists.txt" [=[
 cmake_minimum_required(VERSION 3.16)
 project(dlms_package_consumer LANGUAGES CXX)
 
-find_package(DLMSFramework REQUIRED CONFIG)
+find_package(DLMSFramework REQUIRED CONFIG
+  COMPONENTS
+    codec
+    io
+    protocol
+    cosem_server
+    runtime
+    framework)
 
 foreach(required_target
     dlms::codec

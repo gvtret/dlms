@@ -15,6 +15,10 @@ option(DLMS_BUILD_LIVE_TESTS "Build opt-in live meter smoke tests" OFF)
 option(DLMS_BUILD_EXAMPLES "Build example programs" ON)
 option(DLMS_INSTALL "Install the DLMS framework CMake package" ON)
 
+if(DLMS_BUILD_INTEGRATION_TESTS AND NOT DLMS_USE_SYSTEM_GTEST)
+  set(INSTALL_GTEST OFF CACHE BOOL "Install GoogleTest with the framework package" FORCE)
+endif()
+
 if(DLMS_BUILD_INTEGRATION_TESTS)
   enable_testing()
 

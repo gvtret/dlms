@@ -22,4 +22,25 @@ if(package_size EQUAL 0)
   message(FATAL_ERROR "DLMSFramework package artifact is empty: ${PACKAGE_FILE}")
 endif()
 
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -E tar tf "${PACKAGE_FILE}"
+  RESULT_VARIABLE package_list_result
+  OUTPUT_VARIABLE package_entries
+  ERROR_VARIABLE package_list_error)
+if(NOT package_list_result EQUAL 0)
+  message(FATAL_ERROR
+    "DLMSFramework package artifact smoke failed while listing package: ${package_list_error}")
+endif()
+
+foreach(disallowed_entry
+    "/include/gtest/"
+    "/include/gmock/"
+    "/lib/libgtest"
+    "/lib/libgmock")
+  if(package_entries MATCHES "(^|\n)[^\n]*${disallowed_entry}")
+    message(FATAL_ERROR
+      "DLMSFramework package artifact contains test dependency entry matching '${disallowed_entry}'")
+  endif()
+endforeach()
+
 message(STATUS "DLMSFramework package artifact created: ${PACKAGE_FILE}")

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1 - 2026-06-05
+
+- Removed bundled GoogleTest/GMock headers and libraries from the
+  `DLMSFramework` release ZIP when tests use the fetched test dependency.
+- Extended the package artifact smoke test to reject release ZIPs that contain
+  `include/gtest`, `include/gmock`, or GoogleTest/GMock libraries.
+
 ## 0.2.0 - 2026-06-05
 
 - Completed the layer modernization pass with narrow abstract interface headers

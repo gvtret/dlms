@@ -316,6 +316,34 @@ TEST(WrapperTcpProfileChannelTest, ReceiveApduHandlesSplitWpdu)
   EXPECT_EQ(apdu, received);
 }
 
+TEST(WrapperTcpProfileChannelTest, CloseDropsPartialFrameBeforeReopen)
+{
+  FakeByteStream stream;
+  WrapperTcpProfileChannel channel(stream, DefaultApduChannelOptions());
+  const std::uint8_t firstRaw[] = {0xc0, 0x01};
+  const std::vector<std::uint8_t> firstApdu =
+    Bytes(firstRaw, sizeof(firstRaw));
+  const std::vector<std::uint8_t> firstWpdu = EncodeWpdu(firstApdu);
+  const std::uint8_t secondRaw[] = {0xc1, 0x02, 0x03};
+  const std::vector<std::uint8_t> secondApdu =
+    Bytes(secondRaw, sizeof(secondRaw));
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  stream.ScriptRead(
+    std::vector<std::uint8_t>(firstWpdu.begin(), firstWpdu.begin() + 4));
+
+  std::vector<std::uint8_t> received;
+  EXPECT_EQ(ProfileStatus::WouldBlock, channel.ReceiveApdu(received));
+  EXPECT_TRUE(received.empty());
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Close());
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  stream.ScriptRead(EncodeWpdu(secondApdu));
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
+  EXPECT_EQ(secondApdu, received);
+}
+
 TEST(WrapperTcpProfileChannelTest, ReceiveApduEmitsInboundDecodedTrace)
 {
   FakeByteStream stream;
@@ -456,6 +484,23 @@ TEST(WrapperUdpProfileChannelTest, ReceiveApduDecodesFullDatagram)
   EXPECT_EQ(apdu, received);
 }
 
+TEST(WrapperUdpProfileChannelTest, CanSendAfterCloseAndReopen)
+{
+  FakeDatagramTransport datagram;
+  WrapperUdpProfileChannel channel(datagram, DefaultApduChannelOptions());
+  const std::uint8_t rawApdu[] = {0xc1, 0x02};
+  const std::vector<std::uint8_t> apdu = Bytes(rawApdu, sizeof(rawApdu));
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(apdu)));
+  ASSERT_EQ(ProfileStatus::Ok, channel.Close());
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(apdu)));
+
+  EXPECT_TRUE(channel.IsOpen());
+  EXPECT_EQ(2u, datagram.SentDatagrams().size());
+}
+
 TEST(WrapperUdpProfileChannelTest, RejectsTruncatedDatagram)
 {
   FakeDatagramTransport datagram;
@@ -517,6 +562,23 @@ TEST(HdlcProfileChannelTest, ReceiveApduDecodesHdlcAndLlc)
   std::vector<std::uint8_t> received;
   ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
   EXPECT_EQ(apdu, received);
+}
+
+TEST(HdlcProfileChannelTest, CanSendAfterCloseAndReopen)
+{
+  FakeByteStream stream;
+  HdlcProfileChannel channel(stream, DefaultApduChannelOptions());
+  const std::uint8_t rawApdu[] = {0x60, 0x01, 0x02};
+  const std::vector<std::uint8_t> apdu = Bytes(rawApdu, sizeof(rawApdu));
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(apdu)));
+  ASSERT_EQ(ProfileStatus::Ok, channel.Close());
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(apdu)));
+
+  EXPECT_TRUE(channel.IsOpen());
+  EXPECT_EQ(2u, stream.Writes().size());
 }
 
 TEST(HdlcProfileChannelTest, ConnectDataLinkPerformsSnrmUaHandshake)

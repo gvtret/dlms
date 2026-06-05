@@ -27,20 +27,65 @@ project(dlms_package_consumer LANGUAGES CXX)
 
 find_package(DLMSFramework REQUIRED CONFIG)
 
+foreach(required_target
+    dlms::codec
+    dlms::io
+    dlms::protocol
+    dlms::cosem_server
+    dlms::runtime
+    dlms::framework)
+  if(NOT TARGET ${required_target})
+    message(FATAL_ERROR "Required DLMSFramework target is missing: ${required_target}")
+  endif()
+endforeach()
+
 add_executable(dlms_package_consumer main.cpp)
 target_compile_features(dlms_package_consumer PRIVATE cxx_std_11)
-target_link_libraries(dlms_package_consumer PRIVATE dlms::framework)
+target_link_libraries(dlms_package_consumer
+  PRIVATE
+    dlms::codec
+    dlms::io
+    dlms::protocol
+    dlms::cosem_server
+    dlms::runtime
+    dlms::framework)
 ]=])
 
 file(WRITE "${CONSUMER_DIR}/main.cpp" [=[
 #include "dlms/apdu/apdu_types.hpp"
+#include "dlms/client/client_xdlms_service_interface.hpp"
+#include "dlms/cosem/logical_device_interface.hpp"
+#include "dlms/endpoint/apdu_channel_listener.hpp"
+#include "dlms/endpoint/gateway_interfaces.hpp"
+#include "dlms/endpoint/push_indication_handler.hpp"
+#include "dlms/server/server_service_interface.hpp"
 #include "dlms/transport/transport_status.hpp"
+#include "dlms/xdlms/xdlms_association_state_interface.hpp"
+#include "dlms/xdlms/xdlms_security_processor_interface.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <type_traits>
 
 int main()
 {
+  static_assert(std::is_polymorphic<dlms::client::IClientXdlmsService>::value,
+    "client xDLMS service interface must be polymorphic");
+  static_assert(std::is_polymorphic<dlms::cosem::ILogicalDevice>::value,
+    "COSEM logical-device interface must be polymorphic");
+  static_assert(std::is_polymorphic<dlms::endpoint::IApduChannelListener>::value,
+    "endpoint APDU listener interface must be polymorphic");
+  static_assert(std::is_polymorphic<dlms::endpoint::IGatewayPolicy>::value,
+    "endpoint gateway policy interface must be polymorphic");
+  static_assert(std::is_polymorphic<dlms::endpoint::IPushIndicationHandler>::value,
+    "endpoint push handler interface must be polymorphic");
+  static_assert(std::is_polymorphic<dlms::server::IServerService>::value,
+    "server service interface must be polymorphic");
+  static_assert(std::is_polymorphic<dlms::xdlms::IXdlmsAssociationState>::value,
+    "xDLMS association-state interface must be polymorphic");
+  static_assert(std::is_polymorphic<dlms::xdlms::IXdlmsSecurityProcessor>::value,
+    "xDLMS security processor interface must be polymorphic");
+
   const dlms::apdu::ByteView empty = {
     static_cast<const std::uint8_t*>(0),
     static_cast<std::size_t>(0)

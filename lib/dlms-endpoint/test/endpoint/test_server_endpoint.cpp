@@ -598,6 +598,68 @@ TEST(ServerEndpoint, RunOnceCanUseInjectedServerService)
   EXPECT_EQ(0x1234u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(ServerEndpoint, RunOnceReceiveFailureDoesNotDispatch)
+{
+  FakeApduChannel channel;
+  channel.receiveStatus = dlms::profile::ProfileStatus::ReadFailed;
+  FakeServerService server;
+  dlms::endpoint::ServerEndpoint endpoint(channel, server);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.RunOnce());
+
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.receiveCalls);
+  EXPECT_EQ(0u, channel.sendCalls);
+  EXPECT_TRUE(channel.sentFrames.empty());
+  EXPECT_EQ(0, server.getCalls);
+  EXPECT_EQ(0, server.setCalls);
+  EXPECT_EQ(0, server.actionCalls);
+}
+
+TEST(ServerEndpoint, RunOnceMalformedApduDoesNotDispatch)
+{
+  FakeApduChannel channel;
+  channel.nextReceive.push_back(0xC0u);
+  channel.nextReceive.push_back(0x01u);
+  FakeServerService server;
+  dlms::endpoint::ServerEndpoint endpoint(channel, server);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InternalError,
+            endpoint.RunOnce());
+
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.receiveCalls);
+  EXPECT_EQ(0u, channel.sendCalls);
+  EXPECT_TRUE(channel.sentFrames.empty());
+  EXPECT_EQ(0, server.getCalls);
+  EXPECT_EQ(0, server.setCalls);
+  EXPECT_EQ(0, server.actionCalls);
+}
+
+TEST(ServerEndpoint, RunOnceSendFailureKeepsEndpointOpen)
+{
+  FakeApduChannel channel;
+  channel.nextReceive = EncodeGetRequest();
+  channel.sendStatus = dlms::profile::ProfileStatus::WriteFailed;
+  FakeServerService server;
+  dlms::endpoint::ServerEndpoint endpoint(channel, server);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.RunOnce());
+
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.receiveCalls);
+  EXPECT_EQ(1u, channel.sendCalls);
+  EXPECT_TRUE(channel.sentFrames.empty());
+  EXPECT_EQ(1, server.getCalls);
+  EXPECT_EQ(0, server.setCalls);
+  EXPECT_EQ(0, server.actionCalls);
+}
+
 TEST(ServerEndpoint, OpenCanNegotiateAssociationBeforeRunOnce)
 {
   FakeApduChannel channel;

@@ -558,6 +558,24 @@ TEST(DlmsClient, OpensAndReleasesAssociation)
   EXPECT_FALSE(channel.open);
 }
 
+TEST(DlmsClient, MalformedAssociationResponseKeepsConnected)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  dlms::client::DlmsClient client(channel, association);
+
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  channel.nextReceive.push_back(0x00u);
+
+  EXPECT_EQ(dlms::client::ClientStatus::AssociationFailed,
+            client.OpenAssociation());
+  EXPECT_EQ(dlms::client::ClientState::Connected, client.State());
+  EXPECT_TRUE(client.IsConnected());
+  EXPECT_FALSE(client.IsAssociated());
+}
+
 TEST(DlmsClient, CloseIsIdempotent)
 {
   FakeApduChannel channel;
@@ -608,6 +626,67 @@ TEST(DlmsClient, GetForwardsToXdlmsClient)
   EXPECT_EQ(dlms::client::ClientStatus::Ok,
             client.Get(MakeDescriptor(), output));
   EXPECT_EQ(MakeLongUnsignedBytes(0x2468u), output);
+}
+
+TEST(DlmsClient, GetMapsRealReceiveFailureAndKeepsAssociated)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  dlms::client::DlmsClient client(channel, association);
+  EstablishFacade(client, channel);
+
+  channel.receiveStatus = dlms::profile::ProfileStatus::Timeout;
+  std::vector<std::uint8_t> output;
+  output.push_back(0xAAu);
+
+  EXPECT_EQ(dlms::client::ClientStatus::ReceiveFailed,
+            client.Get(MakeDescriptor(), output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(dlms::client::ClientState::Associated, client.State());
+  EXPECT_TRUE(client.IsAssociated());
+}
+
+TEST(DlmsClient, GetMapsRealMalformedResponseAndKeepsAssociated)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  dlms::client::DlmsClient client(channel, association);
+  EstablishFacade(client, channel);
+
+  channel.nextReceive.clear();
+  channel.nextReceive.push_back(0x00u);
+  std::vector<std::uint8_t> output;
+  output.push_back(0xAAu);
+
+  EXPECT_EQ(dlms::client::ClientStatus::InternalError,
+            client.Get(MakeDescriptor(), output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(dlms::client::ClientState::Associated, client.State());
+  EXPECT_TRUE(client.IsAssociated());
+}
+
+TEST(DlmsClient, GetMapsRealInvokeIdMismatchAndKeepsAssociated)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  dlms::client::DlmsClient client(channel, association);
+  EstablishFacade(client, channel);
+
+  channel.nextReceive = MakeGetResponse(0x82u);
+  std::vector<std::uint8_t> output;
+  output.push_back(0xAAu);
+
+  EXPECT_EQ(dlms::client::ClientStatus::InternalError,
+            client.Get(MakeDescriptor(), output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(dlms::client::ClientState::Associated, client.State());
+  EXPECT_TRUE(client.IsAssociated());
 }
 
 TEST(DlmsClient, GetCanUseInjectedXdlmsService)

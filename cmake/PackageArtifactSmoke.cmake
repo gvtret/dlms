@@ -43,4 +43,14 @@ foreach(disallowed_entry
   endif()
 endforeach()
 
+foreach(required_entry
+    "/share/doc/DLMSFramework/README.md"
+    "/share/doc/DLMSFramework/CHANGELOG.md"
+    "/share/doc/DLMSFramework/VERSION")
+  if(NOT package_entries MATCHES "(^|\n)[^\n]*${required_entry}($|\n)")
+    message(FATAL_ERROR
+      "DLMSFramework package artifact is missing required metadata entry '${required_entry}'")
+  endif()
+endforeach()
+
 message(STATUS "DLMSFramework package artifact created: ${PACKAGE_FILE}")

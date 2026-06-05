@@ -153,6 +153,12 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
         ${CMAKE_CURRENT_BINARY_DIR}/DLMSFrameworkConfigVersion.cmake
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/DLMSFramework)
 
+      install(FILES
+        README.md
+        CHANGELOG.md
+        VERSION
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/DLMSFramework)
+
       install(EXPORT DLMSFrameworkTargets
         NAMESPACE dlms::
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/DLMSFramework)

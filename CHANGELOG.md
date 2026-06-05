@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.2 - 2026-06-05
+
+- Added `README.md`, `CHANGELOG.md`, and `VERSION` to the installed
+  `DLMSFramework` package metadata under `share/doc/DLMSFramework`.
+- Extended the package artifact smoke test to require those release metadata
+  files in generated ZIP artifacts.
+
 ## 0.2.1 - 2026-06-05
 
 - Removed bundled GoogleTest/GMock headers and libraries from the

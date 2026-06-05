@@ -431,6 +431,26 @@ TEST(GatewayEndpoint, OpensAndClosesDownstreamAndUpstream)
   EXPECT_FALSE(upstream.IsOpen());
 }
 
+TEST(GatewayEndpoint, OpenRejectsInvalidDownstreamOptionsBeforeSideEffects)
+{
+  FakeApduChannel channel;
+  FakeGatewayUpstream upstream;
+  FakeGatewayPolicy policy;
+  dlms::endpoint::GatewayEndpointOptions options =
+    dlms::endpoint::DefaultGatewayEndpointOptions();
+  options.downstream.profile.clientSap = 0u;
+
+  dlms::endpoint::GatewayEndpoint endpoint(channel, options, upstream, policy);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_FALSE(channel.IsOpen());
+  EXPECT_FALSE(upstream.IsOpen());
+  EXPECT_EQ(0u, channel.receiveCalls);
+  EXPECT_EQ(0u, channel.sendCalls);
+}
+
 TEST(GatewayEndpoint, CloseCleansDownstreamAfterUpstreamCloseFailure)
 {
   FakeApduChannel channel;
@@ -601,6 +621,27 @@ TEST(GatewayEndpoint, RunOnceCanReleaseNegotiatedDownstreamAssociation)
   ASSERT_EQ(2u, channel.sentFrames.size());
   const dlms::apdu::AcseApdu rlre = DecodeAcseResponse(channel.sentFrames[1]);
   EXPECT_EQ(dlms::apdu::AcseApduKind::Rlre, rlre.kind);
+}
+
+TEST(GatewayEndpoint, OpenCleansDownstreamAfterMalformedNegotiation)
+{
+  FakeApduChannel channel;
+  channel.nextReceive.push_back(0x00u);
+  FakeGatewayUpstream upstream;
+  FakeGatewayPolicy policy;
+  dlms::endpoint::GatewayEndpointOptions options =
+    dlms::endpoint::DefaultGatewayEndpointOptions();
+  options.downstream.negotiateAssociation = true;
+
+  dlms::endpoint::GatewayEndpoint endpoint(channel, options, upstream, policy);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::AssociationFailed,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_FALSE(channel.IsOpen());
+  EXPECT_FALSE(upstream.IsOpen());
+  EXPECT_EQ(1u, channel.receiveCalls);
+  EXPECT_EQ(0u, channel.sendCalls);
 }
 
 TEST(GatewayEndpoint, OpenRejectsNegotiatedLowPasswordCredentialMismatch)

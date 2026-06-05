@@ -2,6 +2,10 @@ if(NOT DEFINED BINARY_DIR)
   message(FATAL_ERROR "BINARY_DIR is required")
 endif()
 
+if(NOT DEFINED SOURCE_DIR)
+  message(FATAL_ERROR "SOURCE_DIR is required")
+endif()
+
 if(NOT DEFINED GENERATOR)
   message(FATAL_ERROR "GENERATOR is required")
 endif()
@@ -10,6 +14,7 @@ set(SMOKE_DIR "${BINARY_DIR}/package-smoke")
 set(INSTALL_PREFIX "${SMOKE_DIR}/install")
 set(CONSUMER_DIR "${SMOKE_DIR}/consumer")
 set(CONSUMER_BUILD_DIR "${SMOKE_DIR}/consumer-build")
+set(EXAMPLES_BUILD_DIR "${SMOKE_DIR}/examples-build")
 
 file(REMOVE_RECURSE "${SMOKE_DIR}")
 file(MAKE_DIRECTORY "${CONSUMER_DIR}")
@@ -20,6 +25,53 @@ execute_process(
 if(NOT install_result EQUAL 0)
   message(FATAL_ERROR "DLMSFramework install smoke failed during install")
 endif()
+
+set(CONFIG_FILE "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkConfig.cmake")
+set(TARGETS_FILE "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkTargets.cmake")
+set(TARGETS_NOCONFIG_FILE "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkTargets-noconfig.cmake")
+
+foreach(required_file
+    "${CONFIG_FILE}"
+    "${TARGETS_FILE}"
+    "${TARGETS_NOCONFIG_FILE}")
+  if(NOT EXISTS "${required_file}")
+    message(FATAL_ERROR "DLMSFramework install smoke missing CMake file: ${required_file}")
+  endif()
+endforeach()
+
+file(READ "${CONFIG_FILE}" config_contents)
+if(NOT config_contents MATCHES "find_dependency\\(OpenSSL\\)")
+  message(FATAL_ERROR "DLMSFrameworkConfig.cmake does not declare OpenSSL dependency")
+endif()
+
+file(READ "${TARGETS_FILE}" targets_contents)
+file(READ "${TARGETS_NOCONFIG_FILE}" targets_noconfig_contents)
+foreach(required_export
+    "dlms::codec"
+    "dlms::io"
+    "dlms::protocol"
+    "dlms::cosem_server"
+    "dlms::runtime"
+    "dlms::framework")
+  if(NOT targets_contents MATCHES "${required_export}")
+    message(FATAL_ERROR "DLMSFrameworkTargets.cmake missing export: ${required_export}")
+  endif()
+endforeach()
+
+if(NOT targets_contents MATCHES "INTERFACE_INCLUDE_DIRECTORIES")
+  message(FATAL_ERROR "DLMSFrameworkTargets.cmake does not export include directories")
+endif()
+
+foreach(disallowed_pattern
+    "gtest"
+    "gmock"
+    "GTest::")
+  if(targets_contents MATCHES "${disallowed_pattern}" OR
+     targets_noconfig_contents MATCHES "${disallowed_pattern}")
+    message(FATAL_ERROR
+      "DLMSFramework exported targets contain test dependency pattern: ${disallowed_pattern}")
+  endif()
+endforeach()
 
 file(WRITE "${CONSUMER_DIR}/CMakeLists.txt" [=[
 cmake_minimum_required(VERSION 3.16)
@@ -123,3 +175,29 @@ execute_process(
 if(NOT build_result EQUAL 0)
   message(FATAL_ERROR "DLMSFramework install smoke failed during consumer build")
 endif()
+
+foreach(example_name
+    codec
+    protocol
+    runtime)
+  set(example_source_dir "${SOURCE_DIR}/examples/package-consumers/${example_name}")
+  set(example_build_dir "${EXAMPLES_BUILD_DIR}/${example_name}")
+
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" -S "${example_source_dir}" -B "${example_build_dir}"
+      -G "${GENERATOR}"
+      "-DDLMSFramework_DIR=${INSTALL_PREFIX}/lib/cmake/DLMSFramework"
+    RESULT_VARIABLE example_configure_result)
+  if(NOT example_configure_result EQUAL 0)
+    message(FATAL_ERROR
+      "DLMSFramework install smoke failed during ${example_name} example configure")
+  endif()
+
+  execute_process(
+    COMMAND "${CMAKE_COMMAND}" --build "${example_build_dir}"
+    RESULT_VARIABLE example_build_result)
+  if(NOT example_build_result EQUAL 0)
+    message(FATAL_ERROR
+      "DLMSFramework install smoke failed during ${example_name} example build")
+  endif()
+endforeach()

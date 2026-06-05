@@ -20,6 +20,20 @@ include/dlms/endpoint/listener_runtime.hpp
 include/dlms/endpoint/endpoint_factories.hpp
 ```
 
+Extension-point headers are intentionally split from concrete endpoint runtime
+classes:
+
+- `endpoint_descriptors.hpp` contains shared client/gateway descriptor aliases;
+- `apdu_channel_listener.hpp` contains `IApduChannelListener`;
+- `push_indication_handler.hpp` contains `IPushIndicationHandler`;
+- `gateway_interfaces.hpp` contains `IGatewayPolicy` and `IGatewayUpstream`;
+- `server_endpoint.hpp` consumes `dlms::server::IServerService` and
+  `dlms::cosem::ILogicalDevice` through their narrow interface headers.
+
+Applications that implement one of these ports can include the narrow header
+for that port without including the concrete listener, push, gateway, server,
+or default COSEM runtime declarations.
+
 ## Status Model
 
 ```cpp

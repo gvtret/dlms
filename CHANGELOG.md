@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.1 - 2026-06-05
+
+- Added install-tree package consumer examples for `dlms::codec`,
+  `dlms::protocol`, and `dlms::runtime`.
+- Extended package install smoke verification to build those examples against
+  the installed `DLMSFramework` package and audit exported CMake target files.
+- Documented CMake components in the versioning and release checklist docs.
+
 ## 0.3.0 - 2026-06-05
 
 - Added CMake package component support for the documented aggregate targets:

@@ -166,6 +166,7 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
       add_test(NAME dlms_package_install_smoke
         COMMAND ${CMAKE_COMMAND}
           -DBINARY_DIR=${CMAKE_CURRENT_BINARY_DIR}
+          -DSOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR}
           -DGENERATOR=${CMAKE_GENERATOR}
           -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/PackageInstallSmoke.cmake)
 

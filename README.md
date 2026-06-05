@@ -75,6 +75,9 @@ find_package(DLMSFramework REQUIRED CONFIG COMPONENTS runtime)
 target_link_libraries(app PRIVATE dlms::runtime)
 ```
 
+Minimal installed-package consumer examples are available under
+`examples/package-consumers` for `codec`, `protocol`, and `runtime`.
+
 Aggregate targets are available for narrower linking:
 
 | Target | Scope |

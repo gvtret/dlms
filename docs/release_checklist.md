@@ -21,6 +21,19 @@ package path is:
 build-release-mingw64/DLMSFramework-<version>.zip
 ```
 
+The default CTest suite includes package smoke checks that must pass before
+tagging:
+
+- `dlms_package_install_smoke` installs the package, audits exported CMake
+  target metadata, verifies the documented components
+  (`codec`, `io`, `protocol`, `cosem_server`, `runtime`, `framework`), and
+  builds the install-tree consumer examples;
+- `dlms_package_artifact_smoke` builds the ZIP, requires release metadata under
+  `share/doc/DLMSFramework`, and rejects bundled GoogleTest/GMock entries.
+
+Consumer-facing CMake examples live under `examples/package-consumers` and must
+continue to configure against the installed package, not the source tree.
+
 ## Tagging
 
 Create release tags from `master` only after the release commit is pushed and

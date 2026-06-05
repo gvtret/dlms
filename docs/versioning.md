@@ -34,7 +34,7 @@ Public compatibility covers:
 - documented C++ interfaces, status codes, option structures, and lifecycle
   behavior;
 - deterministic behavior promised by public examples and architecture docs;
-- CMake target names and documented build options.
+- CMake target names, package components, and documented build options.
 
 Internal tests, private helper classes, and implementation-only file layout are
 not public API unless they are documented as extension points.
@@ -49,8 +49,10 @@ The `dlms_release_tag_check` CTest is a no-op for normal branch and pull
 request runs, but validates that a release tag context uses the exact
 `v<version>` form that matches `VERSION`.
 The package smoke tests validate that the installed `DLMSFramework` CMake
-package is consumable and that the root build can produce a non-empty ZIP
-package artifact.
+package is consumable through the documented package components, that the
+exported targets contain the expected include/dependency metadata without test
+dependencies, and that the root build can produce a ZIP package artifact with
+the required release metadata.
 For local release verification on Windows/MSYS2, run
 `scripts/verify_release_mingw64.sh` from an MSYS2 shell. The script creates a
 fresh `build-release-mingw64` tree, configures with MinGW first in `PATH`,
@@ -67,6 +69,11 @@ Release changes should update:
 - `CHANGELOG.md`;
 - migration notes when behavior changes;
 - any public documentation affected by the compatibility scope.
+
+Changes to `DLMSFramework` package components are public CMake API changes. The
+documented components are `codec`, `io`, `protocol`, `cosem_server`, `runtime`,
+and `framework`; each maps to the corresponding `dlms::<component>` aggregate
+target.
 
 After the layer-modernization pass, any change that affects the installed
 headers, documented extension interfaces, exported CMake targets, release

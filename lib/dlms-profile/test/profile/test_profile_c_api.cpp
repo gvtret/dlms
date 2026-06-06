@@ -269,6 +269,7 @@ TEST(ProfileCApi, RejectsNullChannel)
             dlms_profile_send_apdu(nullptr, apdu, sizeof(apdu)));
   EXPECT_EQ(DLMS_PROFILE_STATUS_INVALID_ARGUMENT,
             dlms_profile_receive_apdu(nullptr, nullptr, 0u, &written));
+  EXPECT_EQ(0u, written);
 }
 
 TEST(ProfileCApi, RejectsInvalidApduAndReceiveBuffers)
@@ -288,6 +289,7 @@ TEST(ProfileCApi, RejectsInvalidApduAndReceiveBuffers)
   std::size_t written = 99u;
   EXPECT_EQ(DLMS_PROFILE_STATUS_INVALID_ARGUMENT,
             dlms_profile_receive_apdu(channel, nullptr, 1u, &written));
+  EXPECT_EQ(0u, written);
   EXPECT_EQ(DLMS_PROFILE_STATUS_INVALID_ARGUMENT,
             dlms_profile_receive_apdu(channel, nullptr, 0u, nullptr));
 

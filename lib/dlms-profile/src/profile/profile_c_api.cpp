@@ -565,6 +565,10 @@ dlms_profile_status_t dlms_profile_receive_apdu(
   size_t output_size,
   size_t* written_size)
 {
+  if (written_size != 0) {
+    *written_size = 0u;
+  }
+
   if (channel == 0 || channel->impl == 0) {
     return DLMS_PROFILE_STATUS_INVALID_ARGUMENT;
   }

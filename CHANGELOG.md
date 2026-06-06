@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.5 - 2026-06-06
+
+- Fixed Profile C API receive validation so a provided `written_size` output is
+  cleared before `dlms_profile_receive_apdu()` returns validation errors.
+- Added Profile C API regression coverage for receive output-size cleanup.
+
 ## 0.3.4 - 2026-06-06
 
 - Fixed APDU C API xDLMS encode validation so null output buffers return

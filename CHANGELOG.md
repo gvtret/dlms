@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.31 - 2026-06-06
+
+- Added Suite 0 AES key wrap/unwrap primitives for Security Setup key transfer.
+- Added RFC 3394 regression coverage for wrapping and unwrapping 128-bit keys
+  with a 128-bit key encryption key.
+- Updated the security roadmap and support matrix for the new key wrapping
+  primitive.
+
 ## 0.3.30 - 2026-06-06
 
 - Added endpoint lifecycle regression coverage for retrying HLS GMAC

@@ -21,7 +21,7 @@ Status values:
 | Suite 0 AES-GCM-128 primitives | Supported | `Suite0AesGcm`, key validation, GMAC and ciphered APDU tests exist. |
 | Suite 0 global unicast encryption key | Supported | `SecurityKeyRole::GlobalUnicastEncryption` is implemented through the key store. |
 | Suite 0 authentication key | Supported | `SecurityKeyRole::Authentication` is used by GMAC and ciphering. |
-| Suite 0 key encryption key | Partial | Key role exists, but key transfer and Security Setup IC methods return explicit unsupported status. |
+| Suite 0 key encryption key | Partial | Key role and AES key wrap/unwrap primitive exist; Security Setup IC key transfer method is still being wired to COSEM. |
 | Suite 0 global broadcast encryption key | Partial | Key role exists, but broadcast APDU policy is not implemented. |
 | Suite 0 dedicated key | Partial | Key role exists, but dedicated-key negotiation, lifetime and `ded_*` APDU use are not implemented. |
 | Suite 1 | Planned | Types allow `Suite1`, but ECDSA, ECDH, certificates and suite-specific APDU handling are not implemented. |
@@ -72,7 +72,7 @@ Status values:
 | Client and server system titles | Partial | `SecurityContext` stores titles and `CosemSecuritySetupObject` exposes encoded read-only system titles. |
 | Certificate array | Planned | Needed for Suite 1/2. |
 | `security_activate` | Partial | Implemented for AXDR enum policy activation with monotonic strengthening; association/session rebinding and full СПОДЭС/СПОДУС policy profiles remain incomplete. |
-| `global_key_transfer` / key transfer | Planned | Needs KEK wrapping, key ids and counter reset behavior. |
+| `global_key_transfer` / key transfer | Partial | Suite 0 AES key wrap/unwrap primitive exists; COSEM method parsing, key sink integration and counter reset behavior remain. |
 | `key_agreement` | Planned | Needs ECDH and general-ciphering APDU. |
 | `generate_key_pair` | Planned | Needed for Suite 1/2 server key management. |
 | `generate_certificate_request` | Planned | Needed for certificate lifecycle. |

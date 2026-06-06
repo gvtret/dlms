@@ -69,6 +69,8 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
    - Suite 0 gaps: Security Setup IC `64`, `security_activate`,
      `global_key_transfer`, `change_HLS_secret`, dedicated key и dedicated
      ciphering APDU.
+   - Статус: Suite 0 AES key wrap/unwrap primitive добавлен в `0.3.31`;
+     COSEM method parsing и key sink integration остаются следующими шагами.
    - Suite 1/2 gaps: ECDSA HLS, ECDH key agreement, certificates, key
      agreement methods, AES-GCM-256 and SHA-384.
 2. Реализовать Security Setup IC `64` как COSEM extension point.
@@ -80,8 +82,9 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
      the configured security policy.
    - Статус: read-only attributes для policy, suite и system titles добавлены
      в `CosemSecuritySetupObject`; `security_activate` выполняет monotonic
-     policy strengthening; key/certificate/key agreement semantics остаются
-     следующими задачами.
+     policy strengthening; Suite 0 AES key wrap/unwrap primitive добавлен в
+     `0.3.31`; key/certificate/key agreement semantics остаются следующими
+     задачами.
 3. Invocation counter production contract.
    - IV is `system_title[8] || invocation_counter[4]`.
    - Counter must be monotonic for each key/system-title context.

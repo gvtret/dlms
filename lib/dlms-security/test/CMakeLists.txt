@@ -16,6 +16,7 @@ add_executable(dlms_security_tests
   security/test_invocation_counter_store.cpp
   security/test_key_store.cpp
   security/test_suite0_aes_gcm.cpp
+  security/test_suite0_key_wrap.cpp
   security/test_security_status.cpp
   security/test_security_types.cpp)
 

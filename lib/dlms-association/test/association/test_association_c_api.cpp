@@ -15,7 +15,19 @@ namespace {
 
 struct CallbackChannel
 {
+  CallbackChannel()
+    : open(false)
+    , openStatus(DLMS_ASSOCIATION_STATUS_OK)
+    , closeStatus(DLMS_ASSOCIATION_STATUS_OK)
+    , sendStatus(DLMS_ASSOCIATION_STATUS_OK)
+    , receiveStatus(DLMS_ASSOCIATION_STATUS_OK)
+  {
+  }
+
   bool open;
+  dlms_association_status_t openStatus;
+  dlms_association_status_t closeStatus;
+  dlms_association_status_t sendStatus;
   std::vector<std::vector<std::uint8_t> > sends;
   std::vector<std::vector<std::uint8_t> > receives;
   dlms_association_status_t receiveStatus;
@@ -77,14 +89,18 @@ std::vector<std::uint8_t> MakeRlreBytes()
 
 dlms_association_status_t CallbackOpen(void* userData)
 {
-  static_cast<CallbackChannel*>(userData)->open = true;
-  return DLMS_ASSOCIATION_STATUS_OK;
+  CallbackChannel* channel = static_cast<CallbackChannel*>(userData);
+  channel->open = channel->openStatus == DLMS_ASSOCIATION_STATUS_OK;
+  return channel->openStatus;
 }
 
 dlms_association_status_t CallbackClose(void* userData)
 {
-  static_cast<CallbackChannel*>(userData)->open = false;
-  return DLMS_ASSOCIATION_STATUS_OK;
+  CallbackChannel* channel = static_cast<CallbackChannel*>(userData);
+  if (channel->closeStatus == DLMS_ASSOCIATION_STATUS_OK) {
+    channel->open = false;
+  }
+  return channel->closeStatus;
 }
 
 dlms_association_status_t CallbackSend(
@@ -93,9 +109,11 @@ dlms_association_status_t CallbackSend(
   std::size_t inputSize)
 {
   CallbackChannel* channel = static_cast<CallbackChannel*>(userData);
-  channel->sends.push_back(
-    std::vector<std::uint8_t>(input, input + inputSize));
-  return DLMS_ASSOCIATION_STATUS_OK;
+  if (channel->sendStatus == DLMS_ASSOCIATION_STATUS_OK) {
+    channel->sends.push_back(
+      std::vector<std::uint8_t>(input, input + inputSize));
+  }
+  return channel->sendStatus;
 }
 
 dlms_association_status_t CallbackReceive(
@@ -468,12 +486,25 @@ TEST(AssociationCApi, RejectsMissingCallbacksAndNullHandles)
 
   EXPECT_EQ(nullptr,
             dlms_association_create_client_from_callbacks(&callbacks, 0));
+  EXPECT_EQ(nullptr,
+            dlms_association_create_server_from_callbacks(&callbacks, 0));
+  EXPECT_EQ(nullptr, dlms_association_create_client_from_callbacks(nullptr, 0));
+  EXPECT_EQ(nullptr, dlms_association_create_server_from_callbacks(nullptr, 0));
+
   EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
             dlms_association_open(nullptr));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_close(nullptr));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_establish(nullptr));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_release(nullptr));
   EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
             dlms_association_get_result(nullptr, nullptr));
   EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
             dlms_association_server_open(nullptr));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_server_close(nullptr));
   EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
             dlms_association_accept(nullptr));
   EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
@@ -488,4 +519,155 @@ TEST(AssociationCApi, RejectsMissingCallbacksAndNullHandles)
   EXPECT_EQ(0, dlms_association_server_is_associated(nullptr));
   dlms_association_destroy_client(nullptr);
   dlms_association_destroy_server(nullptr);
+}
+
+TEST(AssociationCApi, RejectsNullResultForValidHandles)
+{
+  CallbackChannel clientChannel;
+  dlms_association_channel_callbacks_t clientCallbacks =
+    MakeCallbacks(&clientChannel);
+  dlms_association_client_t* client =
+    dlms_association_create_client_from_callbacks(&clientCallbacks, 0);
+  ASSERT_NE(nullptr, client);
+
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_get_result(client, nullptr));
+
+  CallbackChannel serverChannel;
+  dlms_association_channel_callbacks_t serverCallbacks =
+    MakeCallbacks(&serverChannel);
+  dlms_association_server_t* server =
+    dlms_association_create_server_from_callbacks(&serverCallbacks, 0);
+  ASSERT_NE(nullptr, server);
+
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_server_get_result(server, nullptr));
+
+  dlms_association_destroy_client(client);
+  dlms_association_destroy_server(server);
+}
+
+TEST(AssociationCApi, CallbackOpenFailurePropagates)
+{
+  CallbackChannel channel;
+  channel.openStatus = DLMS_ASSOCIATION_STATUS_CHANNEL_OPEN_FAILED;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_client_t* client =
+    dlms_association_create_client_from_callbacks(&callbacks, 0);
+  ASSERT_NE(nullptr, client);
+
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_CHANNEL_OPEN_FAILED,
+            dlms_association_open(client));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_CLOSED,
+            dlms_association_get_state(client));
+  EXPECT_EQ(0, dlms_association_is_associated(client));
+  EXPECT_FALSE(channel.open);
+
+  dlms_association_destroy_client(client);
+}
+
+TEST(AssociationCApi, CallbackSendFailurePropagatesFromEstablish)
+{
+  CallbackChannel channel;
+  channel.sendStatus = DLMS_ASSOCIATION_STATUS_SEND_FAILED;
+  channel.receives.push_back(MakeAareBytes());
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_client_t* client =
+    dlms_association_create_client_from_callbacks(&callbacks, 0);
+  ASSERT_NE(nullptr, client);
+
+  ASSERT_EQ(DLMS_ASSOCIATION_STATUS_OK, dlms_association_open(client));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_SEND_FAILED,
+            dlms_association_establish(client));
+  EXPECT_TRUE(channel.sends.empty());
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
+            dlms_association_get_state(client));
+
+  dlms_association_destroy_client(client);
+}
+
+TEST(AssociationCApi, CallbackCloseFailurePropagatesAndKeepsOpenState)
+{
+  CallbackChannel channel;
+  channel.closeStatus = DLMS_ASSOCIATION_STATUS_CHANNEL_CLOSE_FAILED;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_client_t* client =
+    dlms_association_create_client_from_callbacks(&callbacks, 0);
+  ASSERT_NE(nullptr, client);
+
+  ASSERT_EQ(DLMS_ASSOCIATION_STATUS_OK, dlms_association_open(client));
+  EXPECT_TRUE(channel.open);
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_CHANNEL_CLOSE_FAILED,
+            dlms_association_close(client));
+  EXPECT_TRUE(channel.open);
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
+            dlms_association_get_state(client));
+
+  dlms_association_destroy_client(client);
+}
+
+TEST(AssociationCApi, ServerCallbackOpenFailurePropagates)
+{
+  CallbackChannel channel;
+  channel.openStatus = DLMS_ASSOCIATION_STATUS_CHANNEL_OPEN_FAILED;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_server_t* server =
+    dlms_association_create_server_from_callbacks(&callbacks, 0);
+  ASSERT_NE(nullptr, server);
+
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_CHANNEL_OPEN_FAILED,
+            dlms_association_server_open(server));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_CLOSED,
+            dlms_association_server_get_state(server));
+  EXPECT_EQ(0, dlms_association_server_is_associated(server));
+  EXPECT_FALSE(channel.open);
+
+  dlms_association_destroy_server(server);
+}
+
+TEST(AssociationCApi, ServerCallbackReceiveFailurePropagatesFromAccept)
+{
+  CallbackChannel channel;
+  channel.receiveStatus = DLMS_ASSOCIATION_STATUS_RECEIVE_FAILED;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_server_t* server =
+    dlms_association_create_server_from_callbacks(&callbacks, 0);
+  ASSERT_NE(nullptr, server);
+
+  ASSERT_EQ(DLMS_ASSOCIATION_STATUS_OK,
+            dlms_association_server_open(server));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_RECEIVE_FAILED,
+            dlms_association_accept(server));
+  EXPECT_TRUE(channel.sends.empty());
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
+            dlms_association_server_get_state(server));
+
+  dlms_association_destroy_server(server);
+}
+
+TEST(AssociationCApi, ServerCallbackCloseFailurePropagatesAndKeepsOpenState)
+{
+  CallbackChannel channel;
+  channel.closeStatus = DLMS_ASSOCIATION_STATUS_CHANNEL_CLOSE_FAILED;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_server_t* server =
+    dlms_association_create_server_from_callbacks(&callbacks, 0);
+  ASSERT_NE(nullptr, server);
+
+  ASSERT_EQ(DLMS_ASSOCIATION_STATUS_OK,
+            dlms_association_server_open(server));
+  EXPECT_TRUE(channel.open);
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_CHANNEL_CLOSE_FAILED,
+            dlms_association_server_close(server));
+  EXPECT_TRUE(channel.open);
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
+            dlms_association_server_get_state(server));
+
+  dlms_association_destroy_server(server);
 }

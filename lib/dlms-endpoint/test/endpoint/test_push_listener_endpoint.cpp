@@ -17,6 +17,7 @@ public:
     , receiveStatus(dlms::profile::ProfileStatus::Ok)
     , sendStatus(dlms::profile::ProfileStatus::Ok)
     , open(false)
+    , openCalls(0u)
     , receiveCalls(0u)
     , sendCalls(0u)
   {
@@ -24,6 +25,7 @@ public:
 
   dlms::profile::ProfileStatus Open()
   {
+    ++openCalls;
     open = true;
     return openStatus;
   }
@@ -87,6 +89,7 @@ public:
   dlms::profile::ProfileStatus receiveStatus;
   dlms::profile::ProfileStatus sendStatus;
   bool open;
+  std::size_t openCalls;
   std::size_t receiveCalls;
   std::size_t sendCalls;
   std::vector<std::uint8_t> nextReceive;
@@ -224,6 +227,21 @@ TEST(PushListenerEndpoint, OpensAndClosesChannel)
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
   EXPECT_FALSE(endpoint.IsOpen());
   EXPECT_FALSE(channel.IsOpen());
+}
+
+TEST(PushListenerEndpoint, OpenIsIdempotentWhenAlreadyOpen)
+{
+  FakeApduChannel channel;
+  RecordingPushHandler handler;
+  dlms::endpoint::PushListenerEndpoint endpoint(channel, handler);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.openCalls);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.openCalls);
 }
 
 TEST(PushListenerEndpoint, RunOnceRequiresOpenEndpoint)

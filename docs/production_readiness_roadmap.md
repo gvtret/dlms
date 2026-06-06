@@ -41,6 +41,9 @@
 ## P0. Endpoint, client и server lifecycle
 
 1. Проверить idempotency `Open()`, `Close()`, `RunOnce()` и listener runtime.
+   - Статус: listener runtime `Open()`/`Close()` coverage уже есть;
+     server, push listener и gateway endpoint repeated `Open()` coverage
+     добавлен в `0.3.25`.
 2. Проверить ошибки при частично открытых transport/profile/association цепочках.
 3. Добавить regression tests для cleanup при неуспешном open/association.
 4. Проверить, что bounded loops не скрывают `Timeout`, `Closed`, `InvalidState`.

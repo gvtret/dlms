@@ -22,6 +22,7 @@ public:
     , receiveStatus(dlms::profile::ProfileStatus::Ok)
     , sendStatus(dlms::profile::ProfileStatus::Ok)
     , open(false)
+    , openCalls(0u)
     , receiveCalls(0u)
     , sendCalls(0u)
   {
@@ -29,6 +30,7 @@ public:
 
   dlms::profile::ProfileStatus Open()
   {
+    ++openCalls;
     open = true;
     return openStatus;
   }
@@ -92,6 +94,7 @@ public:
   dlms::profile::ProfileStatus receiveStatus;
   dlms::profile::ProfileStatus sendStatus;
   bool open;
+  std::size_t openCalls;
   std::size_t receiveCalls;
   std::size_t sendCalls;
   std::vector<std::uint8_t> nextReceive;
@@ -110,6 +113,7 @@ public:
     , setStatus(dlms::endpoint::EndpointStatus::Ok)
     , actionStatus(dlms::endpoint::EndpointStatus::Ok)
     , open(false)
+    , openCalls(0u)
     , getCalls(0u)
     , setCalls(0u)
     , actionCalls(0u)
@@ -119,6 +123,7 @@ public:
 
   dlms::endpoint::EndpointStatus Open()
   {
+    ++openCalls;
     open = openStatus == dlms::endpoint::EndpointStatus::Ok;
     return openStatus;
   }
@@ -178,6 +183,7 @@ public:
   dlms::endpoint::EndpointStatus setStatus;
   dlms::endpoint::EndpointStatus actionStatus;
   bool open;
+  std::size_t openCalls;
   std::size_t getCalls;
   std::size_t setCalls;
   std::size_t actionCalls;
@@ -429,6 +435,24 @@ TEST(GatewayEndpoint, OpensAndClosesDownstreamAndUpstream)
   EXPECT_FALSE(endpoint.IsOpen());
   EXPECT_FALSE(channel.IsOpen());
   EXPECT_FALSE(upstream.IsOpen());
+}
+
+TEST(GatewayEndpoint, OpenIsIdempotentWhenAlreadyOpen)
+{
+  FakeApduChannel channel;
+  FakeGatewayUpstream upstream;
+  FakeGatewayPolicy policy;
+  dlms::endpoint::GatewayEndpoint endpoint(channel, upstream, policy);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.openCalls);
+  EXPECT_EQ(1u, upstream.openCalls);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.openCalls);
+  EXPECT_EQ(1u, upstream.openCalls);
 }
 
 TEST(GatewayEndpoint, OpenRejectsInvalidDownstreamOptionsBeforeSideEffects)

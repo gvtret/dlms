@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.25 - 2026-06-06
+
+- Added endpoint lifecycle regression coverage for idempotent `Open()` on
+  server, push listener and gateway endpoints.
+- Verified repeated `Open()` calls do not reopen downstream channels or
+  gateway upstreams when endpoints are already open.
+- Updated the production-ready roadmap for endpoint lifecycle idempotency
+  coverage.
+
 ## 0.3.24 - 2026-06-06
 
 - Added sender-aware invocation counter validation to the invocation counter

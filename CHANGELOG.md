@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.9 - 2026-06-06
+
+- Fixed HDLC C API decode, stream decoder, and reassembler entry points so
+  provided output frame structures are cleared before validation errors.
+- Added HDLC C API regression coverage for output frame cleanup.
+
 ## 0.3.8 - 2026-06-06
 
 - Fixed Association C API result accessors so provided result outputs are

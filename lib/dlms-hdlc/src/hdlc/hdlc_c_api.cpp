@@ -116,6 +116,22 @@ dlms::hdlc::HdlcStatus FromCppFrame(
   return dlms::hdlc::HdlcStatus::Ok;
 }
 
+void ClearFrame(dlms_hdlc_frame_t* frame)
+{
+  if (frame == 0) {
+    return;
+  }
+
+  frame->segmented = 0u;
+  frame->destination_address_raw = 0u;
+  frame->destination_address_size = 0u;
+  frame->source_address_raw = 0u;
+  frame->source_address_size = 0u;
+  frame->control = 0u;
+  frame->information_data = 0;
+  frame->information_size = 0u;
+}
+
 } // namespace
 
 extern "C" {
@@ -167,6 +183,7 @@ dlms_hdlc_status_t dlms_hdlc_decode_frame(
   if (information_size != 0) {
     *information_size = 0u;
   }
+  ClearFrame(frame);
 
   if (input == 0 || frame == 0 || information_size == 0) {
     return DLMS_HDLC_STATUS_INVALID_ARGUMENT;
@@ -250,6 +267,7 @@ dlms_hdlc_status_t dlms_hdlc_stream_decoder_push(
   if (information_size != 0) {
     *information_size = 0u;
   }
+  ClearFrame(frame);
 
   if (decoder == 0 || frame == 0 || information_size == 0) {
     return DLMS_HDLC_STATUS_INVALID_ARGUMENT;
@@ -354,6 +372,7 @@ dlms_hdlc_status_t dlms_hdlc_reassembler_push_frame(
   if (has_completed_frame != 0) {
     *has_completed_frame = 0;
   }
+  ClearFrame(output_frame);
 
   if (reassembler == 0 || input_frame == 0 || output_frame == 0 ||
       output_information_size == 0 || has_completed_frame == 0) {

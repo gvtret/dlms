@@ -36,6 +36,32 @@ dlms_hdlc_frame_t MakeInformationFrame(const std::uint8_t* information,
   return frame;
 }
 
+dlms_hdlc_frame_t FilledFrame()
+{
+  dlms_hdlc_frame_t frame;
+  frame.segmented = 1u;
+  frame.destination_address_raw = 99u;
+  frame.destination_address_size = 4u;
+  frame.source_address_raw = 99u;
+  frame.source_address_size = 4u;
+  frame.control = 99u;
+  frame.information_data = reinterpret_cast<const std::uint8_t*>(1);
+  frame.information_size = 99u;
+  return frame;
+}
+
+void ExpectClearedFrame(const dlms_hdlc_frame_t& frame)
+{
+  EXPECT_EQ(0u, frame.segmented);
+  EXPECT_EQ(0u, frame.destination_address_raw);
+  EXPECT_EQ(0u, frame.destination_address_size);
+  EXPECT_EQ(0u, frame.source_address_raw);
+  EXPECT_EQ(0u, frame.source_address_size);
+  EXPECT_EQ(0u, frame.control);
+  EXPECT_EQ(static_cast<const std::uint8_t*>(0), frame.information_data);
+  EXPECT_EQ(0u, frame.information_size);
+}
+
 void EncodeFrameOrFail(const dlms_hdlc_frame_t& frame,
                        std::uint8_t* output,
                        std::size_t outputSize,
@@ -221,6 +247,59 @@ TEST(HdlcCApi, StreamDecoderResetsAfterDecodeError)
   EXPECT_EQ(0x93u, decoded.control);
 
   dlms_hdlc_stream_decoder_destroy(decoder);
+}
+
+TEST(HdlcCApi, OutputFramesAreClearedBeforeValidationErrors)
+{
+  dlms_hdlc_frame_t decoded = FilledFrame();
+  std::uint8_t information[8] = {};
+  std::size_t informationSize = 99u;
+  EXPECT_EQ(DLMS_HDLC_STATUS_INVALID_ARGUMENT,
+            dlms_hdlc_decode_frame(0,
+                                   1u,
+                                   0,
+                                   &decoded,
+                                   information,
+                                   sizeof(information),
+                                   &informationSize));
+  ExpectClearedFrame(decoded);
+  EXPECT_EQ(0u, informationSize);
+
+  dlms_hdlc_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_stream_decoder_create(0, &decoder));
+  decoded = FilledFrame();
+  informationSize = 99u;
+  EXPECT_EQ(DLMS_HDLC_STATUS_INVALID_ARGUMENT,
+            dlms_hdlc_stream_decoder_push(decoder,
+                                          0,
+                                          1u,
+                                          &decoded,
+                                          information,
+                                          sizeof(information),
+                                          &informationSize));
+  ExpectClearedFrame(decoded);
+  EXPECT_EQ(0u, informationSize);
+  dlms_hdlc_stream_decoder_destroy(decoder);
+
+  dlms_hdlc_reassembler_t* reassembler = 0;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_reassembler_create(0, &reassembler));
+  dlms_hdlc_frame_t output = FilledFrame();
+  std::size_t outputInformationSize = 99u;
+  int hasCompletedFrame = 99;
+  EXPECT_EQ(DLMS_HDLC_STATUS_INVALID_ARGUMENT,
+            dlms_hdlc_reassembler_push_frame(reassembler,
+                                             0,
+                                             &output,
+                                             information,
+                                             sizeof(information),
+                                             &outputInformationSize,
+                                             &hasCompletedFrame));
+  ExpectClearedFrame(output);
+  EXPECT_EQ(0u, outputInformationSize);
+  EXPECT_EQ(0, hasCompletedFrame);
+  dlms_hdlc_reassembler_destroy(reassembler);
 }
 
 TEST(HdlcCApi, StreamDecoderLifecycle)

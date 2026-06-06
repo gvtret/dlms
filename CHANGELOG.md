@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.39 - 2026-06-06
+
+- Added Security Setup regression coverage for the currently unsupported
+  method id range.
+
 ## 0.3.38 - 2026-06-06
 
 - Added Security Setup key-transfer regression coverage for unsupported

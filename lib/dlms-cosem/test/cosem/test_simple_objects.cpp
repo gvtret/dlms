@@ -672,6 +672,10 @@ TEST(CosemSecuritySetupObject, RejectsWritesAndReportsUnsupportedMethods)
             object.ReadAttribute(99u, bytes));
   EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
             object.InvokeMethod(2u, bytes, bytes));
+  for (std::uint8_t methodId = 3u; methodId <= 8u; ++methodId) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(methodId, bytes, bytes));
+  }
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(99u, bytes, bytes));
 }

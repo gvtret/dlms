@@ -95,7 +95,8 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
      transfer wiring добавлен в `0.3.33`; invocation-counter reset policy
      hook добавлен в `0.3.34`; malformed key-transfer parser coverage
      добавлен в `0.3.35`; unsupported suite key-transfer coverage добавлен
-     в `0.3.38`; certificate и key agreement semantics остаются следующими
+     в `0.3.38`; unsupported Security Setup method range coverage добавлен
+     в `0.3.39`; certificate и key agreement semantics остаются следующими
      задачами.
 3. Invocation counter production contract.
    - IV is `system_title[8] || invocation_counter[4]`.

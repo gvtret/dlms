@@ -869,6 +869,69 @@ TEST(ServerEndpoint, HighPasswordRejectsInvalidHlsReply)
   EXPECT_EQ(1u, channel.sentFrames.size());
 }
 
+TEST(ServerEndpoint, HighPasswordCanRetryAfterInvalidHlsReply)
+{
+  const std::uint8_t passwordBytes[] = {'s', 'e', 'c', 'r', 'e', 't'};
+  const std::vector<std::uint8_t> password(
+    passwordBytes,
+    passwordBytes + sizeof(passwordBytes));
+  std::vector<std::uint8_t> clientChallenge(16u, 0u);
+  for (std::size_t i = 0u; i < clientChallenge.size(); ++i) {
+    clientChallenge[i] = static_cast<std::uint8_t>(0x40u + i);
+  }
+
+  FakeApduChannel channel;
+  channel.receiveQueue.push_back(EncodeHlsAarq(clientChallenge));
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+
+  dlms::endpoint::ServerEndpointOptions options =
+    dlms::endpoint::DefaultServerEndpointOptions();
+  options.negotiateAssociation = true;
+  options.security.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::HighPassword;
+  options.security.password = &passwordBytes[0];
+  options.security.passwordSize = sizeof(passwordBytes);
+
+  dlms::endpoint::ServerEndpoint endpoint(channel, options, logicalDevice);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  ASSERT_TRUE(endpoint.IsOpen());
+  ASSERT_EQ(1u, channel.sentFrames.size());
+
+  const dlms::apdu::AcseApdu aare = DecodeAcseResponse(channel.sentFrames[0]);
+  const std::vector<std::uint8_t> serverChallenge =
+    AuthenticationFieldValue(aare, 0xAAu);
+  ASSERT_FALSE(serverChallenge.empty());
+
+  channel.receiveQueue.push_back(
+    EncodeHlsReplyAction(std::vector<std::uint8_t>(16u, 0x00u)));
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::SecurityFailed,
+            endpoint.RunOnce());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_FALSE(endpoint.Context().IsAssociated());
+  EXPECT_EQ(1u, channel.sentFrames.size());
+
+  FixedRandomSource random(0x44u);
+  dlms::security::HlsHighAuthenticator clientHls(
+    SecurityView(password),
+    random);
+  std::vector<std::uint8_t> clientResponse;
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            clientHls.BuildResponse(
+              SecurityView(serverChallenge),
+              clientResponse));
+  channel.receiveQueue.push_back(EncodeHlsReplyAction(clientResponse));
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.RunOnce());
+  EXPECT_TRUE(endpoint.Context().IsAssociated());
+  EXPECT_TRUE(endpoint.Context().AssociationContext().authenticated);
+  ASSERT_EQ(2u, channel.sentFrames.size());
+  const dlms::apdu::XdlmsApdu hlsResponse =
+    DecodeXdlmsResponse(channel.sentFrames[1]);
+  EXPECT_EQ(dlms::apdu::XdlmsApduKind::ActionResponse, hlsResponse.kind);
+  EXPECT_EQ(0u, hlsResponse.actionResponseAny.normal.result);
+}
+
 TEST(ServerEndpoint, OpenCanNegotiateHighGmacAssociationWithHlsReply)
 {
   const std::uint8_t serverTitleBytes[] =

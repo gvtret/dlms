@@ -48,8 +48,9 @@
    - Статус: server и push listener endpoint close-failure coverage добавлен
      в `0.3.26`; gateway downstream close-failure coverage добавлен в
      `0.3.27`; server и push listener malformed negotiated open retry
-     coverage добавлен в `0.3.28`; open-failure cleanup coverage требует
-     продолжения по high-authentication negotiated paths.
+     coverage добавлен в `0.3.28`; high-password HLS retry after invalid
+     reply coverage добавлен в `0.3.29`; open-failure cleanup coverage
+     требует продолжения по HLS GMAC negotiated paths.
 3. Добавить regression tests для cleanup при неуспешном open/association.
 4. Проверить, что bounded loops не скрывают `Timeout`, `Closed`, `InvalidState`.
 

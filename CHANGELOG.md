@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.29 - 2026-06-06
+
+- Added endpoint lifecycle regression coverage for retrying high-password HLS
+  authentication after an invalid client reply.
+- Verified `ServerEndpoint` remains open, unassociated and able to accept a
+  later valid HLS reply after the first HLS verification failure.
+- Updated the production-ready roadmap for high-authentication negotiated
+  failure coverage.
+
 ## 0.3.28 - 2026-06-06
 
 - Added endpoint lifecycle regression coverage for retrying negotiated server

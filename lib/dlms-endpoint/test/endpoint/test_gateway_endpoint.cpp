@@ -492,6 +492,22 @@ TEST(GatewayEndpoint, CloseCleansDownstreamAfterUpstreamCloseFailure)
   EXPECT_FALSE(upstream.IsOpen());
 }
 
+TEST(GatewayEndpoint, DownstreamCloseFailureKeepsEndpointOpen)
+{
+  FakeApduChannel channel;
+  FakeGatewayUpstream upstream;
+  FakeGatewayPolicy policy;
+  dlms::endpoint::GatewayEndpoint endpoint(channel, upstream, policy);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  channel.closeStatus = dlms::profile::ProfileStatus::WriteFailed;
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.Close());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_FALSE(upstream.IsOpen());
+}
+
 TEST(GatewayEndpoint, RunOnceRequiresOpenEndpoint)
 {
   FakeApduChannel channel;

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.27 - 2026-06-06
+
+- Added endpoint lifecycle regression coverage for gateway downstream close
+  failures.
+- Verified `GatewayEndpoint` remains logically open when the downstream APDU
+  channel reports a close failure.
+- Updated the production-ready roadmap for gateway close-failure lifecycle
+  coverage.
+
 ## 0.3.26 - 2026-06-06
 
 - Added endpoint lifecycle regression coverage for close failures on server and

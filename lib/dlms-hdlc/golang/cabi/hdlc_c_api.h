@@ -113,6 +113,9 @@ typedef struct dlms_hdlc_reassembler_t
 
 /**
  * @brief Encode one complete HDLC Type 3 frame.
+ *
+ * On `DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL`, `written_size` receives the
+ * required encoded frame size and no partial frame is written.
  */
 dlms_hdlc_status_t dlms_hdlc_encode_frame(
   const dlms_hdlc_frame_t* frame,

@@ -164,7 +164,9 @@ TEST(HdlcCApi, ReportsSmallOutputBuffer)
                                    output,
                                    sizeof(output),
                                    &writtenSize));
-  EXPECT_EQ(0u, writtenSize);
+  EXPECT_EQ(9u, writtenSize);
+  EXPECT_EQ(0u, output[0]);
+  EXPECT_EQ(0u, output[1]);
 }
 
 TEST(HdlcCApi, ValidatesNullArguments)

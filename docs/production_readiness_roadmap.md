@@ -24,8 +24,8 @@
    - `writtenSize`/`written_size`/`data_size` должны явно сообщать требуемый
      размер там, где API может его вычислить.
    - Малый буфер не должен приводить к частично записанному результату.
-   - Уже закрыто для LLC encode, APDU raw xDLMS encode и Wrapper encode;
-     следующий кандидат: HDLC encode.
+   - Уже закрыто для LLC encode, APDU raw xDLMS encode, Wrapper encode и
+     HDLC encode.
 2. Завершить аудит очистки выходных структур C API.
    - Все выходные указатели очищаются до валидации.
    - Ошибки не оставляют старые значения в result/view/output структурах.
@@ -117,6 +117,6 @@
 2. P0: повторить тот же контракт для Wrapper encode. Статус: выполнено в
    `0.3.17`.
 3. P0: повторить тот же контракт для HDLC encode, если strict encoder может
-   вычислять полный размер до записи.
+   вычислять полный размер до записи. Статус: выполнено в `0.3.18`.
 4. P0: пройти C API output cleanup audit после required-size унификации.
 5. P0: перейти к endpoint lifecycle cleanup tests.

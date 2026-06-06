@@ -132,7 +132,9 @@ typedef struct dlms_hdlc_reassembler_t dlms_hdlc_reassembler_t;
  * @param limits Optional limits; null selects defaults.
  * @param output Destination buffer; must not be null.
  * @param output_size Size of `output` in bytes.
- * @param written_size Receives encoded byte count; must not be null.
+ * @param written_size Receives encoded byte count on success, or the required
+ * encoded frame size on `DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL`; must not be
+ * null.
  * @return Stable C ABI status code.
  */
 dlms_hdlc_status_t dlms_hdlc_encode_frame(

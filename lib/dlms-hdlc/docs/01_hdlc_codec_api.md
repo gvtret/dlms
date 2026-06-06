@@ -234,6 +234,10 @@ HdlcStatus EncodeFrameToBuffer(
   std::size_t& writtenSize);
 ```
 
+When `outputSize` is smaller than the encoded frame, the function returns
+`OutputBufferTooSmall`, sets `writtenSize` to the required encoded frame size,
+and does not write a partial frame.
+
 Convenience API:
 
 ```cpp

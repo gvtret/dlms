@@ -112,6 +112,7 @@ HdlcStatus EncodeFrameToBuffer(
   }
 
   if (outputSize < fullFrameSize) {
+    writtenSize = fullFrameSize;
     return HdlcStatus::OutputBufferTooSmall;
   }
 

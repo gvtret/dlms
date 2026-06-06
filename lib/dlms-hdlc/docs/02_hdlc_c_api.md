@@ -98,6 +98,10 @@ dlms_hdlc_status_t dlms_hdlc_encode_frame(
   size_t* written_size);
 ```
 
+When `output_size` is too small, `dlms_hdlc_encode_frame()` returns
+`DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL`, writes the required encoded frame
+size to `written_size`, and does not write a partial frame.
+
 ## 7. Decode Function
 
 ```c

@@ -138,7 +138,9 @@ TEST(HdlcFrameEncoder, EncodeFrameToBufferReportsSmallOutput)
                                 output,
                                 sizeof(output),
                                 written));
-  EXPECT_EQ(0u, written);
+  EXPECT_EQ(10u, written);
+  EXPECT_EQ(0u, output[0]);
+  EXPECT_EQ(0u, output[1]);
 }
 
 TEST(HdlcFrameEncoder, RejectsNullInformationWithNonZeroSize)

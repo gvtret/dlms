@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.18 - 2026-06-06
+
+- Fixed HDLC strict encode and C API encode small-buffer handling so
+  `written_size` reports the required encoded frame size on
+  `OutputBufferTooSmall` without writing a partial frame.
+- Documented the HDLC small-output-buffer size contract.
+
 ## 0.3.17 - 2026-06-06
 
 - Fixed Wrapper strict encode and C API encode small-buffer handling so

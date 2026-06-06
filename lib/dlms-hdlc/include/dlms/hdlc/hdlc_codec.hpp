@@ -22,7 +22,8 @@ namespace hdlc {
  * @param limits Runtime frame and information-size limits.
  * @param output Destination buffer for the complete encoded frame.
  * @param outputSize Size of `output` in bytes.
- * @param writtenSize Receives the number of bytes written on success.
+ * @param writtenSize Receives the number of bytes written on success, or the
+ * required encoded frame size on `OutputBufferTooSmall`.
  * @return `Ok` on success, or a validation/buffer status on failure.
  */
 HdlcStatus EncodeFrameToBuffer(

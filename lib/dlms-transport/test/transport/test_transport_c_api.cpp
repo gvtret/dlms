@@ -105,6 +105,10 @@ TEST(TransportCApi, TcpLifecycleAndInvalidArguments)
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
             dlms_transport_tcp_read_some(tcp, output, sizeof(output), &bytesRead));
   EXPECT_EQ(0u, bytesRead);
+  bytesRead = 7u;
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_read_some(tcp, 0, 1u, &bytesRead));
+  EXPECT_EQ(0u, bytesRead);
 
   const std::uint8_t input[] = { 0x01u };
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
@@ -206,6 +210,10 @@ TEST(TransportCApi, UdpLifecycleAndInvalidArguments)
                                        sizeof(output),
                                        &bytesRead));
   EXPECT_EQ(0u, bytesRead);
+  bytesRead = 7u;
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_receive(udp, 0, 1u, &bytesRead));
+  EXPECT_EQ(0u, bytesRead);
 
   const std::uint8_t input[] = { 0x01u };
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
@@ -291,6 +299,10 @@ TEST(TransportCApi, SerialLifecycleAndInvalidDevice)
                                             output,
                                             sizeof(output),
                                             &bytesRead));
+  EXPECT_EQ(0u, bytesRead);
+  bytesRead = 7u;
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_read_some(serial, 0, 1u, &bytesRead));
   EXPECT_EQ(0u, bytesRead);
 
   const std::uint8_t input[] = { 0x01u };

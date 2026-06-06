@@ -98,6 +98,11 @@ bool ValidStopBits(dlms_transport_serial_stop_bits_t stopBits)
     stopBits == DLMS_TRANSPORT_SERIAL_STOP_BITS_TWO;
 }
 
+bool ValidOutputBuffer(const std::uint8_t* output, std::size_t outputSize)
+{
+  return output != 0 || outputSize == 0u;
+}
+
 } // namespace
 
 extern "C" {
@@ -239,7 +244,8 @@ dlms_transport_status_t dlms_transport_tcp_read_some(
   if (bytes_read != 0) {
     *bytes_read = 0u;
   }
-  if (transport == 0 || bytes_read == 0) {
+  if (transport == 0 || bytes_read == 0 ||
+      !ValidOutputBuffer(output, output_size)) {
     return DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT;
   }
   try {
@@ -366,7 +372,8 @@ dlms_transport_status_t dlms_transport_udp_receive(
   if (bytes_read != 0) {
     *bytes_read = 0u;
   }
-  if (transport == 0 || bytes_read == 0) {
+  if (transport == 0 || bytes_read == 0 ||
+      !ValidOutputBuffer(output, output_size)) {
     return DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT;
   }
   try {
@@ -455,7 +462,8 @@ dlms_transport_status_t dlms_transport_serial_read_some(
   if (bytes_read != 0) {
     *bytes_read = 0u;
   }
-  if (transport == 0 || bytes_read == 0) {
+  if (transport == 0 || bytes_read == 0 ||
+      !ValidOutputBuffer(output, output_size)) {
     return DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT;
   }
   try {

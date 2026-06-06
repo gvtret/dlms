@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.6 - 2026-06-06
+
+- Fixed Transport C API receive validation so null output buffers are rejected
+  before lower transport calls when a non-zero output size is requested.
+- Added Transport C API regression coverage for null receive output buffers.
+
 ## 0.3.5 - 2026-06-06
 
 - Fixed Profile C API receive validation so a provided `written_size` output is

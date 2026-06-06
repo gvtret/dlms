@@ -40,6 +40,11 @@ The C ABI never allocates output payload buffers for the caller. Decode APIs
 copy DATA into caller-provided memory and report the required size when the
 buffer is too small.
 
+`dlms_wrapper_encode_wpdu()` follows the same caller-buffer contract: when the
+output buffer is too small, it returns
+`DLMS_WRAPPER_STATUS_OUTPUT_BUFFER_TOO_SMALL`, writes the required WPDU size to
+`written_size`, and does not write a partial WPDU.
+
 ## Stream Decoder Handles
 
 Stateful TCP stream decoding uses opaque handles:

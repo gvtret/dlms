@@ -150,6 +150,7 @@ WrapperStatus EncodeWpduToBuffer(
   }
 
   if (outputSize < frameSize) {
+    writtenSize = frameSize;
     return WrapperStatus::OutputBufferTooSmall;
   }
 

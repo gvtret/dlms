@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.17 - 2026-06-06
+
+- Fixed Wrapper strict encode and C API encode small-buffer handling so
+  `written_size` reports the required WPDU size on `OutputBufferTooSmall`
+  without writing a partial WPDU.
+- Documented the Wrapper small-output-buffer size contract.
+
 ## 0.3.16 - 2026-06-06
 
 - Added the production-ready roadmap based on code review findings.

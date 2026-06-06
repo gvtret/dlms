@@ -94,7 +94,9 @@ TEST(WrapperCApiTest, ReportsSmallEncodeOutputBuffer)
                                      output,
                                      sizeof(output),
                                      &writtenSize));
-  EXPECT_EQ(0u, writtenSize);
+  EXPECT_EQ(10u, writtenSize);
+  EXPECT_EQ(0u, output[0]);
+  EXPECT_EQ(0u, output[1]);
 }
 
 TEST(WrapperCApiTest, RejectsInvalidEncodePorts)

@@ -60,6 +60,10 @@ WrapperStatus EncodeWpduToBuffer(
   std::size_t& writtenSize);
 ```
 
+When `outputSize` is smaller than the encoded WPDU, the function returns
+`OutputBufferTooSmall`, sets `writtenSize` to the required WPDU size, and does
+not write a partial WPDU.
+
 ## Decode API
 
 Owning decode:

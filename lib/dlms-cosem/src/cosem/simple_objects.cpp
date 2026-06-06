@@ -377,6 +377,7 @@ CosemStatus CosemDataObject::ReadAttribute(
     output = value_;
     return CosemStatus::Ok;
   }
+  output.clear();
   return CosemStatus::AttributeNotFound;
 }
 
@@ -401,7 +402,7 @@ CosemStatus CosemDataObject::InvokeMethod(
 {
   (void)methodId;
   (void)input;
-  (void)output;
+  output.clear();
   return CosemStatus::MethodNotFound;
 }
 
@@ -459,6 +460,7 @@ CosemStatus CosemRegisterObject::ReadAttribute(
     output = scalerUnit_;
     return CosemStatus::Ok;
   }
+  output.clear();
   return CosemStatus::AttributeNotFound;
 }
 
@@ -484,7 +486,7 @@ CosemStatus CosemRegisterObject::InvokeMethod(
 {
   (void)methodId;
   (void)input;
-  (void)output;
+  output.clear();
   return CosemStatus::MethodNotFound;
 }
 
@@ -550,6 +552,7 @@ CosemStatus CosemAssociationLnObject::ReadAttribute(
     }
     return CosemStatus::Ok;
   }
+  output.clear();
   return CosemStatus::AttributeNotFound;
 }
 
@@ -569,7 +572,7 @@ CosemStatus CosemAssociationLnObject::InvokeMethod(
 {
   (void)methodId;
   (void)input;
-  (void)output;
+  output.clear();
   return CosemStatus::MethodNotFound;
 }
 
@@ -618,6 +621,7 @@ CosemStatus CosemSapAssignmentObject::ReadAttribute(
     }
     return CosemStatus::Ok;
   }
+  output.clear();
   return CosemStatus::AttributeNotFound;
 }
 
@@ -637,7 +641,7 @@ CosemStatus CosemSapAssignmentObject::InvokeMethod(
 {
   (void)methodId;
   (void)input;
-  (void)output;
+  output.clear();
   return CosemStatus::MethodNotFound;
 }
 
@@ -761,6 +765,7 @@ CosemStatus CosemSecuritySetupObject::ReadAttribute(
       kSystemTitleSize);
     return CosemStatus::Ok;
   }
+  output.clear();
   return CosemStatus::AttributeNotFound;
 }
 

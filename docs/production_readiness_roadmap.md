@@ -38,6 +38,8 @@
      размере начиная с `0.3.40`.
    - Security Setup method invocation очищает COSEM output на invalid
      activation и unsupported method failures начиная с `0.3.42`.
+   - Built-in simple COSEM objects очищают output на missing attribute и
+     missing method failures начиная с `0.3.43`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.

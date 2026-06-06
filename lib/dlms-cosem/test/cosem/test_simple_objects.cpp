@@ -223,11 +223,14 @@ TEST(CosemDataObject, WritesValueAndRejectsUnsupportedMembers)
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.WriteAttribute(99u, updated));
 
-  dlms::cosem::CosemByteBuffer output;
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(99u, output));
+  EXPECT_TRUE(output.empty());
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(1u, updated, output));
+  EXPECT_TRUE(output.empty());
 }
 
 TEST(CosemRegisterObject, ExposesDescriptorValueAndScalerUnit)
@@ -283,11 +286,14 @@ TEST(CosemRegisterObject, WritesValueAndRejectsUnsupportedMembers)
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.WriteAttribute(99u, updated));
 
-  dlms::cosem::CosemByteBuffer output;
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(99u, output));
+  EXPECT_TRUE(output.empty());
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(1u, updated, output));
+  EXPECT_TRUE(output.empty());
 }
 
 TEST(SimpleObjects, WorkThroughObjectRegistryAccessChecks)
@@ -537,19 +543,27 @@ TEST(DiscoveryObjects, RejectUnsupportedAttributesWritesAndMethods)
     dlms::cosem::SapAssignmentName(),
     assignments);
   dlms::cosem::CosemByteBuffer bytes;
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
 
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            association.ReadAttribute(99u, bytes));
+            association.ReadAttribute(99u, output));
+  EXPECT_TRUE(output.empty());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             association.WriteAttribute(2u, bytes));
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            association.InvokeMethod(1u, bytes, bytes));
+            association.InvokeMethod(1u, bytes, output));
+  EXPECT_TRUE(output.empty());
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            sap.ReadAttribute(99u, bytes));
+            sap.ReadAttribute(99u, output));
+  EXPECT_TRUE(output.empty());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             sap.WriteAttribute(2u, bytes));
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            sap.InvokeMethod(1u, bytes, bytes));
+            sap.InvokeMethod(1u, bytes, output));
+  EXPECT_TRUE(output.empty());
 }
 
 TEST(DiscoveryObjects, DefaultLogicalNamesUseStandardObisValues)
@@ -640,6 +654,11 @@ TEST(CosemSecuritySetupObject, ExposesDescriptorAndSecurityAttributes)
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(5u, output));
   EXPECT_EQ(EncodedOctetString(server), output);
+
+  output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(99u, output));
+  EXPECT_TRUE(output.empty());
 }
 
 TEST(CosemSecuritySetupObject, ActivatesOnlyMonotonicSecurityPolicy)

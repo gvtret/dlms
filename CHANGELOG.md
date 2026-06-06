@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.8 - 2026-06-06
+
+- Fixed Association C API result accessors so provided result outputs are
+  cleared before validation errors are returned.
+- Added Association C API regression coverage for get-result output cleanup.
+
 ## 0.3.7 - 2026-06-06
 
 - Fixed Wrapper C API decode validation so null data output buffers are rejected

@@ -352,6 +352,24 @@ void CopyResult(
   output->aare_diagnostic = input.aareDiagnostic;
 }
 
+void ClearResult(dlms_association_result_t* result)
+{
+  if (result == 0) {
+    return;
+  }
+
+  result->negotiated_dlms_version_number = 0u;
+  result->negotiated_conformance[0] = 0u;
+  result->negotiated_conformance[1] = 0u;
+  result->negotiated_conformance[2] = 0u;
+  result->server_max_receive_pdu_size = 0u;
+  result->vaa_name = 0u;
+  result->has_aare_result = 0;
+  result->aare_result = 0;
+  result->has_aare_diagnostic = 0;
+  result->aare_diagnostic = 0;
+}
+
 } // namespace
 
 void dlms_association_default_options(
@@ -645,6 +663,7 @@ dlms_association_status_t dlms_association_get_result(
   const dlms_association_client_t* client,
   dlms_association_result_t* result)
 {
+  ClearResult(result);
   if (client == 0 || client->client == 0 || result == 0) {
     return DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT;
   }
@@ -661,6 +680,7 @@ dlms_association_status_t dlms_association_server_get_result(
   const dlms_association_server_t* server,
   dlms_association_result_t* result)
 {
+  ClearResult(result);
   if (server == 0 || server->server == 0 || result == 0) {
     return DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT;
   }

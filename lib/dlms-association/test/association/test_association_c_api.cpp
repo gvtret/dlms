@@ -213,6 +213,36 @@ std::vector<std::uint8_t> FieldBytes(
   return std::vector<std::uint8_t>();
 }
 
+dlms_association_result_t FilledResult()
+{
+  dlms_association_result_t result;
+  result.negotiated_dlms_version_number = 99u;
+  result.negotiated_conformance[0] = 99u;
+  result.negotiated_conformance[1] = 99u;
+  result.negotiated_conformance[2] = 99u;
+  result.server_max_receive_pdu_size = 99u;
+  result.vaa_name = 99u;
+  result.has_aare_result = 1;
+  result.aare_result = 99;
+  result.has_aare_diagnostic = 1;
+  result.aare_diagnostic = 99;
+  return result;
+}
+
+void ExpectClearedResult(const dlms_association_result_t& result)
+{
+  EXPECT_EQ(0u, result.negotiated_dlms_version_number);
+  EXPECT_EQ(0u, result.negotiated_conformance[0]);
+  EXPECT_EQ(0u, result.negotiated_conformance[1]);
+  EXPECT_EQ(0u, result.negotiated_conformance[2]);
+  EXPECT_EQ(0u, result.server_max_receive_pdu_size);
+  EXPECT_EQ(0u, result.vaa_name);
+  EXPECT_EQ(0, result.has_aare_result);
+  EXPECT_EQ(0, result.aare_result);
+  EXPECT_EQ(0, result.has_aare_diagnostic);
+  EXPECT_EQ(0, result.aare_diagnostic);
+}
+
 } // namespace
 
 TEST(AssociationCApi, StatusValuesMatchCppContract)
@@ -545,6 +575,19 @@ TEST(AssociationCApi, RejectsNullResultForValidHandles)
 
   dlms_association_destroy_client(client);
   dlms_association_destroy_server(server);
+}
+
+TEST(AssociationCApi, GetResultErrorsClearProvidedOutput)
+{
+  dlms_association_result_t clientResult = FilledResult();
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_get_result(nullptr, &clientResult));
+  ExpectClearedResult(clientResult);
+
+  dlms_association_result_t serverResult = FilledResult();
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_INVALID_ARGUMENT,
+            dlms_association_server_get_result(nullptr, &serverResult));
+  ExpectClearedResult(serverResult);
 }
 
 TEST(AssociationCApi, CallbackOpenFailurePropagates)

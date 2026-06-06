@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.21 - 2026-06-06
+
+- Implemented Security Setup IC `64` `security_activate` method for encoded
+  security policy activation.
+- Enforced monotonic security policy activation so active policy bits cannot be
+  weakened through `security_activate`.
+- Added direct and registry regression coverage for Security Setup activation,
+  malformed activation input and policy weakening rejection.
+
 ## 0.3.20 - 2026-06-06
 
 - Added `CosemSecuritySetupObject` for Security Setup IC `64` as a read-only

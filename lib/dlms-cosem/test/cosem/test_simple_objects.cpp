@@ -530,6 +530,40 @@ TEST(CosemSecuritySetupObject, ExposesDescriptorAndSecurityAttributes)
   EXPECT_EQ(EncodedOctetString(server), output);
 }
 
+TEST(CosemSecuritySetupObject, ActivatesOnlyMonotonicSecurityPolicy)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x01u,
+    0x00u,
+    client,
+    server);
+
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(1u, Bytes(0x16u, 0x03u), output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(0x03u, object.SecurityPolicy());
+
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, output));
+  EXPECT_EQ(Bytes(0x16u, 0x03u), output);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.InvokeMethod(1u, Bytes(0x16u, 0x01u), output));
+  EXPECT_EQ(0x03u, object.SecurityPolicy());
+
+  dlms::cosem::CosemByteBuffer invalid = Bytes(0x11u, 0x03u);
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.InvokeMethod(1u, invalid, output));
+  EXPECT_EQ(0x03u, object.SecurityPolicy());
+}
+
 TEST(CosemSecuritySetupObject, RejectsWritesAndReportsUnsupportedMethods)
 {
   dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
@@ -551,12 +585,12 @@ TEST(CosemSecuritySetupObject, RejectsWritesAndReportsUnsupportedMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(99u, bytes));
   EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(1u, bytes, bytes));
+            object.InvokeMethod(2u, bytes, bytes));
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(99u, bytes, bytes));
 }
 
-TEST(CosemSecuritySetupObject, RegistryReturnsUnsupportedForKnownMethods)
+TEST(CosemSecuritySetupObject, RegistryActivatesSecurityPolicy)
 {
   dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
     {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
@@ -572,12 +606,23 @@ TEST(CosemSecuritySetupObject, RegistryReturnsUnsupportedForKnownMethods)
   dlms::cosem::ObjectRegistry registry;
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok, registry.Register(object));
 
-  dlms::cosem::CosemByteBuffer bytes;
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             registry.InvokeMethod(
               MakeMethod(object->Descriptor().key, 1u),
-              bytes,
-              bytes));
+              Bytes(0x16u, 0x03u),
+              output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(0x03u, object->SecurityPolicy());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            registry.InvokeMethod(
+              MakeMethod(object->Descriptor().key, 1u),
+              Bytes(0x16u, 0x01u),
+              output));
+  EXPECT_EQ(0x03u, object->SecurityPolicy());
+
+  dlms::cosem::CosemByteBuffer bytes;
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             registry.WriteAttribute(
               MakeAttribute(object->Descriptor().key, 2u),

@@ -71,7 +71,7 @@ Status values:
 | `61` | Register Table | Planned | Needed for broader meter data tables. |
 | `62` | Compact Data | Planned | Needed for compact transfer support. |
 | `63` | Status Mapping | Planned | Needed for status word mapping. |
-| `64` | Security Setup | Partial | `CosemSecuritySetupObject` exposes logical name, encoded security policy, security suite and client/server system titles. Key, certificate and activation methods return explicit unsupported status until implemented. |
+| `64` | Security Setup | Partial | `CosemSecuritySetupObject` exposes logical name, encoded security policy, security suite and client/server system titles. `security_activate` enforces monotonic policy strengthening; key, certificate and key agreement methods return explicit unsupported status until implemented. |
 | `65` | Parameter Monitor | Planned | Needed for parameter monitoring. |
 | `68` | Arbitrator | Application-provided | No built-in implementation. |
 | `70` | Disconnect Control | Planned | Needed for remote disconnect/reconnect. |

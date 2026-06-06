@@ -16,6 +16,7 @@ constexpr std::uint8_t kSecurityPolicyAttributeId = 2u;
 constexpr std::uint8_t kSecuritySuiteAttributeId = 3u;
 constexpr std::uint8_t kClientSystemTitleAttributeId = 4u;
 constexpr std::uint8_t kServerSystemTitleAttributeId = 5u;
+constexpr std::uint8_t kSecurityActivateMethodId = 1u;
 constexpr std::uint8_t kVersion0 = 0u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
@@ -27,6 +28,24 @@ constexpr std::uint8_t kLongUnsignedTag = 0x12u;
 constexpr std::uint8_t kEnumTag = 0x16u;
 constexpr std::uint8_t kLogicalNameSize = 6u;
 constexpr std::size_t kSystemTitleSize = 8u;
+
+bool IsAxdrEnum(
+  const CosemByteBuffer& input,
+  std::uint8_t& value)
+{
+  if (input.size() != 2u || input[0] != kEnumTag) {
+    return false;
+  }
+  value = input[1];
+  return true;
+}
+
+bool StrengthensOrKeepsPolicy(
+  std::uint8_t currentPolicy,
+  std::uint8_t requestedPolicy)
+{
+  return (currentPolicy & requestedPolicy) == currentPolicy;
+}
 
 CosemObjectDescriptor MakeDescriptor(
   std::uint16_t classId,
@@ -628,9 +647,19 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)input;
-  (void)output;
-  if (methodId >= 1u && methodId <= 8u) {
+  if (methodId == kSecurityActivateMethodId) {
+    std::uint8_t requestedPolicy = 0u;
+    if (!IsAxdrEnum(input, requestedPolicy)) {
+      return CosemStatus::InvalidArgument;
+    }
+    if (!StrengthensOrKeepsPolicy(securityPolicy_, requestedPolicy)) {
+      return CosemStatus::AccessDenied;
+    }
+    securityPolicy_ = requestedPolicy;
+    output.clear();
+    return CosemStatus::Ok;
+  }
+  if (methodId > kSecurityActivateMethodId && methodId <= 8u) {
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;

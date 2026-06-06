@@ -67,11 +67,11 @@ Status values:
 
 | Attribute / method | Status | Notes |
 | --- | --- | --- |
-| Attribute `security_policy` | Partial | `CosemSecuritySetupObject` exposes the encoded read-only value; activation and monotonic enforcement are not implemented. |
+| Attribute `security_policy` | Partial | `CosemSecuritySetupObject` exposes the encoded read-only value and `security_activate` enforces monotonic bitmask strengthening. Full association policy rebinding is not complete. |
 | Attribute `security_suite` | Partial | `CosemSecuritySetupObject` exposes the encoded read-only value; association binding is not complete. |
 | Client and server system titles | Partial | `SecurityContext` stores titles and `CosemSecuritySetupObject` exposes encoded read-only system titles. |
 | Certificate array | Planned | Needed for Suite 1/2. |
-| `security_activate` | Planned | Must not weaken active policy. |
+| `security_activate` | Partial | Implemented for AXDR enum policy activation with monotonic strengthening; association/session rebinding and full СПОДЭС/СПОДУС policy profiles remain incomplete. |
 | `global_key_transfer` / key transfer | Planned | Needs KEK wrapping, key ids and counter reset behavior. |
 | `key_agreement` | Planned | Needs ECDH and general-ciphering APDU. |
 | `generate_key_pair` | Planned | Needed for Suite 1/2 server key management. |

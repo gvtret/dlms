@@ -61,6 +61,9 @@
    - Stable enum numeric checks должны быть только там, где ABI это требует.
    - Wrapper C API stream decoder получил публичный push/drain entry point
      начиная с `0.4.0`.
+5. Проверить install-tree export hygiene.
+   - Concrete CMake targets экспортируют package include directory без
+     дублирования начиная с `0.4.2`.
 
 ## P0. Endpoint, client и server lifecycle
 

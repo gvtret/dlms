@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.2 - 2026-06-07
+
+- Cleaned up exported CMake targets so installed concrete targets expose the
+  package include directory only once.
+
 ## 0.4.1 - 2026-06-07
 
 - Hardened profile mutable receive small-buffer failures so Wrapper TCP,

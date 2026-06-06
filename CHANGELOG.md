@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.10 - 2026-06-06
+
+- Fixed Association C API option validation so invalid application contexts,
+  authentication modes, and null low-level credentials with non-zero sizes are
+  rejected during handle creation.
+- Added Association C API regression coverage for invalid option rejection.
+
 ## 0.3.9 - 2026-06-06
 
 - Fixed HDLC C API decode, stream decoder, and reassembler entry points so

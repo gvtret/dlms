@@ -551,6 +551,43 @@ TEST(AssociationCApi, RejectsMissingCallbacksAndNullHandles)
   dlms_association_destroy_server(nullptr);
 }
 
+TEST(AssociationCApi, RejectsInvalidOptions)
+{
+  CallbackChannel channel;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_options_t options;
+  dlms_association_default_options(&options);
+  options.application_context =
+    static_cast<dlms_association_application_context_t>(99);
+  EXPECT_EQ(nullptr,
+            dlms_association_create_client_from_callbacks(&callbacks,
+                                                          &options));
+  EXPECT_EQ(nullptr,
+            dlms_association_create_server_from_callbacks(&callbacks,
+                                                          &options));
+
+  dlms_association_default_options(&options);
+  options.authentication_mode =
+    static_cast<dlms_association_authentication_mode_t>(99);
+  EXPECT_EQ(nullptr,
+            dlms_association_create_client_from_callbacks(&callbacks,
+                                                          &options));
+  EXPECT_EQ(nullptr,
+            dlms_association_create_server_from_callbacks(&callbacks,
+                                                          &options));
+
+  dlms_association_default_options(&options);
+  options.low_level_security_credential = nullptr;
+  options.low_level_security_credential_size = 1u;
+  EXPECT_EQ(nullptr,
+            dlms_association_create_client_from_callbacks(&callbacks,
+                                                          &options));
+  EXPECT_EQ(nullptr,
+            dlms_association_create_server_from_callbacks(&callbacks,
+                                                          &options));
+}
+
 TEST(AssociationCApi, RejectsNullResultForValidHandles)
 {
   CallbackChannel clientChannel;

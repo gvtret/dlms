@@ -128,6 +128,36 @@ dlms::association::HighLevelSecurityMechanism ToCppHlsMechanism(
   return dlms::association::HighLevelSecurityMechanism::Unknown;
 }
 
+bool ValidApplicationContext(dlms_association_application_context_t context)
+{
+  return context == DLMS_ASSOCIATION_APPLICATION_CONTEXT_LN_NO_CIPHERING;
+}
+
+bool ValidAuthenticationMode(dlms_association_authentication_mode_t mode)
+{
+  return mode == DLMS_ASSOCIATION_AUTHENTICATION_NONE ||
+    mode == DLMS_ASSOCIATION_AUTHENTICATION_LOW_LEVEL_SECURITY ||
+    mode == DLMS_ASSOCIATION_AUTHENTICATION_HIGH_LEVEL_SECURITY;
+}
+
+bool ValidAssociationOptions(const dlms_association_options_t* options)
+{
+  if (options == 0) {
+    return true;
+  }
+
+  if (!ValidApplicationContext(options->application_context) ||
+      !ValidAuthenticationMode(options->authentication_mode)) {
+    return false;
+  }
+  if (options->low_level_security_credential == 0 &&
+      options->low_level_security_credential_size != 0u) {
+    return false;
+  }
+
+  return true;
+}
+
 class CHighLevelSecurityStrategy
   : public dlms::association::IHighLevelSecurityStrategy
 {
@@ -402,7 +432,7 @@ dlms_association_client_t* dlms_association_create_client_from_callbacks(
   const dlms_association_channel_callbacks_t* callbacks,
   const dlms_association_options_t* options)
 {
-  if (!ValidCallbacks(callbacks)) {
+  if (!ValidCallbacks(callbacks) || !ValidAssociationOptions(options)) {
     return 0;
   }
 
@@ -437,7 +467,7 @@ dlms_association_server_t* dlms_association_create_server_from_callbacks(
   const dlms_association_channel_callbacks_t* callbacks,
   const dlms_association_options_t* options)
 {
-  if (!ValidCallbacks(callbacks)) {
+  if (!ValidCallbacks(callbacks) || !ValidAssociationOptions(options)) {
     return 0;
   }
 

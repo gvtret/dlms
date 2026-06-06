@@ -53,6 +53,24 @@ void dlms_wrapper_stream_decoder_destroy(
 void dlms_wrapper_stream_decoder_reset(
   dlms_wrapper_stream_decoder_t* decoder);
 
+/*
+ * Push bytes into the stream decoder and receive one decoded WPDU.
+ *
+ * Pass data_size == 0 to drain frames that were already decoded by an earlier
+ * call. source_port, destination_port and frame_data_size are cleared before
+ * validation. On OUTPUT_BUFFER_TOO_SMALL, frame_data_size receives the required
+ * APDU payload size and the decoded WPDU remains pending.
+ */
+dlms_wrapper_status_t dlms_wrapper_stream_decoder_push(
+  dlms_wrapper_stream_decoder_t* decoder,
+  const uint8_t* data,
+  size_t data_size,
+  uint16_t* source_port,
+  uint16_t* destination_port,
+  uint8_t* data_output,
+  size_t data_output_size,
+  size_t* frame_data_size);
+
 #ifdef __cplusplus
 }
 #endif

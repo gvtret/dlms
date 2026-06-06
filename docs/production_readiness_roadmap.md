@@ -57,6 +57,8 @@
 4. Проверить все C headers smoke tests.
    - Каждый C ABI header должен компилироваться как C.
    - Stable enum numeric checks должны быть только там, где ABI это требует.
+   - Wrapper C API stream decoder получил публичный push/drain entry point
+     начиная с `0.4.0`.
 
 ## P0. Endpoint, client и server lifecycle
 

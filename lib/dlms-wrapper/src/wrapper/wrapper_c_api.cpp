@@ -3,6 +3,9 @@
 #include "dlms/wrapper/wrapper_codec.hpp"
 #include "dlms/wrapper/wrapper_stream_decoder.hpp"
 
+#include <algorithm>
+#include <vector>
+
 struct dlms_wrapper_stream_decoder_t
 {
   explicit dlms_wrapper_stream_decoder_t(
@@ -12,6 +15,7 @@ struct dlms_wrapper_stream_decoder_t
   }
 
   dlms::wrapper::WrapperStreamDecoder decoder;
+  std::vector<dlms::wrapper::WrapperFrameBuffer> pending;
 };
 
 namespace {
@@ -168,5 +172,80 @@ extern "C" void dlms_wrapper_stream_decoder_reset(
 {
   if (decoder != 0) {
     decoder->decoder.Reset();
+    decoder->pending.clear();
+  }
+}
+
+extern "C" dlms_wrapper_status_t dlms_wrapper_stream_decoder_push(
+  dlms_wrapper_stream_decoder_t* decoder,
+  const uint8_t* data,
+  size_t data_size,
+  uint16_t* source_port,
+  uint16_t* destination_port,
+  uint8_t* data_output,
+  size_t data_output_size,
+  size_t* frame_data_size)
+{
+  if (source_port != 0) {
+    *source_port = 0u;
+  }
+  if (destination_port != 0) {
+    *destination_port = 0u;
+  }
+  if (frame_data_size != 0) {
+    *frame_data_size = 0u;
+  }
+
+  if (decoder == 0 || source_port == 0 || destination_port == 0 ||
+      frame_data_size == 0) {
+    return DLMS_WRAPPER_STATUS_INVALID_ARGUMENT;
+  }
+  if (data == 0 && data_size != 0u) {
+    return DLMS_WRAPPER_STATUS_INVALID_ARGUMENT;
+  }
+
+  try {
+    if (data_size > 0u) {
+      std::vector<dlms::wrapper::WrapperFrameBuffer> decoded;
+      const dlms::wrapper::WrapperStatus status =
+        decoder->decoder.Push(data, data_size, decoded);
+      if (status != dlms::wrapper::WrapperStatus::Ok &&
+          status != dlms::wrapper::WrapperStatus::NeedMoreData) {
+        decoder->decoder.Reset();
+        decoder->pending.clear();
+        return ToCApiStatus(status);
+      }
+      decoder->pending.insert(decoder->pending.end(),
+                              decoded.begin(),
+                              decoded.end());
+    }
+
+    if (decoder->pending.empty()) {
+      return DLMS_WRAPPER_STATUS_NEED_MORE_DATA;
+    }
+
+    const dlms::wrapper::WrapperFrameBuffer& frame =
+      decoder->pending.front();
+    const size_t required_size = frame.data.size();
+    if (data_output_size < required_size) {
+      *frame_data_size = required_size;
+      return DLMS_WRAPPER_STATUS_OUTPUT_BUFFER_TOO_SMALL;
+    }
+    if (required_size != 0u && data_output == 0) {
+      return DLMS_WRAPPER_STATUS_INVALID_ARGUMENT;
+    }
+
+    if (required_size != 0u) {
+      std::copy(frame.data.begin(), frame.data.end(), data_output);
+    }
+    *source_port = frame.sourcePort;
+    *destination_port = frame.destinationPort;
+    *frame_data_size = required_size;
+    decoder->pending.erase(decoder->pending.begin());
+    return DLMS_WRAPPER_STATUS_OK;
+  } catch (...) {
+    decoder->decoder.Reset();
+    decoder->pending.clear();
+    return DLMS_WRAPPER_STATUS_INTERNAL_ERROR;
   }
 }

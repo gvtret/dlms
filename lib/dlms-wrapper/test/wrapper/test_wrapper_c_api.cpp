@@ -416,4 +416,257 @@ TEST(WrapperCApiTest, StreamDecoderCreateRejectsNullOut)
             dlms_wrapper_stream_decoder_create(0));
 }
 
+TEST(WrapperCApiTest, StreamDecoderPushFullWpdu)
+{
+  const std::uint8_t wpdu[] = {
+    0x00, 0x01,
+    0x00, 0x10,
+    0x00, 0x01,
+    0x00, 0x02,
+    0xc0, 0x01
+  };
+  dlms_wrapper_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_create(&decoder));
+
+  std::uint16_t sourcePort = 99u;
+  std::uint16_t destinationPort = 99u;
+  std::uint8_t data[2] = {};
+  std::size_t dataSize = 99u;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             wpdu,
+                                             sizeof(wpdu),
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(0x0010u, sourcePort);
+  EXPECT_EQ(0x0001u, destinationPort);
+  EXPECT_EQ(2u, dataSize);
+  EXPECT_EQ(0xc0u, data[0]);
+  EXPECT_EQ(0x01u, data[1]);
+
+  dlms_wrapper_stream_decoder_destroy(decoder);
+}
+
+TEST(WrapperCApiTest, StreamDecoderPushHeaderThenData)
+{
+  const std::uint8_t wpdu[] = {
+    0x00, 0x01,
+    0x00, 0x10,
+    0x00, 0x01,
+    0x00, 0x02,
+    0xc0, 0x01
+  };
+  dlms_wrapper_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_create(&decoder));
+
+  std::uint16_t sourcePort = 99u;
+  std::uint16_t destinationPort = 99u;
+  std::uint8_t data[2] = {};
+  std::size_t dataSize = 99u;
+  EXPECT_EQ(DLMS_WRAPPER_STATUS_NEED_MORE_DATA,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             wpdu,
+                                             8u,
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(0u, sourcePort);
+  EXPECT_EQ(0u, destinationPort);
+  EXPECT_EQ(0u, dataSize);
+
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             wpdu + 8u,
+                                             sizeof(wpdu) - 8u,
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(2u, dataSize);
+  EXPECT_EQ(0xc0u, data[0]);
+  EXPECT_EQ(0x01u, data[1]);
+
+  dlms_wrapper_stream_decoder_destroy(decoder);
+}
+
+TEST(WrapperCApiTest, StreamDecoderDrainsPendingFrames)
+{
+  const std::uint8_t first[] = {
+    0x00, 0x01,
+    0x00, 0x10,
+    0x00, 0x01,
+    0x00, 0x01,
+    0xc0
+  };
+  const std::uint8_t second[] = {
+    0x00, 0x01,
+    0x00, 0x10,
+    0x00, 0x01,
+    0x00, 0x02,
+    0xc1, 0x02
+  };
+  std::vector<std::uint8_t> stream(first, first + sizeof(first));
+  stream.insert(stream.end(), second, second + sizeof(second));
+
+  dlms_wrapper_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_create(&decoder));
+
+  std::uint16_t sourcePort = 0u;
+  std::uint16_t destinationPort = 0u;
+  std::uint8_t data[2] = {};
+  std::size_t dataSize = 0u;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             &stream[0],
+                                             stream.size(),
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(1u, dataSize);
+  EXPECT_EQ(0xc0u, data[0]);
+
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             0,
+                                             0u,
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(2u, dataSize);
+  EXPECT_EQ(0xc1u, data[0]);
+  EXPECT_EQ(0x02u, data[1]);
+
+  dlms_wrapper_stream_decoder_destroy(decoder);
+}
+
+TEST(WrapperCApiTest, StreamDecoderReportsSmallOutputBuffer)
+{
+  const std::uint8_t wpdu[] = {
+    0x00, 0x01,
+    0x00, 0x10,
+    0x00, 0x01,
+    0x00, 0x02,
+    0xc0, 0x01
+  };
+  dlms_wrapper_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_create(&decoder));
+
+  std::uint16_t sourcePort = 99u;
+  std::uint16_t destinationPort = 99u;
+  std::uint8_t data[1] = {};
+  std::size_t dataSize = 99u;
+  EXPECT_EQ(DLMS_WRAPPER_STATUS_OUTPUT_BUFFER_TOO_SMALL,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             wpdu,
+                                             sizeof(wpdu),
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(0u, sourcePort);
+  EXPECT_EQ(0u, destinationPort);
+  EXPECT_EQ(2u, dataSize);
+
+  std::uint8_t fullData[2] = {};
+  dataSize = 0u;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             0,
+                                             0u,
+                                             &sourcePort,
+                                             &destinationPort,
+                                             fullData,
+                                             sizeof(fullData),
+                                             &dataSize));
+  EXPECT_EQ(2u, dataSize);
+  EXPECT_EQ(0xc0u, fullData[0]);
+  EXPECT_EQ(0x01u, fullData[1]);
+
+  dlms_wrapper_stream_decoder_destroy(decoder);
+}
+
+TEST(WrapperCApiTest, StreamDecoderPushValidatesArguments)
+{
+  const std::uint8_t wpdu[] = {
+    0x00, 0x01,
+    0x00, 0x10,
+    0x00, 0x01,
+    0x00, 0x01,
+    0xc0
+  };
+  dlms_wrapper_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_WRAPPER_STATUS_OK,
+            dlms_wrapper_stream_decoder_create(&decoder));
+
+  std::uint16_t sourcePort = 99u;
+  std::uint16_t destinationPort = 99u;
+  std::uint8_t data[1] = {};
+  std::size_t dataSize = 99u;
+  EXPECT_EQ(DLMS_WRAPPER_STATUS_INVALID_ARGUMENT,
+            dlms_wrapper_stream_decoder_push(0,
+                                             wpdu,
+                                             sizeof(wpdu),
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(0u, sourcePort);
+  EXPECT_EQ(0u, destinationPort);
+  EXPECT_EQ(0u, dataSize);
+
+  sourcePort = 99u;
+  destinationPort = 99u;
+  dataSize = 99u;
+  EXPECT_EQ(DLMS_WRAPPER_STATUS_INVALID_ARGUMENT,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             0,
+                                             1u,
+                                             &sourcePort,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+  EXPECT_EQ(0u, sourcePort);
+  EXPECT_EQ(0u, destinationPort);
+  EXPECT_EQ(0u, dataSize);
+
+  EXPECT_EQ(DLMS_WRAPPER_STATUS_INVALID_ARGUMENT,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             wpdu,
+                                             sizeof(wpdu),
+                                             0,
+                                             &destinationPort,
+                                             data,
+                                             sizeof(data),
+                                             &dataSize));
+
+  EXPECT_EQ(DLMS_WRAPPER_STATUS_INVALID_ARGUMENT,
+            dlms_wrapper_stream_decoder_push(decoder,
+                                             wpdu,
+                                             sizeof(wpdu),
+                                             &sourcePort,
+                                             &destinationPort,
+                                             0,
+                                             sizeof(data),
+                                             &dataSize));
+
+  dlms_wrapper_stream_decoder_destroy(decoder);
+}
+
 } // namespace

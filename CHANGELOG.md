@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 - 2026-06-07
+
+- Added the Wrapper C API stream decoder push entry point so C consumers can
+  incrementally decode WPDU streams and drain pending frames.
+
 ## 0.3.48 - 2026-06-07
 
 - Hardened HDLC C stream decoder and reassembler small-buffer failures so the

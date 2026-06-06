@@ -168,6 +168,11 @@ dlms_profile_status_t dlms_profile_send_apdu(
   const uint8_t* apdu,
   size_t apdu_size);
 
+/*
+ * Receives one APDU into caller-provided storage.
+ * `written_size` is cleared before validation and must not be null.
+ * `output` may be null only when `output_size` is zero.
+ */
 dlms_profile_status_t dlms_profile_receive_apdu(
   dlms_profile_channel_t* channel,
   uint8_t* output,

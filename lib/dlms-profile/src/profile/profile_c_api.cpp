@@ -1,6 +1,7 @@
 #include "dlms/profile/profile_c_api.h"
 
 #include "dlms/profile/hdlc_profile_channel.hpp"
+#include "dlms/profile/profile_types.hpp"
 #include "dlms/profile/wrapper_tcp_profile_channel.hpp"
 #include "dlms/profile/wrapper_udp_profile_channel.hpp"
 #include "dlms/transport/byte_stream.hpp"
@@ -577,6 +578,9 @@ dlms_profile_status_t dlms_profile_receive_apdu(
   buffer.data = output;
   buffer.size = output_size;
   buffer.writtenSize = written_size;
+  if (!dlms::profile::IsValidMutableBuffer(buffer)) {
+    return DLMS_PROFILE_STATUS_INVALID_ARGUMENT;
+  }
   try {
     return ToCStatus(channel->impl->ReceiveApdu(buffer));
   } catch (...) {

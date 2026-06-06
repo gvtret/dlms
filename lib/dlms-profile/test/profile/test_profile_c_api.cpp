@@ -15,6 +15,7 @@ struct CallbackByteStream
   bool open;
   dlms_profile_status_t openStatus;
   dlms_profile_status_t writeStatus;
+  std::size_t reads;
   std::vector<std::vector<std::uint8_t> > writes;
 };
 
@@ -45,11 +46,13 @@ int CallbackByteStreamIsOpen(const void* userData)
 }
 
 dlms_profile_status_t CallbackByteStreamReadSome(
-  void*,
+  void* userData,
   std::uint8_t*,
   std::size_t,
   std::size_t* bytesRead)
 {
+  CallbackByteStream* stream = static_cast<CallbackByteStream*>(userData);
+  ++stream->reads;
   if (bytesRead != nullptr) {
     *bytesRead = 0u;
   }
@@ -166,6 +169,7 @@ TEST(ProfileCApi, WrapperTcpCallbackChannelSendApdu)
   stream.open = false;
   stream.openStatus = DLMS_PROFILE_STATUS_OK;
   stream.writeStatus = DLMS_PROFILE_STATUS_OK;
+  stream.reads = 0u;
 
   dlms_profile_channel_options_t options;
   dlms_profile_default_channel_options(&options);
@@ -183,6 +187,14 @@ TEST(ProfileCApi, WrapperTcpCallbackChannelSendApdu)
             dlms_profile_send_apdu(channel, apdu, sizeof(apdu)));
   EXPECT_EQ(1, dlms_profile_is_open(channel));
   EXPECT_EQ(1u, stream.writes.size());
+
+  std::size_t written = 99u;
+  EXPECT_EQ(DLMS_PROFILE_STATUS_INVALID_ARGUMENT,
+            dlms_profile_receive_apdu(channel, nullptr, 1u, &written));
+  EXPECT_EQ(0u, written);
+  EXPECT_EQ(DLMS_PROFILE_STATUS_INVALID_ARGUMENT,
+            dlms_profile_receive_apdu(channel, nullptr, 0u, nullptr));
+  EXPECT_EQ(0u, stream.reads);
 
   dlms_profile_destroy_channel(channel);
 }
@@ -302,6 +314,7 @@ TEST(ProfileCApi, CallbackStatusesPropagateThroughChannel)
   stream.open = false;
   stream.openStatus = DLMS_PROFILE_STATUS_OPEN_FAILED;
   stream.writeStatus = DLMS_PROFILE_STATUS_WRITE_FAILED;
+  stream.reads = 0u;
   dlms_profile_channel_options_t options;
   dlms_profile_default_channel_options(&options);
   dlms_profile_byte_stream_callbacks_t callbacks =

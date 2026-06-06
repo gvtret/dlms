@@ -29,6 +29,7 @@
 2. Завершить аудит очистки выходных структур C API.
    - Все выходные указатели очищаются до валидации.
    - Ошибки не оставляют старые значения в result/view/output структурах.
+   - Profile receive boundary validation закрыта в `0.3.19`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.
@@ -119,4 +120,5 @@
 3. P0: повторить тот же контракт для HDLC encode, если strict encoder может
    вычислять полный размер до записи. Статус: выполнено в `0.3.18`.
 4. P0: пройти C API output cleanup audit после required-size унификации.
+   Статус: начато в `0.3.19` с Profile receive boundary validation.
 5. P0: перейти к endpoint lifecycle cleanup tests.

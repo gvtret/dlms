@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.19 - 2026-06-06
+
+- Fixed Profile C API receive validation so invalid caller output buffers and
+  null `written_size` are rejected at the C ABI boundary before the underlying
+  APDU channel is called.
+- Documented the Profile receive output-buffer validation contract.
+
 ## 0.3.18 - 2026-06-06
 
 - Fixed HDLC strict encode and C API encode small-buffer handling so

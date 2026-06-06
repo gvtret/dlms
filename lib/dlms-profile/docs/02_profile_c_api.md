@@ -55,6 +55,8 @@ dlms_profile_status_t dlms_profile_receive_apdu(...);
 - Existing `void*` constructors adapt already-created C++ lower-layer
   interfaces. Pure C callers can use the callback constructors instead.
 - Receive uses caller-provided storage and reports `OutputBufferTooSmall`.
+- Receive validates `written_size` and the output buffer at the C ABI boundary
+  before calling the underlying APDU channel.
 - Null pointers are rejected except for destroy.
 - HDLC session lifecycle calls return `UnsupportedFeature` for non-HDLC
   channels.

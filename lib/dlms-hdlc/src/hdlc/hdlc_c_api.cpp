@@ -44,11 +44,17 @@ dlms::hdlc::HdlcCodecLimits ToCppLimits(const dlms_hdlc_limits_t* limits)
     dlms::hdlc::DefaultHdlcCodecLimits();
 
   if (limits != 0) {
-    cppLimits.maximumFrameSize = limits->maximum_frame_size;
-    cppLimits.maximumInformationFieldSize =
-      limits->maximum_information_field_size;
-    cppLimits.maximumReassembledInformationSize =
-      limits->maximum_reassembled_information_size;
+    if (limits->maximum_frame_size != 0u) {
+      cppLimits.maximumFrameSize = limits->maximum_frame_size;
+    }
+    if (limits->maximum_information_field_size != 0u) {
+      cppLimits.maximumInformationFieldSize =
+        limits->maximum_information_field_size;
+    }
+    if (limits->maximum_reassembled_information_size != 0u) {
+      cppLimits.maximumReassembledInformationSize =
+        limits->maximum_reassembled_information_size;
+    }
   }
 
   return cppLimits;
@@ -258,6 +264,8 @@ dlms_hdlc_status_t dlms_hdlc_stream_decoder_push(
       dlms::hdlc::HdlcStatus status = decoder->decoder.Push(data, data_size, decoded);
       if (status != dlms::hdlc::HdlcStatus::Ok &&
           status != dlms::hdlc::HdlcStatus::NeedMoreData) {
+        decoder->decoder.Reset();
+        decoder->pending.clear();
         return ToCStatus(status);
       }
       decoder->pending.insert(decoder->pending.end(),
@@ -274,6 +282,9 @@ dlms_hdlc_status_t dlms_hdlc_stream_decoder_push(
 
     if (infoSize > information_buffer_size) {
       return DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL;
+    }
+    if (infoSize > 0u && information_buffer == 0) {
+      return DLMS_HDLC_STATUS_INVALID_ARGUMENT;
     }
     if (infoSize > 0u && information_buffer != 0) {
       std::copy(f.information.begin(), f.information.end(), information_buffer);
@@ -380,6 +391,9 @@ dlms_hdlc_status_t dlms_hdlc_reassembler_push_frame(
     std::size_t infoSize = completed.information.size();
     if (infoSize > output_information_buffer_size) {
       return DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL;
+    }
+    if (infoSize > 0u && output_information_buffer == 0) {
+      return DLMS_HDLC_STATUS_INVALID_ARGUMENT;
     }
     if (infoSize > 0u && output_information_buffer != 0) {
       std::copy(completed.information.begin(), completed.information.end(),

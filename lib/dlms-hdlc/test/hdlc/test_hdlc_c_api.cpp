@@ -21,6 +21,34 @@ dlms_hdlc_frame_t MakeSnrmFrame()
   return frame;
 }
 
+dlms_hdlc_frame_t MakeInformationFrame(const std::uint8_t* information,
+                                       std::size_t informationSize)
+{
+  dlms_hdlc_frame_t frame;
+  frame.segmented = 0u;
+  frame.destination_address_raw = 0x01u;
+  frame.destination_address_size = 1u;
+  frame.source_address_raw = 0x10u;
+  frame.source_address_size = 1u;
+  frame.control = 0x10u;
+  frame.information_data = information;
+  frame.information_size = informationSize;
+  return frame;
+}
+
+void EncodeFrameOrFail(const dlms_hdlc_frame_t& frame,
+                       std::uint8_t* output,
+                       std::size_t outputSize,
+                       std::size_t* writtenSize)
+{
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_encode_frame(&frame,
+                                   0,
+                                   output,
+                                   outputSize,
+                                   writtenSize));
+}
+
 TEST(HdlcCApi, StatusValuesMatchStableAbi)
 {
   EXPECT_EQ(0, DLMS_HDLC_STATUS_OK);
@@ -45,6 +73,25 @@ TEST(HdlcCApi, EncodeFrame)
   EXPECT_EQ(9u, writtenSize);
   EXPECT_EQ(0x7eu, output[0]);
   EXPECT_EQ(0x7eu, output[writtenSize - 1u]);
+}
+
+TEST(HdlcCApi, ZeroLimitFieldsKeepDefaults)
+{
+  const dlms_hdlc_frame_t frame = MakeSnrmFrame();
+  dlms_hdlc_limits_t limits;
+  limits.maximum_frame_size = 0u;
+  limits.maximum_information_field_size = 0u;
+  limits.maximum_reassembled_information_size = 0u;
+  std::uint8_t output[32] = {};
+  std::size_t writtenSize = 0u;
+
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_encode_frame(&frame,
+                                   &limits,
+                                   output,
+                                   sizeof(output),
+                                   &writtenSize));
+  EXPECT_EQ(9u, writtenSize);
 }
 
 TEST(HdlcCApi, DecodeFrame)
@@ -110,6 +157,72 @@ TEST(HdlcCApi, ValidatesNullArguments)
             dlms_hdlc_decode_frame(0, 0, 0, 0, 0, 0, 0));
 }
 
+TEST(HdlcCApi, StreamDecoderRejectsNullInformationBufferForPayloadFrame)
+{
+  const std::uint8_t payload[] = {0xE6u, 0xE6u, 0x00u};
+  const dlms_hdlc_frame_t frame = MakeInformationFrame(payload, sizeof(payload));
+  std::uint8_t encoded[32] = {};
+  std::size_t encodedSize = 0u;
+  EncodeFrameOrFail(frame, encoded, sizeof(encoded), &encodedSize);
+
+  dlms_hdlc_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_stream_decoder_create(0, &decoder));
+
+  dlms_hdlc_frame_t decoded;
+  std::size_t informationSize = 99u;
+  EXPECT_EQ(DLMS_HDLC_STATUS_INVALID_ARGUMENT,
+            dlms_hdlc_stream_decoder_push(decoder,
+                                          encoded,
+                                          encodedSize,
+                                          &decoded,
+                                          0,
+                                          sizeof(payload),
+                                          &informationSize));
+  EXPECT_EQ(0u, informationSize);
+
+  dlms_hdlc_stream_decoder_destroy(decoder);
+}
+
+TEST(HdlcCApi, StreamDecoderResetsAfterDecodeError)
+{
+  const std::uint8_t malformed[] = {0x7Eu, 0x00u, 0x00u, 0x7Eu};
+  dlms_hdlc_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_stream_decoder_create(0, &decoder));
+
+  dlms_hdlc_frame_t decoded;
+  std::uint8_t information[8] = {};
+  std::size_t informationSize = 99u;
+  EXPECT_NE(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_stream_decoder_push(decoder,
+                                          malformed,
+                                          sizeof(malformed),
+                                          &decoded,
+                                          information,
+                                          sizeof(information),
+                                          &informationSize));
+  EXPECT_EQ(0u, informationSize);
+
+  const dlms_hdlc_frame_t frame = MakeSnrmFrame();
+  std::uint8_t encoded[32] = {};
+  std::size_t encodedSize = 0u;
+  EncodeFrameOrFail(frame, encoded, sizeof(encoded), &encodedSize);
+
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_stream_decoder_push(decoder,
+                                          encoded,
+                                          encodedSize,
+                                          &decoded,
+                                          information,
+                                          sizeof(information),
+                                          &informationSize));
+  EXPECT_EQ(0u, informationSize);
+  EXPECT_EQ(0x93u, decoded.control);
+
+  dlms_hdlc_stream_decoder_destroy(decoder);
+}
+
 TEST(HdlcCApi, StreamDecoderLifecycle)
 {
   dlms_hdlc_stream_decoder_t* decoder = 0;
@@ -140,6 +253,31 @@ TEST(HdlcCApi, ReassemblerLifecycle)
             dlms_hdlc_reassembler_create(0, 0));
   dlms_hdlc_reassembler_reset(0);
   dlms_hdlc_reassembler_destroy(0);
+}
+
+TEST(HdlcCApi, ReassemblerRejectsNullInformationBufferForPayloadFrame)
+{
+  const std::uint8_t payload[] = {0xE6u, 0xE6u, 0x00u};
+  const dlms_hdlc_frame_t input = MakeInformationFrame(payload, sizeof(payload));
+  dlms_hdlc_reassembler_t* reassembler = 0;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_reassembler_create(0, &reassembler));
+
+  dlms_hdlc_frame_t output;
+  std::size_t outputInformationSize = 99u;
+  int hasCompletedFrame = 99;
+  EXPECT_EQ(DLMS_HDLC_STATUS_INVALID_ARGUMENT,
+            dlms_hdlc_reassembler_push_frame(reassembler,
+                                             &input,
+                                             &output,
+                                             0,
+                                             sizeof(payload),
+                                             &outputInformationSize,
+                                             &hasCompletedFrame));
+  EXPECT_EQ(0u, outputInformationSize);
+  EXPECT_EQ(0, hasCompletedFrame);
+
+  dlms_hdlc_reassembler_destroy(reassembler);
 }
 
 TEST(HdlcCApi, InvalidInputsDoNotCrash)

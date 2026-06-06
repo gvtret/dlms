@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.3 - 2026-06-06
+
+- Fixed HDLC C API limit conversion so zero fields in `dlms_hdlc_limits_t`
+  preserve the documented default limits.
+- Fixed HDLC C API stream decoder error handling to reset the decoder after
+  codec errors.
+- Fixed HDLC C API stream decoder and reassembler payload output validation to
+  reject null information buffers when a non-empty Information field is
+  returned.
+- Added HDLC C API regression coverage for those edge cases.
+
 ## 0.3.2 - 2026-06-05
 
 - Fixed listener runtimes to close accepted APDU channels when constructing or

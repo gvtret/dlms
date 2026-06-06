@@ -130,7 +130,7 @@ dlms_llc_status_t dlms_llc_decode_lpdu(
     lpdu->lsdu_size = 0;
   }
 
-  if (input == 0 || lpdu == 0) {
+  if (lpdu == 0 || (input == 0 && input_size != 0)) {
     return DLMS_LLC_STATUS_INVALID_ARGUMENT;
   }
 

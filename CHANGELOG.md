@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.13 - 2026-06-06
+
+- Fixed LLC C API decode validation so null input with zero size follows the
+  C++ codec contract and returns `NeedMoreData`.
+- Added LLC C API regression coverage for empty null-input decode cleanup.
+
 ## 0.3.12 - 2026-06-06
 
 - Fixed Wrapper C API decode validation so each provided output pointer is

@@ -172,6 +172,19 @@ TEST(LlcCApiTest, DecodeReportsNeedMoreData)
   EXPECT_EQ(0u, lpdu.header.control);
   EXPECT_EQ(static_cast<const std::uint8_t*>(0), lpdu.lsdu);
   EXPECT_EQ(0u, lpdu.lsdu_size);
+
+  lpdu.header.dsap = 0xAAu;
+  lpdu.header.ssap = 0xBBu;
+  lpdu.header.control = 0xCCu;
+  lpdu.lsdu = shortLpdu;
+  lpdu.lsdu_size = 99u;
+  EXPECT_EQ(DLMS_LLC_STATUS_NEED_MORE_DATA,
+            dlms_llc_decode_lpdu(0, 0u, 0, &lpdu));
+  EXPECT_EQ(0u, lpdu.header.dsap);
+  EXPECT_EQ(0u, lpdu.header.ssap);
+  EXPECT_EQ(0u, lpdu.header.control);
+  EXPECT_EQ(static_cast<const std::uint8_t*>(0), lpdu.lsdu);
+  EXPECT_EQ(0u, lpdu.lsdu_size);
 }
 
 TEST(LlcCApiTest, DecodeBroadcastDestinationRequiresExplicitPolicy)

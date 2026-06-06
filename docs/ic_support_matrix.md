@@ -32,7 +32,7 @@ Status values:
 
 | IC | Name | Status | Notes |
 | --- | --- | --- | --- |
-| `1` | Data | Supported | `CosemDataObject` exposes logical name and value. |
+| `1` | Data | Supported | `CosemDataObject` exposes logical name and value; built-in helpers cover logical device name and public invocation counter objects. |
 | `3` | Register | Supported | `CosemRegisterObject` exposes value and scaler/unit. |
 | `4` | Extended Register | Planned | Needed for СПОДЭС/СПОДУС meter model coverage. |
 | `5` | Demand Register | Planned | Needed for demand and load-profile related parameters. |

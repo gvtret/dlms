@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.23 - 2026-06-06
+
+- Added `InvocationCounterObjectName()` for the public invocation counter OBIS
+  `0.0.43.1.0.255`.
+- Added `MakeInvocationCounterObject()` to expose the current invocation
+  counter as a read-only COSEM Data object encoded as AXDR
+  `double-long-unsigned`.
+- Added deterministic COSEM coverage for the public invocation counter object.
+
 ## 0.3.22 - 2026-06-06
 
 - Added regression coverage for invocation counter exhaustion through

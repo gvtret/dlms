@@ -75,8 +75,11 @@ CosemLogicalName CurrentAssociationLnName();
 CosemLogicalName SapAssignmentName();
 CosemLogicalName LogicalDeviceNameObjectName();
 CosemLogicalName SecuritySetupName();
+CosemLogicalName InvocationCounterObjectName();
 CosemDataObject MakeLogicalDeviceNameObject(
   const std::string& logicalDeviceName);
+CosemDataObject MakeInvocationCounterObject(
+  std::uint32_t invocationCounter);
 
 class CosemAssociationLnObject : public ICosemObject
 {

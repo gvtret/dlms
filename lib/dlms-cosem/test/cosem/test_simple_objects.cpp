@@ -44,6 +44,17 @@ void AppendLongUnsigned(
   bytes.push_back(static_cast<std::uint8_t>(value & 0xffu));
 }
 
+void AppendDoubleLongUnsigned(
+  dlms::cosem::CosemByteBuffer& bytes,
+  std::uint32_t value)
+{
+  bytes.push_back(0x06u);
+  bytes.push_back(static_cast<std::uint8_t>((value >> 24u) & 0xffu));
+  bytes.push_back(static_cast<std::uint8_t>((value >> 16u) & 0xffu));
+  bytes.push_back(static_cast<std::uint8_t>((value >> 8u) & 0xffu));
+  bytes.push_back(static_cast<std::uint8_t>(value & 0xffu));
+}
+
 void AppendOctetString(
   dlms::cosem::CosemByteBuffer& bytes,
   const dlms::cosem::CosemLogicalName& name)
@@ -483,6 +494,39 @@ TEST(DiscoveryObjects, DefaultLogicalNamesUseStandardObisValues)
             dlms::cosem::LogicalDeviceNameObjectName());
   EXPECT_EQ(dlms::cosem::CosemLogicalName(0u, 0u, 43u, 0u, 0u, 255u),
             dlms::cosem::SecuritySetupName());
+  EXPECT_EQ(dlms::cosem::CosemLogicalName(0u, 0u, 43u, 1u, 0u, 255u),
+            dlms::cosem::InvocationCounterObjectName());
+}
+
+TEST(InvocationCounterObject, BuildsReadOnlyDataObject)
+{
+  dlms::cosem::CosemDataObject object =
+    dlms::cosem::MakeInvocationCounterObject(0x01020304u);
+
+  const dlms::cosem::CosemObjectDescriptor descriptor =
+    object.Descriptor();
+  EXPECT_EQ(1u, descriptor.key.classId);
+  EXPECT_EQ(0u, descriptor.key.version);
+  EXPECT_EQ(dlms::cosem::InvocationCounterObjectName(),
+            descriptor.key.logicalName);
+
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, output));
+  EXPECT_EQ(EncodedLogicalName(dlms::cosem::InvocationCounterObjectName()),
+            output);
+
+  dlms::cosem::CosemByteBuffer expected;
+  AppendDoubleLongUnsigned(expected, 0x01020304u);
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, output));
+  EXPECT_EQ(expected, output);
+
+  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::ReadOnly,
+            rights.AttributeAccess(1u));
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::ReadOnly,
+            rights.AttributeAccess(2u));
 }
 
 TEST(CosemSecuritySetupObject, ExposesDescriptorAndSecurityAttributes)

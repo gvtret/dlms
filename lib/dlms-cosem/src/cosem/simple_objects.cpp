@@ -21,6 +21,7 @@ constexpr std::uint8_t kVersion0 = 0u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
 constexpr std::uint8_t kNullDataTag = 0x00u;
+constexpr std::uint8_t kDoubleLongUnsignedTag = 0x06u;
 constexpr std::uint8_t kDataOctetStringTag = 0x09u;
 constexpr std::uint8_t kIntegerTag = 0x0Fu;
 constexpr std::uint8_t kUnsignedTag = 0x11u;
@@ -102,6 +103,15 @@ void AppendLongUnsigned(CosemByteBuffer& output, std::uint16_t value)
 {
   output.push_back(kLongUnsignedTag);
   output.push_back(static_cast<std::uint8_t>(value >> 8u));
+  output.push_back(static_cast<std::uint8_t>(value & 0xffu));
+}
+
+void AppendDoubleLongUnsigned(CosemByteBuffer& output, std::uint32_t value)
+{
+  output.push_back(kDoubleLongUnsignedTag);
+  output.push_back(static_cast<std::uint8_t>((value >> 24u) & 0xffu));
+  output.push_back(static_cast<std::uint8_t>((value >> 16u) & 0xffu));
+  output.push_back(static_cast<std::uint8_t>((value >> 8u) & 0xffu));
   output.push_back(static_cast<std::uint8_t>(value & 0xffu));
 }
 
@@ -229,6 +239,11 @@ CosemLogicalName SecuritySetupName()
   return CosemLogicalName(0u, 0u, 43u, 0u, 0u, 255u);
 }
 
+CosemLogicalName InvocationCounterObjectName()
+{
+  return CosemLogicalName(0u, 0u, 43u, 1u, 0u, 255u);
+}
+
 CosemDataObject MakeLogicalDeviceNameObject(
   const std::string& logicalDeviceName)
 {
@@ -239,6 +254,17 @@ CosemDataObject MakeLogicalDeviceNameObject(
     logicalDeviceName.size());
   return CosemDataObject(
     LogicalDeviceNameObjectName(),
+    value,
+    AttributeAccessMode::ReadOnly);
+}
+
+CosemDataObject MakeInvocationCounterObject(
+  std::uint32_t invocationCounter)
+{
+  CosemByteBuffer value;
+  AppendDoubleLongUnsigned(value, invocationCounter);
+  return CosemDataObject(
+    InvocationCounterObjectName(),
     value,
     AttributeAccessMode::ReadOnly);
 }

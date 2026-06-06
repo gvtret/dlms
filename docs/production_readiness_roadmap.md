@@ -52,6 +52,7 @@
 сертификатами, dedicated/general ciphering и строгая политика invocation
 counter. Текущий код покрывает только часть Suite 0: low password,
 HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter stores.
+Текущий статус зафиксирован в `docs/security_support_matrix.md`.
 
 1. Зафиксировать supported/unsupported security matrix.
    - Suite 0: `None`, Low, High password, High GMAC, global ciphering.
@@ -99,6 +100,7 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
 Текущий `dlms-cosem` реализует минимальный generic object model и часть
 Data/Register/Association LN/SAP Assignment behavior, но не является полной
 СПОДЭС/СПОДУС моделью.
+Текущий статус зафиксирован в `docs/ic_support_matrix.md`.
 
 1. Ввести explicit IC support matrix.
    - Для каждого IC: class id, supported versions, attributes, methods,
@@ -217,6 +219,7 @@ library may be described as an extensible DLMS/COSEM framework with partial
 4. P0: пройти C API output cleanup audit после required-size унификации.
    Статус: начато в `0.3.19` с Profile receive boundary validation.
 5. P0: создать security support matrix и IC support matrix по базе знаний
-   СПОДЭС/СПОДУС.
+   СПОДЭС/СПОДУС. Статус: выполнено в `docs/security_support_matrix.md` и
+   `docs/ic_support_matrix.md`.
 6. P0: перейти к endpoint lifecycle cleanup tests после фиксации `Close()`
    semantics.

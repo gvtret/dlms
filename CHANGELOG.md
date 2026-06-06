@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.30 - 2026-06-06
+
+- Added endpoint lifecycle regression coverage for retrying HLS GMAC
+  authentication after an invalid client reply.
+- Verified `ServerEndpoint` remains open, unassociated and able to accept a
+  later valid GMAC HLS reply after the first verification failure.
+- Updated the production-ready roadmap for HLS GMAC negotiated failure
+  coverage.
+
 ## 0.3.29 - 2026-06-06
 
 - Added endpoint lifecycle regression coverage for retrying high-password HLS

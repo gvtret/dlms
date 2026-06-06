@@ -3,6 +3,7 @@
 #include "dlms/apdu/xdlms.hpp"
 
 #include <cstddef>
+#include <limits>
 
 namespace {
 
@@ -136,16 +137,19 @@ extern "C" dlms_apdu_status_t dlms_apdu_encode_xdlms(
   }
 
   *written_size = 0;
+  if (output == 0) {
+    return DLMS_APDU_STATUS_INVALID_ARGUMENT;
+  }
   if (input->payload == 0 && input->payload_size != 0) {
     return DLMS_APDU_STATUS_INVALID_ARGUMENT;
+  }
+  if (input->payload_size == std::numeric_limits<size_t>::max()) {
+    return DLMS_APDU_STATUS_PDU_TOO_LARGE;
   }
 
   const size_t required_size = input->payload_size + 1U;
   if (output_size < required_size) {
     return DLMS_APDU_STATUS_OUTPUT_BUFFER_TOO_SMALL;
-  }
-  if (output == 0) {
-    return DLMS_APDU_STATUS_INVALID_ARGUMENT;
   }
 
   output[0] = input->tag;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.4 - 2026-06-06
+
+- Fixed APDU C API xDLMS encode validation so null output buffers return
+  `INVALID_ARGUMENT` while still clearing `written_size` when it is provided.
+- Added an APDU C API guard for payload sizes that would overflow the encoded
+  APDU size calculation.
+- Added APDU C API regression coverage for those edge cases.
+
 ## 0.3.3 - 2026-06-06
 
 - Fixed HDLC C API limit conversion so zero fields in `dlms_hdlc_limits_t`

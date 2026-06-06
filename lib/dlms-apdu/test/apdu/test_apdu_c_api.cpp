@@ -6,6 +6,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 
 extern "C" int dlms_apdu_c_header_compiles_as_c(void);
 
@@ -84,6 +85,30 @@ TEST(ApduCApiTest, ValidatesNullArguments)
   apdu.payload = 0;
   apdu.payload_size = 1;
   EXPECT_EQ(DLMS_APDU_STATUS_INVALID_ARGUMENT, dlms_apdu_encode_xdlms(&apdu, output.data(), output.size(), &written_size));
+
+  written_size = 7;
+  apdu.payload = input.data();
+  apdu.payload_size = input.size();
+  EXPECT_EQ(DLMS_APDU_STATUS_INVALID_ARGUMENT,
+            dlms_apdu_encode_xdlms(&apdu, 0, 0, &written_size));
+  EXPECT_EQ(0U, written_size);
+}
+
+TEST(ApduCApiTest, RejectsOversizePayloadBeforeRequiredSizeWraps)
+{
+  constexpr std::array<std::uint8_t, 1> payload = {0x01};
+  dlms_apdu_xdlms_t apdu = {};
+  apdu.kind = DLMS_APDU_XDLMS_GET_REQUEST;
+  apdu.tag = 0xC0;
+  apdu.payload = payload.data();
+  apdu.payload_size = std::numeric_limits<std::size_t>::max();
+
+  std::array<std::uint8_t, 4> output = {};
+  std::size_t written_size = 7;
+  EXPECT_EQ(
+    DLMS_APDU_STATUS_PDU_TOO_LARGE,
+    dlms_apdu_encode_xdlms(&apdu, output.data(), output.size(), &written_size));
+  EXPECT_EQ(0U, written_size);
 }
 
 } // namespace

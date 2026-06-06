@@ -5,6 +5,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace {
 
 dlms::security::SecurityKey MakeKey(
@@ -251,6 +253,30 @@ TEST(CipheredApduProcessor, RejectsUnsupportedPartialPolicies)
   EXPECT_EQ(
     dlms::security::SecurityStatus::UnsupportedFeature,
     processor.Protect(plain, protectedApdu));
+}
+
+TEST(CipheredApduProcessor, RefusesProtectWhenInvocationCounterIsExhausted)
+{
+  dlms::security::InMemoryKeyStore keys;
+  InstallKeys(keys);
+
+  dlms::security::InMemoryInvocationCounterStore counters;
+  counters.SetLocalCounter(std::numeric_limits<std::uint32_t>::max());
+  dlms::security::CipheredApduProcessor processor(
+    MakeContext(dlms::security::SecurityRole::Client),
+    keys,
+    counters);
+
+  const std::uint8_t raw[] = {0x01u, 0x02u};
+  dlms::security::SecurityByteView plain;
+  plain.data = raw;
+  plain.size = sizeof(raw);
+
+  std::vector<std::uint8_t> protectedApdu = {0xAAu, 0xBBu};
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::InvocationCounterExhausted,
+    processor.Protect(plain, protectedApdu));
+  EXPECT_TRUE(protectedApdu.empty());
 }
 
 TEST(CipheredApduProcessor, RejectsMalformedProtectedApdu)

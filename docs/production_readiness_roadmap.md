@@ -80,6 +80,9 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
    - Refuse encryption when counter reaches `2^32 - 1`; require key rotation.
    - Expose/read the public invocation counter object
      `0.0.43.1.0.255`, class id `1`, where profile policy requires it.
+   - Статус: local counter exhaustion отказ покрыт для protected APDU и
+     HLS GMAC response paths в `0.3.22`; persistent per-sender replay state и
+     public invocation counter object остаются задачами.
 4. Ciphering completeness.
    - General global ciphering and service-specific global ciphering.
    - Dedicated ciphering and dedicated key lifetime scoped to association.
@@ -229,6 +232,8 @@ library may be described as an extensible DLMS/COSEM framework with partial
    unsupported statuses для методов. Статус: выполнено в `0.3.20`.
 7. P0: реализовать `security_activate` с monotonic policy strengthening.
    Статус: выполнено в `0.3.21`.
-8. P0: перейти к Security Setup key transfer/key wrapping contract или
+8. P0: закрепить refusal на local invocation counter exhaustion для protected
+   APDU и HLS GMAC response paths. Статус: выполнено в `0.3.22`.
+9. P0: перейти к Security Setup key transfer/key wrapping contract или
    endpoint lifecycle cleanup tests после фиксации `Close()`
    semantics.

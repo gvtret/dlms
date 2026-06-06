@@ -59,7 +59,7 @@ Status values:
 | Monotonic local counter increment | Supported | Current protect paths use counter store. |
 | IV construction `system_title[8] || counter[4]` | Supported | Covered by Suite 0 AES-GCM tests. |
 | Reject received counter replay | Partial | Needs per-sender persistence and explicit reject tests for `counter <= last accepted`. |
-| Refuse encryption at `2^32 - 1` | Planned | Required to prevent nonce reuse with the same key. |
+| Refuse encryption at `2^32 - 1` | Supported | `InMemoryInvocationCounterStore` returns `InvocationCounterExhausted`; protected APDU and HLS GMAC response paths propagate it without emitting output. |
 | Public invocation counter object `0.0.43.1.0.255`, class id `1` | Planned | COSEM Data object should expose the counter where profile policy requires it. |
 | Counter reset on key rotation | Planned | Depends on Security Setup key transfer implementation. |
 

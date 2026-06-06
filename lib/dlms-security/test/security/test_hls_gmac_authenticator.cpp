@@ -5,6 +5,8 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
+
 namespace {
 
 class FixedRandomSource : public dlms::security::IRandomSource
@@ -253,4 +255,31 @@ TEST(HlsGmacAuthenticator, RejectsMissingAuthenticationKey)
   EXPECT_EQ(
     dlms::security::SecurityStatus::MissingKey,
     hls.BuildResponse(view, response));
+}
+
+TEST(HlsGmacAuthenticator, RefusesResponseWhenInvocationCounterIsExhausted)
+{
+  dlms::security::InMemoryKeyStore keys;
+  InstallAuthenticationKey(keys);
+
+  dlms::security::InMemoryInvocationCounterStore counters;
+  counters.SetLocalCounter(std::numeric_limits<std::uint32_t>::max());
+  FixedRandomSource random(0x70u);
+
+  dlms::security::HlsGmacAuthenticator hls(
+    MakeContext(dlms::security::SecurityRole::Client),
+    keys,
+    counters,
+    random);
+
+  const std::uint8_t challenge[] = {0x01u};
+  dlms::security::SecurityByteView view;
+  view.data = challenge;
+  view.size = sizeof(challenge);
+
+  std::vector<std::uint8_t> response = {0xAAu, 0xBBu};
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::InvocationCounterExhausted,
+    hls.BuildResponse(view, response));
+  EXPECT_TRUE(response.empty());
 }

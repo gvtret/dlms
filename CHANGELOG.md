@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.22 - 2026-06-06
+
+- Added regression coverage for invocation counter exhaustion through
+  `CipheredApduProcessor::Protect`.
+- Added regression coverage for invocation counter exhaustion through HLS GMAC
+  response generation.
+- Updated security documentation to mark local invocation counter exhaustion
+  refusal as covered at the protected APDU and HLS GMAC boundaries.
+
 ## 0.3.21 - 2026-06-06
 
 - Implemented Security Setup IC `64` `security_activate` method for encoded

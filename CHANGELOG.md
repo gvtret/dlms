@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.35 - 2026-06-06
+
+- Added Security Setup key-transfer malformed input regression coverage for
+  unsupported key identifiers and trailing bytes.
+
 ## 0.3.34 - 2026-06-06
 
 - Added invocation-counter reset policy hook for key rotation.

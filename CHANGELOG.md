@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.12 - 2026-06-06
+
+- Fixed Wrapper C API decode validation so each provided output pointer is
+  cleared before null output-pointer validation errors are returned.
+- Added Wrapper C API regression coverage for partial output cleanup.
+
 ## 0.3.11 - 2026-06-06
 
 - Fixed APDU C API encode validation so provided `written_size` outputs are

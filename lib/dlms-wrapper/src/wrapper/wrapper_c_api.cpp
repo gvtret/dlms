@@ -93,13 +93,19 @@ extern "C" dlms_wrapper_status_t dlms_wrapper_decode_wpdu(
   size_t data_output_size,
   size_t* data_size)
 {
+  if (source_port != 0) {
+    *source_port = 0;
+  }
+  if (destination_port != 0) {
+    *destination_port = 0;
+  }
+  if (data_size != 0) {
+    *data_size = 0;
+  }
+
   if (source_port == 0 || destination_port == 0 || data_size == 0) {
     return DLMS_WRAPPER_STATUS_INVALID_ARGUMENT;
   }
-
-  *source_port = 0;
-  *destination_port = 0;
-  *data_size = 0;
 
   dlms::wrapper::WrapperFrame frame;
   const dlms::wrapper::WrapperStatus status = dlms::wrapper::DecodeWpduView(

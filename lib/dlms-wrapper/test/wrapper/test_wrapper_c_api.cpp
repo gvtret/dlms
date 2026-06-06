@@ -372,6 +372,9 @@ TEST(WrapperCApiTest, ValidatesNullArguments)
                                      data,
                                      sizeof(data),
                                      0));
+  sourcePort = 99u;
+  destinationPort = 99u;
+  dataSize = 99u;
   EXPECT_EQ(DLMS_WRAPPER_STATUS_INVALID_ARGUMENT,
             dlms_wrapper_decode_wpdu(wpdu,
                                      sizeof(wpdu),
@@ -380,6 +383,9 @@ TEST(WrapperCApiTest, ValidatesNullArguments)
                                      0,
                                      sizeof(data),
                                      &dataSize));
+  EXPECT_EQ(0u, sourcePort);
+  EXPECT_EQ(0u, destinationPort);
+  EXPECT_EQ(0u, dataSize);
 }
 
 TEST(WrapperCApiTest, StreamDecoderCreateResetDestroy)

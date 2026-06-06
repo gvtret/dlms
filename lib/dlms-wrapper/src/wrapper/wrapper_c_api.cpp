@@ -111,19 +111,20 @@ extern "C" dlms_wrapper_status_t dlms_wrapper_decode_wpdu(
     return ToCApiStatus(status);
   }
 
-  *data_size = frame.dataSize;
-  if (data_output_size < frame.dataSize) {
-    return DLMS_WRAPPER_STATUS_OUTPUT_BUFFER_TOO_SMALL;
-  }
-
   if (frame.dataSize != 0 && data_output == 0) {
     return DLMS_WRAPPER_STATUS_INVALID_ARGUMENT;
+  }
+
+  if (data_output_size < frame.dataSize) {
+    *data_size = frame.dataSize;
+    return DLMS_WRAPPER_STATUS_OUTPUT_BUFFER_TOO_SMALL;
   }
 
   for (size_t i = 0; i < frame.dataSize; ++i) {
     data_output[i] = frame.data[i];
   }
 
+  *data_size = frame.dataSize;
   *source_port = frame.sourcePort;
   *destination_port = frame.destinationPort;
   return DLMS_WRAPPER_STATUS_OK;

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.7 - 2026-06-06
+
+- Fixed Wrapper C API decode validation so null data output buffers are rejected
+  before `data_size` is written for non-empty decoded payloads.
+- Added Wrapper C API regression coverage for decode output cleanup.
+
 ## 0.3.6 - 2026-06-06
 
 - Fixed Transport C API receive validation so null output buffers are rejected

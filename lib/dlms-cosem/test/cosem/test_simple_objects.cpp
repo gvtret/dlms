@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <array>
 #include <memory>
 #include <string>
 
@@ -66,6 +67,18 @@ dlms::cosem::CosemByteBuffer EncodedOctetString(
   return bytes;
 }
 
+dlms::cosem::CosemByteBuffer EncodedOctetString(
+  const dlms::cosem::CosemSecuritySetupObject::SystemTitle& value)
+{
+  dlms::cosem::CosemByteBuffer bytes;
+  bytes.push_back(0x09u);
+  bytes.push_back(static_cast<std::uint8_t>(value.size()));
+  for (std::size_t i = 0; i < value.size(); ++i) {
+    bytes.push_back(value[i]);
+  }
+  return bytes;
+}
+
 dlms::cosem::CosemAttributeDescriptor MakeAttribute(
   const dlms::cosem::CosemObjectKey& key,
   std::uint8_t attributeId)
@@ -73,6 +86,16 @@ dlms::cosem::CosemAttributeDescriptor MakeAttribute(
   dlms::cosem::CosemAttributeDescriptor descriptor;
   descriptor.object = key;
   descriptor.attributeId = attributeId;
+  return descriptor;
+}
+
+dlms::cosem::CosemMethodDescriptor MakeMethod(
+  const dlms::cosem::CosemObjectKey& key,
+  std::uint8_t methodId)
+{
+  dlms::cosem::CosemMethodDescriptor descriptor;
+  descriptor.object = key;
+  descriptor.methodId = methodId;
   return descriptor;
 }
 
@@ -458,4 +481,105 @@ TEST(DiscoveryObjects, DefaultLogicalNamesUseStandardObisValues)
             dlms::cosem::SapAssignmentName());
   EXPECT_EQ(dlms::cosem::CosemLogicalName(0u, 0u, 42u, 0u, 0u, 255u),
             dlms::cosem::LogicalDeviceNameObjectName());
+  EXPECT_EQ(dlms::cosem::CosemLogicalName(0u, 0u, 43u, 0u, 0u, 255u),
+            dlms::cosem::SecuritySetupName());
+}
+
+TEST(CosemSecuritySetupObject, ExposesDescriptorAndSecurityAttributes)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x30u,
+    0x01u,
+    client,
+    server);
+
+  const dlms::cosem::CosemObjectDescriptor descriptor =
+    object.Descriptor();
+  EXPECT_EQ(64u, descriptor.key.classId);
+  EXPECT_EQ(0u, descriptor.key.version);
+  EXPECT_EQ(dlms::cosem::SecuritySetupName(), descriptor.key.logicalName);
+  EXPECT_EQ(0x30u, object.SecurityPolicy());
+  EXPECT_EQ(0x01u, object.SecuritySuite());
+  EXPECT_EQ(client, object.ClientSystemTitle());
+  EXPECT_EQ(server, object.ServerSystemTitle());
+
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, output));
+  EXPECT_EQ(EncodedLogicalName(dlms::cosem::SecuritySetupName()), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, output));
+  EXPECT_EQ(Bytes(0x16u, 0x30u), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, output));
+  EXPECT_EQ(Bytes(0x16u, 0x01u), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, output));
+  EXPECT_EQ(EncodedOctetString(client), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, output));
+  EXPECT_EQ(EncodedOctetString(server), output);
+}
+
+TEST(CosemSecuritySetupObject, RejectsWritesAndReportsUnsupportedMethods)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x00u,
+    0x00u,
+    client,
+    server);
+
+  dlms::cosem::CosemByteBuffer bytes = Bytes(0x01u, 0x02u);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.WriteAttribute(2u, bytes));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.WriteAttribute(99u, bytes));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(99u, bytes));
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, bytes, bytes));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(99u, bytes, bytes));
+}
+
+TEST(CosemSecuritySetupObject, RegistryReturnsUnsupportedForKnownMethods)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  std::shared_ptr<dlms::cosem::CosemSecuritySetupObject> object(
+    new dlms::cosem::CosemSecuritySetupObject(
+      dlms::cosem::SecuritySetupName(),
+      0x00u,
+      0x00u,
+      client,
+      server));
+  dlms::cosem::ObjectRegistry registry;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok, registry.Register(object));
+
+  dlms::cosem::CosemByteBuffer bytes;
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            registry.InvokeMethod(
+              MakeMethod(object->Descriptor().key, 1u),
+              bytes,
+              bytes));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            registry.WriteAttribute(
+              MakeAttribute(object->Descriptor().key, 2u),
+              bytes));
 }

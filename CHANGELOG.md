@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.20 - 2026-06-06
+
+- Added `CosemSecuritySetupObject` for Security Setup IC `64` as a read-only
+  COSEM extension point exposing security policy, security suite and
+  client/server system titles.
+- Added explicit unsupported method behavior for Security Setup activation,
+  key transfer, key agreement and certificate operation slots.
+- Updated security, IC and production-ready roadmap documentation for the
+  current Security Setup support level.
+
 ## 0.3.19 - 2026-06-06
 
 - Fixed Profile C API receive validation so invalid caller output buffers and

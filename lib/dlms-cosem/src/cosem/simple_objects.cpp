@@ -8,9 +8,14 @@ constexpr std::uint16_t kDataClassId = 1u;
 constexpr std::uint16_t kRegisterClassId = 3u;
 constexpr std::uint16_t kAssociationLnClassId = 15u;
 constexpr std::uint16_t kSapAssignmentClassId = 17u;
+constexpr std::uint16_t kSecuritySetupClassId = 64u;
 constexpr std::uint8_t kLogicalNameAttributeId = 1u;
 constexpr std::uint8_t kValueAttributeId = 2u;
 constexpr std::uint8_t kScalerUnitAttributeId = 3u;
+constexpr std::uint8_t kSecurityPolicyAttributeId = 2u;
+constexpr std::uint8_t kSecuritySuiteAttributeId = 3u;
+constexpr std::uint8_t kClientSystemTitleAttributeId = 4u;
+constexpr std::uint8_t kServerSystemTitleAttributeId = 5u;
 constexpr std::uint8_t kVersion0 = 0u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
@@ -21,6 +26,7 @@ constexpr std::uint8_t kUnsignedTag = 0x11u;
 constexpr std::uint8_t kLongUnsignedTag = 0x12u;
 constexpr std::uint8_t kEnumTag = 0x16u;
 constexpr std::uint8_t kLogicalNameSize = 6u;
+constexpr std::size_t kSystemTitleSize = 8u;
 
 CosemObjectDescriptor MakeDescriptor(
   std::uint16_t classId,
@@ -197,6 +203,11 @@ CosemLogicalName SapAssignmentName()
 CosemLogicalName LogicalDeviceNameObjectName()
 {
   return CosemLogicalName(0u, 0u, 42u, 0u, 0u, 255u);
+}
+
+CosemLogicalName SecuritySetupName()
+{
+  return CosemLogicalName(0u, 0u, 43u, 0u, 0u, 255u);
 }
 
 CosemDataObject MakeLogicalDeviceNameObject(
@@ -515,6 +526,136 @@ CosemStatus CosemSapAssignmentObject::InvokeMethod(
 std::vector<SapAssignment> CosemSapAssignmentObject::Assignments() const
 {
   return assignments_;
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle)
+  : descriptor_(MakeDescriptor(kSecuritySetupClassId, logicalName))
+  , securityPolicy_(securityPolicy)
+  , securitySuite_(securitySuite)
+  , clientSystemTitle_(clientSystemTitle)
+  , serverSystemTitle_(serverSystemTitle)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSecurityPolicyAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSecuritySuiteAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kClientSystemTitleAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kServerSystemTitleAttributeId,
+    AttributeAccessMode::ReadOnly);
+
+  for (std::uint8_t methodId = 1u; methodId <= 8u; ++methodId) {
+    rights_.SetMethodAccess(methodId, MethodAccessMode::Access);
+  }
+}
+
+CosemObjectDescriptor CosemSecuritySetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSecuritySetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSecuritySetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kSecurityPolicyAttributeId) {
+    output.clear();
+    AppendEnum(output, securityPolicy_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kSecuritySuiteAttributeId) {
+    output.clear();
+    AppendEnum(output, securitySuite_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClientSystemTitleAttributeId) {
+    output.clear();
+    AppendOctetString(
+      output,
+      clientSystemTitle_.data(),
+      kSystemTitleSize);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kServerSystemTitleAttributeId) {
+    output.clear();
+    AppendOctetString(
+      output,
+      serverSystemTitle_.data(),
+      kSystemTitleSize);
+    return CosemStatus::Ok;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemSecuritySetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  (void)input;
+  if (attributeId == kLogicalNameAttributeId
+      || attributeId == kSecurityPolicyAttributeId
+      || attributeId == kSecuritySuiteAttributeId
+      || attributeId == kClientSystemTitleAttributeId
+      || attributeId == kServerSystemTitleAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemSecuritySetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  (void)output;
+  if (methodId >= 1u && methodId <= 8u) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+std::uint8_t CosemSecuritySetupObject::SecurityPolicy() const
+{
+  return securityPolicy_;
+}
+
+std::uint8_t CosemSecuritySetupObject::SecuritySuite() const
+{
+  return securitySuite_;
+}
+
+const CosemSecuritySetupObject::SystemTitle&
+CosemSecuritySetupObject::ClientSystemTitle() const
+{
+  return clientSystemTitle_;
+}
+
+const CosemSecuritySetupObject::SystemTitle&
+CosemSecuritySetupObject::ServerSystemTitle() const
+{
+  return serverSystemTitle_;
 }
 
 } // namespace cosem

@@ -68,6 +68,9 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
      operations with unsupported statuses until implemented.
    - Policy must be monotonic: activation may strengthen but must not weaken
      the configured security policy.
+   - Статус: read-only attributes для policy, suite и system titles добавлены
+     в `CosemSecuritySetupObject`; key/certificate/activation semantics
+     остаются следующими задачами.
 3. Invocation counter production contract.
    - IV is `system_title[8] || invocation_counter[4]`.
    - Counter must be monotonic for each key/system-title context.
@@ -221,5 +224,7 @@ library may be described as an extensible DLMS/COSEM framework with partial
 5. P0: создать security support matrix и IC support matrix по базе знаний
    СПОДЭС/СПОДУС. Статус: выполнено в `docs/security_support_matrix.md` и
    `docs/ic_support_matrix.md`.
-6. P0: перейти к endpoint lifecycle cleanup tests после фиксации `Close()`
+6. P0: реализовать минимальный `Security Setup` IC `64` surface с явными
+   unsupported statuses для методов. Статус: выполнено в `0.3.20`.
+7. P0: перейти к endpoint lifecycle cleanup tests после фиксации `Close()`
    semantics.

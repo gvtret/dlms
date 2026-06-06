@@ -21,7 +21,7 @@ Status values:
 | Suite 0 AES-GCM-128 primitives | Supported | `Suite0AesGcm`, key validation, GMAC and ciphered APDU tests exist. |
 | Suite 0 global unicast encryption key | Supported | `SecurityKeyRole::GlobalUnicastEncryption` is implemented through the key store. |
 | Suite 0 authentication key | Supported | `SecurityKeyRole::Authentication` is used by GMAC and ciphering. |
-| Suite 0 key encryption key | Partial | Key role exists, but key transfer and Security Setup IC methods are not implemented. |
+| Suite 0 key encryption key | Partial | Key role exists, but key transfer and Security Setup IC methods return explicit unsupported status. |
 | Suite 0 global broadcast encryption key | Partial | Key role exists, but broadcast APDU policy is not implemented. |
 | Suite 0 dedicated key | Partial | Key role exists, but dedicated-key negotiation, lifetime and `ded_*` APDU use are not implemented. |
 | Suite 1 | Planned | Types allow `Suite1`, but ECDSA, ECDH, certificates and suite-specific APDU handling are not implemented. |
@@ -67,9 +67,9 @@ Status values:
 
 | Attribute / method | Status | Notes |
 | --- | --- | --- |
-| Attribute `security_policy` | Planned | Must model and enforce monotonic policy strengthening. |
-| Attribute `security_suite` | Planned | Must bind association to Suite 0/1/2. |
-| Client and server system titles | Partial | `SecurityContext` stores titles; no Security Setup COSEM object exposes them. |
+| Attribute `security_policy` | Partial | `CosemSecuritySetupObject` exposes the encoded read-only value; activation and monotonic enforcement are not implemented. |
+| Attribute `security_suite` | Partial | `CosemSecuritySetupObject` exposes the encoded read-only value; association binding is not complete. |
+| Client and server system titles | Partial | `SecurityContext` stores titles and `CosemSecuritySetupObject` exposes encoded read-only system titles. |
 | Certificate array | Planned | Needed for Suite 1/2. |
 | `security_activate` | Planned | Must not weaken active policy. |
 | `global_key_transfer` / key transfer | Planned | Needs KEK wrapping, key ids and counter reset behavior. |
@@ -82,8 +82,9 @@ Status values:
 
 The security layer is not complete for СПОДЭС/СПОДУС production use until:
 
-1. `Security Setup` IC `64` is implemented or explicitly exposed as an
-   application-provided IC with documented contracts.
+1. `Security Setup` IC `64` implements policy activation, key transfer and
+   certificate operations, or these operations are explicitly excluded from the
+   claimed supported profile.
 2. Invocation counter replay rejection and overflow refusal are deterministic
    tests, not only storage helpers.
 3. Suite 0 key transfer and dedicated ciphering decisions are implemented or

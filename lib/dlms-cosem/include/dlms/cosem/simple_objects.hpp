@@ -2,6 +2,8 @@
 
 #include "dlms/cosem/logical_device.hpp"
 
+#include <array>
+
 namespace dlms {
 namespace cosem {
 
@@ -72,6 +74,7 @@ private:
 CosemLogicalName CurrentAssociationLnName();
 CosemLogicalName SapAssignmentName();
 CosemLogicalName LogicalDeviceNameObjectName();
+CosemLogicalName SecuritySetupName();
 CosemDataObject MakeLogicalDeviceNameObject(
   const std::string& logicalDeviceName);
 
@@ -128,6 +131,45 @@ public:
 private:
   CosemObjectDescriptor descriptor_;
   std::vector<SapAssignment> assignments_;
+  CosemAccessRights rights_;
+};
+
+class CosemSecuritySetupObject : public ICosemObject
+{
+public:
+  typedef std::array<std::uint8_t, 8u> SystemTitle;
+
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  std::uint8_t SecurityPolicy() const;
+  std::uint8_t SecuritySuite() const;
+  const SystemTitle& ClientSystemTitle() const;
+  const SystemTitle& ServerSystemTitle() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  std::uint8_t securityPolicy_;
+  std::uint8_t securitySuite_;
+  SystemTitle clientSystemTitle_;
+  SystemTitle serverSystemTitle_;
   CosemAccessRights rights_;
 };
 

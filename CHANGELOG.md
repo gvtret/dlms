@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.44 - 2026-06-07
+
+- Hardened COSEM object registry read and method invocation failures so stale
+  caller output buffers are cleared on missing objects, denied access and
+  object-level errors.
+
 ## 0.3.43 - 2026-06-07
 
 - Hardened built-in simple COSEM objects so missing attributes and methods

@@ -291,8 +291,7 @@ TEST(ObjectRegistry, DeniesReadBeforeCallingObject)
   output.push_back(0xAAu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             registry.ReadAttribute(MakeAttribute(key, 2u), output));
-  ASSERT_EQ(1u, output.size());
-  EXPECT_EQ(0xAAu, output[0]);
+  EXPECT_TRUE(output.empty());
   EXPECT_EQ(0u, object->readCount);
 }
 
@@ -344,6 +343,10 @@ TEST(ObjectRegistry, ReturnsMissingAndObjectErrors)
   object->rights.SetAttributeAccess(
     99u, dlms::cosem::AttributeAccessMode::ReadOnly);
   object->readStatus = dlms::cosem::CosemStatus::ObjectError;
+  object->rights.SetMethodAccess(
+    1u, dlms::cosem::MethodAccessMode::Access);
+  object->rights.SetMethodAccess(
+    99u, dlms::cosem::MethodAccessMode::Access);
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok, registry.Register(object));
 
@@ -352,12 +355,32 @@ TEST(ObjectRegistry, ReturnsMissingAndObjectErrors)
   EXPECT_EQ(dlms::cosem::CosemStatus::ObjectNotFound,
             registry.ReadAttribute(MakeAttribute(MakeKey(1u, 0u, 9u), 2u),
                                    output));
+  EXPECT_TRUE(output.empty());
+  output.push_back(0xAAu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             registry.ReadAttribute(MakeAttribute(key, 99u), output));
+  EXPECT_TRUE(output.empty());
+  output.push_back(0xAAu);
   EXPECT_EQ(dlms::cosem::CosemStatus::ObjectError,
             registry.ReadAttribute(MakeAttribute(key, 2u), output));
-  ASSERT_EQ(1u, output.size());
-  EXPECT_EQ(0xAAu, output[0]);
+  EXPECT_TRUE(output.empty());
+
+  dlms::cosem::CosemByteBuffer input;
+  output.push_back(0xAAu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::ObjectNotFound,
+            registry.InvokeMethod(MakeMethod(MakeKey(1u, 0u, 9u), 1u),
+                                  input,
+                                  output));
+  EXPECT_TRUE(output.empty());
+  output.push_back(0xAAu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            registry.InvokeMethod(MakeMethod(key, 99u), input, output));
+  EXPECT_TRUE(output.empty());
+  object->invokeStatus = dlms::cosem::CosemStatus::ObjectError;
+  output.push_back(0xAAu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::ObjectError,
+            registry.InvokeMethod(MakeMethod(key, 1u), input, output));
+  EXPECT_TRUE(output.empty());
 }
 
 } // namespace

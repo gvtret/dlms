@@ -76,16 +76,19 @@ CosemStatus ObjectRegistry::ReadAttribute(
 {
   const CosemStatus status = ValidateAttributeDescriptor(descriptor);
   if (status != CosemStatus::Ok) {
+    output.clear();
     return status;
   }
 
   const ICosemObject* object = Find(descriptor.object);
   if (!object) {
+    output.clear();
     return CosemStatus::ObjectNotFound;
   }
 
   if (!object->AccessRights().CanReadAttribute(
         descriptor.attributeId, context)) {
+    output.clear();
     return CosemStatus::AccessDenied;
   }
 
@@ -94,6 +97,8 @@ CosemStatus ObjectRegistry::ReadAttribute(
     object->ReadAttribute(descriptor.attributeId, candidate);
   if (readStatus == CosemStatus::Ok) {
     output = candidate;
+  } else {
+    output.clear();
   }
   return readStatus;
 }
@@ -145,17 +150,20 @@ CosemStatus ObjectRegistry::InvokeMethod(
 {
   const CosemStatus status = ValidateMethodDescriptor(descriptor);
   if (status != CosemStatus::Ok) {
+    output.clear();
     return status;
   }
 
   std::map<CosemObjectKey, std::shared_ptr<ICosemObject> >::iterator it =
     objects_.find(descriptor.object);
   if (it == objects_.end()) {
+    output.clear();
     return CosemStatus::ObjectNotFound;
   }
 
   if (!it->second->AccessRights().CanInvokeMethod(
         descriptor.methodId, context)) {
+    output.clear();
     return CosemStatus::AccessDenied;
   }
 
@@ -164,6 +172,8 @@ CosemStatus ObjectRegistry::InvokeMethod(
     it->second->InvokeMethod(descriptor.methodId, input, candidate);
   if (invokeStatus == CosemStatus::Ok) {
     output = candidate;
+  } else {
+    output.clear();
   }
   return invokeStatus;
 }

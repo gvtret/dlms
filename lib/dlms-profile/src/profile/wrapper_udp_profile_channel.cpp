@@ -146,6 +146,7 @@ ProfileStatus WrapperUdpProfileChannel::CopyFrameData(
   ProfileMutableBuffer output)
 {
   if (output.size < frame.data.size()) {
+    *output.writtenSize = frame.data.size();
     return ProfileStatus::OutputBufferTooSmall;
   }
 

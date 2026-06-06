@@ -694,6 +694,7 @@ ProfileStatus HdlcProfileChannel::CopyFirstPendingApdu(
 {
   const std::vector<std::uint8_t>& apdu = pendingApdus_.front();
   if (output.size < apdu.size()) {
+    *output.writtenSize = apdu.size();
     return ProfileStatus::OutputBufferTooSmall;
   }
 

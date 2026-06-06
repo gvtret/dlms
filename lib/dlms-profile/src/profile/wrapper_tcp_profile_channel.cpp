@@ -239,6 +239,7 @@ ProfileStatus WrapperTcpProfileChannel::CopyFirstPendingFrame(
 {
   const std::vector<std::uint8_t>& apdu = pendingFrames_.front().data;
   if (output.size < apdu.size()) {
+    *output.writtenSize = apdu.size();
     return ProfileStatus::OutputBufferTooSmall;
   }
 

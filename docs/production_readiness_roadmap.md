@@ -28,6 +28,8 @@
      HDLC encode.
    - HDLC C stream decoder и reassembler сообщают требуемый Information
      размер на small-buffer failures начиная с `0.3.48`.
+   - Profile mutable receive для Wrapper TCP, Wrapper UDP и HDLC сообщает
+     требуемый APDU размер на small-buffer failures начиная с `0.4.1`.
 2. Завершить аудит очистки выходных структур C API.
    - Все выходные указатели очищаются до валидации.
    - Ошибки не оставляют старые значения в result/view/output структурах.

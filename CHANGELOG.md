@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1 - 2026-06-07
+
+- Hardened profile mutable receive small-buffer failures so Wrapper TCP,
+  Wrapper UDP and HDLC channels report the required APDU size.
+
 ## 0.4.0 - 2026-06-07
 
 - Added the Wrapper C API stream decoder push entry point so C consumers can

@@ -437,7 +437,7 @@ TEST(WrapperTcpProfileChannelTest, SmallReceiveBufferDoesNotConsumeApdu)
   smallBuffer.writtenSize = &written;
   EXPECT_EQ(ProfileStatus::OutputBufferTooSmall,
             channel.ReceiveApdu(smallBuffer));
-  EXPECT_EQ(0u, written);
+  EXPECT_EQ(apdu.size(), written);
 
   std::uint8_t output[3] = {};
   ProfileMutableBuffer outputBuffer;
@@ -482,6 +482,27 @@ TEST(WrapperUdpProfileChannelTest, ReceiveApduDecodesFullDatagram)
   std::vector<std::uint8_t> received;
   ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
   EXPECT_EQ(apdu, received);
+}
+
+TEST(WrapperUdpProfileChannelTest, SmallReceiveBufferReportsApduSize)
+{
+  FakeDatagramTransport datagram;
+  WrapperUdpProfileChannel channel(datagram, DefaultApduChannelOptions());
+  const std::uint8_t rawApdu[] = {0xc4, 0x01, 0x81};
+  const std::vector<std::uint8_t> apdu = Bytes(rawApdu, sizeof(rawApdu));
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  datagram.ScriptReceive(EncodeWpdu(apdu));
+
+  std::uint8_t small[2] = {};
+  std::size_t written = 99u;
+  ProfileMutableBuffer smallBuffer;
+  smallBuffer.data = small;
+  smallBuffer.size = sizeof(small);
+  smallBuffer.writtenSize = &written;
+  EXPECT_EQ(ProfileStatus::OutputBufferTooSmall,
+            channel.ReceiveApdu(smallBuffer));
+  EXPECT_EQ(apdu.size(), written);
 }
 
 TEST(WrapperUdpProfileChannelTest, CanSendAfterCloseAndReopen)
@@ -562,6 +583,38 @@ TEST(HdlcProfileChannelTest, ReceiveApduDecodesHdlcAndLlc)
   std::vector<std::uint8_t> received;
   ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
   EXPECT_EQ(apdu, received);
+}
+
+TEST(HdlcProfileChannelTest, SmallReceiveBufferDoesNotConsumeApdu)
+{
+  FakeByteStream stream;
+  HdlcProfileChannel channel(stream, DefaultApduChannelOptions());
+  const std::uint8_t rawApdu[] = {0xc0, 0x01, 0x81, 0x00};
+  const std::vector<std::uint8_t> apdu = Bytes(rawApdu, sizeof(rawApdu));
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(apdu)));
+  ASSERT_EQ(1u, stream.Writes().size());
+  stream.ScriptRead(stream.Writes()[0]);
+
+  std::uint8_t small[3] = {};
+  std::size_t written = 99u;
+  ProfileMutableBuffer smallBuffer;
+  smallBuffer.data = small;
+  smallBuffer.size = sizeof(small);
+  smallBuffer.writtenSize = &written;
+  EXPECT_EQ(ProfileStatus::OutputBufferTooSmall,
+            channel.ReceiveApdu(smallBuffer));
+  EXPECT_EQ(apdu.size(), written);
+
+  std::uint8_t output[4] = {};
+  ProfileMutableBuffer outputBuffer;
+  outputBuffer.data = output;
+  outputBuffer.size = sizeof(output);
+  outputBuffer.writtenSize = &written;
+  ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(outputBuffer));
+  EXPECT_EQ(apdu.size(), written);
+  EXPECT_EQ(apdu, Bytes(output, written));
 }
 
 TEST(HdlcProfileChannelTest, CanSendAfterCloseAndReopen)

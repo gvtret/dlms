@@ -36,6 +36,8 @@
      размером начиная с `0.3.37`.
    - HDLC C decode допускает null information buffer только при нулевом
      размере начиная с `0.3.40`.
+   - Security Setup method invocation очищает COSEM output на invalid
+     activation и unsupported method failures начиная с `0.3.42`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.
@@ -99,7 +101,8 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
      добавлен в `0.3.35`; unsupported suite key-transfer coverage добавлен
      в `0.3.38`; unsupported Security Setup method range coverage добавлен
      в `0.3.39`; reset policy gate перед установкой ключей добавлен в
-     `0.3.41`; certificate и key agreement semantics остаются следующими
+     `0.3.41`; output cleanup для unsupported method failures добавлен в
+     `0.3.42`; certificate и key agreement semantics остаются следующими
      задачами.
 3. Invocation counter production contract.
    - IV is `system_title[8] || invocation_counter[4]`.

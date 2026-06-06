@@ -73,10 +73,10 @@ Status values:
 | Certificate array | Planned | Needed for Suite 1/2. |
 | `security_activate` | Partial | Implemented for AXDR enum policy activation with monotonic strengthening; association/session rebinding and full СПОДЭС/СПОДУС policy profiles remain incomplete. |
 | `global_key_transfer` / key transfer | Partial | Security Setup method 2 parses Suite 0 key-transfer arrays, rejects unsupported key ids and trailing bytes, gates key installation on `IInvocationCounterResetPolicy`, and installs unwrapped keys through `IMutableKeyStore`; persistence policy remains. |
-| `key_agreement` | Planned | Needs ECDH and general-ciphering APDU; currently returns `UnsupportedFeature`. |
-| `generate_key_pair` | Planned | Needed for Suite 1/2 server key management; currently returns `UnsupportedFeature`. |
-| `generate_certificate_request` | Planned | Needed for certificate lifecycle; currently returns `UnsupportedFeature`. |
-| `import_certificate` / `export_certificate` / `remove_certificate` | Planned | Needed for Suite 1/2 certificate lifecycle; currently returns `UnsupportedFeature`. |
+| `key_agreement` | Planned | Needs ECDH and general-ciphering APDU; currently returns `UnsupportedFeature` and clears method output. |
+| `generate_key_pair` | Planned | Needed for Suite 1/2 server key management; currently returns `UnsupportedFeature` and clears method output. |
+| `generate_certificate_request` | Planned | Needed for certificate lifecycle; currently returns `UnsupportedFeature` and clears method output. |
+| `import_certificate` / `export_certificate` / `remove_certificate` | Planned | Needed for Suite 1/2 certificate lifecycle; currently returns `UnsupportedFeature` and clears method output. |
 
 ## Production Gate
 

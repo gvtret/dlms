@@ -666,13 +666,17 @@ TEST(CosemSecuritySetupObject, ActivatesOnlyMonotonicSecurityPolicy)
             object.ReadAttribute(2u, output));
   EXPECT_EQ(Bytes(0x16u, 0x03u), output);
 
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             object.InvokeMethod(1u, Bytes(0x16u, 0x01u), output));
+  EXPECT_TRUE(output.empty());
   EXPECT_EQ(0x03u, object.SecurityPolicy());
 
   dlms::cosem::CosemByteBuffer invalid = Bytes(0x11u, 0x03u);
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
             object.InvokeMethod(1u, invalid, output));
+  EXPECT_TRUE(output.empty());
   EXPECT_EQ(0x03u, object.SecurityPolicy());
 }
 
@@ -696,14 +700,22 @@ TEST(CosemSecuritySetupObject, RejectsWritesAndReportsUnsupportedMethods)
             object.WriteAttribute(99u, bytes));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(99u, bytes));
+
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(2u, bytes, bytes));
+            object.InvokeMethod(2u, bytes, output));
+  EXPECT_TRUE(output.empty());
+
   for (std::uint8_t methodId = 3u; methodId <= 8u; ++methodId) {
+    output = Bytes(0xAAu, 0xBBu);
     EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-              object.InvokeMethod(methodId, bytes, bytes));
+              object.InvokeMethod(methodId, bytes, output));
+    EXPECT_TRUE(output.empty());
   }
+  output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(99u, bytes, bytes));
+            object.InvokeMethod(99u, bytes, output));
+  EXPECT_TRUE(output.empty());
 }
 
 TEST(CosemSecuritySetupObject, TransfersGlobalKeyThroughMutableKeyStore)

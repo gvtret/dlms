@@ -787,9 +787,11 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
   if (methodId == kSecurityActivateMethodId) {
     std::uint8_t requestedPolicy = 0u;
     if (!IsAxdrEnum(input, requestedPolicy)) {
+      output.clear();
       return CosemStatus::InvalidArgument;
     }
     if (!StrengthensOrKeepsPolicy(securityPolicy_, requestedPolicy)) {
+      output.clear();
       return CosemStatus::AccessDenied;
     }
     securityPolicy_ = requestedPolicy;
@@ -901,8 +903,10 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
     return CosemStatus::Ok;
   }
   if (methodId > kSecurityActivateMethodId && methodId <= 8u) {
+    output.clear();
     return CosemStatus::UnsupportedFeature;
   }
+  output.clear();
   return CosemStatus::MethodNotFound;
 }
 

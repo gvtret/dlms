@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.42 - 2026-06-07
+
+- Hardened Security Setup method invocation failures so stale COSEM output
+  data is cleared for invalid activation requests and unsupported methods.
+
 ## 0.3.41 - 2026-06-07
 
 - Hardened Security Setup key transfer so invocation-counter reset policy

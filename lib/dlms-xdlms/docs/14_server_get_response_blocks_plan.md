@@ -179,7 +179,7 @@ feat(xdlms): send server get response blocks
 
 Deliverables:
 
-- root submodule pointer update;
+- root workspace update;
 - root integration test for blocked GET response through client/server APDU
   boundary;
 - full root build and test run.

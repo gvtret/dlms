@@ -195,7 +195,7 @@ feat(xdlms): handle action response blocks
 
 Deliverables:
 
-- root submodule pointer update;
+- root workspace update;
 - root integration test for multi-block ACTION response over a fake APDU
   channel;
 - full root build and test run.

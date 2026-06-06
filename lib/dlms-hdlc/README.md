@@ -1,17 +1,16 @@
 # DLMS/COSEM HDLC Codec
 
-Portable HDLC Frame Format Type 3 codec for DLMS/COSEM, implemented in C++11
-and Go.
+Portable HDLC Frame Format Type 3 codec and transport-independent session
+state machine for DLMS/COSEM, implemented in C++11.
 
-This repository contains the HDLC codec and initial HDLC session layer for a
-future DLMS/COSEM framework. The framework is planned to include HDLC, LLC,
-WRAPPER and APDU codecs, but this repository phase focuses on the HDLC
-foundation.
+`dlms-hdlc` is a codec component of the root DLMS/COSEM framework. It does not
+own sockets, timers, LLC payload parsing, APDU parsing, association state, or
+security.
 
 ## Scope
 
-Version 1 implements the **HDLC codec layer** and an initial
-transport-independent **HDLC session layer** in both C++11 and Go.
+The component implements the **HDLC codec layer** and a transport-independent
+**HDLC session layer** in C++11.
 
 Included:
 
@@ -27,12 +26,11 @@ Included:
 - DISC/UA disconnect sequence
 - I-frame and RR sequence tracking
 - status-code based error handling
-- no exceptions (C++) / no panics (Go) in public runtime API paths
-- stable C ABI wrapper (C++ implementation, exposed from Go via CGo)
-- Doxygen-documented C++ public API; godoc-documented Go public API
-- CMake 3.16+ build system (C++, Go, and CTest integration)
+- no exceptions in public runtime API paths
+- stable C ABI wrapper
+- Doxygen-documented C++ public API
+- CMake 3.16+ build system
 - GoogleTest-based C++ test suite
-- Go standard-library test suite (`go test`)
 
 Not included in v1:
 
@@ -47,9 +45,9 @@ Not included in v1:
 - APDU block transfer
 - security and ciphering
 
-## Target Architecture
+## Stack Placement
 
-Expected future HDLC-based DLMS/COSEM stack:
+HDLC-based DLMS/COSEM stack:
 
 ```text
 +-----------------------------+
@@ -65,7 +63,7 @@ Expected future HDLC-based DLMS/COSEM stack:
 +-----------------------------+
 ```
 
-Expected future WRAPPER-based stack:
+Wrapper-based stack:
 
 ```text
 +-----------------------------+
@@ -81,22 +79,22 @@ The HDLC codec does **not** parse LLC or APDU payloads. The HDLC `Information` f
 
 ## Key Design Decisions
 
-| Area | C++ | Go |
-|---|---|---|
-| Language | C++11 | Go 1.21+ |
-| Build system | CMake 3.16+ | CMake + `go build` via custom target |
-| Error handling | status codes | `error` interface returning `Status` |
-| Panics / exceptions | not used in public/runtime API paths | not used in public/runtime API paths |
-| Target roles | client and server | client and server |
-| HDLC frame format | Type 3 | Type 3 |
-| Segmentation | fully supported | fully supported |
-| Byte stuffing | not used | not used |
-| Frame boundary | determined by Format Field length | determined by Format Field length |
-| Closing flag | required | required |
-| Payload byte `0x7E` | allowed inside Information field | allowed inside Information field |
-| Session layer | transport-independent state machine | transport-independent state machine |
-| C ABI | separate stable wrapper | CGo shared-library wrapper (`-buildmode=c-shared`) |
-| Tests | GoogleTest | `go test` |
+| Area | Decision |
+|---|---|
+| Language | C++11 |
+| Build system | CMake 3.16+ |
+| Error handling | status codes |
+| Exceptions | not used in public/runtime API paths |
+| Target roles | client and server |
+| HDLC frame format | Type 3 |
+| Segmentation | fully supported |
+| Byte stuffing | not used |
+| Frame boundary | determined by Format Field length |
+| Closing flag | required |
+| Payload byte `0x7E` | allowed inside Information field |
+| Session layer | transport-independent state machine |
+| C ABI | separate stable wrapper |
+| Tests | GoogleTest |
 
 ## Frame Format
 

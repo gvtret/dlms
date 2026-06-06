@@ -2,7 +2,7 @@
 
 `dlms-server` is the server-side DLMS/COSEM orchestration layer.
 
-The repository owns the boundary between decoded server-side xDLMS service
+The component owns the boundary between decoded server-side xDLMS service
 requests and the COSEM object model. It does not implement lower protocol
 codecs, transport I/O, persistent object storage, or cryptographic primitives.
 

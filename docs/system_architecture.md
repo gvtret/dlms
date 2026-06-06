@@ -3,7 +3,7 @@
 ## 1. Scope
 
 This document describes the target architecture of the DLMS/COSEM framework
-hosted by this integration repository.
+hosted by the root repository.
 
 The root repository is the canonical monorepository. Each protocol or service
 layer lives as a self-contained component directory under `lib/`, but Git
@@ -12,11 +12,11 @@ repository.
 
 The architecture is intentionally layered:
 
-- codec repositories encode and decode protocol data units;
-- profile repositories bind codecs to transport channels;
-- application repositories implement DLMS/COSEM state machines and services;
-- object-model repositories implement COSEM server resources and access rules;
-- facade repositories expose ergonomic client/server APIs.
+- codec components encode and decode protocol data units;
+- profile components bind codecs to transport channels;
+- application components implement DLMS/COSEM state machines and services;
+- object-model components implement COSEM server resources and access rules;
+- facade components expose ergonomic client/server APIs.
 
 ## 2. Fixed Design Decisions
 
@@ -145,6 +145,11 @@ These examples are intentionally deterministic and do not require a live meter.
 Loopback and live-meter coverage belongs in integration tests or opt-in smoke
 tests when it requires network timing or external hardware.
 
+Install-tree examples under `examples/package-consumers` verify the exported
+CMake package from the user side. They cover `dlms::codec`, `dlms::protocol`,
+and `dlms::runtime`; `dlms::framework` is checked by the root framework target
+smoke test.
+
 ## 2.4. Consolidation And Versioning
 
 The project uses one Git repository and one SemVer release stream. The
@@ -181,7 +186,6 @@ execution. `dlms-transport` owns protocol-neutral I/O only, while
 
 ```text
 dlms                         monorepository and release root
-lib/dlms-common              shared byte views, buffers, status helpers
 lib/dlms-hdlc                HDLC codec and session state machine
 lib/dlms-llc                 LLC codec
 lib/dlms-wrapper             Wrapper codec
@@ -197,8 +201,8 @@ lib/dlms-client              Ergonomic public client facade
 lib/dlms-endpoint            Runtime composition for client/server/push/gateway endpoints
 ```
 
-`dlms-common` should be introduced only when new repositories create real
-duplication. It must not become a dumping ground for protocol logic.
+Shared helpers should be introduced only when multiple components create real
+duplication. They must not become a dumping ground for protocol logic.
 
 ## 5. System Architecture
 
@@ -327,7 +331,7 @@ flowchart LR
 
 ### 7.1 `dlms-common`
 
-Provides shared infrastructure used by multiple repositories.
+Provides shared infrastructure used by multiple components.
 
 In scope:
 

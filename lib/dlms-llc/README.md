@@ -2,10 +2,9 @@
 
 Portable C++11 Logical Link Control sub-layer codec for DLMS/COSEM.
 
-This repository contains the LLC codec for a DLMS/COSEM framework. The framework
-is expected to include HDLC, LLC, WRAPPER and APDU codecs, while this repository
-focuses on the LLC layer used by the 3-layer, connection-oriented HDLC based
-communication profile.
+`dlms-llc` is the LLC codec component of the root DLMS/COSEM framework. It is
+used by the 3-layer connection-oriented HDLC communication profile and keeps
+the carried APDU bytes opaque.
 
 ## Scope
 

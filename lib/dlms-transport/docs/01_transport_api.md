@@ -2,8 +2,9 @@
 
 ## 1. Public Headers
 
-The initial API is header-only and defines interfaces plus fake transports for
-contract tests.
+The public API exposes protocol-neutral transport interfaces, concrete default
+transports, deterministic fake transports, tracing, event-loop helpers, and the
+C ABI.
 
 ```text
 include/dlms/transport/transport_status.hpp
@@ -11,6 +12,18 @@ include/dlms/transport/byte_stream.hpp
 include/dlms/transport/datagram_transport.hpp
 include/dlms/transport/timer_scheduler.hpp
 include/dlms/transport/fake_transport.hpp
+include/dlms/transport/tcp_stream_transport.hpp
+include/dlms/transport/tcp_server_transport.hpp
+include/dlms/transport/udp_transport.hpp
+include/dlms/transport/serial_transport.hpp
+include/dlms/transport/tls_stream_transport.hpp
+include/dlms/transport/non_blocking_byte_stream.hpp
+include/dlms/transport/non_blocking_datagram_transport.hpp
+include/dlms/transport/transport_event_loop.hpp
+include/dlms/transport/transport_trace.hpp
+include/dlms/transport/iec62056_21_mode_e.hpp
+include/dlms/transport/serial_port_discovery.hpp
+include/dlms/transport/transport_c_api.h
 ```
 
 ## 2. Status Model
@@ -124,3 +137,14 @@ They are part of the public test-support API because upper layers such as
 `dlms-profile` and `dlms-association` need stable fake channels.
 
 Fake transports are not thread-safe.
+
+## 7. Concrete Transports And Adapters
+
+Concrete TCP, UDP, serial, TLS, and IEC 62056-21 helpers implement the
+interfaces above. They remain byte-stream or datagram transports only: Wrapper,
+HDLC, APDU, retry, association, and COSEM validation belongs to higher
+components.
+
+Applications can implement `IByteStream` or `IDatagramTransport` directly when
+they own the socket, serial driver, embedded link, test harness, or custom
+non-blocking runtime.

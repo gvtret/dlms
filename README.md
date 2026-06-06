@@ -61,14 +61,14 @@ cmake --install build-mingw64 --prefix /tmp/dlms-install
 cmake --build build-mingw64 --target package
 ```
 
-Consumer projects can then use:
+Consumer projects can then use the whole framework:
 
 ```cmake
-find_package(DLMSFramework REQUIRED CONFIG)
+find_package(DLMSFramework REQUIRED CONFIG COMPONENTS framework)
 target_link_libraries(app PRIVATE dlms::framework)
 ```
 
-The package also supports CMake components for the aggregate targets:
+Or link only the aggregate component they need:
 
 ```cmake
 find_package(DLMSFramework REQUIRED CONFIG COMPONENTS runtime)
@@ -87,7 +87,30 @@ Aggregate targets are available for narrower linking:
 | `dlms::protocol` | association, security, xDLMS |
 | `dlms::cosem_server` | COSEM object model and server dispatch |
 | `dlms::runtime` | client and endpoint runtime composition |
-| `dlms::framework` | all framework targets |
+| `dlms::framework` | all aggregate targets |
+
+The same names are the `find_package` components:
+`codec`, `io`, `protocol`, `cosem_server`, `runtime`, and `framework`.
+Individual implementation libraries such as `dlms_hdlc` or `dlms_endpoint`
+are exported for source compatibility, but new consumers should prefer the
+aggregate targets above unless they intentionally depend on one low-level
+component.
+
+## Extension Points
+
+Each runtime component exposes abstract C++ ports for custom implementations:
+
+| Component | Public extension point |
+|---|---|
+| `dlms-transport` | `IByteStream`, `IDatagramTransport`, timer and event-loop interfaces |
+| `dlms-profile` | `IApduChannel`, `IHdlcDataLinkSession` |
+| `dlms-association` | `IAssociationClient`, `IAssociationServer`, HLS strategy interfaces |
+| `dlms-security` | `IKeyStore`, `IInvocationCounterStore`, `IRandomSource` |
+| `dlms-xdlms` | association-state, security-processor, server-handler interfaces |
+| `dlms-cosem` | `ICosemObject`, `ILogicalDevice` |
+| `dlms-server` | `IServerService` |
+| `dlms-client` | `IClientXdlmsService` and injectable association/security services |
+| `dlms-endpoint` | APDU-channel listener, push handler, gateway policy/upstream, endpoint factories |
 
 ## Versioning
 

@@ -120,4 +120,4 @@ Documentation phase is complete when this plan and cross-linked documentation
 updates are committed.
 
 Implementation phase is complete when standalone `dlms-cosem` tests pass and
-the root submodule pointer is advanced.
+the root workspace is updated.

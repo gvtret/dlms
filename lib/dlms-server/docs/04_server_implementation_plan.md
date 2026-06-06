@@ -9,7 +9,7 @@ Deliverables:
 - architecture diagrams;
 - test plan;
 - implementation plan;
-- empty standalone repository registered as root submodule.
+- empty component directory registered in the root workspace.
 
 Commit message:
 
@@ -86,7 +86,7 @@ feat(server): add minimal server facade
 Deliverables:
 
 - root CMake subdirectory wiring;
-- root submodule pointer update;
+- root workspace update;
 - root test run with `dlms_server_tests`;
 - deferred note for full APDU path until server-side xDLMS decoding exists.
 
@@ -132,7 +132,7 @@ feat(server): adapt xdlms get to server dispatch
 
 Deliverables:
 
-- root submodule pointer update;
+- root workspace update;
 - full workspace build and test run;
 - commit message for the root repo.
 
@@ -179,7 +179,7 @@ feat(server): adapt xdlms set to server dispatch
 
 Deliverables:
 
-- root submodule pointer update;
+- root workspace update;
 - full workspace build and test run;
 - commit message for the root repo.
 

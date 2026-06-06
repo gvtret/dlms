@@ -2,7 +2,7 @@
 
 `dlms-client` is the public client facade layer for the DLMS/COSEM framework.
 
-It composes lower repositories into an application-facing synchronous API:
+It composes lower components into an application-facing synchronous API:
 
 - `dlms-transport` for TCP, UDP, serial, and future transport construction;
 - `dlms-profile` for Wrapper and HDLC APDU channels;
@@ -12,7 +12,7 @@ It composes lower repositories into an application-facing synchronous API:
 
 The facade must not implement protocol codecs, association negotiation rules,
 COSEM object storage, or xDLMS APDU semantics. Those responsibilities stay in
-their dedicated layer repositories.
+their dedicated components.
 
 Applications can use the options-based constructor for default composition, or
 inject lower-layer pieces explicitly. `IClientXdlmsService` is the abstract

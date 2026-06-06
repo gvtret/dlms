@@ -60,14 +60,14 @@ feat(xdlms): implement normal get flow
 Deliverables:
 
 - root CMake subdirectory wiring
-- root git submodule entry
+- root component entry
 - cross-layer test for no-security association plus normal GET over fake APDU
   channel
 
 Commit message:
 
 ```text
-build: add dlms-xdlms submodule
+build: add dlms-xdlms component
 ```
 
 ## Phase 4. Server Normal GET Documentation
@@ -106,7 +106,7 @@ feat(xdlms): add server normal get dispatcher
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - full workspace build and test run
 - commit message for the root repo
 
@@ -153,7 +153,7 @@ feat(xdlms): process server get apdus
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - full workspace build and test run
 - commit message for the root repo
 
@@ -201,7 +201,7 @@ feat(xdlms): add server normal set dispatcher
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - full workspace build and test run
 - commit message for the root repo
 
@@ -248,7 +248,7 @@ feat(xdlms): process server set apdus
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - full workspace build and test run
 - commit message for the root repo
 
@@ -294,7 +294,7 @@ feat(xdlms): add server action apdu boundary
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - full workspace build and test run
 - root integration tests for ACTION APDU reaching a COSEM object method
 
@@ -403,7 +403,7 @@ feat(xdlms): handle get response blocks
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - root integration test for multi-block GET over a fake APDU channel
 - full root build and test run
 
@@ -447,7 +447,7 @@ feat(xdlms): send set request blocks
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - root integration test for multi-block SET over a fake APDU channel
 - full root build and test run
 
@@ -492,7 +492,7 @@ feat(xdlms): handle action response blocks
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - root integration test for multi-block ACTION response over a fake APDU
   channel
 - full root build and test run
@@ -539,7 +539,7 @@ feat(xdlms): send action request blocks
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - root integration test for multi-block ACTION request over a fake APDU channel
 - full root build and test run
 
@@ -585,7 +585,7 @@ feat(xdlms): reassemble server action request blocks
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - root integration test for client ACTION request blocks reaching server APDU
   processing
 - full root build and test run
@@ -633,7 +633,7 @@ feat(xdlms): reassemble server set request blocks
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - root integration test for client SET request blocks reaching server APDU
   processing
 - full root build and test run
@@ -680,7 +680,7 @@ feat(xdlms): send server get response blocks
 
 Deliverables:
 
-- root submodule pointer update
+- root workspace update
 - root integration test for client GET consuming server response blocks
 - full root build and test run
 

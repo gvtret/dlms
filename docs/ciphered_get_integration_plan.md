@@ -27,7 +27,7 @@ Out of scope:
 ## 2. Requirements
 
 1. The root integration test shall use only public headers from participating
-   layer repositories.
+   component directories in the root repository.
 2. The same Suite 0 global unicast encryption and authentication keys shall be
    installed for client and server processors.
 3. Client and server security contexts shall use opposite local and remote

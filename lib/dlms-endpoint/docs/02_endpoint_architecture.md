@@ -430,4 +430,4 @@ responsible for precise protocol status and trace details.
 ## Test Strategy
 
 The endpoint repository owns orchestration tests only. Protocol vector tests
-remain in lower-layer repositories.
+remain in lower component directories.

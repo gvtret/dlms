@@ -69,7 +69,7 @@ feat(client): compose wrapper tcp client
 
 Deliverables:
 
-- root submodule entry;
+- root component entry;
 - root CMake wiring;
 - root integration test for public-client GET against the minimal server path;
 - full root build and test run.

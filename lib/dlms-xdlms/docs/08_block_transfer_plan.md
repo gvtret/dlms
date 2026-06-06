@@ -188,7 +188,7 @@ feat(xdlms): handle get response blocks
 
 Deliverables:
 
-- root submodule pointer update;
+- root workspace update;
 - root integration test for multi-block GET over a fake APDU channel;
 - full root build and test run.
 

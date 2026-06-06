@@ -116,7 +116,7 @@ feat(endpoint): add gateway endpoint bridge
 Deliverables:
 
 - root CMake integration;
-- submodule pointer update;
+- root workspace update;
 - minimal SPODES client example;
 - minimal SPODES server example;
 - minimal push listener example;

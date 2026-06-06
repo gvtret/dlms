@@ -157,7 +157,7 @@ flowchart LR
 ```
 
 The smoke owns only option parsing and status reporting. All protocol work must
-remain in the layer repositories.
+remain in the component directories under the root repository.
 
 ## 5. Class Interaction
 

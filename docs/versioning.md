@@ -73,7 +73,7 @@ Release changes should update:
 Changes to `DLMSFramework` package components are public CMake API changes. The
 documented components are `codec`, `io`, `protocol`, `cosem_server`, `runtime`,
 and `framework`; each maps to the corresponding `dlms::<component>` aggregate
-target.
+target and must be verified through install-tree consumer examples.
 
 After the layer-modernization pass, any change that affects the installed
 headers, documented extension interfaces, exported CMake targets, release
@@ -82,6 +82,6 @@ before merge and update `VERSION` plus `CHANGELOG.md` in the same change. Purely
 internal refactors may leave the version unchanged only when they do not alter
 the public compatibility scope above.
 
-The root repository is authoritative after the submodule flattening. Former
-standalone layer repositories are archive sources for history before the
-monorepo migration; new work should land in the root repository.
+The root repository is authoritative after the completed flattening. Former
+standalone component repositories are archive sources for history before the
+monorepo migration; new work must land in the root repository.

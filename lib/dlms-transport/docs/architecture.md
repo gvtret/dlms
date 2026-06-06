@@ -76,9 +76,9 @@ test/transport/*.cpp
 TCP, UDP, and serial implementations may be split by platform when required.
 The public interfaces should remain platform-neutral.
 
-The initial committed API includes the protocol-neutral interfaces and fake
-transports. Concrete TCP, UDP, and serial implementations are planned follow-up
-modules.
+The committed API includes protocol-neutral interfaces, fake transports,
+concrete TCP/UDP/serial/TLS transports, IEC 62056-21 helpers, trace callbacks,
+and event-loop integration points.
 
 ## 6. Class Interaction Diagram
 

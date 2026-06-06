@@ -78,4 +78,4 @@ sequenceDiagram
 Documentation phase is complete when this plan is committed in `dlms-cosem`.
 
 Implementation phase is complete when `dlms-cosem` tests pass and the root
-submodule pointer is advanced.
+root workspace is updated.

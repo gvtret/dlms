@@ -101,7 +101,7 @@ feat(security): add hls gmac authenticator
 
 Deliverables:
 
-- root submodule entry;
+- root component entry;
 - root CMake wiring;
 - no-security regression check with security layer present;
 - first ciphered GET integration test once `dlms-xdlms` and `dlms-server`

@@ -1,17 +1,23 @@
 # dlms-transport
 
-`dlms-transport` will provide protocol-neutral I/O primitives for the
-DLMS/COSEM framework.
+`dlms-transport` provides protocol-neutral I/O primitives for the DLMS/COSEM
+framework.
 
 The library is a lower infrastructure layer. It must not know about HDLC, LLC,
 Wrapper, APDU, Application Associations, COSEM objects, or security policy.
 
-Planned transports:
+Implemented public surfaces:
 
 - TCP byte stream;
 - UDP datagram transport;
 - serial byte stream;
-- timer abstraction for timeout and retry policies owned by higher layers.
+- timer abstraction for timeout and retry policies owned by higher layers;
+- non-blocking byte-stream and datagram interfaces;
+- event-loop integration points;
+- TLS byte-stream wrapper;
+- IEC 62056-21 Mode E helper and serial-port discovery;
+- transport trace callbacks;
+- stable C ABI.
 
 ## Usage
 

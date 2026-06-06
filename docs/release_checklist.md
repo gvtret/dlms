@@ -34,6 +34,17 @@ tagging:
 Consumer-facing CMake examples live under `examples/package-consumers` and must
 continue to configure against the installed package, not the source tree.
 
+Before tagging, compare `README.md`, `docs/system_architecture.md`, and the
+component README files with `cmake/DLMSFrameworkConfig.cmake.in` and
+`cmake/DlmsPackages.cmake`. They must agree on:
+
+- supported `find_package(DLMSFramework COMPONENTS ...)` names;
+- exported aggregate targets `dlms::codec`, `dlms::io`, `dlms::protocol`,
+  `dlms::cosem_server`, `dlms::runtime`, and `dlms::framework`;
+- the absence of GoogleTest, examples, and other test-only targets from the
+  install tree;
+- the OpenSSL package dependency used by security-capable components.
+
 ## Tagging
 
 Create release tags from `master` only after the release commit is pushed and

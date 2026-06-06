@@ -27,7 +27,7 @@ Out of scope:
 ## 2. Requirements
 
 1. The root integration test shall use only public headers from participating
-   layer repositories.
+   component directories in the root repository.
 2. The test shall not introduce ownership cycles between `dlms-server`,
    `dlms-xdlms`, and `dlms-cosem`.
 3. `SET-REQUEST-NORMAL` with a writable attribute shall return

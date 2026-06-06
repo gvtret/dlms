@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.14 - 2026-06-06
+
+- Refreshed root, package, release, architecture, and component documentation
+  for the monorepo component model and `DLMSFramework` CMake components.
+- Documented current aggregate targets, install-tree consumer examples, and
+  public extension points after layer modernization.
+- Removed obsolete submodule and per-layer repository wording from active
+  documentation and implementation plans.
+
 ## 0.3.13 - 2026-06-06
 
 - Fixed LLC C API decode validation so null input with zero size follows the

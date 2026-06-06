@@ -185,7 +185,7 @@ feat(xdlms): send set request blocks
 
 Deliverables:
 
-- root submodule pointer update;
+- root workspace update;
 - root integration test for multi-block SET over a fake APDU channel;
 - full root build and test run.
 

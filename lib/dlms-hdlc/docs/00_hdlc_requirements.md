@@ -4,7 +4,7 @@
 
 This document defines requirements for a portable C++11 HDLC library for DLMS/COSEM.
 
-The library implements HDLC Frame Format Type 3 encoding and decoding. It is part of a future DLMS/COSEM framework that will also include:
+The library implements HDLC Frame Format Type 3 encoding and decoding. It is part of the root DLMS/COSEM framework together with:
 
 - LLC codec
 - WRAPPER codec

@@ -2,9 +2,9 @@
 
 ## Decision
 
-The project is moving from one Git repository per protocol layer to one root
-monorepository. Layer boundaries remain logical API and dependency boundaries,
-not repository boundaries.
+The project uses one root monorepository. Former per-layer source locations are
+no longer active development locations. Component boundaries remain logical API
+and dependency boundaries, not repository boundaries.
 
 This keeps the important DLMS/COSEM separation:
 
@@ -17,9 +17,9 @@ This keeps the important DLMS/COSEM separation:
 
 ## Package Direction
 
-The physical source tree may stay under `lib/dlms-*` while the build and release
-model consolidates around the root repository. Future packaging can group the
-logical components into fewer deliverables without moving code first:
+The physical source tree stays under `lib/dlms-*`, while the build and release
+model is owned by the root repository. The installed CMake package groups
+logical components into aggregate targets:
 
 | Package | Logical components |
 |---|---|
@@ -41,11 +41,18 @@ The root CMake build exposes matching aggregate interface targets:
 | `dlms_framework` / `dlms::framework` | all aggregate targets above |
 
 The root install step exports these targets as a CMake package named
-`DLMSFramework`. A downstream CMake project can consume the installed framework
-with:
+`DLMSFramework`. A downstream CMake project should request the component it
+uses:
 
 ```cmake
-find_package(DLMSFramework REQUIRED CONFIG)
+find_package(DLMSFramework REQUIRED CONFIG COMPONENTS runtime)
+target_link_libraries(app PRIVATE dlms::runtime)
+```
+
+Applications that intentionally need every aggregate can request `framework`:
+
+```cmake
+find_package(DLMSFramework REQUIRED CONFIG COMPONENTS framework)
 target_link_libraries(app PRIVATE dlms::framework)
 ```
 
@@ -55,13 +62,13 @@ and can be verified without changing protocol behavior.
 
 ## Migration Scope
 
-The initial migration uses a flattening approach:
+The completed migration used a flattening approach:
 
-- remove `.gitmodules`;
-- replace submodule gitlink entries with the current checked-out file contents;
-- do not import old submodule commit history into the root repository;
-- keep old standalone repositories only as archival history before the
-  migration point.
+- remove the legacy external-module manifest;
+- replace external-module entries with the current checked-out file contents;
+- do not import old external-module commit history into the root repository;
+- keep old standalone sources only as archival history before the migration
+  point.
 
 ## Success Criteria
 
@@ -71,5 +78,5 @@ The initial migration uses a flattening approach:
 - Aggregate CMake package targets compile and link through a root smoke test.
 - The installed `DLMSFramework` CMake package configures and links a downstream
   smoke consumer through `dlms::framework`.
-- Documentation no longer tells contributors to create one repository per
-  layer.
+- Documentation no longer tells contributors to create one source repository
+  per component.

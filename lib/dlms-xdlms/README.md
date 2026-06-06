@@ -1,17 +1,19 @@
 # dlms-xdlms
 
-`dlms-xdlms` will provide high-level xDLMS service orchestration over an
-already established DLMS/COSEM association. The repo is the shared home for
-client request flows and server-side GET/SET/ACTION dispatch contracts.
+`dlms-xdlms` provides high-level xDLMS service orchestration over an already
+established DLMS/COSEM association. The component owns client request flows and
+server-side GET/SET/ACTION dispatch contracts.
 
-The first implementation target is a normal LN GET request/response flow:
+Implemented scope includes:
 
-- require an established `dlms-association` client;
-- build a GET-REQUEST-NORMAL APDU through `dlms-apdu`;
-- send and receive APDUs through the association/profile channel boundary;
-- decode GET-RESPONSE-NORMAL into caller-owned result data;
-- keep block transfer, SET, ACTION, ciphering, and public facade ownership out
-  of the first phase.
+- GET, SET, and ACTION request/response orchestration;
+- server-side GET, SET, and ACTION dispatch boundaries;
+- service-specific block transfer helpers;
+- optional APDU security processor integration;
+- operation over `dlms::profile::IApduChannel` and abstract association state.
+
+The component does not own transport I/O, profile framing, association opening,
+COSEM object storage, public client facades, or endpoint lifecycle.
 
 ## Build
 

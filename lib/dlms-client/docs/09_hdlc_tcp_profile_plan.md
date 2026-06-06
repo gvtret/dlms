@@ -148,4 +148,4 @@ requirements/API/architecture/test-plan documents are committed in
 `dlms-client`.
 
 Implementation phase is complete when `dlms-client` tests pass, the root
-submodule pointer is advanced, and root `ctest` passes.
+root workspace is updated, and root `ctest` passes.

@@ -9,7 +9,7 @@ Deliverables:
 - architecture diagrams;
 - test plan;
 - implementation plan;
-- empty standalone repository registered as root submodule.
+- empty component directory registered in the root workspace.
 
 Commit message:
 
@@ -76,13 +76,13 @@ feat(cosem): add logical device association view
 Deliverables:
 
 - root CMake subdirectory wiring;
-- root submodule pointer update;
+- root workspace update;
 - root integration smoke test once `dlms-server` exists.
 
 Commit message:
 
 ```text
-build: add dlms-cosem submodule
+build: add dlms-cosem component
 ```
 
 ## Phase 5. Simple Interface Objects Documentation

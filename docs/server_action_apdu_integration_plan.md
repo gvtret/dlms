@@ -4,7 +4,7 @@
 
 This document defines the root integration boundary for a server-side
 `ACTION-REQUEST-NORMAL` APDU reaching a COSEM object method through the
-existing layer repositories.
+existing component directories in the root repository.
 
 In scope:
 
@@ -27,7 +27,7 @@ Out of scope:
 ## 2. Requirements
 
 1. The root integration test shall use only public headers from participating
-   layer repositories.
+   component directories in the root repository.
 2. `ACTION-REQUEST-NORMAL` with a permitted method shall return
    `ACTION-RESPONSE-NORMAL` with action-result `0`.
 3. Optional invocation parameter bytes shall reach the COSEM object unchanged.

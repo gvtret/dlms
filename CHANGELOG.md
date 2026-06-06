@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.28 - 2026-06-06
+
+- Added endpoint lifecycle regression coverage for retrying negotiated server
+  and push listener opens after malformed association requests.
+- Verified failed negotiated opens close the APDU channel and do not leave
+  endpoints logically open.
+- Updated the production-ready roadmap for negotiated open-failure cleanup
+  coverage.
+
 ## 0.3.27 - 2026-06-06
 
 - Added endpoint lifecycle regression coverage for gateway downstream close

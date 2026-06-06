@@ -1116,6 +1116,39 @@ TEST(ServerEndpoint, OpenCanRetryAfterLowPasswordCredentialMismatch)
   EXPECT_EQ(0x1357u, response.getResponseAny.result.data.unsignedValue);
 }
 
+TEST(ServerEndpoint, OpenCanRetryAfterMalformedNegotiation)
+{
+  FakeApduChannel channel;
+  channel.receiveQueue.push_back(std::vector<std::uint8_t>(1u, 0x00u));
+  channel.receiveQueue.push_back(EncodeAarq());
+  channel.receiveQueue.push_back(EncodeGetRequest());
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            logicalDevice.RegisterObject(MakeRegisterObject(0x2468u)));
+
+  dlms::endpoint::ServerEndpointOptions options =
+    dlms::endpoint::DefaultServerEndpointOptions();
+  options.negotiateAssociation = true;
+
+  dlms::endpoint::ServerEndpoint endpoint(channel, options, logicalDevice);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::AssociationFailed,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_FALSE(channel.IsOpen());
+  EXPECT_EQ(0u, channel.sentFrames.size());
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_TRUE(endpoint.Context().IsAssociated());
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.RunOnce());
+
+  ASSERT_EQ(2u, channel.sentFrames.size());
+  const dlms::apdu::XdlmsApdu response =
+    DecodeXdlmsResponse(channel.sentFrames[1]);
+  EXPECT_EQ(0x2468u, response.getResponseAny.result.data.unsignedValue);
+}
+
 TEST(ServerEndpoint, RunOnceRequiresOpenEndpoint)
 {
   FakeApduChannel channel;

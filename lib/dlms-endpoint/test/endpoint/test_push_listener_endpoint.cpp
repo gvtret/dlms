@@ -457,6 +457,37 @@ TEST(PushListenerEndpoint, OpenCanRetryAfterLowPasswordCredentialMismatch)
             handler.lastApdu);
 }
 
+TEST(PushListenerEndpoint, OpenCanRetryAfterMalformedNegotiation)
+{
+  const std::uint8_t pushApdu[] = {0x0fu, 0x06u, 0x24u, 0x68u};
+  FakeApduChannel channel;
+  channel.receiveQueue.push_back(std::vector<std::uint8_t>(1u, 0x00u));
+  channel.receiveQueue.push_back(EncodeAarq());
+  channel.receiveQueue.push_back(
+    std::vector<std::uint8_t>(pushApdu, pushApdu + sizeof(pushApdu)));
+  RecordingPushHandler handler;
+  dlms::endpoint::PushListenerEndpointOptions options =
+    dlms::endpoint::DefaultPushListenerEndpointOptions();
+  options.negotiateAssociation = true;
+
+  dlms::endpoint::PushListenerEndpoint endpoint(channel, options, handler);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::AssociationFailed,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_FALSE(channel.IsOpen());
+  EXPECT_EQ(0u, handler.calls);
+  EXPECT_EQ(0u, channel.sentFrames.size());
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.RunOnce());
+  EXPECT_EQ(1u, handler.calls);
+  EXPECT_EQ(std::vector<std::uint8_t>(pushApdu, pushApdu + sizeof(pushApdu)),
+            handler.lastApdu);
+  EXPECT_EQ(1u, channel.sentFrames.size());
+}
+
 TEST(PushListenerEndpoint, OpenRejectsNegotiatedAssociationWithHighAuthentication)
 {
   FakeApduChannel channel;

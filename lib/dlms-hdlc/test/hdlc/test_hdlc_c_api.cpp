@@ -240,6 +240,49 @@ TEST(HdlcCApi, StreamDecoderRejectsNullInformationBufferForPayloadFrame)
   dlms_hdlc_stream_decoder_destroy(decoder);
 }
 
+TEST(HdlcCApi, StreamDecoderReportsRequiredInformationSize)
+{
+  const std::uint8_t payload[] = {0xE6u, 0xE6u, 0x00u};
+  const dlms_hdlc_frame_t frame = MakeInformationFrame(payload, sizeof(payload));
+  std::uint8_t encoded[32] = {};
+  std::size_t encodedSize = 0u;
+  EncodeFrameOrFail(frame, encoded, sizeof(encoded), &encodedSize);
+
+  dlms_hdlc_stream_decoder_t* decoder = 0;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_stream_decoder_create(0, &decoder));
+
+  dlms_hdlc_frame_t decoded = FilledFrame();
+  std::uint8_t tooSmall[2] = {};
+  std::size_t informationSize = 99u;
+  EXPECT_EQ(DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL,
+            dlms_hdlc_stream_decoder_push(decoder,
+                                          encoded,
+                                          encodedSize,
+                                          &decoded,
+                                          tooSmall,
+                                          sizeof(tooSmall),
+                                          &informationSize));
+  ExpectClearedFrame(decoded);
+  EXPECT_EQ(sizeof(payload), informationSize);
+
+  std::uint8_t information[sizeof(payload)] = {};
+  informationSize = 0u;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_stream_decoder_push(decoder,
+                                          0,
+                                          0u,
+                                          &decoded,
+                                          information,
+                                          sizeof(information),
+                                          &informationSize));
+  EXPECT_EQ(sizeof(payload), informationSize);
+  EXPECT_EQ(0x10u, decoded.control);
+  EXPECT_EQ(information, decoded.information_data);
+
+  dlms_hdlc_stream_decoder_destroy(decoder);
+}
+
 TEST(HdlcCApi, StreamDecoderResetsAfterDecodeError)
 {
   const std::uint8_t malformed[] = {0x7Eu, 0x00u, 0x00u, 0x7Eu};
@@ -384,6 +427,33 @@ TEST(HdlcCApi, ReassemblerRejectsNullInformationBufferForPayloadFrame)
                                              &outputInformationSize,
                                              &hasCompletedFrame));
   EXPECT_EQ(0u, outputInformationSize);
+  EXPECT_EQ(0, hasCompletedFrame);
+
+  dlms_hdlc_reassembler_destroy(reassembler);
+}
+
+TEST(HdlcCApi, ReassemblerReportsRequiredInformationSize)
+{
+  const std::uint8_t payload[] = {0xE6u, 0xE6u, 0x00u};
+  const dlms_hdlc_frame_t input = MakeInformationFrame(payload, sizeof(payload));
+  dlms_hdlc_reassembler_t* reassembler = 0;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_reassembler_create(0, &reassembler));
+
+  dlms_hdlc_frame_t output = FilledFrame();
+  std::uint8_t tooSmall[2] = {};
+  std::size_t outputInformationSize = 99u;
+  int hasCompletedFrame = 99;
+  EXPECT_EQ(DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL,
+            dlms_hdlc_reassembler_push_frame(reassembler,
+                                             &input,
+                                             &output,
+                                             tooSmall,
+                                             sizeof(tooSmall),
+                                             &outputInformationSize,
+                                             &hasCompletedFrame));
+  ExpectClearedFrame(output);
+  EXPECT_EQ(sizeof(payload), outputInformationSize);
   EXPECT_EQ(0, hasCompletedFrame);
 
   dlms_hdlc_reassembler_destroy(reassembler);

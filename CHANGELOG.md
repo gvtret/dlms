@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.48 - 2026-06-07
+
+- Hardened HDLC C stream decoder and reassembler small-buffer failures so the
+  information size output reports the required payload size.
+
 ## 0.3.47 - 2026-06-07
 
 - Hardened endpoint security bundle creation so validation failures reset the

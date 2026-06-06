@@ -300,6 +300,7 @@ dlms_hdlc_status_t dlms_hdlc_stream_decoder_push(
     std::size_t infoSize = f.information.size();
 
     if (infoSize > information_buffer_size) {
+      *information_size = infoSize;
       return DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL;
     }
     if (infoSize > 0u && information_buffer == 0) {
@@ -410,6 +411,7 @@ dlms_hdlc_status_t dlms_hdlc_reassembler_push_frame(
 
     std::size_t infoSize = completed.information.size();
     if (infoSize > output_information_buffer_size) {
+      *output_information_size = infoSize;
       return DLMS_HDLC_STATUS_OUTPUT_BUFFER_TOO_SMALL;
     }
     if (infoSize > 0u && output_information_buffer == 0) {

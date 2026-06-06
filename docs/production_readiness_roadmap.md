@@ -26,6 +26,8 @@
    - Малый буфер не должен приводить к частично записанному результату.
    - Уже закрыто для LLC encode, APDU raw xDLMS encode, Wrapper encode и
      HDLC encode.
+   - HDLC C stream decoder и reassembler сообщают требуемый Information
+     размер на small-buffer failures начиная с `0.3.48`.
 2. Завершить аудит очистки выходных структур C API.
    - Все выходные указатели очищаются до валидации.
    - Ошибки не оставляют старые значения в result/view/output структурах.

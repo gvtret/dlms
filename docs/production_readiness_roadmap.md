@@ -32,6 +32,8 @@
    - Profile receive boundary validation закрыта в `0.3.19`.
    - Profile callback adapters не передают ненулевой размер чтения после
      failed callback начиная с `0.3.36`.
+   - Transport C write/send entry points отклоняют null input с ненулевым
+     размером начиная с `0.3.37`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.

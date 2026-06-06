@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.37 - 2026-06-06
+
+- Hardened transport C write/send entry points to reject null input with a
+  non-zero size at the C ABI boundary.
+
 ## 0.3.36 - 2026-06-06
 
 - Hardened profile C callback adapters so failed read/receive callbacks do not

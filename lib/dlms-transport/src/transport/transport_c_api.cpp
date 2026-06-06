@@ -103,6 +103,11 @@ bool ValidOutputBuffer(const std::uint8_t* output, std::size_t outputSize)
   return output != 0 || outputSize == 0u;
 }
 
+bool ValidInputBuffer(const std::uint8_t* input, std::size_t inputSize)
+{
+  return input != 0 || inputSize == 0u;
+}
+
 } // namespace
 
 extern "C" {
@@ -264,7 +269,7 @@ dlms_transport_status_t dlms_transport_tcp_write_all(
   const uint8_t* input,
   size_t input_size)
 {
-  if (transport == 0) {
+  if (transport == 0 || !ValidInputBuffer(input, input_size)) {
     return DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT;
   }
   try {
@@ -353,7 +358,7 @@ dlms_transport_status_t dlms_transport_udp_send(
   const uint8_t* input,
   size_t input_size)
 {
-  if (transport == 0) {
+  if (transport == 0 || !ValidInputBuffer(input, input_size)) {
     return DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT;
   }
   try {
@@ -482,7 +487,7 @@ dlms_transport_status_t dlms_transport_serial_write_all(
   const uint8_t* input,
   size_t input_size)
 {
-  if (transport == 0) {
+  if (transport == 0 || !ValidInputBuffer(input, input_size)) {
     return DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT;
   }
   try {

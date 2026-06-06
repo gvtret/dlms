@@ -113,6 +113,8 @@ TEST(TransportCApi, TcpLifecycleAndInvalidArguments)
   const std::uint8_t input[] = { 0x01u };
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
             dlms_transport_tcp_write_all(tcp, input, sizeof(input)));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_write_all(tcp, 0, sizeof(input)));
   dlms_transport_tcp_destroy(tcp);
 
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
@@ -218,6 +220,8 @@ TEST(TransportCApi, UdpLifecycleAndInvalidArguments)
   const std::uint8_t input[] = { 0x01u };
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
             dlms_transport_udp_send(udp, input, sizeof(input)));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_send(udp, 0, sizeof(input)));
 
   dlms_transport_udp_destroy(udp);
   dlms_transport_udp_destroy(0);
@@ -308,6 +312,8 @@ TEST(TransportCApi, SerialLifecycleAndInvalidDevice)
   const std::uint8_t input[] = { 0x01u };
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
             dlms_transport_serial_write_all(serial, input, sizeof(input)));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_write_all(serial, 0, sizeof(input)));
   dlms_transport_serial_destroy(serial);
 
   options.parity = static_cast<dlms_transport_serial_parity_t>(99);

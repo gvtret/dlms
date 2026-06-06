@@ -78,7 +78,9 @@ TEST(ApduCApiTest, ValidatesNullArguments)
   EXPECT_EQ(DLMS_APDU_STATUS_INVALID_ARGUMENT, dlms_apdu_decode_xdlms(input.data(), input.size(), 0));
   EXPECT_EQ(DLMS_APDU_STATUS_INVALID_ARGUMENT, dlms_apdu_decode_xdlms(0, input.size(), &apdu));
   EXPECT_EQ(DLMS_APDU_STATUS_NEED_MORE_DATA, dlms_apdu_decode_xdlms(0, 0, &apdu));
+  written_size = 7;
   EXPECT_EQ(DLMS_APDU_STATUS_INVALID_ARGUMENT, dlms_apdu_encode_xdlms(0, output.data(), output.size(), &written_size));
+  EXPECT_EQ(0U, written_size);
   EXPECT_EQ(DLMS_APDU_STATUS_INVALID_ARGUMENT, dlms_apdu_encode_xdlms(&apdu, output.data(), output.size(), 0));
 
   apdu.tag = 0xC0;

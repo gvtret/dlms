@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.11 - 2026-06-06
+
+- Fixed APDU C API encode validation so provided `written_size` outputs are
+  cleared before null input validation errors.
+- Added APDU C API regression coverage for null input output-size cleanup.
+
 ## 0.3.10 - 2026-06-06
 
 - Fixed Association C API option validation so invalid application contexts,

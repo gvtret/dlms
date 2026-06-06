@@ -132,11 +132,14 @@ extern "C" dlms_apdu_status_t dlms_apdu_encode_xdlms(
   size_t output_size,
   size_t* written_size)
 {
+  if (written_size != 0) {
+    *written_size = 0;
+  }
+
   if (input == 0 || written_size == 0) {
     return DLMS_APDU_STATUS_INVALID_ARGUMENT;
   }
 
-  *written_size = 0;
   if (output == 0) {
     return DLMS_APDU_STATUS_INVALID_ARGUMENT;
   }

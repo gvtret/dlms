@@ -84,7 +84,8 @@ dlms_apdu_status_t dlms_apdu_decode_xdlms(
  * Encode a raw xDLMS C ABI view into caller-provided storage.
  *
  * The encoded APDU is tag followed by payload bytes. written_size is set to
- * zero before validation and remains zero on errors.
+ * zero before validation. On OUTPUT_BUFFER_TOO_SMALL, written_size receives
+ * the required APDU size and no partial APDU is written.
  *
  * Returns OUTPUT_BUFFER_TOO_SMALL when output_size is smaller than
  * 1 + payload_size. Returns INVALID_ARGUMENT for null required pointers.

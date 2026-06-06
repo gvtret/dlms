@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.16 - 2026-06-06
+
+- Added the production-ready roadmap based on code review findings.
+- Fixed APDU raw xDLMS C API small-buffer handling so `written_size` reports
+  the required encoded APDU size on `OutputBufferTooSmall` without writing a
+  partial APDU.
+- Documented the APDU small-output-buffer size contract.
+
 ## 0.3.15 - 2026-06-06
 
 - Fixed LLC strict encode and C API encode small-buffer handling so

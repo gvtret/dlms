@@ -152,6 +152,7 @@ extern "C" dlms_apdu_status_t dlms_apdu_encode_xdlms(
 
   const size_t required_size = input->payload_size + 1U;
   if (output_size < required_size) {
+    *written_size = required_size;
     return DLMS_APDU_STATUS_OUTPUT_BUFFER_TOO_SMALL;
   }
 

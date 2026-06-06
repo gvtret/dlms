@@ -98,8 +98,9 @@ OUTPUT_BUFFER_TOO_SMALL when output_size is insufficient
 INTERNAL_ERROR for unexpected C++ exceptions
 ```
 
-`written_size` is set to zero before encode validation and remains zero on
-errors.
+`written_size` is set to zero before encode validation. On
+`OUTPUT_BUFFER_TOO_SMALL`, it receives the required encoded APDU size and the
+encoder does not write a partial APDU. On other errors it remains zero.
 
 ## Tests
 

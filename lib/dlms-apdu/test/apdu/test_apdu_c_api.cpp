@@ -65,7 +65,9 @@ TEST(ApduCApiTest, ReportsSmallOutputBuffer)
   EXPECT_EQ(
     DLMS_APDU_STATUS_OUTPUT_BUFFER_TOO_SMALL,
     dlms_apdu_encode_xdlms(&apdu, output.data(), output.size(), &written_size));
-  EXPECT_EQ(0U, written_size);
+  EXPECT_EQ(payload.size() + 1U, written_size);
+  EXPECT_EQ(0U, output[0]);
+  EXPECT_EQ(0U, output[1]);
 }
 
 TEST(ApduCApiTest, ValidatesNullArguments)

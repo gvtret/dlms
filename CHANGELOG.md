@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.38 - 2026-06-06
+
+- Added Security Setup key-transfer regression coverage for unsupported
+  security suites.
+
 ## 0.3.37 - 2026-06-06
 
 - Hardened transport C write/send entry points to reject null input with a

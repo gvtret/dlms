@@ -24,8 +24,8 @@ Status values:
 | Suite 0 key encryption key | Partial | Key role, mutable key sink, AES key wrap/unwrap primitive and Security Setup IC key transfer wiring exist; counter reset policy remains application-defined. |
 | Suite 0 global broadcast encryption key | Partial | Key role exists, but broadcast APDU policy is not implemented. |
 | Suite 0 dedicated key | Partial | Key role exists, but dedicated-key negotiation, lifetime and `ded_*` APDU use are not implemented. |
-| Suite 1 | Planned | Types allow `Suite1`, but ECDSA, ECDH, certificates and suite-specific APDU handling are not implemented. |
-| Suite 2 | Planned | Types allow `Suite2`, but AES-GCM-256, SHA-384, ECDSA P-384, ECDH P-384 and certificates are not implemented. |
+| Suite 1 | Planned | Types allow `Suite1`, but ECDSA, ECDH, certificates and suite-specific APDU handling are not implemented; Security Setup key transfer rejects non-Suite 0 suites. |
+| Suite 2 | Planned | Types allow `Suite2`, but AES-GCM-256, SHA-384, ECDSA P-384, ECDH P-384 and certificates are not implemented; Security Setup key transfer rejects non-Suite 0 suites. |
 
 ## Authentication
 

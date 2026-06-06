@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.36 - 2026-06-06
+
+- Hardened profile C callback adapters so failed read/receive callbacks do not
+  propagate non-zero byte counts.
+
 ## 0.3.35 - 2026-06-06
 
 - Added Security Setup key-transfer malformed input regression coverage for

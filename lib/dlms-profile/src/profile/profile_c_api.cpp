@@ -214,7 +214,8 @@ public:
                            output,
                            outputSize,
                            &callbackBytesRead);
-    bytesRead = callbackBytesRead;
+    bytesRead =
+      status == DLMS_PROFILE_STATUS_OK ? callbackBytesRead : 0u;
     return ToTransportStatus(status);
   }
 
@@ -276,7 +277,8 @@ public:
                          output,
                          outputSize,
                          &callbackBytesRead);
-    bytesRead = callbackBytesRead;
+    bytesRead =
+      status == DLMS_PROFILE_STATUS_OK ? callbackBytesRead : 0u;
     return ToTransportStatus(status);
   }
 

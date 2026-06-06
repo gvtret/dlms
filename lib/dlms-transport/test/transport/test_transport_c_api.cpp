@@ -69,6 +69,8 @@ TEST(TransportCApi, TimerLifecycle)
   ASSERT_NE(static_cast<dlms_transport_timer_t*>(0), timer);
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_OK,
             dlms_transport_timer_monotonic_ms(timer, &now));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_timer_monotonic_ms(timer, 0));
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_OK,
             dlms_transport_timer_sleep_for(timer, 0u));
   dlms_transport_timer_destroy(timer);
@@ -77,6 +79,8 @@ TEST(TransportCApi, TimerLifecycle)
             dlms_transport_timer_create(0));
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
             dlms_transport_timer_monotonic_ms(0, &now));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_timer_sleep_for(0, 0u));
   dlms_transport_timer_destroy(0);
 }
 
@@ -109,7 +113,38 @@ TEST(TransportCApi, TcpLifecycleAndInvalidArguments)
 
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
             dlms_transport_tcp_create(0, &tcp));
+  EXPECT_EQ(static_cast<dlms_transport_tcp_t*>(0), tcp);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_create(&options, 0));
+  options.host = 0;
+  tcp = reinterpret_cast<dlms_transport_tcp_t*>(1);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_create(&options, &tcp));
+  EXPECT_EQ(static_cast<dlms_transport_tcp_t*>(0), tcp);
   dlms_transport_tcp_destroy(0);
+}
+
+TEST(TransportCApi, TcpNullHandleOperationsAreInvalid)
+{
+  std::uint8_t output[1] = {};
+  std::size_t bytesRead = 7u;
+  const std::uint8_t input[] = { 0x01u };
+
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_open(0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_close(0));
+  EXPECT_EQ(0, dlms_transport_tcp_is_open(0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_read_some(0,
+                                         output,
+                                         sizeof(output),
+                                         &bytesRead));
+  EXPECT_EQ(0u, bytesRead);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_read_some(0, output, sizeof(output), 0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_tcp_write_all(0, input, sizeof(input)));
 }
 
 TEST(TransportCApi, UdpLoopbackDatagram)
@@ -143,6 +178,65 @@ TEST(TransportCApi, UdpLoopbackDatagram)
 
   dlms_transport_udp_destroy(sender);
   dlms_transport_udp_destroy(receiver);
+}
+
+TEST(TransportCApi, UdpLifecycleAndInvalidArguments)
+{
+  dlms_transport_udp_t* udp = 0;
+  dlms_transport_udp_options_t options = UdpReceiverOptions();
+
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_create(0, &udp));
+  EXPECT_EQ(static_cast<dlms_transport_udp_t*>(0), udp);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_create(&options, 0));
+
+  ASSERT_EQ(DLMS_TRANSPORT_STATUS_OK,
+            dlms_transport_udp_create(&options, &udp));
+  ASSERT_NE(static_cast<dlms_transport_udp_t*>(0), udp);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_OK, dlms_transport_udp_close(udp));
+  EXPECT_EQ(0, dlms_transport_udp_is_open(udp));
+  EXPECT_EQ(0u, dlms_transport_udp_local_port(udp));
+
+  std::uint8_t output[1] = {};
+  std::size_t bytesRead = 7u;
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
+            dlms_transport_udp_receive(udp,
+                                       output,
+                                       sizeof(output),
+                                       &bytesRead));
+  EXPECT_EQ(0u, bytesRead);
+
+  const std::uint8_t input[] = { 0x01u };
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_NOT_OPEN,
+            dlms_transport_udp_send(udp, input, sizeof(input)));
+
+  dlms_transport_udp_destroy(udp);
+  dlms_transport_udp_destroy(0);
+}
+
+TEST(TransportCApi, UdpNullHandleOperationsAreInvalid)
+{
+  std::uint8_t output[1] = {};
+  std::size_t bytesRead = 7u;
+  const std::uint8_t input[] = { 0x01u };
+
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_open(0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_close(0));
+  EXPECT_EQ(0, dlms_transport_udp_is_open(0));
+  EXPECT_EQ(0u, dlms_transport_udp_local_port(0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_receive(0,
+                                       output,
+                                       sizeof(output),
+                                       &bytesRead));
+  EXPECT_EQ(0u, bytesRead);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_receive(0, output, sizeof(output), 0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_udp_send(0, input, sizeof(input)));
 }
 
 TEST(TransportCApi, UdpReportsSmallOutputBuffer)
@@ -207,7 +301,44 @@ TEST(TransportCApi, SerialLifecycleAndInvalidDevice)
   options.parity = static_cast<dlms_transport_serial_parity_t>(99);
   EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
             dlms_transport_serial_create(&options, &serial));
+  EXPECT_EQ(static_cast<dlms_transport_serial_t*>(0), serial);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_create(&options, 0));
+  options.parity = DLMS_TRANSPORT_SERIAL_PARITY_NONE;
+  options.stop_bits = static_cast<dlms_transport_serial_stop_bits_t>(99);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_create(&options, &serial));
+  EXPECT_EQ(static_cast<dlms_transport_serial_t*>(0), serial);
+  options.stop_bits = DLMS_TRANSPORT_SERIAL_STOP_BITS_ONE;
+  options.device_name = 0;
+  serial = reinterpret_cast<dlms_transport_serial_t*>(1);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_create(&options, &serial));
+  EXPECT_EQ(static_cast<dlms_transport_serial_t*>(0), serial);
   dlms_transport_serial_destroy(0);
+}
+
+TEST(TransportCApi, SerialNullHandleOperationsAreInvalid)
+{
+  std::uint8_t output[1] = {};
+  std::size_t bytesRead = 7u;
+  const std::uint8_t input[] = { 0x01u };
+
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_open(0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_close(0));
+  EXPECT_EQ(0, dlms_transport_serial_is_open(0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_read_some(0,
+                                            output,
+                                            sizeof(output),
+                                            &bytesRead));
+  EXPECT_EQ(0u, bytesRead);
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_read_some(0, output, sizeof(output), 0));
+  EXPECT_EQ(DLMS_TRANSPORT_STATUS_INVALID_ARGUMENT,
+            dlms_transport_serial_write_all(0, input, sizeof(input)));
 }
 
 } // namespace

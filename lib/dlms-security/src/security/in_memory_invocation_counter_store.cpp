@@ -50,5 +50,35 @@ SecurityStatus InMemoryInvocationCounterStore::ValidateRemote(
   return SecurityStatus::Ok;
 }
 
+SecurityStatus InMemoryInvocationCounterStore::ValidateRemoteForSystemTitle(
+  const std::uint8_t* systemTitle,
+  std::size_t systemTitleSize,
+  std::uint32_t invocationCounter)
+{
+  if (systemTitle == 0 || systemTitleSize != 8u) {
+    return SecurityStatus::InvalidSystemTitle;
+  }
+
+  if (invocationCounter == 0u) {
+    return SecurityStatus::InvalidInvocationCounter;
+  }
+
+  const std::vector<std::uint8_t> key(
+    systemTitle,
+    systemTitle + systemTitleSize);
+  std::map<std::vector<std::uint8_t>, std::uint32_t>::iterator it =
+    highestRemoteBySystemTitle_.find(key);
+  if (it != highestRemoteBySystemTitle_.end()) {
+    if (invocationCounter <= it->second) {
+      return SecurityStatus::ReplayDetected;
+    }
+    it->second = invocationCounter;
+    return SecurityStatus::Ok;
+  }
+
+  highestRemoteBySystemTitle_[key] = invocationCounter;
+  return SecurityStatus::Ok;
+}
+
 } // namespace security
 } // namespace dlms

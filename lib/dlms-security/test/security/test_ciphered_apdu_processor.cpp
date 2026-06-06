@@ -165,6 +165,69 @@ TEST(CipheredApduProcessor, RejectsReplayAfterSuccessfulUnprotect)
   EXPECT_TRUE(unprotectedApdu.empty());
 }
 
+TEST(CipheredApduProcessor, TracksReplayStatePerRemoteSystemTitle)
+{
+  dlms::security::InMemoryKeyStore keys;
+  InstallKeys(keys);
+
+  dlms::security::SecurityContext firstClientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  dlms::security::SecurityContext firstServerContext =
+    MakeContext(dlms::security::SecurityRole::Server);
+  dlms::security::SecurityContext secondClientContext = firstClientContext;
+  dlms::security::SecurityContext secondServerContext = firstServerContext;
+  secondClientContext.localSystemTitle[7] = 3u;
+  secondServerContext.remoteSystemTitle[7] = 3u;
+
+  dlms::security::InMemoryInvocationCounterStore firstClientCounters;
+  firstClientCounters.SetLocalCounter(10u);
+  dlms::security::InMemoryInvocationCounterStore secondClientCounters;
+  secondClientCounters.SetLocalCounter(10u);
+  dlms::security::InMemoryInvocationCounterStore serverCounters;
+
+  dlms::security::CipheredApduProcessor firstClient(
+    firstClientContext,
+    keys,
+    firstClientCounters);
+  dlms::security::CipheredApduProcessor secondClient(
+    secondClientContext,
+    keys,
+    secondClientCounters);
+  dlms::security::CipheredApduProcessor firstServer(
+    firstServerContext,
+    keys,
+    serverCounters);
+  dlms::security::CipheredApduProcessor secondServer(
+    secondServerContext,
+    keys,
+    serverCounters);
+
+  const std::uint8_t raw[] = {0x01u, 0x02u, 0x03u};
+  dlms::security::SecurityByteView plain;
+  plain.data = raw;
+  plain.size = sizeof(raw);
+
+  std::vector<std::uint8_t> firstProtected;
+  std::vector<std::uint8_t> secondProtected;
+  ASSERT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    firstClient.Protect(plain, firstProtected));
+  ASSERT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    secondClient.Protect(plain, secondProtected));
+
+  std::vector<std::uint8_t> unprotectedApdu;
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    firstServer.Unprotect(ViewOf(firstProtected), unprotectedApdu));
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    secondServer.Unprotect(ViewOf(secondProtected), unprotectedApdu));
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::ReplayDetected,
+    firstServer.Unprotect(ViewOf(firstProtected), unprotectedApdu));
+}
+
 TEST(CipheredApduProcessor, RejectsTamperedTagWithoutAdvancingReplayState)
 {
   dlms::security::InMemoryKeyStore keys;

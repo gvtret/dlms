@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.24 - 2026-06-06
+
+- Added sender-aware invocation counter validation to the invocation counter
+  store abstraction.
+- Updated `InMemoryInvocationCounterStore` to track remote replay state per
+  remote system title.
+- Updated protected APDU and HLS GMAC verification paths to validate remote
+  invocation counters against the remote system title.
+- Added regression coverage for independent replay state across remote system
+  titles.
+
 ## 0.3.23 - 2026-06-06
 
 - Added `InvocationCounterObjectName()` for the public invocation counter OBIS

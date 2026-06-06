@@ -298,7 +298,10 @@ SecurityStatus CipheredApduProcessor::Unprotect(
     return status;
   }
 
-  status = counters_.ValidateRemote(invocationCounter);
+  status = counters_.ValidateRemoteForSystemTitle(
+    context_.remoteSystemTitle,
+    sizeof(context_.remoteSystemTitle),
+    invocationCounter);
   if (status != SecurityStatus::Ok) {
     plainApdu.clear();
     return status;

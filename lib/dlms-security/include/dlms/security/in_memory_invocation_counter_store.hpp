@@ -8,7 +8,9 @@
 namespace dlms {
 namespace security {
 
-class InMemoryInvocationCounterStore : public IInvocationCounterStore
+class InMemoryInvocationCounterStore
+  : public IInvocationCounterStore
+  , public IInvocationCounterResetPolicy
 {
 public:
   InMemoryInvocationCounterStore();
@@ -22,6 +24,7 @@ public:
     const std::uint8_t* systemTitle,
     std::size_t systemTitleSize,
     std::uint32_t invocationCounter);
+  SecurityStatus ResetAfterKeyRotation(SecurityKeyRole role);
 
 private:
   std::uint32_t nextLocal_;

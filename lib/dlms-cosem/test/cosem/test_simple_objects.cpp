@@ -1,4 +1,5 @@
 #include "dlms/cosem/cosem.hpp"
+#include "dlms/security/in_memory_invocation_counter_store.hpp"
 #include "dlms/security/in_memory_key_store.hpp"
 #include "dlms/security/suite0_key_wrap.hpp"
 
@@ -804,6 +805,84 @@ TEST(CosemSecuritySetupObject, RejectsTamperedGlobalKeyTransfer)
             keyStore.GetKey(
               dlms::security::SecurityKeyRole::Authentication,
               installed));
+}
+
+TEST(CosemSecuritySetupObject, KeyTransferResetsInvocationCounters)
+{
+  const std::uint8_t kekBytes[] = {
+    0x00u, 0x01u, 0x02u, 0x03u,
+    0x04u, 0x05u, 0x06u, 0x07u,
+    0x08u, 0x09u, 0x0Au, 0x0Bu,
+    0x0Cu, 0x0Du, 0x0Eu, 0x0Fu};
+  const std::uint8_t authenticationBytes[] = {
+    0x10u, 0x11u, 0x12u, 0x13u,
+    0x14u, 0x15u, 0x16u, 0x17u,
+    0x18u, 0x19u, 0x1Au, 0x1Bu,
+    0x1Cu, 0x1Du, 0x1Eu, 0x1Fu};
+  dlms::security::InMemoryKeyStore keyStore;
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyStore.SetKey(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes))));
+
+  dlms::security::InMemoryInvocationCounterStore counters;
+  const std::uint8_t title[8] =
+    {0x53u, 0x54u, 0x31u, 0u, 0u, 0u, 0u, 1u};
+  counters.SetLocalCounter(10u);
+  ASSERT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    counters.ValidateRemoteForSystemTitle(title, sizeof(title), 20u));
+
+  dlms::security::Suite0KeyWrap keyWrap;
+  std::vector<std::uint8_t> wrapped;
+  const std::vector<std::uint8_t> plain(
+    authenticationBytes,
+    authenticationBytes + sizeof(authenticationBytes));
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyWrap.Wrap(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes)),
+              SecurityView(plain),
+              wrapped));
+
+  dlms::cosem::CosemByteBuffer input;
+  input.push_back(0x01u);
+  input.push_back(0x01u);
+  input.push_back(0x02u);
+  input.push_back(0x02u);
+  input.push_back(0x16u);
+  input.push_back(0x02u);
+  input.push_back(0x09u);
+  input.push_back(static_cast<std::uint8_t>(wrapped.size()));
+  input.insert(input.end(), wrapped.begin(), wrapped.end());
+
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x03u,
+    0x00u,
+    client,
+    server,
+    &keyStore,
+    &counters);
+
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(2u, input, output));
+
+  std::uint32_t local = 0u;
+  EXPECT_EQ(dlms::security::SecurityStatus::Ok, counters.NextLocal(local));
+  EXPECT_EQ(1u, local);
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    counters.ValidateRemoteForSystemTitle(title, sizeof(title), 20u));
 }
 
 TEST(CosemSecuritySetupObject, RegistryActivatesSecurityPolicy)

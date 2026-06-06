@@ -93,3 +93,26 @@ TEST(InMemoryInvocationCounterStore, RejectsInvalidSystemTitleCounterKey)
       sizeof(validTitle),
       0u));
 }
+
+TEST(InMemoryInvocationCounterStore, ResetAfterKeyRotationClearsReplayState)
+{
+  dlms::security::InMemoryInvocationCounterStore store;
+  const std::uint8_t title[8] =
+    {0x53u, 0x54u, 0x31u, 0u, 0u, 0u, 0u, 1u};
+  store.SetLocalCounter(10u);
+  ASSERT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    store.ValidateRemoteForSystemTitle(title, sizeof(title), 20u));
+
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    store.ResetAfterKeyRotation(
+      dlms::security::SecurityKeyRole::Authentication));
+
+  std::uint32_t local = 0u;
+  EXPECT_EQ(dlms::security::SecurityStatus::Ok, store.NextLocal(local));
+  EXPECT_EQ(1u, local);
+  EXPECT_EQ(
+    dlms::security::SecurityStatus::Ok,
+    store.ValidateRemoteForSystemTitle(title, sizeof(title), 20u));
+}

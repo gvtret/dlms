@@ -80,5 +80,15 @@ SecurityStatus InMemoryInvocationCounterStore::ValidateRemoteForSystemTitle(
   return SecurityStatus::Ok;
 }
 
+SecurityStatus InMemoryInvocationCounterStore::ResetAfterKeyRotation(
+  SecurityKeyRole role)
+{
+  (void)role;
+  nextLocal_ = 1u;
+  highestRemote_ = 0u;
+  highestRemoteBySystemTitle_.clear();
+  return SecurityStatus::Ok;
+}
+
 } // namespace security
 } // namespace dlms

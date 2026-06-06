@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dlms/security/security_status.hpp"
+#include "dlms/security/security_types.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -28,6 +28,14 @@ public:
     (void)systemTitleSize;
     return ValidateRemote(invocationCounter);
   }
+};
+
+class IInvocationCounterResetPolicy
+{
+public:
+  virtual ~IInvocationCounterResetPolicy() {}
+
+  virtual SecurityStatus ResetAfterKeyRotation(SecurityKeyRole role) = 0;
 };
 
 } // namespace security

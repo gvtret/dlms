@@ -1,6 +1,7 @@
 #pragma once
 
 #include "dlms/cosem/logical_device.hpp"
+#include "dlms/security/invocation_counter_store.hpp"
 #include "dlms/security/key_store.hpp"
 
 #include <array>
@@ -158,6 +159,15 @@ public:
     const SystemTitle& serverSystemTitle,
     dlms::security::IMutableKeyStore* keyStore);
 
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle,
+    dlms::security::IMutableKeyStore* keyStore,
+    dlms::security::IInvocationCounterResetPolicy* counterResetPolicy);
+
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
   CosemStatus ReadAttribute(
@@ -183,6 +193,7 @@ private:
   SystemTitle clientSystemTitle_;
   SystemTitle serverSystemTitle_;
   dlms::security::IMutableKeyStore* keyStore_;
+  dlms::security::IInvocationCounterResetPolicy* counterResetPolicy_;
   CosemAccessRights rights_;
 };
 

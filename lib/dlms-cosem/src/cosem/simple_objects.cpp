@@ -669,12 +669,32 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
   const SystemTitle& clientSystemTitle,
   const SystemTitle& serverSystemTitle,
   dlms::security::IMutableKeyStore* keyStore)
+  : CosemSecuritySetupObject(
+      logicalName,
+      securityPolicy,
+      securitySuite,
+      clientSystemTitle,
+      serverSystemTitle,
+      keyStore,
+      0)
+{
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle,
+  dlms::security::IMutableKeyStore* keyStore,
+  dlms::security::IInvocationCounterResetPolicy* counterResetPolicy)
   : descriptor_(MakeDescriptor(kSecuritySetupClassId, logicalName))
   , securityPolicy_(securityPolicy)
   , securitySuite_(securitySuite)
   , clientSystemTitle_(clientSystemTitle)
   , serverSystemTitle_(serverSystemTitle)
   , keyStore_(keyStore)
+  , counterResetPolicy_(counterResetPolicy)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
@@ -866,6 +886,16 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
       status = MapSecurityStatus(keyStore_->SetKey(transferredKeys[i]));
       if (status != CosemStatus::Ok) {
         return status;
+      }
+    }
+    if (counterResetPolicy_ != 0) {
+      for (std::size_t i = 0u; i < transferredKeys.size(); ++i) {
+        status = MapSecurityStatus(
+          counterResetPolicy_->ResetAfterKeyRotation(
+            transferredKeys[i].role));
+        if (status != CosemStatus::Ok) {
+          return status;
+        }
       }
     }
     return CosemStatus::Ok;

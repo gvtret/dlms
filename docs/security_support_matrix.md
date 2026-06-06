@@ -61,7 +61,7 @@ Status values:
 | Reject received counter replay | Partial | `InMemoryInvocationCounterStore` tracks replay state per remote system title and protected APDU/HLS GMAC paths use it; durable persistence across process restarts remains application-provided. |
 | Refuse encryption at `2^32 - 1` | Supported | `InMemoryInvocationCounterStore` returns `InvocationCounterExhausted`; protected APDU and HLS GMAC response paths propagate it without emitting output. |
 | Public invocation counter object `0.0.43.1.0.255`, class id `1` | Supported | `MakeInvocationCounterObject()` exposes a read-only Data object encoded as AXDR `double-long-unsigned`. |
-| Counter reset on key rotation | Planned | Depends on Security Setup key transfer implementation and application persistence policy. |
+| Counter reset on key rotation | Partial | `IInvocationCounterResetPolicy` exists and the in-memory store resets local and remote replay state after key rotation; durable persistence policy remains application-provided. |
 
 ## Security Setup IC `64`
 
@@ -72,7 +72,7 @@ Status values:
 | Client and server system titles | Partial | `SecurityContext` stores titles and `CosemSecuritySetupObject` exposes encoded read-only system titles. |
 | Certificate array | Planned | Needed for Suite 1/2. |
 | `security_activate` | Partial | Implemented for AXDR enum policy activation with monotonic strengthening; association/session rebinding and full СПОДЭС/СПОДУС policy profiles remain incomplete. |
-| `global_key_transfer` / key transfer | Partial | Security Setup method 2 parses Suite 0 key-transfer arrays and installs unwrapped keys through `IMutableKeyStore`; counter reset behavior remains. |
+| `global_key_transfer` / key transfer | Partial | Security Setup method 2 parses Suite 0 key-transfer arrays, installs unwrapped keys through `IMutableKeyStore` and can invoke `IInvocationCounterResetPolicy`; persistence policy remains. |
 | `key_agreement` | Planned | Needs ECDH and general-ciphering APDU. |
 | `generate_key_pair` | Planned | Needed for Suite 1/2 server key management. |
 | `generate_certificate_request` | Planned | Needed for certificate lifecycle. |

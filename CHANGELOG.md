@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.34 - 2026-06-06
+
+- Added invocation-counter reset policy hook for key rotation.
+- Updated `InMemoryInvocationCounterStore` to reset local and remote replay
+  state after key rotation.
+- Wired Security Setup key transfer to invoke the reset hook after successful
+  key installation.
+
 ## 0.3.33 - 2026-06-06
 
 - Wired Security Setup IC `64` method `global_key_transfer` for Suite 0 key

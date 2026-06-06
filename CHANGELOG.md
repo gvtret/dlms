@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.41 - 2026-06-07
+
+- Hardened Security Setup key transfer so invocation-counter reset policy
+  failures reject key rotation before installing transferred keys.
+
 ## 0.3.40 - 2026-06-07
 
 - Hardened HDLC C decode buffer validation to allow a null information buffer

@@ -48,6 +48,32 @@ dlms::security::SecurityKey MakeSecurityKey(
   return key;
 }
 
+class FailingCounterResetPolicy
+  : public dlms::security::IInvocationCounterResetPolicy
+{
+public:
+  FailingCounterResetPolicy()
+    : calls_(0u)
+  {
+  }
+
+  dlms::security::SecurityStatus ResetAfterKeyRotation(
+    dlms::security::SecurityKeyRole role)
+  {
+    (void)role;
+    ++calls_;
+    return dlms::security::SecurityStatus::AuthenticationFailed;
+  }
+
+  std::size_t Calls() const
+  {
+    return calls_;
+  }
+
+private:
+  std::size_t calls_;
+};
+
 dlms::cosem::CosemByteBuffer EncodedLogicalName(
   const dlms::cosem::CosemLogicalName& name)
 {
@@ -1094,6 +1120,71 @@ TEST(CosemSecuritySetupObject, KeyTransferResetsInvocationCounters)
   EXPECT_EQ(
     dlms::security::SecurityStatus::Ok,
     counters.ValidateRemoteForSystemTitle(title, sizeof(title), 20u));
+}
+
+TEST(CosemSecuritySetupObject, KeyTransferResetFailureDoesNotInstallKey)
+{
+  const std::uint8_t kekBytes[] = {
+    0x00u, 0x01u, 0x02u, 0x03u,
+    0x04u, 0x05u, 0x06u, 0x07u,
+    0x08u, 0x09u, 0x0Au, 0x0Bu,
+    0x0Cu, 0x0Du, 0x0Eu, 0x0Fu};
+  const std::uint8_t authenticationBytes[] = {
+    0x10u, 0x11u, 0x12u, 0x13u,
+    0x14u, 0x15u, 0x16u, 0x17u,
+    0x18u, 0x19u, 0x1Au, 0x1Bu,
+    0x1Cu, 0x1Du, 0x1Eu, 0x1Fu};
+  dlms::security::InMemoryKeyStore keyStore;
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyStore.SetKey(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes))));
+
+  dlms::security::Suite0KeyWrap keyWrap;
+  std::vector<std::uint8_t> wrapped;
+  const std::vector<std::uint8_t> plain(
+    authenticationBytes,
+    authenticationBytes + sizeof(authenticationBytes));
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyWrap.Wrap(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes)),
+              SecurityView(plain),
+              wrapped));
+
+  const dlms::cosem::CosemByteBuffer input =
+    EncodedGlobalKeyTransfer(0x02u, wrapped);
+
+  FailingCounterResetPolicy resetPolicy;
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x03u,
+    0x00u,
+    client,
+    server,
+    &keyStore,
+    &resetPolicy);
+
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.InvokeMethod(2u, input, output));
+  EXPECT_EQ(1u, resetPolicy.Calls());
+
+  dlms::security::SecurityKey installed =
+    dlms::security::EmptySecurityKey(
+      dlms::security::SecurityKeyRole::Authentication);
+  EXPECT_EQ(dlms::security::SecurityStatus::MissingKey,
+            keyStore.GetKey(
+              dlms::security::SecurityKeyRole::Authentication,
+              installed));
 }
 
 TEST(CosemSecuritySetupObject, RegistryActivatesSecurityPolicy)

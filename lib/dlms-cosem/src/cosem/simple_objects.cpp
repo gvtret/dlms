@@ -882,12 +882,6 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
       return CosemStatus::InvalidArgument;
     }
 
-    for (std::size_t i = 0u; i < transferredKeys.size(); ++i) {
-      status = MapSecurityStatus(keyStore_->SetKey(transferredKeys[i]));
-      if (status != CosemStatus::Ok) {
-        return status;
-      }
-    }
     if (counterResetPolicy_ != 0) {
       for (std::size_t i = 0u; i < transferredKeys.size(); ++i) {
         status = MapSecurityStatus(
@@ -896,6 +890,12 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
         if (status != CosemStatus::Ok) {
           return status;
         }
+      }
+    }
+    for (std::size_t i = 0u; i < transferredKeys.size(); ++i) {
+      status = MapSecurityStatus(keyStore_->SetKey(transferredKeys[i]));
+      if (status != CosemStatus::Ok) {
+        return status;
       }
     }
     return CosemStatus::Ok;

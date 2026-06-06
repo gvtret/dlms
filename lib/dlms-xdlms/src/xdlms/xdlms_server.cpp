@@ -855,17 +855,20 @@ XdlmsStatus XdlmsServerDispatcher::DispatchGet(
 {
   XdlmsStatus status = ValidateInvokeId(indication.invokeId);
   if (status != XdlmsStatus::Ok) {
+    result = EmptyGetResult();
     return status;
   }
 
   status = ValidateDescriptor(indication.descriptor);
   if (status != XdlmsStatus::Ok) {
+    result = EmptyGetResult();
     return status;
   }
 
   GetResult handlerResult = EmptyGetResult();
   status = handler_.HandleGet(indication, handlerResult);
   if (status != XdlmsStatus::Ok) {
+    result = EmptyGetResult();
     return status;
   }
 
@@ -880,21 +883,25 @@ XdlmsStatus XdlmsServerDispatcher::DispatchSet(
 {
   XdlmsStatus status = ValidateInvokeId(indication.invokeId);
   if (status != XdlmsStatus::Ok) {
+    result = EmptySetResult();
     return status;
   }
 
   status = ValidateDescriptor(indication.descriptor);
   if (status != XdlmsStatus::Ok) {
+    result = EmptySetResult();
     return status;
   }
 
   if (indication.data.empty()) {
+    result = EmptySetResult();
     return XdlmsStatus::InvalidArgument;
   }
 
   SetResult handlerResult = EmptySetResult();
   status = handler_.HandleSet(indication, handlerResult);
   if (status != XdlmsStatus::Ok) {
+    result = EmptySetResult();
     return status;
   }
 
@@ -909,21 +916,25 @@ XdlmsStatus XdlmsServerDispatcher::DispatchAction(
 {
   XdlmsStatus status = ValidateInvokeId(indication.invokeId);
   if (status != XdlmsStatus::Ok) {
+    result = EmptyActionResult();
     return status;
   }
 
   status = ValidateMethodDescriptor(indication.descriptor);
   if (status != XdlmsStatus::Ok) {
+    result = EmptyActionResult();
     return status;
   }
 
   if (indication.hasParameter && indication.parameter.empty()) {
+    result = EmptyActionResult();
     return XdlmsStatus::InvalidArgument;
   }
 
   ActionResult handlerResult = EmptyActionResult();
   status = handler_.HandleAction(indication, handlerResult);
   if (status != XdlmsStatus::Ok) {
+    result = EmptyActionResult();
     return status;
   }
 

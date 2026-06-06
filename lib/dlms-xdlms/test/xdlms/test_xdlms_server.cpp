@@ -164,11 +164,15 @@ TEST(XdlmsServer, DispatchRejectsInvalidInvokeIdBeforeHandler)
   dlms::xdlms::GetIndication indication = MakeIndication();
   dlms::xdlms::GetResult result = dlms::xdlms::EmptyGetResult();
   indication.invokeId = 0u;
+  result.hasData = true;
+  result.data.push_back(0xAAu);
 
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::InvalidArgument,
             dispatcher.DispatchGet(indication, result));
   EXPECT_EQ(0, handler.calls);
   EXPECT_EQ(0u, result.invokeId);
+  EXPECT_FALSE(result.hasData);
+  EXPECT_TRUE(result.data.empty());
 }
 
 TEST(XdlmsServer, DispatchRejectsInvalidDescriptorBeforeHandler)
@@ -242,12 +246,15 @@ TEST(XdlmsServer, DispatchAccessResultPreservesRequestInvokeId)
   EXPECT_EQ(0x0Cu, result.accessResult);
 }
 
-TEST(XdlmsServer, DispatchPropagatesHandlerFailureWithoutResultMutation)
+TEST(XdlmsServer, DispatchGetClearsResultOnHandlerFailure)
 {
   FakeServerHandler handler;
   dlms::xdlms::XdlmsServerDispatcher dispatcher(handler);
   dlms::xdlms::GetResult result = dlms::xdlms::EmptyGetResult();
   handler.status = dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+  result.invokeId = 99u;
+  result.hasData = true;
+  result.data.push_back(0xAAu);
 
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::UnsupportedFeature,
             dispatcher.DispatchGet(MakeIndication(), result));
@@ -284,6 +291,8 @@ TEST(XdlmsServer, DispatchSetRejectsInvalidInvokeIdBeforeHandler)
   dlms::xdlms::SetIndication indication = MakeSetIndication();
   dlms::xdlms::SetResult result = dlms::xdlms::EmptySetResult();
   indication.invokeId = 0u;
+  result.invokeId = 99u;
+  result.accessResult = 99u;
 
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::InvalidArgument,
             dispatcher.DispatchSet(indication, result));
@@ -381,12 +390,14 @@ TEST(XdlmsServer, DispatchSetUsesDefaultUnsupportedHandler)
   EXPECT_EQ(0u, result.accessResult);
 }
 
-TEST(XdlmsServer, DispatchSetPropagatesHandlerFailureWithoutResultMutation)
+TEST(XdlmsServer, DispatchSetClearsResultOnHandlerFailure)
 {
   FakeSetServerHandler handler;
   dlms::xdlms::XdlmsServerDispatcher dispatcher(handler);
   dlms::xdlms::SetResult result = dlms::xdlms::EmptySetResult();
   handler.setStatus = dlms::xdlms::XdlmsStatus::ServiceRejected;
+  result.invokeId = 99u;
+  result.accessResult = 99u;
 
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::ServiceRejected,
             dispatcher.DispatchSet(MakeSetIndication(), result));
@@ -415,11 +426,18 @@ TEST(XdlmsServer, DispatchActionRejectsInvalidInvokeIdBeforeHandler)
   dlms::xdlms::ActionIndication indication = MakeActionIndication();
   dlms::xdlms::ActionResult result = dlms::xdlms::EmptyActionResult();
   indication.invokeId = 0u;
+  result.invokeId = 99u;
+  result.actionResult = 99u;
+  result.hasData = true;
+  result.data.push_back(0xAAu);
 
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::InvalidArgument,
             dispatcher.DispatchAction(indication, result));
   EXPECT_EQ(0, handler.actionCalls);
   EXPECT_EQ(0u, result.invokeId);
+  EXPECT_EQ(0u, result.actionResult);
+  EXPECT_FALSE(result.hasData);
+  EXPECT_TRUE(result.data.empty());
 }
 
 TEST(XdlmsServer, DispatchActionRejectsInvalidDescriptorBeforeHandler)
@@ -498,12 +516,16 @@ TEST(XdlmsServer, DispatchActionUsesDefaultUnsupportedHandler)
   EXPECT_EQ(0u, result.actionResult);
 }
 
-TEST(XdlmsServer, DispatchActionPropagatesHandlerFailureWithoutResultMutation)
+TEST(XdlmsServer, DispatchActionClearsResultOnHandlerFailure)
 {
   FakeSetServerHandler handler;
   dlms::xdlms::XdlmsServerDispatcher dispatcher(handler);
   dlms::xdlms::ActionResult result = dlms::xdlms::EmptyActionResult();
   handler.actionStatus = dlms::xdlms::XdlmsStatus::ServiceRejected;
+  result.invokeId = 99u;
+  result.actionResult = 99u;
+  result.hasData = true;
+  result.data.push_back(0xAAu);
 
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::ServiceRejected,
             dispatcher.DispatchAction(MakeActionIndication(), result));
@@ -511,4 +533,6 @@ TEST(XdlmsServer, DispatchActionPropagatesHandlerFailureWithoutResultMutation)
   EXPECT_EQ(1, handler.actionCalls);
   EXPECT_EQ(0u, result.invokeId);
   EXPECT_EQ(0u, result.actionResult);
+  EXPECT_FALSE(result.hasData);
+  EXPECT_TRUE(result.data.empty());
 }

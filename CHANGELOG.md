@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.46 - 2026-06-07
+
+- Hardened xDLMS server dispatcher failures so stale get, set and action
+  result objects are cleared on validation and handler errors.
+
 ## 0.3.45 - 2026-06-07
 
 - Hardened xDLMS server adapter status-level failures so stale get, set and

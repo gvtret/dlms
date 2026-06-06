@@ -152,6 +152,34 @@ TEST(HdlcCApi, DecodeFrame)
   EXPECT_EQ(0u, informationSize);
 }
 
+TEST(HdlcCApi, DecodeEmptyInformationAllowsNullInformationBuffer)
+{
+  const dlms_hdlc_frame_t frame = MakeSnrmFrame();
+  std::uint8_t encoded[32] = {};
+  std::size_t writtenSize = 0u;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_encode_frame(&frame,
+                                   0,
+                                   encoded,
+                                   sizeof(encoded),
+                                   &writtenSize));
+
+  dlms_hdlc_frame_t decoded = FilledFrame();
+  std::size_t informationSize = 99u;
+  ASSERT_EQ(DLMS_HDLC_STATUS_OK,
+            dlms_hdlc_decode_frame(encoded,
+                                   writtenSize,
+                                   0,
+                                   &decoded,
+                                   0,
+                                   0u,
+                                   &informationSize));
+  EXPECT_EQ(0x93u, decoded.control);
+  EXPECT_EQ(static_cast<const std::uint8_t*>(0), decoded.information_data);
+  EXPECT_EQ(0u, decoded.information_size);
+  EXPECT_EQ(0u, informationSize);
+}
+
 TEST(HdlcCApi, ReportsSmallOutputBuffer)
 {
   const dlms_hdlc_frame_t frame = MakeSnrmFrame();

@@ -34,6 +34,8 @@
      failed callback начиная с `0.3.36`.
    - Transport C write/send entry points отклоняют null input с ненулевым
      размером начиная с `0.3.37`.
+   - HDLC C decode допускает null information buffer только при нулевом
+     размере начиная с `0.3.40`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.

@@ -185,7 +185,8 @@ dlms_hdlc_status_t dlms_hdlc_decode_frame(
   }
   ClearFrame(frame);
 
-  if (input == 0 || frame == 0 || information_size == 0) {
+  if (input == 0 || frame == 0 || information_size == 0 ||
+      (information_buffer == 0 && information_buffer_size != 0u)) {
     return DLMS_HDLC_STATUS_INVALID_ARGUMENT;
   }
 

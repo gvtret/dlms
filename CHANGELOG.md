@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.40 - 2026-06-07
+
+- Hardened HDLC C decode buffer validation to allow a null information buffer
+  only when its size is zero.
+
 ## 0.3.39 - 2026-06-06
 
 - Added Security Setup regression coverage for the currently unsupported

@@ -590,6 +590,20 @@ TEST(ServerEndpoint, OpenIsIdempotentWhenAlreadyOpen)
   EXPECT_EQ(1u, channel.openCalls);
 }
 
+TEST(ServerEndpoint, CloseFailureKeepsEndpointOpen)
+{
+  FakeApduChannel channel;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  dlms::endpoint::ServerEndpoint endpoint(channel, logicalDevice);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  channel.closeStatus = dlms::profile::ProfileStatus::WriteFailed;
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.Close());
+  EXPECT_TRUE(endpoint.IsOpen());
+}
+
 TEST(ServerEndpoint, RunOnceCanUseInjectedServerService)
 {
   FakeApduChannel channel;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.26 - 2026-06-06
+
+- Added endpoint lifecycle regression coverage for close failures on server and
+  push listener endpoints.
+- Verified endpoints remain logically open when their underlying APDU channel
+  reports a close failure.
+- Updated the production-ready roadmap for close-failure lifecycle coverage.
+
 ## 0.3.25 - 2026-06-06
 
 - Added endpoint lifecycle regression coverage for idempotent `Open()` on

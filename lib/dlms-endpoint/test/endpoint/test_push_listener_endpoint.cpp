@@ -244,6 +244,20 @@ TEST(PushListenerEndpoint, OpenIsIdempotentWhenAlreadyOpen)
   EXPECT_EQ(1u, channel.openCalls);
 }
 
+TEST(PushListenerEndpoint, CloseFailureKeepsEndpointOpen)
+{
+  FakeApduChannel channel;
+  RecordingPushHandler handler;
+  dlms::endpoint::PushListenerEndpoint endpoint(channel, handler);
+
+  ASSERT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  channel.closeStatus = dlms::profile::ProfileStatus::WriteFailed;
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.Close());
+  EXPECT_TRUE(endpoint.IsOpen());
+}
+
 TEST(PushListenerEndpoint, RunOnceRequiresOpenEndpoint)
 {
   FakeApduChannel channel;

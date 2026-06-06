@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.15 - 2026-06-06
+
+- Fixed LLC strict encode and C API encode small-buffer handling so
+  `written_size` reports the required LPDU size on `OutputBufferTooSmall`
+  without writing a partial LPDU.
+- Documented the LLC small-output-buffer size contract.
+
 ## 0.3.14 - 2026-06-06
 
 - Refreshed root, package, release, architecture, and component documentation

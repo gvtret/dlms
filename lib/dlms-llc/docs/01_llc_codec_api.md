@@ -126,6 +126,10 @@ LlcStatus EncodeLpduToBuffer(
   std::size_t& writtenSize);
 ```
 
+When `outputSize` is smaller than the complete LPDU, the function returns
+`OutputBufferTooSmall`, sets `writtenSize` to the required LPDU size, and does
+not write a partial LPDU.
+
 ```cpp
 LlcStatus DecodeLpduFromBuffer(
   const std::uint8_t* input,

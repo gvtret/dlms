@@ -91,7 +91,11 @@ TEST(LlcCApiTest, ReportsSmallOutputBuffer)
   EXPECT_EQ(DLMS_LLC_STATUS_OUTPUT_BUFFER_TOO_SMALL,
             dlms_llc_encode_request(
               apdu, sizeof(apdu), output, sizeof(output), &writtenSize));
-  EXPECT_EQ(0u, writtenSize);
+  EXPECT_EQ(5u, writtenSize);
+  EXPECT_EQ(0u, output[0]);
+  EXPECT_EQ(0u, output[1]);
+  EXPECT_EQ(0u, output[2]);
+  EXPECT_EQ(0u, output[3]);
 }
 
 TEST(LlcCApiTest, RejectsBroadcastDestinationForEncode)

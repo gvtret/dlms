@@ -47,6 +47,7 @@ LlcStatus EncodeLpduToBuffer(
 
   const std::size_t requiredSize = kLlcHeaderSize + lsduSize;
   if (outputSize < requiredSize) {
+    writtenSize = requiredSize;
     return LlcStatus::OutputBufferTooSmall;
   }
 

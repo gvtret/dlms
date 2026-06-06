@@ -109,6 +109,9 @@ dlms_llc_status_t dlms_llc_encode_response(
   size_t* written_size);
 ```
 
+On `DLMS_LLC_STATUS_OUTPUT_BUFFER_TOO_SMALL`, `written_size` receives the
+required LPDU size. The encoder does not write a partial LPDU into `output`.
+
 ## 6. Decode API
 
 ```c

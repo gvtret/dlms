@@ -78,7 +78,9 @@ typedef struct dlms_llc_lpdu_view_t
  * @brief Encode an LLC LPDU into a caller-provided output buffer.
  *
  * `lsdu` may be NULL only when `lsdu_size` is zero. Broadcast Destination LSAP
- * is rejected for encoding.
+ * is rejected for encoding. When the output buffer is too small,
+ * `written_size` receives the required LPDU size and no partial LPDU is
+ * written.
  */
 dlms_llc_status_t dlms_llc_encode_lpdu(
   const dlms_llc_header_t* header,

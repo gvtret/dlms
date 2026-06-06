@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.32 - 2026-06-06
+
+- Added `IMutableKeyStore` as the public mutable key sink contract for
+  Security Setup key transfer.
+- Updated `InMemoryKeyStore` to implement the mutable key store abstraction.
+- Added regression coverage for writing keys through the abstract interface.
+
 ## 0.3.31 - 2026-06-06
 
 - Added Suite 0 AES key wrap/unwrap primitives for Security Setup key transfer.

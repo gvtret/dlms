@@ -15,5 +15,11 @@ public:
     SecurityKey& output) const = 0;
 };
 
+class IMutableKeyStore : public IKeyStore
+{
+public:
+  virtual SecurityStatus SetKey(const SecurityKey& key) = 0;
+};
+
 } // namespace security
 } // namespace dlms

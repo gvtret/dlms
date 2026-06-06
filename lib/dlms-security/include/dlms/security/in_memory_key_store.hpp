@@ -7,7 +7,7 @@
 namespace dlms {
 namespace security {
 
-class InMemoryKeyStore : public IKeyStore
+class InMemoryKeyStore : public IMutableKeyStore
 {
 public:
   SecurityStatus SetKey(const SecurityKey& key);

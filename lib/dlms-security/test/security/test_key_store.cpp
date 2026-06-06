@@ -56,6 +56,29 @@ TEST(InMemoryKeyStore, StoresKeysByRole)
   EXPECT_EQ(encryptionKey.bytes[15], found.bytes[15]);
 }
 
+TEST(InMemoryKeyStore, StoresKeysThroughMutableInterface)
+{
+  dlms::security::InMemoryKeyStore store;
+  dlms::security::IMutableKeyStore& mutableStore = store;
+  const dlms::security::SecurityKey key =
+    MakeKey(dlms::security::SecurityKeyRole::KeyEncryption, 16u);
+
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            mutableStore.SetKey(key));
+
+  dlms::security::SecurityKey found =
+    dlms::security::EmptySecurityKey(
+      dlms::security::SecurityKeyRole::KeyEncryption);
+  EXPECT_EQ(dlms::security::SecurityStatus::Ok,
+            mutableStore.GetKey(
+              dlms::security::SecurityKeyRole::KeyEncryption,
+              found));
+  EXPECT_EQ(key.role, found.role);
+  EXPECT_EQ(key.size, found.size);
+  EXPECT_EQ(key.bytes[0], found.bytes[0]);
+  EXPECT_EQ(key.bytes[15], found.bytes[15]);
+}
+
 TEST(InMemoryKeyStore, RejectsEmptyKey)
 {
   dlms::security::InMemoryKeyStore store;

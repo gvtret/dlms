@@ -473,3 +473,52 @@ TEST(EndpointFactories, CreatesSecurityBundleFromEndpointOptions)
   EXPECT_EQ('C', bundle.context.remoteSystemTitle[0]);
   EXPECT_EQ('1', bundle.context.remoteSystemTitle[7]);
 }
+
+TEST(EndpointFactories, SecurityBundleErrorsClearOutput)
+{
+  dlms::endpoint::EndpointProfileOptions profile =
+    dlms::endpoint::DefaultEndpointProfileOptions();
+  dlms::endpoint::EndpointSecurityOptions security =
+    dlms::endpoint::DefaultEndpointSecurityOptions();
+  dlms::endpoint::EndpointSecurityBundle bundle;
+  bundle.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::HighGmac;
+  bundle.context = dlms::security::EmptySecurityContext();
+  bundle.context.policy =
+    dlms::security::SecurityPolicy::AuthenticatedAndEncrypted;
+  bundle.requiresPassword = true;
+  bundle.requiresCiphering = true;
+
+  profile.clientSap = 0u;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            dlms::endpoint::CreateEndpointSecurity(
+              profile,
+              security,
+              bundle));
+  EXPECT_EQ(dlms::endpoint::EndpointAuthenticationKind::None,
+            bundle.authentication);
+  EXPECT_EQ(dlms::security::SecurityPolicy::None, bundle.context.policy);
+  EXPECT_FALSE(bundle.requiresPassword);
+  EXPECT_FALSE(bundle.requiresCiphering);
+
+  profile = dlms::endpoint::DefaultEndpointProfileOptions();
+  security.authentication =
+    static_cast<dlms::endpoint::EndpointAuthenticationKind>(99);
+  bundle.authentication =
+    dlms::endpoint::EndpointAuthenticationKind::HighGmac;
+  bundle.context.policy =
+    dlms::security::SecurityPolicy::AuthenticatedAndEncrypted;
+  bundle.requiresPassword = true;
+  bundle.requiresCiphering = true;
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            dlms::endpoint::CreateEndpointSecurity(
+              profile,
+              security,
+              bundle));
+  EXPECT_EQ(dlms::endpoint::EndpointAuthenticationKind::None,
+            bundle.authentication);
+  EXPECT_EQ(dlms::security::SecurityPolicy::None, bundle.context.policy);
+  EXPECT_FALSE(bundle.requiresPassword);
+  EXPECT_FALSE(bundle.requiresCiphering);
+}

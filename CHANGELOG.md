@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.47 - 2026-06-07
+
+- Hardened endpoint security bundle creation so validation failures reset the
+  caller-provided security bundle output.
+
 ## 0.3.46 - 2026-06-07
 
 - Hardened xDLMS server dispatcher failures so stale get, set and action

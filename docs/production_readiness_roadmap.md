@@ -46,6 +46,8 @@
      status-level failures начиная с `0.3.45`.
    - xDLMS server dispatcher очищает get/set/action result objects на
      validation и handler failures начиная с `0.3.46`.
+   - Endpoint security bundle factory очищает output bundle на validation
+     failures начиная с `0.3.47`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.

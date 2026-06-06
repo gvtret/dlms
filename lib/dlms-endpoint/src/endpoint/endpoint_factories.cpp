@@ -60,6 +60,16 @@ dlms::profile::ApduChannelOptions MakeAcceptedApduChannelOptions(
   return channelOptions;
 }
 
+dlms::endpoint::EndpointSecurityBundle EmptyEndpointSecurityBundle()
+{
+  dlms::endpoint::EndpointSecurityBundle bundle;
+  bundle.authentication = dlms::endpoint::EndpointAuthenticationKind::None;
+  bundle.context = dlms::security::EmptySecurityContext();
+  bundle.requiresPassword = false;
+  bundle.requiresCiphering = false;
+  return bundle;
+}
+
 dlms::endpoint::EndpointStatus MapTransportStatus(
   dlms::transport::TransportStatus status)
 {
@@ -763,6 +773,8 @@ EndpointStatus CreateEndpointSecurity(
   const EndpointSecurityOptions& options,
   EndpointSecurityBundle& output)
 {
+  output = EmptyEndpointSecurityBundle();
+
   EndpointStatus status = ValidateEndpointProfileOptions(profile);
   if (status != EndpointStatus::Ok) {
     return status;
@@ -774,7 +786,6 @@ EndpointStatus CreateEndpointSecurity(
   }
 
   output.authentication = options.authentication;
-  output.context = dlms::security::EmptySecurityContext();
   output.context.suite = dlms::security::SecuritySuite::Suite0;
   output.context.role = dlms::security::SecurityRole::Client;
   output.context.clientSap = profile.clientSap;

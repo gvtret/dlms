@@ -1,4 +1,5 @@
 #include "dlms/cosem/simple_objects.hpp"
+#include "dlms/security/suite0_key_wrap.hpp"
 
 namespace dlms {
 namespace cosem {
@@ -17,6 +18,7 @@ constexpr std::uint8_t kSecuritySuiteAttributeId = 3u;
 constexpr std::uint8_t kClientSystemTitleAttributeId = 4u;
 constexpr std::uint8_t kServerSystemTitleAttributeId = 5u;
 constexpr std::uint8_t kSecurityActivateMethodId = 1u;
+constexpr std::uint8_t kGlobalKeyTransferMethodId = 2u;
 constexpr std::uint8_t kVersion0 = 0u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
@@ -29,6 +31,8 @@ constexpr std::uint8_t kLongUnsignedTag = 0x12u;
 constexpr std::uint8_t kEnumTag = 0x16u;
 constexpr std::uint8_t kLogicalNameSize = 6u;
 constexpr std::size_t kSystemTitleSize = 8u;
+constexpr std::size_t kSuite0KeySize = 16u;
+constexpr std::size_t kSuite0WrappedKeySize = 24u;
 
 bool IsAxdrEnum(
   const CosemByteBuffer& input,
@@ -41,11 +45,80 @@ bool IsAxdrEnum(
   return true;
 }
 
+bool ReadAxdrLength(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::size_t& length)
+{
+  if (offset >= input.size()) {
+    return false;
+  }
+
+  const std::uint8_t first = input[offset++];
+  if ((first & 0x80u) == 0u) {
+    length = first;
+    return true;
+  }
+
+  const std::size_t lengthBytes = first & 0x7fu;
+  if (lengthBytes == 0u ||
+      lengthBytes > sizeof(std::size_t) ||
+      input.size() - offset < lengthBytes) {
+    return false;
+  }
+
+  length = 0u;
+  for (std::size_t i = 0u; i < lengthBytes; ++i) {
+    length = (length << 8u) | input[offset++];
+  }
+  return true;
+}
+
 bool StrengthensOrKeepsPolicy(
   std::uint8_t currentPolicy,
   std::uint8_t requestedPolicy)
 {
   return (currentPolicy & requestedPolicy) == currentPolicy;
+}
+
+bool MapSecuritySetupKeyId(
+  std::uint8_t keyId,
+  dlms::security::SecurityKeyRole& role)
+{
+  switch (keyId) {
+    case 0u:
+      role = dlms::security::SecurityKeyRole::GlobalUnicastEncryption;
+      return true;
+    case 1u:
+      role = dlms::security::SecurityKeyRole::GlobalBroadcastEncryption;
+      return true;
+    case 2u:
+      role = dlms::security::SecurityKeyRole::Authentication;
+      return true;
+    case 3u:
+      role = dlms::security::SecurityKeyRole::KeyEncryption;
+      return true;
+    default:
+      return false;
+  }
+}
+
+CosemStatus MapSecurityStatus(dlms::security::SecurityStatus status)
+{
+  switch (status) {
+    case dlms::security::SecurityStatus::Ok:
+      return CosemStatus::Ok;
+    case dlms::security::SecurityStatus::InvalidArgument:
+    case dlms::security::SecurityStatus::InvalidKeyLength:
+      return CosemStatus::InvalidArgument;
+    case dlms::security::SecurityStatus::MissingKey:
+    case dlms::security::SecurityStatus::AuthenticationFailed:
+      return CosemStatus::AccessDenied;
+    case dlms::security::SecurityStatus::UnsupportedFeature:
+      return CosemStatus::UnsupportedFeature;
+    default:
+      return CosemStatus::ObjectError;
+  }
 }
 
 CosemObjectDescriptor MakeDescriptor(
@@ -579,11 +652,29 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
   std::uint8_t securitySuite,
   const SystemTitle& clientSystemTitle,
   const SystemTitle& serverSystemTitle)
+  : CosemSecuritySetupObject(
+      logicalName,
+      securityPolicy,
+      securitySuite,
+      clientSystemTitle,
+      serverSystemTitle,
+      0)
+{
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle,
+  dlms::security::IMutableKeyStore* keyStore)
   : descriptor_(MakeDescriptor(kSecuritySetupClassId, logicalName))
   , securityPolicy_(securityPolicy)
   , securitySuite_(securitySuite)
   , clientSystemTitle_(clientSystemTitle)
   , serverSystemTitle_(serverSystemTitle)
+  , keyStore_(keyStore)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
@@ -683,6 +774,100 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
     }
     securityPolicy_ = requestedPolicy;
     output.clear();
+    return CosemStatus::Ok;
+  }
+  if (methodId == kGlobalKeyTransferMethodId) {
+    output.clear();
+    if (keyStore_ == 0) {
+      return CosemStatus::UnsupportedFeature;
+    }
+    if (securitySuite_ != 0u) {
+      return CosemStatus::UnsupportedFeature;
+    }
+
+    dlms::security::SecurityKey kek =
+      dlms::security::EmptySecurityKey(
+        dlms::security::SecurityKeyRole::KeyEncryption);
+    CosemStatus status = MapSecurityStatus(
+      keyStore_->GetKey(
+        dlms::security::SecurityKeyRole::KeyEncryption,
+        kek));
+    if (status != CosemStatus::Ok) {
+      return status;
+    }
+
+    std::size_t offset = 0u;
+    if (input.size() < 2u || input[offset++] != kArrayTag) {
+      return CosemStatus::InvalidArgument;
+    }
+    std::size_t count = 0u;
+    if (!ReadAxdrLength(input, offset, count)) {
+      return CosemStatus::InvalidArgument;
+    }
+
+    dlms::security::Suite0KeyWrap keyWrap;
+    std::vector<dlms::security::SecurityKey> transferredKeys;
+    for (std::size_t entry = 0u; entry < count; ++entry) {
+      if (input.size() - offset < 6u ||
+          input[offset++] != kStructureTag) {
+        return CosemStatus::InvalidArgument;
+      }
+      std::size_t fieldCount = 0u;
+      if (!ReadAxdrLength(input, offset, fieldCount) ||
+          fieldCount != 2u ||
+          input.size() - offset < 2u ||
+          input[offset++] != kEnumTag) {
+        return CosemStatus::InvalidArgument;
+      }
+
+      dlms::security::SecurityKeyRole role =
+        dlms::security::SecurityKeyRole::Authentication;
+      if (!MapSecuritySetupKeyId(input[offset++], role) ||
+          offset >= input.size() ||
+          input[offset++] != kDataOctetStringTag) {
+        return CosemStatus::InvalidArgument;
+      }
+
+      std::size_t wrappedSize = 0u;
+      if (!ReadAxdrLength(input, offset, wrappedSize) ||
+          wrappedSize != kSuite0WrappedKeySize ||
+          input.size() - offset < wrappedSize) {
+        return CosemStatus::InvalidArgument;
+      }
+
+      dlms::security::SecurityByteView wrapped;
+      wrapped.data = &input[offset];
+      wrapped.size = wrappedSize;
+      offset += wrappedSize;
+
+      std::vector<std::uint8_t> plain;
+      status = MapSecurityStatus(keyWrap.Unwrap(kek, wrapped, plain));
+      if (status != CosemStatus::Ok) {
+        return status;
+      }
+      if (plain.size() != kSuite0KeySize) {
+        return CosemStatus::InvalidArgument;
+      }
+
+      dlms::security::SecurityKey transferred =
+        dlms::security::EmptySecurityKey(role);
+      transferred.size = plain.size();
+      for (std::size_t i = 0u; i < plain.size(); ++i) {
+        transferred.bytes[i] = plain[i];
+      }
+      transferredKeys.push_back(transferred);
+    }
+
+    if (offset != input.size()) {
+      return CosemStatus::InvalidArgument;
+    }
+
+    for (std::size_t i = 0u; i < transferredKeys.size(); ++i) {
+      status = MapSecurityStatus(keyStore_->SetKey(transferredKeys[i]));
+      if (status != CosemStatus::Ok) {
+        return status;
+      }
+    }
     return CosemStatus::Ok;
   }
   if (methodId > kSecurityActivateMethodId && methodId <= 8u) {

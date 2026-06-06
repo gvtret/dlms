@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.33 - 2026-06-06
+
+- Wired Security Setup IC `64` method `global_key_transfer` for Suite 0 key
+  transfer through the mutable key store abstraction.
+- Added AXDR key-data parsing for wrapped global unicast, broadcast,
+  authentication and key-encryption keys.
+- Added COSEM regression coverage for installing an unwrapped authentication
+  key through Security Setup method 2.
+
 ## 0.3.32 - 2026-06-06
 
 - Added `IMutableKeyStore` as the public mutable key sink contract for

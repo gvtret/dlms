@@ -17,12 +17,20 @@ add_library(dlms_cosem
   src/cosem/object_registry.cpp
   src/cosem/simple_objects.cpp)
 
+if(NOT TARGET dlms_security AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security/CMakeLists.txt")
+  add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security" "${CMAKE_CURRENT_BINARY_DIR}/_deps/dlms-security")
+endif()
+
 target_compile_features(dlms_cosem PUBLIC cxx_std_11)
 
 target_include_directories(dlms_cosem
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>)
+
+target_link_libraries(dlms_cosem
+  PUBLIC
+    dlms_security)
 
 set(DLMS_COSEM_HAS_OBJECT_MODEL_API ON CACHE INTERNAL
   "dlms-cosem exposes the COSEM object model API")

@@ -1,4 +1,6 @@
 #include "dlms/cosem/cosem.hpp"
+#include "dlms/security/in_memory_key_store.hpp"
+#include "dlms/security/suite0_key_wrap.hpp"
 
 #include <gtest/gtest.h>
 
@@ -21,6 +23,28 @@ dlms::cosem::CosemByteBuffer Bytes(
   bytes.push_back(first);
   bytes.push_back(second);
   return bytes;
+}
+
+dlms::security::SecurityByteView SecurityView(
+  const std::vector<std::uint8_t>& bytes)
+{
+  dlms::security::SecurityByteView view;
+  view.data = bytes.empty() ? 0 : &bytes[0];
+  view.size = bytes.size();
+  return view;
+}
+
+dlms::security::SecurityKey MakeSecurityKey(
+  dlms::security::SecurityKeyRole role,
+  const std::uint8_t* bytes,
+  std::size_t size)
+{
+  dlms::security::SecurityKey key = dlms::security::EmptySecurityKey(role);
+  key.size = size;
+  for (std::size_t i = 0u; i < size; ++i) {
+    key.bytes[i] = bytes[i];
+  }
+  return key;
 }
 
 dlms::cosem::CosemByteBuffer EncodedLogicalName(
@@ -632,6 +656,154 @@ TEST(CosemSecuritySetupObject, RejectsWritesAndReportsUnsupportedMethods)
             object.InvokeMethod(2u, bytes, bytes));
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(99u, bytes, bytes));
+}
+
+TEST(CosemSecuritySetupObject, TransfersGlobalKeyThroughMutableKeyStore)
+{
+  const std::uint8_t kekBytes[] = {
+    0x00u, 0x01u, 0x02u, 0x03u,
+    0x04u, 0x05u, 0x06u, 0x07u,
+    0x08u, 0x09u, 0x0Au, 0x0Bu,
+    0x0Cu, 0x0Du, 0x0Eu, 0x0Fu};
+  const std::uint8_t authenticationBytes[] = {
+    0x10u, 0x11u, 0x12u, 0x13u,
+    0x14u, 0x15u, 0x16u, 0x17u,
+    0x18u, 0x19u, 0x1Au, 0x1Bu,
+    0x1Cu, 0x1Du, 0x1Eu, 0x1Fu};
+  dlms::security::InMemoryKeyStore keyStore;
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyStore.SetKey(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes))));
+
+  dlms::security::Suite0KeyWrap keyWrap;
+  std::vector<std::uint8_t> wrapped;
+  const std::vector<std::uint8_t> plain(
+    authenticationBytes,
+    authenticationBytes + sizeof(authenticationBytes));
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyWrap.Wrap(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes)),
+              SecurityView(plain),
+              wrapped));
+
+  dlms::cosem::CosemByteBuffer input;
+  input.push_back(0x01u);
+  input.push_back(0x01u);
+  input.push_back(0x02u);
+  input.push_back(0x02u);
+  input.push_back(0x16u);
+  input.push_back(0x02u);
+  input.push_back(0x09u);
+  input.push_back(static_cast<std::uint8_t>(wrapped.size()));
+  input.insert(input.end(), wrapped.begin(), wrapped.end());
+
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x03u,
+    0x00u,
+    client,
+    server,
+    &keyStore);
+
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(2u, input, output));
+  EXPECT_TRUE(output.empty());
+
+  dlms::security::SecurityKey installed =
+    dlms::security::EmptySecurityKey(
+      dlms::security::SecurityKeyRole::Authentication);
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyStore.GetKey(
+              dlms::security::SecurityKeyRole::Authentication,
+              installed));
+  EXPECT_EQ(dlms::security::SecurityKeyRole::Authentication, installed.role);
+  ASSERT_EQ(sizeof(authenticationBytes), installed.size);
+  for (std::size_t i = 0u; i < installed.size; ++i) {
+    EXPECT_EQ(authenticationBytes[i], installed.bytes[i]);
+  }
+}
+
+TEST(CosemSecuritySetupObject, RejectsTamperedGlobalKeyTransfer)
+{
+  const std::uint8_t kekBytes[] = {
+    0x00u, 0x01u, 0x02u, 0x03u,
+    0x04u, 0x05u, 0x06u, 0x07u,
+    0x08u, 0x09u, 0x0Au, 0x0Bu,
+    0x0Cu, 0x0Du, 0x0Eu, 0x0Fu};
+  const std::uint8_t authenticationBytes[] = {
+    0x10u, 0x11u, 0x12u, 0x13u,
+    0x14u, 0x15u, 0x16u, 0x17u,
+    0x18u, 0x19u, 0x1Au, 0x1Bu,
+    0x1Cu, 0x1Du, 0x1Eu, 0x1Fu};
+  dlms::security::InMemoryKeyStore keyStore;
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyStore.SetKey(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes))));
+
+  dlms::security::Suite0KeyWrap keyWrap;
+  std::vector<std::uint8_t> wrapped;
+  const std::vector<std::uint8_t> plain(
+    authenticationBytes,
+    authenticationBytes + sizeof(authenticationBytes));
+  ASSERT_EQ(dlms::security::SecurityStatus::Ok,
+            keyWrap.Wrap(
+              MakeSecurityKey(
+                dlms::security::SecurityKeyRole::KeyEncryption,
+                kekBytes,
+                sizeof(kekBytes)),
+              SecurityView(plain),
+              wrapped));
+  wrapped[0] ^= 0x01u;
+
+  dlms::cosem::CosemByteBuffer input;
+  input.push_back(0x01u);
+  input.push_back(0x01u);
+  input.push_back(0x02u);
+  input.push_back(0x02u);
+  input.push_back(0x16u);
+  input.push_back(0x02u);
+  input.push_back(0x09u);
+  input.push_back(static_cast<std::uint8_t>(wrapped.size()));
+  input.insert(input.end(), wrapped.begin(), wrapped.end());
+
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x03u,
+    0x00u,
+    client,
+    server,
+    &keyStore);
+
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.InvokeMethod(2u, input, output));
+  EXPECT_TRUE(output.empty());
+
+  dlms::security::SecurityKey installed =
+    dlms::security::EmptySecurityKey(
+      dlms::security::SecurityKeyRole::Authentication);
+  EXPECT_EQ(dlms::security::SecurityStatus::MissingKey,
+            keyStore.GetKey(
+              dlms::security::SecurityKeyRole::Authentication,
+              installed));
 }
 
 TEST(CosemSecuritySetupObject, RegistryActivatesSecurityPolicy)

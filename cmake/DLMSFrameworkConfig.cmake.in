@@ -1,7 +1,25 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
-find_dependency(OpenSSL)
+
+set(_DLMSFramework_requires_OpenSSL FALSE)
+if(NOT DLMSFramework_FIND_COMPONENTS)
+  set(_DLMSFramework_requires_OpenSSL TRUE)
+endif()
+foreach(_DLMSFramework_component IN LISTS DLMSFramework_FIND_COMPONENTS)
+  if(_DLMSFramework_component STREQUAL "protocol" OR
+     _DLMSFramework_component STREQUAL "cosem_server" OR
+     _DLMSFramework_component STREQUAL "runtime" OR
+     _DLMSFramework_component STREQUAL "framework")
+    set(_DLMSFramework_requires_OpenSSL TRUE)
+  endif()
+endforeach()
+
+if(_DLMSFramework_requires_OpenSSL)
+  find_dependency(OpenSSL)
+endif()
+unset(_DLMSFramework_requires_OpenSSL)
+unset(_DLMSFramework_component)
 
 include("${CMAKE_CURRENT_LIST_DIR}/DLMSFrameworkTargets.cmake")
 

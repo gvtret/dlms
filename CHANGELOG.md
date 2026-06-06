@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.3 - 2026-06-07
+
+- Scoped the package OpenSSL dependency to components that transitively use
+  security and added a codec-only install-tree smoke test with OpenSSL disabled.
+
 ## 0.4.2 - 2026-06-07
 
 - Cleaned up exported CMake targets so installed concrete targets expose the

@@ -14,10 +14,13 @@ set(SMOKE_DIR "${BINARY_DIR}/package-smoke")
 set(INSTALL_PREFIX "${SMOKE_DIR}/install")
 set(CONSUMER_DIR "${SMOKE_DIR}/consumer")
 set(CONSUMER_BUILD_DIR "${SMOKE_DIR}/consumer-build")
+set(CODEC_CONSUMER_DIR "${SMOKE_DIR}/codec-consumer")
+set(CODEC_CONSUMER_BUILD_DIR "${SMOKE_DIR}/codec-consumer-build")
 set(EXAMPLES_BUILD_DIR "${SMOKE_DIR}/examples-build")
 
 file(REMOVE_RECURSE "${SMOKE_DIR}")
 file(MAKE_DIRECTORY "${CONSUMER_DIR}")
+file(MAKE_DIRECTORY "${CODEC_CONSUMER_DIR}")
 
 execute_process(
   COMMAND "${CMAKE_COMMAND}" --install "${BINARY_DIR}" --prefix "${INSTALL_PREFIX}"
@@ -174,6 +177,53 @@ execute_process(
   RESULT_VARIABLE build_result)
 if(NOT build_result EQUAL 0)
   message(FATAL_ERROR "DLMSFramework install smoke failed during consumer build")
+endif()
+
+file(WRITE "${CODEC_CONSUMER_DIR}/CMakeLists.txt" [=[
+cmake_minimum_required(VERSION 3.16)
+project(dlms_codec_only_consumer LANGUAGES CXX)
+
+find_package(DLMSFramework REQUIRED CONFIG COMPONENTS codec)
+
+if(NOT TARGET dlms::codec)
+  message(FATAL_ERROR "Required DLMSFramework target is missing: dlms::codec")
+endif()
+
+add_executable(dlms_codec_only_consumer main.cpp)
+target_compile_features(dlms_codec_only_consumer PRIVATE cxx_std_11)
+target_link_libraries(dlms_codec_only_consumer PRIVATE dlms::codec)
+]=])
+
+file(WRITE "${CODEC_CONSUMER_DIR}/main.cpp" [=[
+#include "dlms/llc/llc_header.hpp"
+
+int main()
+{
+  const dlms::llc::LlcHeader header =
+    dlms::llc::MakeLlcHeader(dlms::llc::LlcDirection::ClientToServer);
+  return header.dsap == 0xE6 && header.ssap == 0xE6 && header.control == 0x00
+    ? 0
+    : 1;
+}
+]=])
+
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -S "${CODEC_CONSUMER_DIR}" -B "${CODEC_CONSUMER_BUILD_DIR}"
+    -G "${GENERATOR}"
+    "-DDLMSFramework_DIR=${INSTALL_PREFIX}/lib/cmake/DLMSFramework"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE"
+  RESULT_VARIABLE codec_configure_result)
+if(NOT codec_configure_result EQUAL 0)
+  message(FATAL_ERROR
+    "DLMSFramework install smoke failed during codec-only consumer configure")
+endif()
+
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" --build "${CODEC_CONSUMER_BUILD_DIR}"
+  RESULT_VARIABLE codec_build_result)
+if(NOT codec_build_result EQUAL 0)
+  message(FATAL_ERROR
+    "DLMSFramework install smoke failed during codec-only consumer build")
 endif()
 
 foreach(example_name

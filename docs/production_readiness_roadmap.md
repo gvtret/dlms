@@ -64,6 +64,9 @@
 5. Проверить install-tree export hygiene.
    - Concrete CMake targets экспортируют package include directory без
      дублирования начиная с `0.4.2`.
+   - `find_package(DLMSFramework COMPONENTS codec)` больше не требует OpenSSL
+     начиная с `0.4.3`; install smoke проверяет codec-only consumer with
+     OpenSSL disabled.
 
 ## P0. Endpoint, client и server lifecycle
 

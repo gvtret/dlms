@@ -42,6 +42,8 @@
      missing method failures начиная с `0.3.43`.
    - COSEM object registry очищает output на missing object, access denied и
      object-level read/invoke failures начиная с `0.3.44`.
+   - xDLMS server adapter очищает get/set/action result objects на
+     status-level failures начиная с `0.3.45`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.

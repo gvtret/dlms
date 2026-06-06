@@ -84,6 +84,7 @@ dlms::xdlms::XdlmsStatus XdlmsServerAdapter::HandleGet(
   const ServerGetResponse response = server_.HandleGet(request);
   if (response.status == ServerStatus::Ok) {
     if (!response.hasData) {
+      result = dlms::xdlms::EmptyGetResult();
       return dlms::xdlms::XdlmsStatus::InternalError;
     }
 
@@ -102,6 +103,7 @@ dlms::xdlms::XdlmsStatus XdlmsServerAdapter::HandleGet(
     return dlms::xdlms::XdlmsStatus::Ok;
   }
 
+  result = dlms::xdlms::EmptyGetResult();
   return MapServerStatusToXdlmsStatus(response.status);
 }
 
@@ -129,6 +131,7 @@ dlms::xdlms::XdlmsStatus XdlmsServerAdapter::HandleSet(
     return dlms::xdlms::XdlmsStatus::Ok;
   }
 
+  result = dlms::xdlms::EmptySetResult();
   return MapServerStatusToXdlmsStatus(response.status);
 }
 
@@ -158,6 +161,7 @@ dlms::xdlms::XdlmsStatus XdlmsServerAdapter::HandleAction(
     return dlms::xdlms::XdlmsStatus::Ok;
   }
 
+  result = dlms::xdlms::EmptyActionResult();
   return MapServerStatusToXdlmsStatus(response.status);
 }
 

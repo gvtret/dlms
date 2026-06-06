@@ -280,15 +280,25 @@ TEST(XdlmsServerAdapter, HandleGetMapsAssociationAndStateFailures)
   dlms::server::DlmsServer server(context);
   dlms::server::XdlmsServerAdapter adapter(server);
   dlms::xdlms::GetResult result = dlms::xdlms::EmptyGetResult();
+  result.hasData = true;
+  result.data.push_back(0xAAu);
 
   context.AttachLogicalDevice(&logicalDevice);
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::NotAssociated,
             adapter.HandleGet(MakeIndication(2u), result));
+  EXPECT_FALSE(result.hasData);
+  EXPECT_TRUE(result.data.empty());
+  EXPECT_FALSE(result.hasAccessResult);
 
+  result.hasData = true;
+  result.data.push_back(0xAAu);
   context.SetAssociated(true);
   context.AttachLogicalDevice(0);
   EXPECT_EQ(dlms::xdlms::XdlmsStatus::InvalidState,
             adapter.HandleGet(MakeIndication(2u), result));
+  EXPECT_FALSE(result.hasData);
+  EXPECT_TRUE(result.data.empty());
+  EXPECT_FALSE(result.hasAccessResult);
 }
 
 TEST(XdlmsServerAdapter, HandleSetMapsSuccessAndForwardsData)
@@ -331,6 +341,24 @@ TEST(XdlmsServerAdapter, HandleSetMapsAccessDeniedToDataAccessResult)
   EXPECT_EQ(8u, result.invokeId);
   EXPECT_EQ(3u, result.accessResult);
   EXPECT_EQ(0u, object->writeCount);
+}
+
+TEST(XdlmsServerAdapter, HandleSetClearsResultOnStateFailure)
+{
+  dlms::server::ServerContext context;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  dlms::server::DlmsServer server(context);
+  dlms::server::XdlmsServerAdapter adapter(server);
+  dlms::xdlms::SetResult result = dlms::xdlms::EmptySetResult();
+  result.invokeId = 99u;
+  result.accessResult = 99u;
+
+  context.AttachLogicalDevice(&logicalDevice);
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::NotAssociated,
+            adapter.HandleSet(MakeSetIndication(4u), result));
+
+  EXPECT_EQ(0u, result.invokeId);
+  EXPECT_EQ(0u, result.accessResult);
 }
 
 TEST(XdlmsServerAdapter, HandleActionMapsSuccessDataAndForwardsParameter)
@@ -378,6 +406,28 @@ TEST(XdlmsServerAdapter, HandleActionMapsMethodDeniedToActionResult)
   EXPECT_EQ(3u, result.actionResult);
   EXPECT_FALSE(result.hasData);
   EXPECT_EQ(0u, object->invokeCount);
+}
+
+TEST(XdlmsServerAdapter, HandleActionClearsResultOnStateFailure)
+{
+  dlms::server::ServerContext context;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  dlms::server::DlmsServer server(context);
+  dlms::server::XdlmsServerAdapter adapter(server);
+  dlms::xdlms::ActionResult result = dlms::xdlms::EmptyActionResult();
+  result.invokeId = 99u;
+  result.actionResult = 99u;
+  result.hasData = true;
+  result.data.push_back(0xAAu);
+
+  context.AttachLogicalDevice(&logicalDevice);
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::NotAssociated,
+            adapter.HandleAction(MakeActionIndication(1u), result));
+
+  EXPECT_EQ(0u, result.invokeId);
+  EXPECT_EQ(0u, result.actionResult);
+  EXPECT_FALSE(result.hasData);
+  EXPECT_TRUE(result.data.empty());
 }
 
 TEST(XdlmsServerAdapter, StatusMappingUsesStableContracts)

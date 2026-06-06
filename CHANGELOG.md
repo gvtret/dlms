@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.45 - 2026-06-07
+
+- Hardened xDLMS server adapter status-level failures so stale get, set and
+  action result objects are cleared before returning an error status.
+
 ## 0.3.44 - 2026-06-07
 
 - Hardened COSEM object registry read and method invocation failures so stale

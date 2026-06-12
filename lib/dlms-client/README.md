@@ -30,6 +30,11 @@ values such as boolean, signed/unsigned scalars, enum, and octet-string. These
 helpers are intended for UI models that need typed values while the transport
 facade keeps exchanging complete encoded DLMS `Data` bytes.
 
+The root `tools/client_gui_read_example.cpp` program shows the intended GUI
+backend pattern: use `ReadAttribute` with class id and OBIS logical name, check
+`accessResult`, and decode the returned encoded DLMS `Data` through
+`client_data.hpp`.
+
 ## Documentation
 
 - [Requirements](docs/00_client_requirements.md)

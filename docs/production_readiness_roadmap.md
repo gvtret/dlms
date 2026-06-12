@@ -328,5 +328,5 @@ library may be described as an extensible DLMS/COSEM framework with partial
 12. P0: довести `dlms-client` до удобного backend API для GUI-клиента вместо
     Gurux. Статус: detailed class-id/OBIS helpers добавлены в `0.6.0`; дальше
     common typed DLMS Data decode/encode helpers добавлены в `0.7.0`; дальше
-    нужны Profile Generic selective access helpers и примеры чтения типовых
-    СПОДЭС OBIS.
+    GUI-oriented read example добавлен в `0.7.1`; дальше нужны Profile
+    Generic selective access helpers и примеры чтения типовых СПОДЭС OBIS.

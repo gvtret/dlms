@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1 - 2026-06-07
+
+- Added a GUI-oriented client read example that uses `ReadAttribute` and typed
+  DLMS Data decoding without requiring application code to parse A-XDR bytes.
+
 ## 0.7.0 - 2026-06-07
 
 - Added `dlms-client` typed DLMS Data encode/decode helpers for GUI consumers

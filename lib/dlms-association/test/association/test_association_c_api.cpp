@@ -21,6 +21,8 @@ struct CallbackChannel
     , closeStatus(DLMS_ASSOCIATION_STATUS_OK)
     , sendStatus(DLMS_ASSOCIATION_STATUS_OK)
     , receiveStatus(DLMS_ASSOCIATION_STATUS_OK)
+    , forceReceiveWrittenSize(false)
+    , forcedReceiveWrittenSize(0u)
   {
   }
 
@@ -31,6 +33,8 @@ struct CallbackChannel
   std::vector<std::vector<std::uint8_t> > sends;
   std::vector<std::vector<std::uint8_t> > receives;
   dlms_association_status_t receiveStatus;
+  bool forceReceiveWrittenSize;
+  std::size_t forcedReceiveWrittenSize;
 };
 
 struct CallbackHls
@@ -128,6 +132,12 @@ dlms_association_status_t CallbackReceive(
   }
   if (channel->receiveStatus != DLMS_ASSOCIATION_STATUS_OK) {
     return channel->receiveStatus;
+  }
+  if (channel->forceReceiveWrittenSize) {
+    if (writtenSize != 0) {
+      *writtenSize = channel->forcedReceiveWrittenSize;
+    }
+    return DLMS_ASSOCIATION_STATUS_OK;
   }
   if (channel->receives.empty()) {
     return DLMS_ASSOCIATION_STATUS_RECEIVE_FAILED;
@@ -668,6 +678,31 @@ TEST(AssociationCApi, CallbackSendFailurePropagatesFromEstablish)
   dlms_association_destroy_client(client);
 }
 
+TEST(AssociationCApi, CallbackReceiveOverrunIsRejectedFromEstablish)
+{
+  CallbackChannel channel;
+  channel.forceReceiveWrittenSize = true;
+  channel.forcedReceiveWrittenSize = 3u;
+
+  dlms_association_options_t options;
+  dlms_association_default_options(&options);
+  options.receive_buffer_size = 2u;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_client_t* client =
+    dlms_association_create_client_from_callbacks(&callbacks, &options);
+  ASSERT_NE(nullptr, client);
+
+  ASSERT_EQ(DLMS_ASSOCIATION_STATUS_OK, dlms_association_open(client));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_RECEIVE_FAILED,
+            dlms_association_establish(client));
+  EXPECT_EQ(0, dlms_association_is_associated(client));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
+            dlms_association_get_state(client));
+
+  dlms_association_destroy_client(client);
+}
+
 TEST(AssociationCApi, CallbackCloseFailurePropagatesAndKeepsOpenState)
 {
   CallbackChannel channel;
@@ -724,6 +759,32 @@ TEST(AssociationCApi, ServerCallbackReceiveFailurePropagatesFromAccept)
   EXPECT_EQ(DLMS_ASSOCIATION_STATUS_RECEIVE_FAILED,
             dlms_association_accept(server));
   EXPECT_TRUE(channel.sends.empty());
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
+            dlms_association_server_get_state(server));
+
+  dlms_association_destroy_server(server);
+}
+
+TEST(AssociationCApi, ServerCallbackReceiveOverrunIsRejectedFromAccept)
+{
+  CallbackChannel channel;
+  channel.forceReceiveWrittenSize = true;
+  channel.forcedReceiveWrittenSize = 3u;
+
+  dlms_association_options_t options;
+  dlms_association_default_options(&options);
+  options.receive_buffer_size = 2u;
+  dlms_association_channel_callbacks_t callbacks = MakeCallbacks(&channel);
+
+  dlms_association_server_t* server =
+    dlms_association_create_server_from_callbacks(&callbacks, &options);
+  ASSERT_NE(nullptr, server);
+
+  ASSERT_EQ(DLMS_ASSOCIATION_STATUS_OK,
+            dlms_association_server_open(server));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_RECEIVE_FAILED,
+            dlms_association_accept(server));
+  EXPECT_EQ(0, dlms_association_server_is_associated(server));
   EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
             dlms_association_server_get_state(server));
 

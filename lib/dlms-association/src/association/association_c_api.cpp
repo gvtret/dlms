@@ -186,9 +186,11 @@ public:
                                          buffer.size(),
                                          &writtenSize);
     if (status != DLMS_ASSOCIATION_STATUS_OK) {
+      output.clear();
       return ToCppStatus(status);
     }
     if (writtenSize > buffer.size()) {
+      output.clear();
       return dlms::association::AssociationStatus::InvalidArgument;
     }
 
@@ -330,9 +332,11 @@ public:
                          buffer.size(),
                          &writtenSize);
     if (status != DLMS_ASSOCIATION_STATUS_OK) {
+      apdu.clear();
       return ToProfileStatus(status);
     }
     if (writtenSize > buffer.size()) {
+      apdu.clear();
       return dlms::profile::ProfileStatus::InvalidLength;
     }
 
@@ -343,20 +347,28 @@ public:
   dlms::profile::ProfileStatus ReceiveApdu(
     dlms::profile::ProfileMutableBuffer output) override
   {
-    if (output.data == 0 && output.size != 0) {
+    if (output.writtenSize == 0 ||
+        (output.data == 0 && output.size != 0)) {
       return dlms::profile::ProfileStatus::InvalidArgument;
     }
 
+    *output.writtenSize = 0u;
     std::size_t writtenSize = 0u;
     const dlms_association_status_t status =
       callbacks_.receive(callbacks_.user_data,
                          output.data,
                          output.size,
                          &writtenSize);
-    if (output.writtenSize != 0) {
-      *output.writtenSize = writtenSize;
+    if (status != DLMS_ASSOCIATION_STATUS_OK) {
+      return ToProfileStatus(status);
     }
-    return ToProfileStatus(status);
+    if (writtenSize > output.size) {
+      *output.writtenSize = writtenSize;
+      return dlms::profile::ProfileStatus::InvalidLength;
+    }
+
+    *output.writtenSize = writtenSize;
+    return dlms::profile::ProfileStatus::Ok;
   }
 
 private:

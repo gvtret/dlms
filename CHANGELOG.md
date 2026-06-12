@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.7 - 2026-06-07
+
+- Hardened the association C API callback APDU adapter so receive callbacks
+  cannot leave stale output or accept over-reported received sizes.
+
 ## 0.4.6 - 2026-06-07
 
 - Documented the complete `DLMSFramework` component-to-target package mapping

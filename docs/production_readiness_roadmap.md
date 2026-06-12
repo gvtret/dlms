@@ -52,6 +52,8 @@
      validation и handler failures начиная с `0.3.46`.
    - Endpoint security bundle factory очищает output bundle на validation
      failures начиная с `0.3.47`.
+   - Association C API callback APDU adapter очищает receive output и
+     отклоняет over-reported callback sizes начиная с `0.4.7`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
      публичный статус.

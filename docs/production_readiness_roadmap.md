@@ -174,11 +174,11 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
 Data/Register/Association LN/SAP Assignment behavior, но не является полной
 СПОДЭС/СПОДУС моделью.
 Текущий статус зафиксирован в `docs/ic_support_matrix.md`.
-Сверка `0.4.11` по базе знаний подтвердила, что built-in IC coverage сейчас
+Сверка `0.4.11` по базе знаний подтвердила, что built-in IC coverage был
 ограничен Data `1`, Register `3`, Association LN `15`, SAP Assignment `17` и
-частичным Security Setup `64`; остальные IC из ГОСТ Р 58940-2020 table 7.1 и
-DLMS UA Blue Book должны оставаться `Planned` или `Application-provided` до
-явной реализации.
+частичным Security Setup `64`; `0.5.0` добавляет partial Profile Generic `7`.
+Остальные IC из ГОСТ Р 58940-2020 table 7.1 и DLMS UA Blue Book должны
+оставаться `Planned` или `Application-provided` до явной реализации.
 
 1. Ввести explicit IC support matrix.
    - Для каждого IC: class id, supported versions, attributes, methods,
@@ -199,6 +199,10 @@ DLMS UA Blue Book должны оставаться `Planned` или `Applicatio
      timestamp handling.
    - СПОДЭС/СПОДУС journals: discovered meters, exchange statuses,
      object-correction log, meter parameter journal, event aggregation profiles.
+   - Статус: partial built-in `CosemProfileGenericObject` с read-only
+     attributes, encoded buffer rows и capture objects добавлен в `0.5.0`;
+     selective access, capture execution и fixed journal schemas остаются
+     задачами.
 4. СПОДЭС/СПОДУС catalogs.
    - OBIS catalogs and parameter lists for meter categories A/B/C/D and ИВКЭ.
    - Event code table and status word formats.

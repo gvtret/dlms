@@ -37,7 +37,7 @@ Status values:
 | `4` | Extended Register | Planned | Needed for СПОДЭС/СПОДУС meter model coverage. |
 | `5` | Demand Register | Planned | Needed for demand and load-profile related parameters. |
 | `6` | Register Activation | Planned | Needed for tariff/register activation scenarios. |
-| `7` | Profile Generic | Planned | Required for load profiles, event journals and СПОДЭС/СПОДУС ИВКЭ journals. |
+| `7` | Profile Generic | Partial | `CosemProfileGenericObject` exposes read-only profile attributes, encoded buffer rows and capture objects. Selective access, capture execution and journal schemas remain planned. |
 | `8` | Clock | Planned | Required for timestamps, schedules and event fixation. |
 | `9` | Script Table | Planned | Needed for control actions and scripts. |
 | `10` | Schedule | Planned | Needed for scheduled operations. |
@@ -113,5 +113,6 @@ The COSEM layer is not complete for СПОДЭС/СПОДУС production use unt
 
 The `0.4.11` knowledge-base audit reconciled this matrix against ГОСТ Р
 58940-2020 table 7.1 and the DLMS UA Blue Book class list. Built-in coverage
-remains limited to Data `1`, Register `3`, Association LN `15`, SAP Assignment
-`17`, and partial Security Setup `64`.
+was limited to Data `1`, Register `3`, Association LN `15`, SAP Assignment
+`17`, and partial Security Setup `64`; `0.5.0` adds partial Profile Generic
+`7` scaffolding.

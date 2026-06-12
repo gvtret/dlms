@@ -73,6 +73,58 @@ private:
   CosemAccessRights rights_;
 };
 
+enum class CosemProfileGenericSortMethod
+{
+  Fifo = 1,
+  Lifo = 2,
+  Largest = 3,
+  Smallest = 4,
+  NearestToZero = 5,
+  FarthestFromZero = 6
+};
+
+struct CosemCaptureObject
+{
+  CosemObjectKey object;
+  std::uint8_t attributeId;
+  std::uint16_t dataIndex;
+};
+
+class CosemProfileGenericObject : public ICosemObject
+{
+public:
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const std::vector<CosemByteBuffer>& BufferRows() const;
+  const std::vector<CosemCaptureObject>& CaptureObjects() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  std::vector<CosemByteBuffer> bufferRows_;
+  std::vector<CosemCaptureObject> captureObjects_;
+  std::uint32_t capturePeriod_;
+  std::uint32_t profileEntries_;
+  CosemAccessRights rights_;
+};
+
 CosemLogicalName CurrentAssociationLnName();
 CosemLogicalName SapAssignmentName();
 CosemLogicalName LogicalDeviceNameObjectName();

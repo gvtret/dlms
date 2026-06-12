@@ -95,6 +95,14 @@ void AppendLongUnsigned(
   bytes.push_back(static_cast<std::uint8_t>(value & 0xffu));
 }
 
+void AppendInteger(
+  dlms::cosem::CosemByteBuffer& bytes,
+  std::uint8_t value)
+{
+  bytes.push_back(0x0Fu);
+  bytes.push_back(value);
+}
+
 void AppendDoubleLongUnsigned(
   dlms::cosem::CosemByteBuffer& bytes,
   std::uint32_t value)
@@ -106,6 +114,14 @@ void AppendDoubleLongUnsigned(
   bytes.push_back(static_cast<std::uint8_t>(value & 0xffu));
 }
 
+void AppendEnum(
+  dlms::cosem::CosemByteBuffer& bytes,
+  std::uint8_t value)
+{
+  bytes.push_back(0x16u);
+  bytes.push_back(value);
+}
+
 void AppendOctetString(
   dlms::cosem::CosemByteBuffer& bytes,
   const dlms::cosem::CosemLogicalName& name)
@@ -115,6 +131,19 @@ void AppendOctetString(
   for (std::size_t i = 0; i < name.Size(); ++i) {
     bytes.push_back(name[i]);
   }
+}
+
+dlms::cosem::CosemByteBuffer EncodedCaptureObject(
+  const dlms::cosem::CosemCaptureObject& object)
+{
+  dlms::cosem::CosemByteBuffer bytes;
+  bytes.push_back(0x02u);
+  bytes.push_back(0x04u);
+  AppendLongUnsigned(bytes, object.object.classId);
+  AppendOctetString(bytes, object.object.logicalName);
+  AppendInteger(bytes, object.attributeId);
+  AppendLongUnsigned(bytes, object.dataIndex);
+  return bytes;
 }
 
 dlms::cosem::CosemByteBuffer EncodedOctetString(
@@ -293,6 +322,140 @@ TEST(CosemRegisterObject, WritesValueAndRejectsUnsupportedMembers)
   output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(1u, updated, output));
+  EXPECT_TRUE(output.empty());
+}
+
+TEST(CosemProfileGenericObject, ExposesReadOnlyProfileAttributes)
+{
+  const dlms::cosem::CosemLogicalName name = MakeName(7u);
+
+  dlms::cosem::CosemByteBuffer row;
+  row.push_back(0x02u);
+  row.push_back(0x01u);
+  AppendDoubleLongUnsigned(row, 42u);
+  std::vector<dlms::cosem::CosemByteBuffer> rows;
+  rows.push_back(row);
+
+  dlms::cosem::CosemCaptureObject capture;
+  capture.object.classId = 3u;
+  capture.object.version = 0u;
+  capture.object.logicalName = MakeName(3u);
+  capture.attributeId = 2u;
+  capture.dataIndex = 0u;
+  std::vector<dlms::cosem::CosemCaptureObject> captures;
+  captures.push_back(capture);
+
+  dlms::cosem::CosemProfileGenericObject object(
+    name,
+    rows,
+    captures,
+    60u,
+    100u);
+
+  const dlms::cosem::CosemObjectDescriptor descriptor =
+    object.Descriptor();
+  EXPECT_EQ(7u, descriptor.key.classId);
+  EXPECT_EQ(1u, descriptor.key.version);
+  EXPECT_EQ(name, descriptor.key.logicalName);
+  EXPECT_EQ(rows, object.BufferRows());
+  ASSERT_EQ(1u, object.CaptureObjects().size());
+  EXPECT_EQ(3u, object.CaptureObjects()[0].object.classId);
+
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, output));
+  EXPECT_EQ(EncodedLogicalName(name), output);
+
+  dlms::cosem::CosemByteBuffer expectedBuffer;
+  expectedBuffer.push_back(0x01u);
+  expectedBuffer.push_back(0x01u);
+  expectedBuffer.insert(expectedBuffer.end(), row.begin(), row.end());
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, output));
+  EXPECT_EQ(expectedBuffer, output);
+
+  dlms::cosem::CosemByteBuffer expectedCaptureObjects;
+  expectedCaptureObjects.push_back(0x01u);
+  expectedCaptureObjects.push_back(0x01u);
+  const dlms::cosem::CosemByteBuffer encodedCapture =
+    EncodedCaptureObject(capture);
+  expectedCaptureObjects.insert(
+    expectedCaptureObjects.end(),
+    encodedCapture.begin(),
+    encodedCapture.end());
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, output));
+  EXPECT_EQ(expectedCaptureObjects, output);
+
+  dlms::cosem::CosemByteBuffer expectedCapturePeriod;
+  AppendDoubleLongUnsigned(expectedCapturePeriod, 60u);
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, output));
+  EXPECT_EQ(expectedCapturePeriod, output);
+
+  dlms::cosem::CosemByteBuffer expectedSortMethod;
+  AppendEnum(expectedSortMethod, 1u);
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, output));
+  EXPECT_EQ(expectedSortMethod, output);
+
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, output));
+  EXPECT_EQ(encodedCapture, output);
+
+  dlms::cosem::CosemByteBuffer expectedEntriesInUse;
+  AppendDoubleLongUnsigned(expectedEntriesInUse, 1u);
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(7u, output));
+  EXPECT_EQ(expectedEntriesInUse, output);
+
+  dlms::cosem::CosemByteBuffer expectedProfileEntries;
+  AppendDoubleLongUnsigned(expectedProfileEntries, 100u);
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(8u, output));
+  EXPECT_EQ(expectedProfileEntries, output);
+}
+
+TEST(CosemProfileGenericObject, RejectsWritesAndReportsUnsupportedMethods)
+{
+  dlms::cosem::CosemProfileGenericObject object(
+    MakeName(7u),
+    std::vector<dlms::cosem::CosemByteBuffer>(),
+    std::vector<dlms::cosem::CosemCaptureObject>(),
+    0u,
+    0u);
+
+  const dlms::cosem::CosemByteBuffer input = Bytes(0x01u, 0x02u);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.WriteAttribute(2u, input));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.WriteAttribute(99u, input));
+
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, input, output));
+  EXPECT_TRUE(output.empty());
+
+  output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(2u, input, output));
+  EXPECT_TRUE(output.empty());
+
+  output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(99u, input, output));
+  EXPECT_TRUE(output.empty());
+
+  output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(99u, output));
   EXPECT_TRUE(output.empty());
 }
 

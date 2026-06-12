@@ -7,12 +7,22 @@ namespace {
 
 constexpr std::uint16_t kDataClassId = 1u;
 constexpr std::uint16_t kRegisterClassId = 3u;
+constexpr std::uint16_t kProfileGenericClassId = 7u;
 constexpr std::uint16_t kAssociationLnClassId = 15u;
 constexpr std::uint16_t kSapAssignmentClassId = 17u;
 constexpr std::uint16_t kSecuritySetupClassId = 64u;
 constexpr std::uint8_t kLogicalNameAttributeId = 1u;
 constexpr std::uint8_t kValueAttributeId = 2u;
 constexpr std::uint8_t kScalerUnitAttributeId = 3u;
+constexpr std::uint8_t kProfileBufferAttributeId = 2u;
+constexpr std::uint8_t kProfileCaptureObjectsAttributeId = 3u;
+constexpr std::uint8_t kProfileCapturePeriodAttributeId = 4u;
+constexpr std::uint8_t kProfileSortMethodAttributeId = 5u;
+constexpr std::uint8_t kProfileSortObjectAttributeId = 6u;
+constexpr std::uint8_t kProfileEntriesInUseAttributeId = 7u;
+constexpr std::uint8_t kProfileProfileEntriesAttributeId = 8u;
+constexpr std::uint8_t kProfileResetMethodId = 1u;
+constexpr std::uint8_t kProfileCaptureMethodId = 2u;
 constexpr std::uint8_t kSecurityPolicyAttributeId = 2u;
 constexpr std::uint8_t kSecuritySuiteAttributeId = 3u;
 constexpr std::uint8_t kClientSystemTitleAttributeId = 4u;
@@ -20,6 +30,7 @@ constexpr std::uint8_t kServerSystemTitleAttributeId = 5u;
 constexpr std::uint8_t kSecurityActivateMethodId = 1u;
 constexpr std::uint8_t kGlobalKeyTransferMethodId = 2u;
 constexpr std::uint8_t kVersion0 = 0u;
+constexpr std::uint8_t kProfileGenericVersion = 1u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
 constexpr std::uint8_t kNullDataTag = 0x00u;
@@ -123,13 +134,21 @@ CosemStatus MapSecurityStatus(dlms::security::SecurityStatus status)
 
 CosemObjectDescriptor MakeDescriptor(
   std::uint16_t classId,
+  std::uint8_t version,
   const CosemLogicalName& logicalName)
 {
   CosemObjectDescriptor descriptor;
   descriptor.key.classId = classId;
-  descriptor.key.version = kVersion0;
+  descriptor.key.version = version;
   descriptor.key.logicalName = logicalName;
   return descriptor;
+}
+
+CosemObjectDescriptor MakeDescriptor(
+  std::uint16_t classId,
+  const CosemLogicalName& logicalName)
+{
+  return MakeDescriptor(classId, kVersion0, logicalName);
 }
 
 CosemByteBuffer EncodeLogicalName(const CosemLogicalName& logicalName)
@@ -275,6 +294,59 @@ void AppendObjectListElement(
   AppendUnsigned(output, object.descriptor.key.version);
   AppendLogicalName(output, object.descriptor.key.logicalName);
   AppendAccessRights(output, object.accessRights);
+}
+
+void AppendCaptureObject(
+  CosemByteBuffer& output,
+  const CosemCaptureObject& object)
+{
+  AppendStructureHeader(output, 4u);
+  AppendLongUnsigned(output, object.object.classId);
+  AppendLogicalName(output, object.object.logicalName);
+  AppendInteger(output, object.attributeId);
+  AppendLongUnsigned(output, object.dataIndex);
+}
+
+void AppendProfileBuffer(
+  CosemByteBuffer& output,
+  const std::vector<CosemByteBuffer>& rows)
+{
+  AppendArrayHeader(output, rows.size());
+  for (std::vector<CosemByteBuffer>::const_iterator it = rows.begin();
+       it != rows.end();
+       ++it) {
+    output.insert(output.end(), it->begin(), it->end());
+  }
+}
+
+void AppendProfileCaptureObjects(
+  CosemByteBuffer& output,
+  const std::vector<CosemCaptureObject>& objects)
+{
+  AppendArrayHeader(output, objects.size());
+  for (std::vector<CosemCaptureObject>::const_iterator it = objects.begin();
+       it != objects.end();
+       ++it) {
+    AppendCaptureObject(output, *it);
+  }
+}
+
+void AppendProfileSortObject(
+  CosemByteBuffer& output,
+  const std::vector<CosemCaptureObject>& objects)
+{
+  if (objects.empty()) {
+    CosemCaptureObject empty;
+    empty.object.classId = 0u;
+    empty.object.version = 0u;
+    empty.object.logicalName = CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
+    empty.attributeId = 0u;
+    empty.dataIndex = 0u;
+    AppendCaptureObject(output, empty);
+    return;
+  }
+
+  AppendCaptureObject(output, objects[0]);
 }
 
 void AppendSapAssignment(
@@ -509,6 +581,149 @@ void CosemRegisterObject::SetScalerUnit(
   const CosemByteBuffer& scalerUnit)
 {
   scalerUnit_ = scalerUnit;
+}
+
+CosemProfileGenericObject::CosemProfileGenericObject(
+  const CosemLogicalName& logicalName,
+  const std::vector<CosemByteBuffer>& bufferRows,
+  const std::vector<CosemCaptureObject>& captureObjects,
+  std::uint32_t capturePeriod,
+  std::uint32_t profileEntries)
+  : descriptor_(MakeDescriptor(
+      kProfileGenericClassId,
+      kProfileGenericVersion,
+      logicalName))
+  , bufferRows_(bufferRows)
+  , captureObjects_(captureObjects)
+  , capturePeriod_(capturePeriod)
+  , profileEntries_(profileEntries)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kProfileBufferAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kProfileCaptureObjectsAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kProfileCapturePeriodAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kProfileSortMethodAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kProfileSortObjectAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kProfileEntriesInUseAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kProfileProfileEntriesAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetMethodAccess(kProfileResetMethodId, MethodAccessMode::Access);
+  rights_.SetMethodAccess(kProfileCaptureMethodId, MethodAccessMode::Access);
+}
+
+CosemObjectDescriptor CosemProfileGenericObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemProfileGenericObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemProfileGenericObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kProfileBufferAttributeId) {
+    output.clear();
+    AppendProfileBuffer(output, bufferRows_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kProfileCaptureObjectsAttributeId) {
+    output.clear();
+    AppendProfileCaptureObjects(output, captureObjects_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kProfileCapturePeriodAttributeId) {
+    output.clear();
+    AppendDoubleLongUnsigned(output, capturePeriod_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kProfileSortMethodAttributeId) {
+    output.clear();
+    AppendEnum(
+      output,
+      static_cast<std::uint8_t>(CosemProfileGenericSortMethod::Fifo));
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kProfileSortObjectAttributeId) {
+    output.clear();
+    AppendProfileSortObject(output, captureObjects_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kProfileEntriesInUseAttributeId) {
+    output.clear();
+    AppendDoubleLongUnsigned(
+      output,
+      static_cast<std::uint32_t>(bufferRows_.size()));
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kProfileProfileEntriesAttributeId) {
+    output.clear();
+    AppendDoubleLongUnsigned(output, profileEntries_);
+    return CosemStatus::Ok;
+  }
+
+  output.clear();
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemProfileGenericObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  (void)input;
+  if (attributeId >= kLogicalNameAttributeId &&
+      attributeId <= kProfileProfileEntriesAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemProfileGenericObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kProfileResetMethodId ||
+      methodId == kProfileCaptureMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const std::vector<CosemByteBuffer>&
+CosemProfileGenericObject::BufferRows() const
+{
+  return bufferRows_;
+}
+
+const std::vector<CosemCaptureObject>&
+CosemProfileGenericObject::CaptureObjects() const
+{
+  return captureObjects_;
 }
 
 CosemAssociationLnObject::CosemAssociationLnObject(

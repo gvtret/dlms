@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0 - 2026-06-07
+
+- Added a built-in partial Profile Generic IC `7` object with read-only
+  profile attributes and explicit unsupported reset/capture methods.
+
 ## 0.4.11 - 2026-06-07
 
 - Reconciled the IC and security production-readiness documentation against

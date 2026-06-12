@@ -95,6 +95,25 @@ TEST(XdlmsTypes, MethodDescriptorRequiresClassMethodAndInstance)
             dlms::xdlms::ValidateMethodDescriptor(descriptor));
 }
 
+TEST(XdlmsTypes, SelectiveAccessRequiresSelectorAndParameters)
+{
+  dlms::xdlms::SelectiveAccessDescriptor descriptor =
+    dlms::xdlms::EmptySelectiveAccessDescriptor();
+
+  EXPECT_EQ(0u, descriptor.selector);
+  EXPECT_TRUE(descriptor.encodedParameters.empty());
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::InvalidArgument,
+            dlms::xdlms::ValidateSelectiveAccess(descriptor));
+
+  descriptor.selector = 1u;
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::InvalidArgument,
+            dlms::xdlms::ValidateSelectiveAccess(descriptor));
+
+  descriptor.encodedParameters.push_back(0x00u);
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            dlms::xdlms::ValidateSelectiveAccess(descriptor));
+}
+
 TEST(XdlmsTypes, EmptyGetResultClearsFields)
 {
   const dlms::xdlms::GetResult result =

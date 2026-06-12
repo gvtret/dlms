@@ -235,7 +235,8 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
    OBIS logical name and attribute/method id, with detailed access/action
    result reporting. Статус: `ReadAttribute`, `WriteAttribute` и `CallMethod`
    added in `0.6.0`; common typed DLMS Data encode/decode helpers added in
-   `0.7.0`; profile selective access UX helpers remain planned.
+   `0.7.0`; generic xDLMS/client GET selective access added in `0.8.0`;
+   Profile Generic selector-specific UX helpers remain planned.
 
 ## P0. СПОДЭС/СПОДУС completeness gate
 
@@ -329,4 +330,4 @@ library may be described as an extensible DLMS/COSEM framework with partial
     Gurux. Статус: detailed class-id/OBIS helpers добавлены в `0.6.0`; дальше
     common typed DLMS Data decode/encode helpers добавлены в `0.7.0`; дальше
     GUI-oriented read example добавлен в `0.7.1`; дальше нужны Profile
-    Generic selective access helpers и примеры чтения типовых СПОДЭС OBIS.
+    Generic selector-specific helpers и примеры чтения типовых СПОДЭС OBIS.

@@ -11,6 +11,7 @@ namespace client {
 
 using CosemAttributeDescriptor = dlms::xdlms::CosemAttributeDescriptor;
 using CosemMethodDescriptor = dlms::xdlms::CosemMethodDescriptor;
+using SelectiveAccessDescriptor = dlms::xdlms::SelectiveAccessDescriptor;
 
 class IClientXdlmsService
 {
@@ -20,6 +21,11 @@ public:
   virtual dlms::xdlms::XdlmsStatus Get(
     const CosemAttributeDescriptor& descriptor,
     dlms::xdlms::GetResult& result) = 0;
+
+  virtual dlms::xdlms::XdlmsStatus Get(
+    const CosemAttributeDescriptor& descriptor,
+    const SelectiveAccessDescriptor& selectiveAccess,
+    dlms::xdlms::GetResult& result);
 
   virtual dlms::xdlms::XdlmsStatus Set(
     const CosemAttributeDescriptor& descriptor,

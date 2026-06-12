@@ -137,6 +137,7 @@ identity types:
 ```cpp
 using CosemAttributeDescriptor = dlms::xdlms::CosemAttributeDescriptor;
 using CosemMethodDescriptor = dlms::xdlms::CosemMethodDescriptor;
+using SelectiveAccessDescriptor = dlms::xdlms::SelectiveAccessDescriptor;
 ```
 
 GET, SET, and ACTION values cross the facade boundary as complete encoded DLMS
@@ -293,6 +294,13 @@ public:
     std::uint8_t attributeId,
     ClientGetResult& result);
 
+  ClientStatus ReadAttribute(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t attributeId,
+    const SelectiveAccessDescriptor& selectiveAccess,
+    ClientGetResult& result);
+
   ClientStatus Set(
     const CosemAttributeDescriptor& descriptor,
     const std::vector<std::uint8_t>& encodedData);
@@ -350,6 +358,10 @@ public:
 - `ReadAttribute()`, `WriteAttribute()`, and `CallMethod()` clear their result
   structs before dispatch and preserve lower xDLMS invoke id plus
   access/action result bytes when the service response reaches the client.
+- The selective-access `ReadAttribute()` overload forwards generic xDLMS
+  `SelectiveAccessDescriptor` values. The descriptor contains the selector
+  byte and complete encoded DLMS `Data` parameters; Profile Generic selector
+  `1` and `2` parameter builders remain a higher-level helper concern.
 - `ReleaseAssociation()` is idempotent when already not associated. In the
   injected-channel phase a successful release closes the lower channel through
   `AssociationClient::Release()` and returns the facade to disconnected state.

@@ -107,6 +107,7 @@ public:
     , actionResult(0u)
     , actionHasData(false)
     , getCalls(0)
+    , selectedGetCalls(0)
     , setCalls(0)
     , actionCalls(0)
     , lastActionHasParameter(false)
@@ -126,6 +127,27 @@ public:
       result.data.push_back(0x12u);
       result.data.push_back(0x13u);
       result.data.push_back(0x57u);
+      result.hasAccessResult = getHasAccessResult;
+      result.accessResult = getAccessResult;
+    }
+    return getStatus;
+  }
+
+  dlms::xdlms::XdlmsStatus Get(
+    const dlms::client::CosemAttributeDescriptor& descriptor,
+    const dlms::client::SelectiveAccessDescriptor& selectiveAccess,
+    dlms::xdlms::GetResult& result)
+  {
+    ++selectedGetCalls;
+    lastGetDescriptor = descriptor;
+    lastSelection = selectiveAccess;
+    result = dlms::xdlms::EmptyGetResult();
+    if (getStatus == dlms::xdlms::XdlmsStatus::Ok) {
+      result.invokeId = 4u;
+      result.hasData = true;
+      result.data.push_back(0x12u);
+      result.data.push_back(0x45u);
+      result.data.push_back(0x67u);
       result.hasAccessResult = getHasAccessResult;
       result.accessResult = getAccessResult;
     }
@@ -178,9 +200,11 @@ public:
   bool actionHasData;
   std::vector<std::uint8_t> actionData;
   int getCalls;
+  int selectedGetCalls;
   int setCalls;
   int actionCalls;
   dlms::client::CosemAttributeDescriptor lastGetDescriptor;
+  dlms::client::SelectiveAccessDescriptor lastSelection;
   dlms::client::CosemAttributeDescriptor lastSetDescriptor;
   dlms::client::CosemMethodDescriptor lastActionDescriptor;
   bool lastActionHasParameter;
@@ -760,6 +784,42 @@ TEST(DlmsClient, ReadAttributeBuildsDescriptorAndReturnsDetailedResult)
   for (std::size_t i = 0u; i < logicalName.Size(); ++i) {
     EXPECT_EQ(logicalName[i], xdlms.lastGetDescriptor.instanceId[i]);
   }
+}
+
+TEST(DlmsClient, ReadAttributeCanUseSelectiveAccess)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  FakeXdlmsService xdlms;
+  xdlms.getHasAccessResult = true;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+  EstablishFacade(client, channel);
+
+  dlms::client::SelectiveAccessDescriptor selection =
+    dlms::xdlms::EmptySelectiveAccessDescriptor();
+  selection.selector = 1u;
+  selection.encodedParameters.push_back(0x00u);
+
+  dlms::client::ClientGetResult result;
+  const dlms::xdlms::CosemLogicalName logicalName(1, 0, 99, 1, 0, 255);
+  EXPECT_EQ(
+    dlms::client::ClientStatus::Ok,
+    client.ReadAttribute(7u, logicalName, 2u, selection, result));
+
+  EXPECT_EQ(dlms::client::ClientStatus::Ok, result.status);
+  EXPECT_EQ(4u, result.invokeId);
+  EXPECT_TRUE(result.hasData);
+  EXPECT_EQ(MakeLongUnsignedBytes(0x4567u), result.encodedData);
+  EXPECT_TRUE(result.hasAccessResult);
+  EXPECT_EQ(0u, result.accessResult);
+  EXPECT_EQ(0, xdlms.getCalls);
+  EXPECT_EQ(1, xdlms.selectedGetCalls);
+  EXPECT_EQ(7u, xdlms.lastGetDescriptor.classId);
+  EXPECT_EQ(2u, xdlms.lastGetDescriptor.attributeId);
+  EXPECT_EQ(1u, xdlms.lastSelection.selector);
+  EXPECT_EQ(selection.encodedParameters, xdlms.lastSelection.encodedParameters);
 }
 
 TEST(DlmsClient, WriteAttributeBuildsDescriptorAndReturnsAccessResult)

@@ -87,6 +87,14 @@ CosemMethodDescriptor EmptyCosemMethodDescriptor()
   return descriptor;
 }
 
+SelectiveAccessDescriptor EmptySelectiveAccessDescriptor()
+{
+  SelectiveAccessDescriptor descriptor;
+  descriptor.selector = 0u;
+  descriptor.encodedParameters.clear();
+  return descriptor;
+}
+
 GetResult EmptyGetResult()
 {
   GetResult result;
@@ -134,6 +142,16 @@ XdlmsStatus ValidateDescriptor(
   return hasAnyInstanceByte
     ? XdlmsStatus::Ok
     : XdlmsStatus::InvalidArgument;
+}
+
+XdlmsStatus ValidateSelectiveAccess(
+  const SelectiveAccessDescriptor& selectiveAccess)
+{
+  if (selectiveAccess.selector == 0u ||
+      selectiveAccess.encodedParameters.empty()) {
+    return XdlmsStatus::InvalidArgument;
+  }
+  return XdlmsStatus::Ok;
 }
 
 XdlmsStatus ValidateMethodDescriptor(

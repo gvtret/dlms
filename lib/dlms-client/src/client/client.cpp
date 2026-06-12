@@ -99,6 +99,14 @@ public:
     return client_.Get(descriptor, result);
   }
 
+  dlms::xdlms::XdlmsStatus Get(
+    const CosemAttributeDescriptor& descriptor,
+    const SelectiveAccessDescriptor& selectiveAccess,
+    dlms::xdlms::GetResult& result)
+  {
+    return client_.Get(descriptor, selectiveAccess, result);
+  }
+
   dlms::xdlms::XdlmsStatus Set(
     const CosemAttributeDescriptor& descriptor,
     const std::vector<std::uint8_t>& encodedData,
@@ -486,6 +494,17 @@ std::unique_ptr<dlms::profile::IApduChannel> CreateProfileChannel(
 
 IClientXdlmsService::~IClientXdlmsService()
 {
+}
+
+dlms::xdlms::XdlmsStatus IClientXdlmsService::Get(
+  const CosemAttributeDescriptor& descriptor,
+  const SelectiveAccessDescriptor& selectiveAccess,
+  dlms::xdlms::GetResult& result)
+{
+  (void)descriptor;
+  (void)selectiveAccess;
+  result = dlms::xdlms::EmptyGetResult();
+  return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
 }
 
 class ClientHlsAssociationStrategy;
@@ -1131,6 +1150,35 @@ ClientStatus DlmsClient::ReadAttribute(
   const CosemAttributeDescriptor descriptor =
     MakeAttributeDescriptor(classId, logicalName, attributeId);
   result.status = MapXdlmsStatus(xdlms_->Get(descriptor, xdlmsResult));
+  if (result.status != ClientStatus::Ok) {
+    return result.status;
+  }
+
+  result.invokeId = xdlmsResult.invokeId;
+  result.hasData = xdlmsResult.hasData;
+  result.encodedData = xdlmsResult.data;
+  result.hasAccessResult = xdlmsResult.hasAccessResult;
+  result.accessResult = xdlmsResult.accessResult;
+  return result.status;
+}
+
+ClientStatus DlmsClient::ReadAttribute(
+  std::uint16_t classId,
+  const dlms::xdlms::CosemLogicalName& logicalName,
+  std::uint8_t attributeId,
+  const SelectiveAccessDescriptor& selectiveAccess,
+  ClientGetResult& result)
+{
+  result = EmptyClientGetResult(ClientStatus::NotAssociated);
+  if (state_ != ClientState::Associated) {
+    return result.status;
+  }
+
+  dlms::xdlms::GetResult xdlmsResult = dlms::xdlms::EmptyGetResult();
+  const CosemAttributeDescriptor descriptor =
+    MakeAttributeDescriptor(classId, logicalName, attributeId);
+  result.status =
+    MapXdlmsStatus(xdlms_->Get(descriptor, selectiveAccess, xdlmsResult));
   if (result.status != ClientStatus::Ok) {
     return result.status;
   }

@@ -111,6 +111,13 @@ public:
     std::uint8_t attributeId,
     ClientGetResult& result);
 
+  ClientStatus ReadAttribute(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t attributeId,
+    const SelectiveAccessDescriptor& selectiveAccess,
+    ClientGetResult& result);
+
   ClientStatus Set(
     const CosemAttributeDescriptor& descriptor,
     const std::vector<std::uint8_t>& encodedData);

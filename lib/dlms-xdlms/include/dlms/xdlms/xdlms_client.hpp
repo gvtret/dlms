@@ -58,6 +58,17 @@ public:
 
   XdlmsStatus Get(
     const CosemAttributeDescriptor& descriptor,
+    const SelectiveAccessDescriptor& selectiveAccess,
+    GetResult& result);
+
+  XdlmsStatus Get(
+    const CosemAttributeDescriptor& descriptor,
+    const ServiceOptions& options,
+    GetResult& result);
+
+  XdlmsStatus Get(
+    const CosemAttributeDescriptor& descriptor,
+    const SelectiveAccessDescriptor& selectiveAccess,
     const ServiceOptions& options,
     GetResult& result);
 
@@ -88,6 +99,12 @@ public:
 private:
   XdlmsClient(const XdlmsClient&);
   XdlmsClient& operator=(const XdlmsClient&);
+
+  XdlmsStatus Get(
+    const CosemAttributeDescriptor& descriptor,
+    const SelectiveAccessDescriptor* selectiveAccess,
+    const ServiceOptions& options,
+    GetResult& result);
 
   dlms::profile::IApduChannel& channel_;
   std::unique_ptr<IXdlmsAssociationState> ownedAssociation_;

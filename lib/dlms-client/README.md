@@ -35,6 +35,11 @@ backend pattern: use `ReadAttribute` with class id and OBIS logical name, check
 `accessResult`, and decode the returned encoded DLMS `Data` through
 `client_data.hpp`.
 
+`ReadAttribute` also has a selective-access overload. GUI clients can pass a
+`SelectiveAccessDescriptor` with a selector and encoded DLMS `Data` parameters
+for Profile Generic range/by-entry reads once the UI has built the
+selector-specific parameter structure.
+
 ## Documentation
 
 - [Requirements](docs/00_client_requirements.md)

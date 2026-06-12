@@ -231,6 +231,38 @@ dlms::apdu::XdlmsApdu MakeGetRequestNext(
   return request;
 }
 
+XdlmsStatus MakeGetRequestNormal(
+  std::uint8_t invokeIdAndPriority,
+  const CosemAttributeDescriptor& descriptor,
+  const SelectiveAccessDescriptor* selectiveAccess,
+  dlms::apdu::XdlmsApdu& request)
+{
+  request = dlms::apdu::MakeGetRequestNormal(
+    invokeIdAndPriority,
+    descriptor.classId,
+    ToApduLogicalName(descriptor.instanceId),
+    descriptor.attributeId);
+
+  if (selectiveAccess == 0) {
+    return XdlmsStatus::Ok;
+  }
+
+  dlms::apdu::DlmsData parameters = {};
+  const XdlmsStatus status =
+    DecodeEncodedData(selectiveAccess->encodedParameters, parameters);
+  if (status != XdlmsStatus::Ok) {
+    return status;
+  }
+
+  request.getRequest.hasSelectiveAccess = true;
+  request.getRequest.selectiveAccess.selector = selectiveAccess->selector;
+  request.getRequest.selectiveAccess.parameters = parameters;
+  request.getRequestAny.normal.hasSelection = true;
+  request.getRequestAny.normal.selection =
+    request.getRequest.selectiveAccess;
+  return XdlmsStatus::Ok;
+}
+
 dlms::apdu::XdlmsApdu MakeActionRequestNextPblock(
   std::uint8_t invokeIdAndPriority,
   std::uint32_t blockNumber)
@@ -593,6 +625,32 @@ XdlmsStatus XdlmsClient::Get(
 
 XdlmsStatus XdlmsClient::Get(
   const CosemAttributeDescriptor& descriptor,
+  const SelectiveAccessDescriptor& selectiveAccess,
+  GetResult& result)
+{
+  return Get(descriptor, selectiveAccess, DefaultServiceOptions(), result);
+}
+
+XdlmsStatus XdlmsClient::Get(
+  const CosemAttributeDescriptor& descriptor,
+  const ServiceOptions& options,
+  GetResult& result)
+{
+  return Get(descriptor, 0, options, result);
+}
+
+XdlmsStatus XdlmsClient::Get(
+  const CosemAttributeDescriptor& descriptor,
+  const SelectiveAccessDescriptor& selectiveAccess,
+  const ServiceOptions& options,
+  GetResult& result)
+{
+  return Get(descriptor, &selectiveAccess, options, result);
+}
+
+XdlmsStatus XdlmsClient::Get(
+  const CosemAttributeDescriptor& descriptor,
+  const SelectiveAccessDescriptor* selectiveAccess,
   const ServiceOptions& options,
   GetResult& result)
 {
@@ -601,6 +659,12 @@ XdlmsStatus XdlmsClient::Get(
   XdlmsStatus status = ValidateDescriptor(descriptor);
   if (status != XdlmsStatus::Ok) {
     return status;
+  }
+  if (selectiveAccess != 0) {
+    status = ValidateSelectiveAccess(*selectiveAccess);
+    if (status != XdlmsStatus::Ok) {
+      return status;
+    }
   }
 
   if (!association_->IsAssociated()) {
@@ -611,11 +675,15 @@ XdlmsStatus XdlmsClient::Get(
   const std::uint8_t invokeIdAndPriority =
     MakeInvokeIdAndPriority(invokeId, options);
 
-  dlms::apdu::XdlmsApdu request = dlms::apdu::MakeGetRequestNormal(
+  dlms::apdu::XdlmsApdu request;
+  status = MakeGetRequestNormal(
     invokeIdAndPriority,
-    descriptor.classId,
-    ToApduLogicalName(descriptor.instanceId),
-    descriptor.attributeId);
+    descriptor,
+    selectiveAccess,
+    request);
+  if (status != XdlmsStatus::Ok) {
+    return status;
+  }
 
   std::vector<std::uint8_t> decodedResponseBytes;
   dlms::apdu::XdlmsApdu response;

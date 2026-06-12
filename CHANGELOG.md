@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.8.0 - 2026-06-07
+
+- Added xDLMS and client facade support for GET selective access requests with
+  encoded DLMS Data selection parameters.
+
 ## 0.7.1 - 2026-06-07
 
 - Added a GUI-oriented client read example that uses `ReadAttribute` and typed

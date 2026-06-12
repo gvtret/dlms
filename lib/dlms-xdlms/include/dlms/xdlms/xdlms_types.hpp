@@ -43,6 +43,12 @@ struct CosemMethodDescriptor
   std::uint8_t methodId;
 };
 
+struct SelectiveAccessDescriptor
+{
+  std::uint8_t selector;
+  std::vector<std::uint8_t> encodedParameters;
+};
+
 struct ServiceOptions
 {
   bool confirmed;
@@ -91,11 +97,14 @@ private:
 ServiceOptions DefaultServiceOptions();
 CosemAttributeDescriptor EmptyCosemAttributeDescriptor();
 CosemMethodDescriptor EmptyCosemMethodDescriptor();
+SelectiveAccessDescriptor EmptySelectiveAccessDescriptor();
 GetResult EmptyGetResult();
 SetResult EmptySetResult();
 ActionResult EmptyActionResult();
 XdlmsStatus ValidateDescriptor(
   const CosemAttributeDescriptor& descriptor);
+XdlmsStatus ValidateSelectiveAccess(
+  const SelectiveAccessDescriptor& selectiveAccess);
 XdlmsStatus ValidateMethodDescriptor(
   const CosemMethodDescriptor& descriptor);
 

@@ -424,6 +424,44 @@ TEST(XdlmsClient, GetSendsNormalRequestAndCopiesDataResult)
   EXPECT_FALSE(result.hasAccessResult);
 }
 
+TEST(XdlmsClient, GetSendsSelectiveAccessRequest)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  Establish(association, channel);
+  channel.nextReceive = MakeDataResponse(0x81u);
+
+  dlms::xdlms::SelectiveAccessDescriptor selection =
+    dlms::xdlms::EmptySelectiveAccessDescriptor();
+  selection.selector = 1u;
+  selection.encodedParameters.push_back(0x00u);
+
+  dlms::xdlms::XdlmsClient client(channel, association);
+  dlms::xdlms::GetResult result;
+
+  EXPECT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            client.Get(MakeDescriptor(), selection, result));
+
+  dlms::apdu::XdlmsApdu request;
+  ASSERT_EQ(
+    dlms::apdu::ApduStatus::Ok,
+    dlms::apdu::DecodeXdlmsApdu(
+      &channel.sent[0],
+      channel.sent.size(),
+      request));
+  ASSERT_EQ(dlms::apdu::XdlmsApduKind::GetRequest, request.kind);
+  EXPECT_TRUE(request.getRequest.hasSelectiveAccess);
+  EXPECT_EQ(1u, request.getRequest.selectiveAccess.selector);
+  EXPECT_EQ(
+    dlms::apdu::DlmsDataType::NullData,
+    request.getRequest.selectiveAccess.parameters.type);
+  EXPECT_TRUE(request.getRequestAny.normal.hasSelection);
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_TRUE(result.hasData);
+}
+
 TEST(XdlmsClient, GetCanUseAbstractAssociationState)
 {
   FakeApduChannel channel;

@@ -46,6 +46,16 @@ No C ABI is planned for the first implementation.
 - `instanceId`
 - `attributeId`
 
+`SelectiveAccessDescriptor` contains:
+
+- `selector`
+- `encodedParameters`
+
+`encodedParameters` is a complete encoded DLMS `Data` value. The xDLMS layer
+does not interpret Profile Generic selector-specific structures; it validates
+that a selector and parameters are present, decodes the parameters as DLMS
+`Data`, and emits them into GET-REQUEST-NORMAL selective access.
+
 `ServiceOptions` contains:
 
 - `confirmed`
@@ -102,6 +112,20 @@ descriptor.attributeId = 2;
 
 dlms::xdlms::GetResult result;
 const dlms::xdlms::XdlmsStatus status = client.Get(descriptor, result);
+```
+
+GET selective access is available through overloads that accept
+`SelectiveAccessDescriptor`:
+
+```cpp
+dlms::xdlms::SelectiveAccessDescriptor selection =
+  dlms::xdlms::EmptySelectiveAccessDescriptor();
+selection.selector = 1;
+selection.encodedParameters = {0x00}; // DLMS null-data parameters example
+
+dlms::xdlms::GetResult selectedResult;
+const dlms::xdlms::XdlmsStatus selectedStatus =
+  client.Get(descriptor, selection, selectedResult);
 ```
 
 When constructed directly with an `IXdlmsAssociationState&`, `XdlmsClient` does

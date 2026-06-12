@@ -257,7 +257,9 @@ dlms_transport_status_t dlms_transport_tcp_read_some(
     std::size_t cppBytesRead = 0u;
     const dlms::transport::TransportStatus status =
       transport->transport.ReadSome(output, output_size, cppBytesRead);
-    *bytes_read = cppBytesRead;
+    if (status == dlms::transport::TransportStatus::Ok) {
+      *bytes_read = cppBytesRead;
+    }
     return ToCStatus(status);
   } catch (...) {
     return DLMS_TRANSPORT_STATUS_INTERNAL_ERROR;
@@ -385,7 +387,9 @@ dlms_transport_status_t dlms_transport_udp_receive(
     std::size_t cppBytesRead = 0u;
     const dlms::transport::TransportStatus status =
       transport->transport.Receive(output, output_size, cppBytesRead);
-    *bytes_read = cppBytesRead;
+    if (status == dlms::transport::TransportStatus::Ok) {
+      *bytes_read = cppBytesRead;
+    }
     return ToCStatus(status);
   } catch (...) {
     return DLMS_TRANSPORT_STATUS_INTERNAL_ERROR;
@@ -475,7 +479,9 @@ dlms_transport_status_t dlms_transport_serial_read_some(
     std::size_t cppBytesRead = 0u;
     const dlms::transport::TransportStatus status =
       transport->transport.ReadSome(output, output_size, cppBytesRead);
-    *bytes_read = cppBytesRead;
+    if (status == dlms::transport::TransportStatus::Ok) {
+      *bytes_read = cppBytesRead;
+    }
     return ToCStatus(status);
   } catch (...) {
     return DLMS_TRANSPORT_STATUS_INTERNAL_ERROR;

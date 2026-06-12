@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.8 - 2026-06-07
+
+- Hardened transport C API read and receive entry points so `bytes_read`
+  remains zero for non-OK backend statuses.
+
 ## 0.4.7 - 2026-06-07
 
 - Hardened the association C API callback APDU adapter so receive callbacks

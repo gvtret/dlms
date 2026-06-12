@@ -36,6 +36,8 @@
    - Profile receive boundary validation закрыта в `0.3.19`.
    - Profile callback adapters не передают ненулевой размер чтения после
      failed callback начиная с `0.3.36`.
+   - Profile C API datagram callback receive coverage для failed callback с
+     ненулевым callback byte count добавлен в `0.4.9`.
    - Transport C write/send entry points отклоняют null input с ненулевым
      размером начиная с `0.3.37`.
    - HDLC C decode допускает null information buffer только при нулевом

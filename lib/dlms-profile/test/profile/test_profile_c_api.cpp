@@ -26,6 +26,9 @@ struct CallbackDatagram
   bool open;
   dlms_profile_status_t openStatus;
   dlms_profile_status_t sendStatus;
+  dlms_profile_status_t receiveStatus;
+  std::size_t receiveBytes;
+  std::size_t receives;
   std::vector<std::vector<std::uint8_t> > sends;
 };
 
@@ -119,15 +122,17 @@ dlms_profile_status_t CallbackDatagramSend(
 }
 
 dlms_profile_status_t CallbackDatagramReceive(
-  void*,
+  void* userData,
   std::uint8_t*,
   std::size_t,
   std::size_t* bytesRead)
 {
+  CallbackDatagram* datagram = static_cast<CallbackDatagram*>(userData);
+  ++datagram->receives;
   if (bytesRead != nullptr) {
-    *bytesRead = 0u;
+    *bytesRead = datagram->receiveBytes;
   }
-  return DLMS_PROFILE_STATUS_WOULD_BLOCK;
+  return datagram->receiveStatus;
 }
 
 dlms_profile_datagram_callbacks_t MakeDatagramCallbacks(
@@ -209,6 +214,9 @@ TEST(ProfileCApi, WrapperUdpCallbackChannelSendApdu)
   datagram.open = false;
   datagram.openStatus = DLMS_PROFILE_STATUS_OK;
   datagram.sendStatus = DLMS_PROFILE_STATUS_OK;
+  datagram.receiveStatus = DLMS_PROFILE_STATUS_WOULD_BLOCK;
+  datagram.receiveBytes = 0u;
+  datagram.receives = 0u;
 
   dlms_profile_channel_options_t options;
   dlms_profile_default_channel_options(&options);
@@ -374,6 +382,40 @@ TEST(ProfileCApi, CallbackReadFailureDoesNotReportBytes)
                                       &written));
   EXPECT_EQ(0u, written);
   EXPECT_EQ(1u, stream.reads);
+
+  dlms_profile_destroy_channel(channel);
+}
+
+TEST(ProfileCApi, CallbackDatagramReceiveFailureDoesNotReportBytes)
+{
+  CallbackDatagram datagram;
+  datagram.open = false;
+  datagram.openStatus = DLMS_PROFILE_STATUS_OK;
+  datagram.sendStatus = DLMS_PROFILE_STATUS_OK;
+  datagram.receiveStatus = DLMS_PROFILE_STATUS_READ_FAILED;
+  datagram.receiveBytes = 3u;
+  datagram.receives = 0u;
+
+  dlms_profile_channel_options_t options;
+  dlms_profile_default_channel_options(&options);
+  dlms_profile_datagram_callbacks_t callbacks =
+    MakeDatagramCallbacks(&datagram);
+
+  dlms_profile_channel_t* channel =
+    dlms_profile_create_wrapper_udp_channel_from_callbacks(&callbacks,
+                                                           &options);
+  ASSERT_NE(nullptr, channel);
+
+  std::uint8_t output[16] = {};
+  std::size_t written = 99u;
+  EXPECT_EQ(DLMS_PROFILE_STATUS_OK, dlms_profile_open(channel));
+  EXPECT_EQ(DLMS_PROFILE_STATUS_READ_FAILED,
+            dlms_profile_receive_apdu(channel,
+                                      output,
+                                      sizeof(output),
+                                      &written));
+  EXPECT_EQ(0u, written);
+  EXPECT_EQ(1u, datagram.receives);
 
   dlms_profile_destroy_channel(channel);
 }

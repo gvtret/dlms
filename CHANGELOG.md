@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.9 - 2026-06-07
+
+- Added profile C API regression coverage for datagram receive callbacks that
+  return a non-OK status after reporting bytes.
+
 ## 0.4.8 - 2026-06-07
 
 - Hardened transport C API read and receive entry points so `bytes_read`

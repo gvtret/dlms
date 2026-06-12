@@ -243,7 +243,7 @@ library may be described as an extensible DLMS/COSEM framework with partial
 1. Расширить install-tree examples.
    - Уже есть `codec`, `io`, `protocol`, `cosem_server`, `runtime`,
      `framework` начиная с `0.4.5`.
-   - Следующий шаг: добавить README snippets для каждого consumer example.
+   - README snippets для всех component/target пар добавлены в `0.4.6`.
 2. Продолжать exported target audit.
    - Include dirs, transitive deps, OpenSSL dependency, отсутствие test deps.
 3. Документировать минимальные include примеры для каждого aggregate target.

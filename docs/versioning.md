@@ -73,7 +73,9 @@ Release changes should update:
 Changes to `DLMSFramework` package components are public CMake API changes. The
 documented components are `codec`, `io`, `protocol`, `cosem_server`, `runtime`,
 and `framework`; each maps to the corresponding `dlms::<component>` aggregate
-target and must be verified through install-tree consumer examples.
+target and must be verified through install-tree consumer examples. The
+consumer examples under `examples/package-consumers` are part of release
+verification and must stay aligned with this component list.
 
 After the layer-modernization pass, any change that affects the installed
 headers, documented extension interfaces, exported CMake targets, release

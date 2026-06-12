@@ -76,7 +76,7 @@ target_link_libraries(app PRIVATE dlms::runtime)
 ```
 
 Minimal installed-package consumer examples are available under
-`examples/package-consumers` for `codec`, `protocol`, and `runtime`.
+`examples/package-consumers` for every documented aggregate component.
 
 Aggregate targets are available for narrower linking:
 
@@ -95,6 +95,17 @@ Individual implementation libraries such as `dlms_hdlc` or `dlms_endpoint`
 are exported for source compatibility, but new consumers should prefer the
 aggregate targets above unless they intentionally depend on one low-level
 component.
+
+Minimal component consumers use the same pattern:
+
+| Component | Target |
+|---|---|
+| `find_package(DLMSFramework REQUIRED CONFIG COMPONENTS codec)` | `dlms::codec` |
+| `find_package(DLMSFramework REQUIRED CONFIG COMPONENTS io)` | `dlms::io` |
+| `find_package(DLMSFramework REQUIRED CONFIG COMPONENTS protocol)` | `dlms::protocol` |
+| `find_package(DLMSFramework REQUIRED CONFIG COMPONENTS cosem_server)` | `dlms::cosem_server` |
+| `find_package(DLMSFramework REQUIRED CONFIG COMPONENTS runtime)` | `dlms::runtime` |
+| `find_package(DLMSFramework REQUIRED CONFIG COMPONENTS framework)` | `dlms::framework` |
 
 ## Extension Points
 

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.6 - 2026-06-07
+
+- Documented the complete `DLMSFramework` component-to-target package mapping
+  in the README and release versioning notes.
+
 ## 0.4.5 - 2026-06-07
 
 - Added install-tree consumer examples for the `io`, `cosem_server`, and

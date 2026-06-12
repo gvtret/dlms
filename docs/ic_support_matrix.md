@@ -73,10 +73,12 @@ Status values:
 | `63` | Status Mapping | Planned | Needed for status word mapping. |
 | `64` | Security Setup | Partial | `CosemSecuritySetupObject` exposes logical name, encoded security policy, security suite and client/server system titles. `security_activate` enforces monotonic policy strengthening; key, certificate and key agreement methods return explicit unsupported status until implemented. |
 | `65` | Parameter Monitor | Planned | Needed for parameter monitoring. |
+| `67` | Sensor Manager | Application-provided | No built-in implementation. |
 | `68` | Arbitrator | Application-provided | No built-in implementation. |
 | `70` | Disconnect Control | Planned | Needed for remote disconnect/reconnect. |
 | `71` | Limiter | Planned | Needed for active power/current/voltage limiting parameters. |
 | `72`-`77` | M-Bus classes | Application-provided | No built-in implementation. |
+| `80`-`85` | PRIME PLC classes | Application-provided | No built-in implementation. |
 
 ## СПОДЭС/СПОДУС Application Model
 
@@ -108,3 +110,8 @@ The COSEM layer is not complete for СПОДЭС/СПОДУС production use unt
    association/security context.
 5. Unsupported ICs return explicit access/service errors through server and
    endpoint paths.
+
+The `0.4.11` knowledge-base audit reconciled this matrix against ГОСТ Р
+58940-2020 table 7.1 and the DLMS UA Blue Book class list. Built-in coverage
+remains limited to Data `1`, Register `3`, Association LN `15`, SAP Assignment
+`17`, and partial Security Setup `64`.

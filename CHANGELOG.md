@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.11 - 2026-06-07
+
+- Reconciled the IC and security production-readiness documentation against
+  the knowledge-base class lists and current built-in COSEM coverage.
+
 ## 0.4.10 - 2026-06-07
 
 - Extended the package install smoke audit to verify aggregate target

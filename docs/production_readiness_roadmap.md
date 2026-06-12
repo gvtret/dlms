@@ -105,9 +105,10 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
 
 1. Зафиксировать supported/unsupported security matrix.
    - Suite 0: `None`, Low, High password, High GMAC, global ciphering.
-   - Suite 0 gaps: Security Setup IC `64`, `security_activate`,
-     `global_key_transfer`, `change_HLS_secret`, dedicated key и dedicated
-     ciphering APDU.
+   - Suite 0 gaps: `change_HLS_secret`, dedicated key и dedicated ciphering
+     APDU; Security Setup IC `64`, `security_activate` и
+     `global_key_transfer` реализованы частично, но certificate/key agreement
+     semantics остаются unsupported.
    - Статус: Suite 0 AES key wrap/unwrap primitive добавлен в `0.3.31`;
      mutable key sink добавлен в `0.3.32`; Security Setup method 2 Suite 0
      key-transfer parsing добавлен в `0.3.33`; invocation-counter reset
@@ -173,6 +174,11 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
 Data/Register/Association LN/SAP Assignment behavior, но не является полной
 СПОДЭС/СПОДУС моделью.
 Текущий статус зафиксирован в `docs/ic_support_matrix.md`.
+Сверка `0.4.11` по базе знаний подтвердила, что built-in IC coverage сейчас
+ограничен Data `1`, Register `3`, Association LN `15`, SAP Assignment `17` и
+частичным Security Setup `64`; остальные IC из ГОСТ Р 58940-2020 table 7.1 и
+DLMS UA Blue Book должны оставаться `Planned` или `Application-provided` до
+явной реализации.
 
 1. Ввести explicit IC support matrix.
    - Для каждого IC: class id, supported versions, attributes, methods,

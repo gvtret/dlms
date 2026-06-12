@@ -101,6 +101,11 @@ public:
     : getStatus(dlms::xdlms::XdlmsStatus::Ok)
     , setStatus(dlms::xdlms::XdlmsStatus::Ok)
     , actionStatus(dlms::xdlms::XdlmsStatus::Ok)
+    , getHasAccessResult(false)
+    , getAccessResult(0u)
+    , setAccessResult(0u)
+    , actionResult(0u)
+    , actionHasData(false)
     , getCalls(0)
     , setCalls(0)
     , actionCalls(0)
@@ -121,6 +126,8 @@ public:
       result.data.push_back(0x12u);
       result.data.push_back(0x13u);
       result.data.push_back(0x57u);
+      result.hasAccessResult = getHasAccessResult;
+      result.accessResult = getAccessResult;
     }
     return getStatus;
   }
@@ -134,6 +141,10 @@ public:
     lastSetDescriptor = descriptor;
     lastSetData = encodedData;
     result = dlms::xdlms::EmptySetResult();
+    if (setStatus == dlms::xdlms::XdlmsStatus::Ok) {
+      result.invokeId = 2u;
+      result.accessResult = setAccessResult;
+    }
     return setStatus;
   }
 
@@ -148,12 +159,24 @@ public:
     lastActionHasParameter = hasParameter;
     lastActionParameter = encodedParameter;
     result = dlms::xdlms::EmptyActionResult();
+    if (actionStatus == dlms::xdlms::XdlmsStatus::Ok) {
+      result.invokeId = 3u;
+      result.actionResult = actionResult;
+      result.hasData = actionHasData;
+      result.data = actionData;
+    }
     return actionStatus;
   }
 
   dlms::xdlms::XdlmsStatus getStatus;
   dlms::xdlms::XdlmsStatus setStatus;
   dlms::xdlms::XdlmsStatus actionStatus;
+  bool getHasAccessResult;
+  std::uint8_t getAccessResult;
+  std::uint8_t setAccessResult;
+  std::uint8_t actionResult;
+  bool actionHasData;
+  std::vector<std::uint8_t> actionData;
   int getCalls;
   int setCalls;
   int actionCalls;
@@ -705,6 +728,129 @@ TEST(DlmsClient, GetCanUseInjectedXdlmsService)
 
   EXPECT_EQ(1, xdlms.getCalls);
   EXPECT_EQ(MakeLongUnsignedBytes(0x1357u), output);
+}
+
+TEST(DlmsClient, ReadAttributeBuildsDescriptorAndReturnsDetailedResult)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  FakeXdlmsService xdlms;
+  xdlms.getHasAccessResult = true;
+  xdlms.getAccessResult = 3u;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+  EstablishFacade(client, channel);
+
+  dlms::client::ClientGetResult result;
+  const dlms::xdlms::CosemLogicalName logicalName(1, 0, 1, 8, 0, 255);
+  EXPECT_EQ(
+    dlms::client::ClientStatus::Ok,
+    client.ReadAttribute(3u, logicalName, 2u, result));
+
+  EXPECT_EQ(dlms::client::ClientStatus::Ok, result.status);
+  EXPECT_EQ(1u, result.invokeId);
+  EXPECT_TRUE(result.hasData);
+  EXPECT_EQ(MakeLongUnsignedBytes(0x1357u), result.encodedData);
+  EXPECT_TRUE(result.hasAccessResult);
+  EXPECT_EQ(3u, result.accessResult);
+  EXPECT_EQ(1, xdlms.getCalls);
+  EXPECT_EQ(3u, xdlms.lastGetDescriptor.classId);
+  EXPECT_EQ(2u, xdlms.lastGetDescriptor.attributeId);
+  for (std::size_t i = 0u; i < logicalName.Size(); ++i) {
+    EXPECT_EQ(logicalName[i], xdlms.lastGetDescriptor.instanceId[i]);
+  }
+}
+
+TEST(DlmsClient, WriteAttributeBuildsDescriptorAndReturnsAccessResult)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  FakeXdlmsService xdlms;
+  xdlms.setAccessResult = 4u;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+  EstablishFacade(client, channel);
+
+  dlms::client::ClientSetResult result;
+  const std::vector<std::uint8_t> encoded = MakeLongUnsignedBytes(25u);
+  const dlms::xdlms::CosemLogicalName logicalName(1, 0, 1, 8, 0, 255);
+  EXPECT_EQ(
+    dlms::client::ClientStatus::Ok,
+    client.WriteAttribute(3u, logicalName, 2u, encoded, result));
+
+  EXPECT_EQ(dlms::client::ClientStatus::Ok, result.status);
+  EXPECT_EQ(2u, result.invokeId);
+  EXPECT_EQ(4u, result.accessResult);
+  EXPECT_EQ(1, xdlms.setCalls);
+  EXPECT_EQ(3u, xdlms.lastSetDescriptor.classId);
+  EXPECT_EQ(2u, xdlms.lastSetDescriptor.attributeId);
+  EXPECT_EQ(encoded, xdlms.lastSetData);
+}
+
+TEST(DlmsClient, CallMethodBuildsDescriptorAndReturnsDetailedResult)
+{
+  FakeApduChannel channel;
+  dlms::association::AssociationClient association(
+    channel,
+    dlms::association::DefaultAssociationOptions());
+  FakeXdlmsService xdlms;
+  xdlms.actionResult = 5u;
+  xdlms.actionHasData = true;
+  xdlms.actionData = MakeLongUnsignedBytes(7u);
+  dlms::client::DlmsClient client(channel, association, xdlms);
+  EstablishFacade(client, channel);
+
+  dlms::client::ClientActionResult result;
+  const std::vector<std::uint8_t> parameter = MakeLongUnsignedBytes(11u);
+  const dlms::xdlms::CosemLogicalName logicalName(0, 0, 40, 0, 0, 255);
+  EXPECT_EQ(
+    dlms::client::ClientStatus::Ok,
+    client.CallMethod(15u, logicalName, 1u, true, parameter, result));
+
+  EXPECT_EQ(dlms::client::ClientStatus::Ok, result.status);
+  EXPECT_EQ(3u, result.invokeId);
+  EXPECT_EQ(5u, result.actionResult);
+  EXPECT_TRUE(result.hasData);
+  EXPECT_EQ(MakeLongUnsignedBytes(7u), result.encodedReturnParameter);
+  EXPECT_EQ(1, xdlms.actionCalls);
+  EXPECT_EQ(15u, xdlms.lastActionDescriptor.classId);
+  EXPECT_EQ(1u, xdlms.lastActionDescriptor.methodId);
+  EXPECT_TRUE(xdlms.lastActionHasParameter);
+  EXPECT_EQ(parameter, xdlms.lastActionParameter);
+}
+
+TEST(DlmsClient, DetailedServiceMethodsClearResultsOnFailure)
+{
+  FakeApduChannel channel;
+  FakeAssociationClient association;
+  FakeXdlmsService xdlms;
+  dlms::client::DlmsClient client(channel, association, xdlms);
+
+  dlms::client::ClientGetResult getResult;
+  getResult.status = dlms::client::ClientStatus::Ok;
+  getResult.hasData = true;
+  getResult.encodedData.push_back(0xAAu);
+  EXPECT_EQ(
+    dlms::client::ClientStatus::NotAssociated,
+    client.ReadAttribute(1u, dlms::xdlms::CosemLogicalName(), 2u, getResult));
+  EXPECT_EQ(dlms::client::ClientStatus::NotAssociated, getResult.status);
+  EXPECT_FALSE(getResult.hasData);
+  EXPECT_TRUE(getResult.encodedData.empty());
+
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.Connect());
+  ASSERT_EQ(dlms::client::ClientStatus::Ok, client.OpenAssociation());
+  xdlms.getStatus = dlms::xdlms::XdlmsStatus::ReceiveFailed;
+  getResult.status = dlms::client::ClientStatus::Ok;
+  getResult.hasData = true;
+  getResult.encodedData.push_back(0xBBu);
+  EXPECT_EQ(
+    dlms::client::ClientStatus::ReceiveFailed,
+    client.ReadAttribute(1u, dlms::xdlms::CosemLogicalName(), 2u, getResult));
+  EXPECT_EQ(dlms::client::ClientStatus::ReceiveFailed, getResult.status);
+  EXPECT_FALSE(getResult.hasData);
+  EXPECT_TRUE(getResult.encodedData.empty());
 }
 
 TEST(DlmsClient, CanUseInjectedAssociationInterface)

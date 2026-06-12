@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0 - 2026-06-07
+
+- Added detailed `DlmsClient` attribute/method helpers for GUI consumers that
+  need class-id/OBIS calls plus access/action result details.
+
 ## 0.5.0 - 2026-06-07
 
 - Added a built-in partial Profile Generic IC `7` object with read-only

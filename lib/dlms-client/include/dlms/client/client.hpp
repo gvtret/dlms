@@ -31,6 +31,32 @@ enum class ClientState
   Associated
 };
 
+struct ClientGetResult
+{
+  ClientStatus status;
+  std::uint8_t invokeId;
+  bool hasData;
+  std::vector<std::uint8_t> encodedData;
+  bool hasAccessResult;
+  std::uint8_t accessResult;
+};
+
+struct ClientSetResult
+{
+  ClientStatus status;
+  std::uint8_t invokeId;
+  std::uint8_t accessResult;
+};
+
+struct ClientActionResult
+{
+  ClientStatus status;
+  std::uint8_t invokeId;
+  std::uint8_t actionResult;
+  bool hasData;
+  std::vector<std::uint8_t> encodedReturnParameter;
+};
+
 class DlmsClient
 {
 public:
@@ -79,15 +105,36 @@ public:
     const CosemAttributeDescriptor& descriptor,
     std::vector<std::uint8_t>& encodedData);
 
+  ClientStatus ReadAttribute(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t attributeId,
+    ClientGetResult& result);
+
   ClientStatus Set(
     const CosemAttributeDescriptor& descriptor,
     const std::vector<std::uint8_t>& encodedData);
+
+  ClientStatus WriteAttribute(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t attributeId,
+    const std::vector<std::uint8_t>& encodedData,
+    ClientSetResult& result);
 
   ClientStatus Action(
     const CosemMethodDescriptor& descriptor,
     bool hasParameter,
     const std::vector<std::uint8_t>& encodedParameter,
     std::vector<std::uint8_t>& encodedReturnParameter);
+
+  ClientStatus CallMethod(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t methodId,
+    bool hasParameter,
+    const std::vector<std::uint8_t>& encodedParameter,
+    ClientActionResult& result);
 
 private:
   DlmsClient(const DlmsClient&);

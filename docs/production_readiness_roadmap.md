@@ -231,6 +231,11 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
 4. Profile path: Wrapper/TCP, Wrapper/UDP, HDLC over byte stream, HDLC session.
 5. Client facade и endpoint facade: сценарии client, server, push listener,
    gateway.
+6. GUI client replacement surface: stable `DlmsClient` calls by class id,
+   OBIS logical name and attribute/method id, with detailed access/action
+   result reporting. Статус: `ReadAttribute`, `WriteAttribute` и `CallMethod`
+   added in `0.6.0`; typed DLMS Data decode helpers and profile selective
+   access UX helpers remain planned.
 
 ## P0. СПОДЭС/СПОДУС completeness gate
 
@@ -320,3 +325,7 @@ library may be described as an extensible DLMS/COSEM framework with partial
 11. P0: перейти к Security Setup key transfer/key wrapping contract или
    endpoint lifecycle cleanup tests после фиксации `Close()`
    semantics.
+12. P0: довести `dlms-client` до удобного backend API для GUI-клиента вместо
+    Gurux. Статус: detailed class-id/OBIS helpers добавлены в `0.6.0`; дальше
+    нужны typed DLMS Data decode/encode helpers, Profile Generic selective
+    access helpers и примеры чтения типовых СПОДЭС OBIS.

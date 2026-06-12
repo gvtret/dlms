@@ -142,6 +142,37 @@ GET, SET, and ACTION values cross the facade boundary as complete encoded DLMS
 `Data` bytes, including the type tag. Typed convenience helpers may be added
 later, but they must remain thin wrappers over this encoded-data API.
 
+GUI-facing helpers can work directly with class id, OBIS logical name and
+attribute/method id while still using the same encoded-data payload:
+
+```cpp
+struct ClientGetResult
+{
+  ClientStatus status;
+  std::uint8_t invokeId;
+  bool hasData;
+  std::vector<std::uint8_t> encodedData;
+  bool hasAccessResult;
+  std::uint8_t accessResult;
+};
+
+struct ClientSetResult
+{
+  ClientStatus status;
+  std::uint8_t invokeId;
+  std::uint8_t accessResult;
+};
+
+struct ClientActionResult
+{
+  ClientStatus status;
+  std::uint8_t invokeId;
+  std::uint8_t actionResult;
+  bool hasData;
+  std::vector<std::uint8_t> encodedReturnParameter;
+};
+```
+
 ## 4. Client Service Interface
 
 ```cpp
@@ -216,15 +247,36 @@ public:
     const CosemAttributeDescriptor& descriptor,
     std::vector<std::uint8_t>& encodedData);
 
+  ClientStatus ReadAttribute(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t attributeId,
+    ClientGetResult& result);
+
   ClientStatus Set(
     const CosemAttributeDescriptor& descriptor,
     const std::vector<std::uint8_t>& encodedData);
+
+  ClientStatus WriteAttribute(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t attributeId,
+    const std::vector<std::uint8_t>& encodedData,
+    ClientSetResult& result);
 
   ClientStatus Action(
     const CosemMethodDescriptor& descriptor,
     bool hasParameter,
     const std::vector<std::uint8_t>& encodedParameter,
     std::vector<std::uint8_t>& encodedReturnParameter);
+
+  ClientStatus CallMethod(
+    std::uint16_t classId,
+    const dlms::xdlms::CosemLogicalName& logicalName,
+    std::uint8_t methodId,
+    bool hasParameter,
+    const std::vector<std::uint8_t>& encodedParameter,
+    ClientActionResult& result);
 };
 ```
 
@@ -253,7 +305,11 @@ public:
   remains a compatibility shortcut for the default security implementation.
 - `Connect()` opens the APDU channel through `AssociationClient`.
 - `OpenAssociation()` requires a connected channel.
-- `Get()`, `Set()`, and `Action()` require an established association.
+- `Get()`, `Set()`, `Action()`, `ReadAttribute()`, `WriteAttribute()`, and
+  `CallMethod()` require an established association.
+- `ReadAttribute()`, `WriteAttribute()`, and `CallMethod()` clear their result
+  structs before dispatch and preserve lower xDLMS invoke id plus
+  access/action result bytes when the service response reaches the client.
 - `ReleaseAssociation()` is idempotent when already not associated. In the
   injected-channel phase a successful release closes the lower channel through
   `AssociationClient::Release()` and returns the facade to disconnected state.

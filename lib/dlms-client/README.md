@@ -19,6 +19,12 @@ inject lower-layer pieces explicitly. `IClientXdlmsService` is the abstract
 GET/SET/ACTION backend port for callers that need a custom xDLMS service
 implementation while keeping the `DlmsClient` facade API.
 
+GUI clients can use `ReadAttribute`, `WriteAttribute`, and `CallMethod` when
+the UI works with class id, OBIS logical name, and attribute/method id directly.
+These helpers still pass complete encoded DLMS `Data` values across the facade,
+but they return detailed result structs with invoke id and access/action result
+bytes for diagnostics and user-visible error reporting.
+
 ## Documentation
 
 - [Requirements](docs/00_client_requirements.md)

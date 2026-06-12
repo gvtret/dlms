@@ -743,6 +743,64 @@ ClientStatus DecodeOctetStringData(
   return ClientStatus::Ok;
 }
 
+CosemAttributeDescriptor MakeAttributeDescriptor(
+  std::uint16_t classId,
+  const dlms::xdlms::CosemLogicalName& logicalName,
+  std::uint8_t attributeId)
+{
+  CosemAttributeDescriptor descriptor =
+    dlms::xdlms::EmptyCosemAttributeDescriptor();
+  descriptor.classId = classId;
+  descriptor.instanceId = logicalName;
+  descriptor.attributeId = attributeId;
+  return descriptor;
+}
+
+CosemMethodDescriptor MakeMethodDescriptor(
+  std::uint16_t classId,
+  const dlms::xdlms::CosemLogicalName& logicalName,
+  std::uint8_t methodId)
+{
+  CosemMethodDescriptor descriptor =
+    dlms::xdlms::EmptyCosemMethodDescriptor();
+  descriptor.classId = classId;
+  descriptor.instanceId = logicalName;
+  descriptor.methodId = methodId;
+  return descriptor;
+}
+
+ClientGetResult EmptyClientGetResult(ClientStatus status)
+{
+  ClientGetResult result;
+  result.status = status;
+  result.invokeId = 0u;
+  result.hasData = false;
+  result.encodedData.clear();
+  result.hasAccessResult = false;
+  result.accessResult = 0u;
+  return result;
+}
+
+ClientSetResult EmptyClientSetResult(ClientStatus status)
+{
+  ClientSetResult result;
+  result.status = status;
+  result.invokeId = 0u;
+  result.accessResult = 0u;
+  return result;
+}
+
+ClientActionResult EmptyClientActionResult(ClientStatus status)
+{
+  ClientActionResult result;
+  result.status = status;
+  result.invokeId = 0u;
+  result.actionResult = 0u;
+  result.hasData = false;
+  result.encodedReturnParameter.clear();
+  return result;
+}
+
 } // namespace
 
 DlmsClient::DlmsClient(const DlmsClientOptions& options)
@@ -1058,6 +1116,33 @@ ClientStatus DlmsClient::Get(
   return ClientStatus::Ok;
 }
 
+ClientStatus DlmsClient::ReadAttribute(
+  std::uint16_t classId,
+  const dlms::xdlms::CosemLogicalName& logicalName,
+  std::uint8_t attributeId,
+  ClientGetResult& result)
+{
+  result = EmptyClientGetResult(ClientStatus::NotAssociated);
+  if (state_ != ClientState::Associated) {
+    return result.status;
+  }
+
+  dlms::xdlms::GetResult xdlmsResult = dlms::xdlms::EmptyGetResult();
+  const CosemAttributeDescriptor descriptor =
+    MakeAttributeDescriptor(classId, logicalName, attributeId);
+  result.status = MapXdlmsStatus(xdlms_->Get(descriptor, xdlmsResult));
+  if (result.status != ClientStatus::Ok) {
+    return result.status;
+  }
+
+  result.invokeId = xdlmsResult.invokeId;
+  result.hasData = xdlmsResult.hasData;
+  result.encodedData = xdlmsResult.data;
+  result.hasAccessResult = xdlmsResult.hasAccessResult;
+  result.accessResult = xdlmsResult.accessResult;
+  return result.status;
+}
+
 ClientStatus DlmsClient::Set(
   const CosemAttributeDescriptor& descriptor,
   const std::vector<std::uint8_t>& encodedData)
@@ -1068,6 +1153,32 @@ ClientStatus DlmsClient::Set(
 
   dlms::xdlms::SetResult result = dlms::xdlms::EmptySetResult();
   return MapXdlmsStatus(xdlms_->Set(descriptor, encodedData, result));
+}
+
+ClientStatus DlmsClient::WriteAttribute(
+  std::uint16_t classId,
+  const dlms::xdlms::CosemLogicalName& logicalName,
+  std::uint8_t attributeId,
+  const std::vector<std::uint8_t>& encodedData,
+  ClientSetResult& result)
+{
+  result = EmptyClientSetResult(ClientStatus::NotAssociated);
+  if (state_ != ClientState::Associated) {
+    return result.status;
+  }
+
+  dlms::xdlms::SetResult xdlmsResult = dlms::xdlms::EmptySetResult();
+  const CosemAttributeDescriptor descriptor =
+    MakeAttributeDescriptor(classId, logicalName, attributeId);
+  result.status =
+    MapXdlmsStatus(xdlms_->Set(descriptor, encodedData, xdlmsResult));
+  if (result.status != ClientStatus::Ok) {
+    return result.status;
+  }
+
+  result.invokeId = xdlmsResult.invokeId;
+  result.accessResult = xdlmsResult.accessResult;
+  return result.status;
 }
 
 ClientStatus DlmsClient::Action(
@@ -1096,6 +1207,41 @@ ClientStatus DlmsClient::Action(
     encodedReturnParameter = result.data;
   }
   return ClientStatus::Ok;
+}
+
+ClientStatus DlmsClient::CallMethod(
+  std::uint16_t classId,
+  const dlms::xdlms::CosemLogicalName& logicalName,
+  std::uint8_t methodId,
+  bool hasParameter,
+  const std::vector<std::uint8_t>& encodedParameter,
+  ClientActionResult& result)
+{
+  result = EmptyClientActionResult(ClientStatus::NotAssociated);
+  if (state_ != ClientState::Associated) {
+    return result.status;
+  }
+
+  dlms::xdlms::ActionResult xdlmsResult =
+    dlms::xdlms::EmptyActionResult();
+  const CosemMethodDescriptor descriptor =
+    MakeMethodDescriptor(classId, logicalName, methodId);
+  result.status =
+    MapXdlmsStatus(
+      xdlms_->Action(
+        descriptor,
+        hasParameter,
+        encodedParameter,
+        xdlmsResult));
+  if (result.status != ClientStatus::Ok) {
+    return result.status;
+  }
+
+  result.invokeId = xdlmsResult.invokeId;
+  result.actionResult = xdlmsResult.actionResult;
+  result.hasData = xdlmsResult.hasData;
+  result.encodedReturnParameter = xdlmsResult.data;
+  return result.status;
 }
 
 const char* ClientStateName(ClientState state)

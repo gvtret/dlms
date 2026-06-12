@@ -25,6 +25,11 @@ These helpers still pass complete encoded DLMS `Data` values across the facade,
 but they return detailed result structs with invoke id and access/action result
 bytes for diagnostics and user-visible error reporting.
 
+`client_data.hpp` provides typed encode/decode helpers for common DLMS `Data`
+values such as boolean, signed/unsigned scalars, enum, and octet-string. These
+helpers are intended for UI models that need typed values while the transport
+facade keeps exchanging complete encoded DLMS `Data` bytes.
+
 ## Documentation
 
 - [Requirements](docs/00_client_requirements.md)

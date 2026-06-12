@@ -11,6 +11,7 @@ option(DLMS_USE_SYSTEM_GTEST "Use system-installed GoogleTest" OFF)
 
 add_library(dlms_client
   src/client/client.cpp
+  src/client/client_data.cpp
   src/client/client_options.cpp
   src/client/client_status.cpp)
 

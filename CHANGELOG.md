@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.0 - 2026-06-07
+
+- Added `dlms-client` typed DLMS Data encode/decode helpers for GUI consumers
+  that should not manipulate A-XDR bytes directly for common scalar values.
+
 ## 0.6.0 - 2026-06-07
 
 - Added detailed `DlmsClient` attribute/method helpers for GUI consumers that

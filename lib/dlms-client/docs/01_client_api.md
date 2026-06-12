@@ -6,6 +6,7 @@ Public headers:
 
 ```text
 include/dlms/client/client_status.hpp
+include/dlms/client/client_data.hpp
 include/dlms/client/client_options.hpp
 include/dlms/client/client_xdlms_service_interface.hpp
 include/dlms/client/client.hpp
@@ -139,8 +140,47 @@ using CosemMethodDescriptor = dlms::xdlms::CosemMethodDescriptor;
 ```
 
 GET, SET, and ACTION values cross the facade boundary as complete encoded DLMS
-`Data` bytes, including the type tag. Typed convenience helpers may be added
-later, but they must remain thin wrappers over this encoded-data API.
+`Data` bytes, including the type tag. Typed convenience helpers remain thin
+wrappers over this encoded-data API.
+
+`client_data.hpp` exposes helpers for common GUI-facing scalar values:
+
+```cpp
+ClientStatus EncodeDlmsBoolean(bool value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsBoolean(const std::vector<std::uint8_t>& encoded, bool& value);
+
+ClientStatus EncodeDlmsInteger(std::int8_t value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsInteger(const std::vector<std::uint8_t>& encoded, std::int8_t& value);
+
+ClientStatus EncodeDlmsLong(std::int16_t value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsLong(const std::vector<std::uint8_t>& encoded, std::int16_t& value);
+
+ClientStatus EncodeDlmsDoubleLong(std::int32_t value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsDoubleLong(const std::vector<std::uint8_t>& encoded, std::int32_t& value);
+
+ClientStatus EncodeDlmsUnsigned(std::uint8_t value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsUnsigned(const std::vector<std::uint8_t>& encoded, std::uint8_t& value);
+
+ClientStatus EncodeDlmsLongUnsigned(std::uint16_t value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsLongUnsigned(const std::vector<std::uint8_t>& encoded, std::uint16_t& value);
+
+ClientStatus EncodeDlmsDoubleLongUnsigned(std::uint32_t value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsDoubleLongUnsigned(const std::vector<std::uint8_t>& encoded, std::uint32_t& value);
+
+ClientStatus EncodeDlmsEnum(std::uint8_t value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsEnum(const std::vector<std::uint8_t>& encoded, std::uint8_t& value);
+
+ClientStatus EncodeDlmsOctetString(
+  const std::vector<std::uint8_t>& value,
+  std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsOctetString(
+  const std::vector<std::uint8_t>& encoded,
+  std::vector<std::uint8_t>& value);
+```
+
+The helpers decode only the exact matching DLMS `Data` tag and return
+`InvalidArgument` for malformed input or a different tag. They clear output
+values on failure so GUI state does not retain stale data.
 
 GUI-facing helpers can work directly with class id, OBIS logical name and
 attribute/method id while still using the same encoded-data payload:

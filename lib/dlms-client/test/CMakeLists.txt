@@ -11,6 +11,7 @@ endif()
 
 add_executable(dlms_client_tests
   client/test_client.cpp
+  client/test_client_data.cpp
   client/test_client_options.cpp
   client/test_client_status.cpp)
 

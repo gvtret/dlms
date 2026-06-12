@@ -234,8 +234,8 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
 6. GUI client replacement surface: stable `DlmsClient` calls by class id,
    OBIS logical name and attribute/method id, with detailed access/action
    result reporting. Статус: `ReadAttribute`, `WriteAttribute` и `CallMethod`
-   added in `0.6.0`; typed DLMS Data decode helpers and profile selective
-   access UX helpers remain planned.
+   added in `0.6.0`; common typed DLMS Data encode/decode helpers added in
+   `0.7.0`; profile selective access UX helpers remain planned.
 
 ## P0. СПОДЭС/СПОДУС completeness gate
 
@@ -327,5 +327,6 @@ library may be described as an extensible DLMS/COSEM framework with partial
    semantics.
 12. P0: довести `dlms-client` до удобного backend API для GUI-клиента вместо
     Gurux. Статус: detailed class-id/OBIS helpers добавлены в `0.6.0`; дальше
-    нужны typed DLMS Data decode/encode helpers, Profile Generic selective
-    access helpers и примеры чтения типовых СПОДЭС OBIS.
+    common typed DLMS Data decode/encode helpers добавлены в `0.7.0`; дальше
+    нужны Profile Generic selective access helpers и примеры чтения типовых
+    СПОДЭС OBIS.

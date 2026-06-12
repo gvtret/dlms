@@ -16,11 +16,14 @@ set(CONSUMER_DIR "${SMOKE_DIR}/consumer")
 set(CONSUMER_BUILD_DIR "${SMOKE_DIR}/consumer-build")
 set(CODEC_CONSUMER_DIR "${SMOKE_DIR}/codec-consumer")
 set(CODEC_CONSUMER_BUILD_DIR "${SMOKE_DIR}/codec-consumer-build")
+set(IO_CONSUMER_DIR "${SMOKE_DIR}/io-consumer")
+set(IO_CONSUMER_BUILD_DIR "${SMOKE_DIR}/io-consumer-build")
 set(EXAMPLES_BUILD_DIR "${SMOKE_DIR}/examples-build")
 
 file(REMOVE_RECURSE "${SMOKE_DIR}")
 file(MAKE_DIRECTORY "${CONSUMER_DIR}")
 file(MAKE_DIRECTORY "${CODEC_CONSUMER_DIR}")
+file(MAKE_DIRECTORY "${IO_CONSUMER_DIR}")
 
 execute_process(
   COMMAND "${CMAKE_COMMAND}" --install "${BINARY_DIR}" --prefix "${INSTALL_PREFIX}"
@@ -224,6 +227,51 @@ execute_process(
 if(NOT codec_build_result EQUAL 0)
   message(FATAL_ERROR
     "DLMSFramework install smoke failed during codec-only consumer build")
+endif()
+
+file(WRITE "${IO_CONSUMER_DIR}/CMakeLists.txt" [=[
+cmake_minimum_required(VERSION 3.16)
+project(dlms_io_only_consumer LANGUAGES CXX)
+
+find_package(DLMSFramework REQUIRED CONFIG COMPONENTS io)
+
+if(NOT TARGET dlms::io)
+  message(FATAL_ERROR "Required DLMSFramework target is missing: dlms::io")
+endif()
+
+add_executable(dlms_io_only_consumer main.cpp)
+target_compile_features(dlms_io_only_consumer PRIVATE cxx_std_11)
+target_link_libraries(dlms_io_only_consumer PRIVATE dlms::io)
+]=])
+
+file(WRITE "${IO_CONSUMER_DIR}/main.cpp" [=[
+#include "dlms/transport/transport_status.hpp"
+
+int main()
+{
+  return dlms::transport::ToString(dlms::transport::TransportStatus::Ok)[0] == 'O'
+    ? 0
+    : 1;
+}
+]=])
+
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" -S "${IO_CONSUMER_DIR}" -B "${IO_CONSUMER_BUILD_DIR}"
+    -G "${GENERATOR}"
+    "-DDLMSFramework_DIR=${INSTALL_PREFIX}/lib/cmake/DLMSFramework"
+    "-DCMAKE_DISABLE_FIND_PACKAGE_OpenSSL=TRUE"
+  RESULT_VARIABLE io_configure_result)
+if(NOT io_configure_result EQUAL 0)
+  message(FATAL_ERROR
+    "DLMSFramework install smoke failed during io-only consumer configure")
+endif()
+
+execute_process(
+  COMMAND "${CMAKE_COMMAND}" --build "${IO_CONSUMER_BUILD_DIR}"
+  RESULT_VARIABLE io_build_result)
+if(NOT io_build_result EQUAL 0)
+  message(FATAL_ERROR
+    "DLMSFramework install smoke failed during io-only consumer build")
 endif()
 
 foreach(example_name

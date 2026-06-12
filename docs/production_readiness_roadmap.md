@@ -67,6 +67,9 @@
    - `find_package(DLMSFramework COMPONENTS codec)` больше не требует OpenSSL
      начиная с `0.4.3`; install smoke проверяет codec-only consumer with
      OpenSSL disabled.
+   - `find_package(DLMSFramework COMPONENTS io)` больше не требует OpenSSL
+     начиная с `0.4.4`; install smoke проверяет io-only consumer with
+     OpenSSL disabled.
 
 ## P0. Endpoint, client и server lifecycle
 
@@ -238,8 +241,8 @@ library may be described as an extensible DLMS/COSEM framework with partial
 ## P1. Package и consumer experience
 
 1. Расширить install-tree examples.
-   - Уже есть `codec`, `protocol`, `runtime`.
-   - Добавить `io`, `cosem_server`, `framework` consumers.
+   - Уже есть `codec`, `io`, `protocol`, `runtime`.
+   - Добавить `cosem_server`, `framework` consumers.
 2. Продолжать exported target audit.
    - Include dirs, transitive deps, OpenSSL dependency, отсутствие test deps.
 3. Документировать минимальные include примеры для каждого aggregate target.

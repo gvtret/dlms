@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.4 - 2026-06-07
+
+- Added an io-only install-tree smoke test with OpenSSL disabled to verify that
+  `find_package(DLMSFramework COMPONENTS io)` stays independent from security
+  dependencies.
+
 ## 0.4.3 - 2026-06-07
 
 - Scoped the package OpenSSL dependency to components that transitively use

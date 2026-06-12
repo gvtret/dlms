@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.5 - 2026-06-07
+
+- Added install-tree consumer examples for the `io`, `cosem_server`, and
+  `framework` package components and included them in package smoke coverage.
+
 ## 0.4.4 - 2026-06-07
 
 - Added an io-only install-tree smoke test with OpenSSL disabled to verify that

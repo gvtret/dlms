@@ -146,9 +146,9 @@ Loopback and live-meter coverage belongs in integration tests or opt-in smoke
 tests when it requires network timing or external hardware.
 
 Install-tree examples under `examples/package-consumers` verify the exported
-CMake package from the user side. They cover `dlms::codec`, `dlms::protocol`,
-and `dlms::runtime`; `dlms::framework` is checked by the root framework target
-smoke test.
+CMake package from the user side. They cover `dlms::codec`, `dlms::io`,
+`dlms::protocol`, `dlms::cosem_server`, `dlms::runtime`, and
+`dlms::framework`.
 
 ## 2.4. Consolidation And Versioning
 

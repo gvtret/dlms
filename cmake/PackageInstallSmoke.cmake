@@ -276,7 +276,10 @@ endif()
 
 foreach(example_name
     codec
+    io
     protocol
+    cosem_server
+    framework
     runtime)
   set(example_source_dir "${SOURCE_DIR}/examples/package-consumers/${example_name}")
   set(example_build_dir "${EXAMPLES_BUILD_DIR}/${example_name}")

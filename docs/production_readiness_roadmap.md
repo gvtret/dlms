@@ -252,6 +252,8 @@ library may be described as an extensible DLMS/COSEM framework with partial
    - README snippets для всех component/target пар добавлены в `0.4.6`.
 2. Продолжать exported target audit.
    - Include dirs, transitive deps, OpenSSL dependency, отсутствие test deps.
+   - Aggregate target `INTERFACE_LINK_LIBRARIES` проверяются install smoke
+     начиная с `0.4.10`.
 3. Документировать минимальные include примеры для каждого aggregate target.
 4. Проверить package artifact на Windows/MSYS2 и Linux CI, если Linux runner
    доступен.

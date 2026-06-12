@@ -68,6 +68,19 @@ if(NOT targets_contents MATCHES "INTERFACE_INCLUDE_DIRECTORIES")
   message(FATAL_ERROR "DLMSFrameworkTargets.cmake does not export include directories")
 endif()
 
+foreach(expected_link IN ITEMS
+    [=[INTERFACE_LINK_LIBRARIES "dlms::dlms_hdlc;dlms::dlms_llc;dlms::dlms_wrapper;dlms::dlms_apdu"]=]
+    [=[INTERFACE_LINK_LIBRARIES "dlms::dlms_transport;dlms::dlms_profile"]=]
+    [=[INTERFACE_LINK_LIBRARIES "dlms::dlms_association;dlms::dlms_security;dlms::dlms_xdlms"]=]
+    [=[INTERFACE_LINK_LIBRARIES "dlms::dlms_cosem;dlms::dlms_server"]=]
+    [=[INTERFACE_LINK_LIBRARIES "dlms::dlms_client;dlms::dlms_endpoint"]=]
+    [=[INTERFACE_LINK_LIBRARIES "dlms::codec;dlms::io;dlms::protocol;dlms::cosem_server;dlms::runtime"]=])
+  if(NOT targets_contents MATCHES "${expected_link}")
+    message(FATAL_ERROR
+      "DLMSFrameworkTargets.cmake missing aggregate link interface: ${expected_link}")
+  endif()
+endforeach()
+
 foreach(disallowed_pattern
     "gtest"
     "gmock"

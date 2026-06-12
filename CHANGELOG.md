@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.10 - 2026-06-07
+
+- Extended the package install smoke audit to verify aggregate target
+  `INTERFACE_LINK_LIBRARIES` for all documented DLMSFramework components.
+
 ## 0.4.9 - 2026-06-07
 
 - Added profile C API regression coverage for datagram receive callbacks that

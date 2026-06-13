@@ -81,6 +81,31 @@ TEST(DlmsDataCodecTest, DecodesOctetString)
   EXPECT_EQ(data.bytes.data[2], 0x03);
 }
 
+TEST(DlmsDataCodecTest, DecodesDateTimeDateAndTime)
+{
+  constexpr std::array<std::uint8_t, 26> input = {
+    0x02, 0x03,
+    0x19,
+    0x07, 0xE8, 0x06, 0x0D, 0x05, 0x10,
+    0x20, 0x30, 0x00, 0x80, 0x00, 0x00,
+    0x1A, 0x07, 0xE8, 0x06, 0x0D, 0x05,
+    0x1B, 0x10, 0x20, 0x30, 0x00};
+  DlmsData data = {};
+
+  ASSERT_EQ(DecodeDlmsData(input.data(), input.size(), 4, data), ApduStatus::Ok);
+  ASSERT_EQ(data.elements.size(), 3U);
+  EXPECT_EQ(data.elements[0].type, DlmsDataType::DateTime);
+  ASSERT_EQ(data.elements[0].bytes.size, 12U);
+  EXPECT_EQ(data.elements[0].bytes.data[0], 0x07);
+  EXPECT_EQ(data.elements[0].bytes.data[11], 0x00);
+  EXPECT_EQ(data.elements[1].type, DlmsDataType::Date);
+  ASSERT_EQ(data.elements[1].bytes.size, 5U);
+  EXPECT_EQ(data.elements[1].bytes.data[4], 0x05);
+  EXPECT_EQ(data.elements[2].type, DlmsDataType::Time);
+  ASSERT_EQ(data.elements[2].bytes.size, 4U);
+  EXPECT_EQ(data.elements[2].bytes.data[3], 0x00);
+}
+
 TEST(DlmsDataCodecTest, EncodesStructureRoundtrip)
 {
   constexpr std::array<std::uint8_t, 13> input = {
@@ -98,6 +123,40 @@ TEST(DlmsDataCodecTest, EncodesStructureRoundtrip)
   EXPECT_EQ(EncodeDlmsData(data, writer), ApduStatus::Ok);
   ASSERT_EQ(writer.WrittenSize(), input.size());
   EXPECT_EQ(std::equal(input.begin(), input.end(), output.begin()), true);
+}
+
+TEST(DlmsDataCodecTest, EncodesDateTimeDateAndTimeRoundtrip)
+{
+  constexpr std::array<std::uint8_t, 26> input = {
+    0x02, 0x03,
+    0x19,
+    0x07, 0xE8, 0x06, 0x0D, 0x05, 0x10,
+    0x20, 0x30, 0x00, 0x80, 0x00, 0x00,
+    0x1A, 0x07, 0xE8, 0x06, 0x0D, 0x05,
+    0x1B, 0x10, 0x20, 0x30, 0x00};
+  DlmsData data = {};
+  ASSERT_EQ(DecodeDlmsData(input.data(), input.size(), 4, data), ApduStatus::Ok);
+
+  std::array<std::uint8_t, 32> output = {};
+  ApduWriter writer(output.data(), output.size());
+
+  EXPECT_EQ(EncodeDlmsData(data, writer), ApduStatus::Ok);
+  ASSERT_EQ(writer.WrittenSize(), input.size());
+  EXPECT_EQ(std::equal(input.begin(), input.end(), output.begin()), true);
+}
+
+TEST(DlmsDataCodecTest, RejectsInvalidDateTimeLengthOnEncode)
+{
+  DlmsData data = {};
+  data.type = DlmsDataType::DateTime;
+  constexpr std::array<std::uint8_t, 2> bytes = {0x01, 0x02};
+  data.bytes.data = bytes.data();
+  data.bytes.size = bytes.size();
+
+  std::array<std::uint8_t, 16> output = {};
+  ApduWriter writer(output.data(), output.size());
+
+  EXPECT_EQ(EncodeDlmsData(data, writer), ApduStatus::InvalidLength);
 }
 
 TEST(DlmsDataCodecTest, RejectsUnsupportedTag)

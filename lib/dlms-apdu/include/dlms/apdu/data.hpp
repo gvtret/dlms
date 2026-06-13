@@ -27,7 +27,10 @@ enum class DlmsDataType : std::uint8_t
   LongUnsigned = 18,
   Long64 = 20,
   Long64Unsigned = 21,
-  Enum = 22
+  Enum = 22,
+  DateTime = 25,
+  Date = 26,
+  Time = 27
 };
 
 struct DlmsData

@@ -10,6 +10,9 @@ namespace client {
 namespace {
 
 constexpr std::size_t kMaximumDataDepth = 8u;
+constexpr std::size_t kDlmsDateTimeSize = 12u;
+constexpr std::size_t kDlmsDateSize = 5u;
+constexpr std::size_t kDlmsTimeSize = 4u;
 
 ClientStatus MapDataStatus(dlms::apdu::ApduStatus status)
 {
@@ -84,6 +87,68 @@ dlms::apdu::DlmsData EmptyData(dlms::apdu::DlmsDataType type)
   return data;
 }
 
+void AppendU16(
+  std::uint16_t value,
+  std::vector<std::uint8_t>& output)
+{
+  output.push_back(static_cast<std::uint8_t>(value >> 8u));
+  output.push_back(static_cast<std::uint8_t>(value & 0xffu));
+}
+
+std::uint16_t ReadU16(const std::uint8_t* input)
+{
+  return static_cast<std::uint16_t>(
+    (static_cast<std::uint16_t>(input[0]) << 8u) |
+    static_cast<std::uint16_t>(input[1]));
+}
+
+std::int16_t ReadI16(const std::uint8_t* input)
+{
+  return static_cast<std::int16_t>(ReadU16(input));
+}
+
+std::vector<std::uint8_t> PackDate(const DlmsDate& value)
+{
+  std::vector<std::uint8_t> output;
+  output.reserve(kDlmsDateSize);
+  AppendU16(value.year, output);
+  output.push_back(value.month);
+  output.push_back(value.dayOfMonth);
+  output.push_back(value.dayOfWeek);
+  return output;
+}
+
+std::vector<std::uint8_t> PackTime(const DlmsTime& value)
+{
+  std::vector<std::uint8_t> output;
+  output.reserve(kDlmsTimeSize);
+  output.push_back(value.hour);
+  output.push_back(value.minute);
+  output.push_back(value.second);
+  output.push_back(value.hundredths);
+  return output;
+}
+
+DlmsDate UnpackDate(const std::uint8_t* input)
+{
+  DlmsDate value;
+  value.year = ReadU16(input);
+  value.month = input[2];
+  value.dayOfMonth = input[3];
+  value.dayOfWeek = input[4];
+  return value;
+}
+
+DlmsTime UnpackTime(const std::uint8_t* input)
+{
+  DlmsTime value;
+  value.hour = input[0];
+  value.minute = input[1];
+  value.second = input[2];
+  value.hundredths = input[3];
+  return value;
+}
+
 ClientStatus DecodeType(
   const std::vector<std::uint8_t>& encodedData,
   dlms::apdu::DlmsDataType expectedType,
@@ -94,6 +159,23 @@ ClientStatus DecodeType(
     return status;
   }
   if (data.type != expectedType) {
+    data = {};
+    return ClientStatus::InvalidArgument;
+  }
+  return ClientStatus::Ok;
+}
+
+ClientStatus DecodeFixedBytes(
+  const std::vector<std::uint8_t>& encodedData,
+  dlms::apdu::DlmsDataType expectedType,
+  std::size_t expectedSize,
+  dlms::apdu::DlmsData& data)
+{
+  const ClientStatus status = DecodeType(encodedData, expectedType, data);
+  if (status != ClientStatus::Ok) {
+    return status;
+  }
+  if (data.bytes.size != expectedSize || data.bytes.data == 0) {
     data = {};
     return ClientStatus::InvalidArgument;
   }
@@ -325,6 +407,102 @@ ClientStatus DecodeDlmsOctetString(
     return ClientStatus::Ok;
   }
   value.assign(data.bytes.data, data.bytes.data + data.bytes.size);
+  return ClientStatus::Ok;
+}
+
+ClientStatus EncodeDlmsDateTime(
+  const DlmsDateTime& value,
+  std::vector<std::uint8_t>& encodedData)
+{
+  std::vector<std::uint8_t> bytes = PackDate(value.date);
+  const std::vector<std::uint8_t> time = PackTime(value.time);
+  bytes.insert(bytes.end(), time.begin(), time.end());
+  AppendU16(static_cast<std::uint16_t>(value.deviation), bytes);
+  bytes.push_back(value.clockStatus);
+
+  dlms::apdu::DlmsData data = EmptyData(dlms::apdu::DlmsDataType::DateTime);
+  data.bytes.data = &bytes[0];
+  data.bytes.size = bytes.size();
+  return EncodeData(data, encodedData);
+}
+
+ClientStatus DecodeDlmsDateTime(
+  const std::vector<std::uint8_t>& encodedData,
+  DlmsDateTime& value)
+{
+  value = {};
+  dlms::apdu::DlmsData data = {};
+  const ClientStatus status = DecodeFixedBytes(
+    encodedData,
+    dlms::apdu::DlmsDataType::DateTime,
+    kDlmsDateTimeSize,
+    data);
+  if (status != ClientStatus::Ok) {
+    return status;
+  }
+
+  value.date = UnpackDate(data.bytes.data);
+  value.time = UnpackTime(data.bytes.data + kDlmsDateSize);
+  value.deviation = ReadI16(data.bytes.data + kDlmsDateSize + kDlmsTimeSize);
+  value.clockStatus = data.bytes.data[kDlmsDateTimeSize - 1u];
+  return ClientStatus::Ok;
+}
+
+ClientStatus EncodeDlmsDate(
+  const DlmsDate& value,
+  std::vector<std::uint8_t>& encodedData)
+{
+  const std::vector<std::uint8_t> bytes = PackDate(value);
+  dlms::apdu::DlmsData data = EmptyData(dlms::apdu::DlmsDataType::Date);
+  data.bytes.data = &bytes[0];
+  data.bytes.size = bytes.size();
+  return EncodeData(data, encodedData);
+}
+
+ClientStatus DecodeDlmsDate(
+  const std::vector<std::uint8_t>& encodedData,
+  DlmsDate& value)
+{
+  value = {};
+  dlms::apdu::DlmsData data = {};
+  const ClientStatus status = DecodeFixedBytes(
+    encodedData,
+    dlms::apdu::DlmsDataType::Date,
+    kDlmsDateSize,
+    data);
+  if (status != ClientStatus::Ok) {
+    return status;
+  }
+  value = UnpackDate(data.bytes.data);
+  return ClientStatus::Ok;
+}
+
+ClientStatus EncodeDlmsTime(
+  const DlmsTime& value,
+  std::vector<std::uint8_t>& encodedData)
+{
+  const std::vector<std::uint8_t> bytes = PackTime(value);
+  dlms::apdu::DlmsData data = EmptyData(dlms::apdu::DlmsDataType::Time);
+  data.bytes.data = &bytes[0];
+  data.bytes.size = bytes.size();
+  return EncodeData(data, encodedData);
+}
+
+ClientStatus DecodeDlmsTime(
+  const std::vector<std::uint8_t>& encodedData,
+  DlmsTime& value)
+{
+  value = {};
+  dlms::apdu::DlmsData data = {};
+  const ClientStatus status = DecodeFixedBytes(
+    encodedData,
+    dlms::apdu::DlmsDataType::Time,
+    kDlmsTimeSize,
+    data);
+  if (status != ClientStatus::Ok) {
+    return status;
+  }
+  value = UnpackTime(data.bytes.data);
   return ClientStatus::Ok;
 }
 

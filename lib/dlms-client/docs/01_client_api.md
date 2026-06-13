@@ -177,11 +177,47 @@ ClientStatus EncodeDlmsOctetString(
 ClientStatus DecodeDlmsOctetString(
   const std::vector<std::uint8_t>& encoded,
   std::vector<std::uint8_t>& value);
+
+struct DlmsDate
+{
+  std::uint16_t year;
+  std::uint8_t month;
+  std::uint8_t dayOfMonth;
+  std::uint8_t dayOfWeek;
+};
+
+struct DlmsTime
+{
+  std::uint8_t hour;
+  std::uint8_t minute;
+  std::uint8_t second;
+  std::uint8_t hundredths;
+};
+
+struct DlmsDateTime
+{
+  DlmsDate date;
+  DlmsTime time;
+  std::int16_t deviation;
+  std::uint8_t clockStatus;
+};
+
+ClientStatus EncodeDlmsDateTime(const DlmsDateTime& value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsDateTime(const std::vector<std::uint8_t>& encoded, DlmsDateTime& value);
+
+ClientStatus EncodeDlmsDate(const DlmsDate& value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsDate(const std::vector<std::uint8_t>& encoded, DlmsDate& value);
+
+ClientStatus EncodeDlmsTime(const DlmsTime& value, std::vector<std::uint8_t>& encoded);
+ClientStatus DecodeDlmsTime(const std::vector<std::uint8_t>& encoded, DlmsTime& value);
 ```
 
 The helpers decode only the exact matching DLMS `Data` tag and return
 `InvalidArgument` for malformed input or a different tag. They clear output
 values on failure so GUI state does not retain stale data.
+Date/time structs preserve DLMS wildcard and special values such as `0xFF`,
+`0xFE`, `0xFD`, deviation `0x8000`, and raw clock-status bits instead of
+normalizing them into host calendar types.
 
 GUI-facing helpers can work directly with class id, OBIS logical name and
 attribute/method id while still using the same encoded-data payload:

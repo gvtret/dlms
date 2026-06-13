@@ -69,6 +69,13 @@ Failure mapping:
 - receive failure;
 - unsupported feature.
 
+Data helpers:
+
+- scalar helpers encode/decode exact DLMS `Data` tags;
+- date-time, date, and time helpers preserve wildcard and special DLMS field
+  values;
+- typed decode rejects wrong tags and clears caller output on failure.
+
 ## 2. Integration Tests
 
 Root integration should cover:

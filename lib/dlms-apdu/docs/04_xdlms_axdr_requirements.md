@@ -163,7 +163,11 @@ dont-care
 
 `compact-array` is recognized but unsupported in v1.
 
+The initial supported scalar `Data` codec subset covers the tags used by the
+client facade and current COSEM helpers, including `date-time`, `date`, and
+`time` fixed-size encodings. Class-specific interpretation of calendar
+semantics remains outside `dlms-apdu`.
+
 ## Ciphered APDUs
 
 The decoder recognizes global, dedicated, and general ciphering tags and returns opaque bytes. It does not decrypt or authenticate them.
-

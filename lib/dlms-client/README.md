@@ -26,9 +26,10 @@ but they return detailed result structs with invoke id and access/action result
 bytes for diagnostics and user-visible error reporting.
 
 `client_data.hpp` provides typed encode/decode helpers for common DLMS `Data`
-values such as boolean, signed/unsigned scalars, enum, and octet-string. These
-helpers are intended for UI models that need typed values while the transport
-facade keeps exchanging complete encoded DLMS `Data` bytes.
+values such as boolean, signed/unsigned scalars, enum, octet-string,
+date-time, date, and time. These helpers are intended for UI models that need
+typed values while the transport facade keeps exchanging complete encoded DLMS
+`Data` bytes.
 
 The root `tools/client_gui_read_example.cpp` program shows the intended GUI
 backend pattern: use `ReadAttribute` with class id and OBIS logical name, check

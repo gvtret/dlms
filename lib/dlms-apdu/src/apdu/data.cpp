@@ -22,6 +22,12 @@ constexpr std::uint8_t kLongUnsignedTag = 0x12;
 constexpr std::uint8_t kLong64Tag = 0x14;
 constexpr std::uint8_t kLong64UnsignedTag = 0x15;
 constexpr std::uint8_t kEnumTag = 0x16;
+constexpr std::uint8_t kDateTimeTag = 0x19;
+constexpr std::uint8_t kDateTag = 0x1A;
+constexpr std::uint8_t kTimeTag = 0x1B;
+constexpr std::size_t kDateTimeSize = 12;
+constexpr std::size_t kDateSize = 5;
+constexpr std::size_t kTimeSize = 4;
 
 std::int64_t SignExtend(std::uint64_t value, std::size_t byteCount)
 {
@@ -57,6 +63,35 @@ ApduStatus WriteUnsigned(ApduWriter& writer, std::uint64_t value, std::size_t by
     }
   }
   return ApduStatus::Ok;
+}
+
+ApduStatus ReadFixedBytes(
+  ApduReader& reader,
+  std::size_t size,
+  DlmsData& output)
+{
+  const std::uint8_t* bytes = 0;
+  ApduStatus status = reader.ReadBytes(bytes, size);
+  if (status != ApduStatus::Ok) {
+    return status;
+  }
+  output.bytes.data = bytes;
+  output.bytes.size = size;
+  return ApduStatus::Ok;
+}
+
+ApduStatus WriteFixedBytes(
+  ApduWriter& writer,
+  const DlmsData& input,
+  std::size_t size)
+{
+  if (input.bytes.size != size) {
+    return ApduStatus::InvalidLength;
+  }
+  if (input.bytes.data == 0 && size != 0) {
+    return ApduStatus::InvalidArgument;
+  }
+  return writer.WriteBytes(input.bytes.data, size);
 }
 
 ApduStatus DecodeDlmsDataValue(
@@ -149,6 +184,15 @@ ApduStatus DecodeDlmsDataValue(
       status = ReadUnsigned(reader, 8, output.unsignedValue);
       return status;
 
+    case kDateTimeTag:
+      return ReadFixedBytes(reader, kDateTimeSize, output);
+
+    case kDateTag:
+      return ReadFixedBytes(reader, kDateSize, output);
+
+    case kTimeTag:
+      return ReadFixedBytes(reader, kTimeSize, output);
+
     default:
       return ApduStatus::UnsupportedDataType;
   }
@@ -210,6 +254,15 @@ ApduStatus EncodeDlmsDataValue(const DlmsData& input, ApduWriter& writer)
 
     case kLong64UnsignedTag:
       return WriteUnsigned(writer, input.unsignedValue, 8);
+
+    case kDateTimeTag:
+      return WriteFixedBytes(writer, input, kDateTimeSize);
+
+    case kDateTag:
+      return WriteFixedBytes(writer, input, kDateSize);
+
+    case kTimeTag:
+      return WriteFixedBytes(writer, input, kTimeSize);
 
     default:
       return ApduStatus::UnsupportedDataType;

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.0 - 2026-06-07
+
+- Added DLMS `date-time`, `date`, and `time` Data codec support plus
+  GUI-facing typed client helpers.
+
 ## 0.11.0 - 2026-06-07
 
 - Added Association LN object-list and access-rights encode/decode helpers for

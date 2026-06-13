@@ -273,10 +273,10 @@ const char* AuthenticationName(
 const char* WrapperTraceKindName(dlms::profile::WrapperTcpTraceKind kind)
 {
   switch (kind) {
-  case dlms::profile::WrapperTcpTraceKind::EncodedFrame:
-    return "encoded-frame";
-  case dlms::profile::WrapperTcpTraceKind::DecodedFrame:
-    return "decoded-frame";
+  case dlms::profile::WrapperTcpTraceKind::WireWrite:
+    return "wire-write";
+  case dlms::profile::WrapperTcpTraceKind::WireRead:
+    return "wire-read";
   case dlms::profile::WrapperTcpTraceKind::ReadStatus:
     return "read-status";
   case dlms::profile::WrapperTcpTraceKind::DecodeStatus:

@@ -62,6 +62,31 @@ bool IsRetriableReceiveStatus(ProfileStatus status)
     status == ProfileStatus::NeedMoreData;
 }
 
+HdlcProfileTraceEvent MakeHdlcTraceEvent(
+  const HdlcProfileTraceKind kind,
+  const HdlcProfileTraceDirection direction,
+  const ProfileStatus status)
+{
+  HdlcProfileTraceEvent event;
+  event.kind = kind;
+  event.direction = direction;
+  event.status = status;
+  event.encodedSize = 0u;
+  event.apduSize = 0u;
+  event.bytes = 0;
+  event.byteSize = 0u;
+  return event;
+}
+
+void EmitHdlcTrace(
+  IHdlcProfileTraceSink* sink,
+  const HdlcProfileTraceEvent& event)
+{
+  if (sink != 0) {
+    sink->OnHdlcProfileTrace(event);
+  }
+}
+
 } // namespace
 
 HdlcProfileChannel::HdlcProfileChannel(
@@ -345,6 +370,14 @@ ProfileStatus HdlcProfileChannel::WriteFrameBytes(
   const std::vector<std::uint8_t>& frameBytes)
 {
   const std::uint8_t* data = frameBytes.empty() ? 0 : &frameBytes[0];
+  HdlcProfileTraceEvent event =
+    MakeHdlcTraceEvent(HdlcProfileTraceKind::WireWrite,
+                       HdlcProfileTraceDirection::Outbound,
+                       ProfileStatus::Ok);
+  event.encodedSize = frameBytes.size();
+  event.bytes = data;
+  event.byteSize = frameBytes.size();
+  EmitHdlcTrace(options_.hdlcProfileTraceSink, event);
   return MapTransportStatus(stream_.WriteAll(data, frameBytes.size()));
 }
 
@@ -556,10 +589,25 @@ ProfileStatus HdlcProfileChannel::ReceiveDecodedFrame(
                                           readBuffer_.size(),
                                           bytesRead));
     if (readStatus != ProfileStatus::Ok) {
+      HdlcProfileTraceEvent event =
+        MakeHdlcTraceEvent(HdlcProfileTraceKind::ReadStatus,
+                           HdlcProfileTraceDirection::Inbound,
+                           readStatus);
+      EmitHdlcTrace(options_.hdlcProfileTraceSink, event);
       return readStatus;
     }
     if (bytesRead == 0u) {
       return ProfileStatus::NeedMoreData;
+    }
+
+    {
+      HdlcProfileTraceEvent wireEvent =
+        MakeHdlcTraceEvent(HdlcProfileTraceKind::WireRead,
+                           HdlcProfileTraceDirection::Inbound,
+                           ProfileStatus::Ok);
+      wireEvent.bytes = &readBuffer_[0];
+      wireEvent.byteSize = bytesRead;
+      EmitHdlcTrace(options_.hdlcProfileTraceSink, wireEvent);
     }
 
     std::vector<dlms::hdlc::HdlcFrameBuffer> frames;
@@ -577,6 +625,13 @@ ProfileStatus HdlcProfileChannel::ReceiveDecodedFrame(
     }
 
     if (decodeStatus != ProfileStatus::NeedMoreData) {
+      HdlcProfileTraceEvent event =
+        MakeHdlcTraceEvent(HdlcProfileTraceKind::DecodeStatus,
+                           HdlcProfileTraceDirection::Inbound,
+                           decodeStatus);
+      event.bytes = &readBuffer_[0];
+      event.byteSize = bytesRead;
+      EmitHdlcTrace(options_.hdlcProfileTraceSink, event);
       decoder_.Reset();
       return decodeStatus;
     }

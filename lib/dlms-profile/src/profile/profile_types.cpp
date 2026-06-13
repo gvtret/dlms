@@ -9,6 +9,7 @@ ApduChannelOptions DefaultApduChannelOptions()
   options.localWrapperPort = dlms::wrapper::kPublicClient;
   options.remoteWrapperPort = dlms::wrapper::kManagementLogicalDevice;
   options.wrapperTcpTraceSink = 0;
+  options.hdlcProfileTraceSink = 0;
   options.hdlcClientAddress = 0x10u;
   options.hdlcLogicalDeviceAddress = 0x01u;
   options.hdlcPhysicalDeviceAddress = 0x00u;

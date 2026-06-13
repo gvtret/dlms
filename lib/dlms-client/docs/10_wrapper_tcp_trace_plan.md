@@ -66,9 +66,9 @@ sequenceDiagram
   Tool->>Client: options.wrapperTcpTraceSink = &sink
   Client->>Channel: construct with ApduChannelOptions
   Client->>Channel: Open / SendApdu(AARQ)
-  Channel-->>Sink: EncodedFrame
+  Channel-->>Sink: WireWrite
   Client->>Channel: ReceiveApdu(AARE)
-  Channel-->>Sink: DecodedFrame or ReadStatus/DecodeStatus
+  Channel-->>Sink: WireRead or ReadStatus/DecodeStatus
 ```
 
 ## Test Plan

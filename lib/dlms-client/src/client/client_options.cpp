@@ -26,6 +26,7 @@ DlmsClientOptions DefaultDlmsClientOptions()
   options.authenticationMode = ClientAuthenticationMode::None;
   options.securityMode = ClientSecurityMode::None;
   options.wrapperTcpTraceSink = 0;
+  options.hdlcProfileTraceSink = 0;
   options.associationTraceSink = 0;
   options.associationHasProposedQualityOfService =
     dlms::association::DefaultAssociationOptions().hasProposedQualityOfService;

@@ -44,8 +44,8 @@ enum class WrapperTcpTraceDirection
 
 enum class WrapperTcpTraceKind
 {
-  EncodedFrame,
-  DecodedFrame,
+  WireWrite,
+  WireRead,
   ReadStatus,
   DecodeStatus
 };
@@ -131,14 +131,15 @@ classDiagram
 ## Test Plan
 
 - `DefaultApduChannelOptions` leaves `wrapperTcpTraceSink` null.
-- `SendApdu()` emits one outbound `EncodedFrame` event after successful WRAPPER
+- `SendApdu()` emits one outbound `WireWrite` event after successful WRAPPER
   encoding and before transport write.
 - `ReceiveNextFrame()` emits inbound `ReadStatus` when the byte stream read
   fails before a frame is decoded.
 - `ReceiveNextFrame()` emits inbound `DecodeStatus` when the stream decoder
   returns a non-`NeedMoreData` failure.
-- `ReceiveNextFrame()` emits one inbound `DecodedFrame` event per decoded
-  WRAPPER frame with source/destination ports and APDU size.
+- `ReceiveNextFrame()` emits one inbound `WireRead` event for each byte stream
+  read that returns data. `WireRead` reports raw wire bytes before decoding, so
+  parsed WRAPPER ports and APDU size are not populated on that event.
 - Trace disabled path keeps existing tests and behavior unchanged.
 - Root live smoke can print metadata-only trace for WRAPPER legacy association.
 

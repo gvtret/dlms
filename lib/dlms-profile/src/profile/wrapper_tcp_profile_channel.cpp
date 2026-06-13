@@ -112,7 +112,7 @@ ProfileStatus WrapperTcpProfileChannel::SendApdu(ProfileByteView apdu)
 
   const std::uint8_t* data = wpdu.empty() ? 0 : &wpdu[0];
   WrapperTcpTraceEvent event =
-    MakeTraceEvent(WrapperTcpTraceKind::EncodedFrame,
+    MakeTraceEvent(WrapperTcpTraceKind::WireWrite,
                    WrapperTcpTraceDirection::Outbound,
                    ProfileStatus::Ok);
   event.sourcePort = frame.sourcePort;
@@ -190,26 +190,22 @@ ProfileStatus WrapperTcpProfileChannel::ReceiveNextFrame()
       return ProfileStatus::NeedMoreData;
     }
 
+    {
+      WrapperTcpTraceEvent wireEvent =
+        MakeTraceEvent(WrapperTcpTraceKind::WireRead,
+                       WrapperTcpTraceDirection::Inbound,
+                       ProfileStatus::Ok);
+      wireEvent.bytes = &readBuffer_[0];
+      wireEvent.byteSize = bytesRead;
+      EmitTrace(options_.wrapperTcpTraceSink, wireEvent);
+    }
+
     std::vector<dlms::wrapper::WrapperFrameBuffer> frames;
     const ProfileStatus decodeStatus =
       MapWrapperStatus(decoder_.Push(&readBuffer_[0], bytesRead, frames));
 
     if (decodeStatus == ProfileStatus::Ok) {
       try {
-        for (std::size_t i = 0u; i < frames.size(); ++i) {
-          WrapperTcpTraceEvent event =
-            MakeTraceEvent(WrapperTcpTraceKind::DecodedFrame,
-                           WrapperTcpTraceDirection::Inbound,
-                           ProfileStatus::Ok);
-          event.sourcePort = frames[i].sourcePort;
-          event.destinationPort = frames[i].destinationPort;
-          event.apduSize = frames[i].data.size();
-          event.encodedSize =
-            dlms::wrapper::kWrapperHeaderSize + frames[i].data.size();
-          event.bytes = frames[i].data.empty() ? 0 : &frames[i].data[0];
-          event.byteSize = frames[i].data.size();
-          EmitTrace(options_.wrapperTcpTraceSink, event);
-        }
         pendingFrames_.insert(pendingFrames_.end(), frames.begin(), frames.end());
       } catch (...) {
         decoder_.Reset();

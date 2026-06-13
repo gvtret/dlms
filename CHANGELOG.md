@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 - 2026-06-13
+
+- Added explicit HDLC client, logical-device, and physical-device addressing
+  fields to endpoint/profile options, so COSEM SAPs are no longer reused as
+  HDLC link-layer addresses.
+- Added HDLC profile wire trace hooks and changed Wrapper/TCP trace event names
+  to `WireWrite` and `WireRead` for wire-level diagnostics.
+
 ## 0.15.0 - 2026-06-07
 
 - Added version-gated Association LN configuration up to class version `3`,

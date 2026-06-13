@@ -6,6 +6,16 @@
 #include <cstdint>
 
 namespace dlms {
+
+namespace association {
+class IAssociationTraceSink;
+}
+
+namespace profile {
+class IHdlcProfileTraceSink;
+class IWrapperTcpTraceSink;
+}
+
 namespace endpoint {
 
 enum class EndpointTransportKind
@@ -44,6 +54,9 @@ struct EndpointProfileOptions
   EndpointProfileKind kind;
   std::uint16_t clientSap;
   std::uint16_t serverSap;
+  std::uint8_t hdlcClientAddress;
+  std::uint16_t hdlcLogicalDeviceAddress;
+  std::uint16_t hdlcPhysicalDeviceAddress;
   bool hdlcUseSession;
   std::size_t maxApduSize;
 };
@@ -70,6 +83,9 @@ struct ClientEndpointOptions
   EndpointTransportOptions transport;
   EndpointProfileOptions profile;
   EndpointSecurityOptions security;
+  profile::IWrapperTcpTraceSink* wrapperTcpTraceSink = nullptr;
+  profile::IHdlcProfileTraceSink* hdlcProfileTraceSink = nullptr;
+  association::IAssociationTraceSink* associationTraceSink = nullptr;
 };
 
 struct ServerEndpointOptions

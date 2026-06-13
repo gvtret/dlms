@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.0 - 2026-06-07
+
+- Added version-gated Association LN configuration up to class version `3`,
+  including user-list/current-user attributes for version `2+`.
+
 ## 0.14.0 - 2026-06-07
 
 - Added Association LN status and optional security setup reference attributes,

@@ -349,17 +349,38 @@ enum class CosemAssociationStatus
   AssociationPending = 1,
   Associated = 2
 };
+
+struct CosemAssociationUser
+{
+  std::uint8_t userId;
+  std::string userName;
+};
+
+struct CosemAssociationLnConfig
+{
+  std::uint8_t version;
+  CosemAssociationStatus associationStatus;
+  bool hasSecuritySetupReference;
+  CosemLogicalName securitySetupReference;
+  std::vector<CosemAssociationUser> users;
+  CosemAssociationUser currentUser;
+};
 ```
 
-Association LN exposes read-only attributes `1`, `2`, and `8`. Attribute `8`
-is `association_status`, encoded as DLMS Data `enum`. The constructor overload
-that accepts a security setup logical name creates a version `1` object and
-also exposes read-only attribute `9`, `security_setup_reference`, encoded as an
-xDLMS Data octet-string logical name. Association LN methods `1` through `4`
-are published in access rights and return `UnsupportedFeature` until the
-library owns HLS and object-list mutation policy. SAP Assignment exposes
-read-only attributes `1` and `2`; its methods are not supported in this
-increment. Their list attributes are returned as encoded xDLMS Data array bytes.
+Association LN supports caller-selected class versions up to
+`CosemAssociationLnObject::MaxSupportedVersion`, currently `3`. Attribute and
+method access rights are derived from the selected version: version `0`
+exposes attributes `1`, `2`, `8` and methods `1`-`4`; version `1+` may expose
+attribute `9`, `security_setup_reference`, when configured; version `2+`
+exposes attributes `10`, `11` and methods `5`, `6` for user-list handling.
+Unimplemented Association LN methods return `UnsupportedFeature`.
+
+Attribute `8` is `association_status`, encoded as DLMS Data `enum`. Attribute
+`9` is encoded as an xDLMS Data octet-string logical name. Attribute `10` is an
+array of `{ user_id: unsigned, user_name: visible-string }` structures, and
+attribute `11` is one such structure. SAP Assignment exposes read-only
+attributes `1` and `2`; its methods are not supported in this increment. Their
+list attributes are returned as encoded xDLMS Data array bytes.
 Association LN object-list helpers follow the LN `object_list` structure:
 `class_id`, `version`, `logical_name`, and `access_rights`. Access rights decode
 validates attribute access items, method access items, and the documented

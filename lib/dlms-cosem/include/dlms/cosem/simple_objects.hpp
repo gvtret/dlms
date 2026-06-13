@@ -5,6 +5,8 @@
 #include "dlms/security/key_store.hpp"
 
 #include <array>
+#include <string>
+#include <vector>
 
 namespace dlms {
 namespace cosem {
@@ -255,12 +257,34 @@ enum class CosemAssociationStatus
   Associated = 2
 };
 
+struct CosemAssociationUser
+{
+  std::uint8_t userId = 0u;
+  std::string userName;
+};
+
+struct CosemAssociationLnConfig
+{
+  std::uint8_t version = 0u;
+  CosemAssociationStatus associationStatus = CosemAssociationStatus::Associated;
+  bool hasSecuritySetupReference = false;
+  CosemLogicalName securitySetupReference;
+  std::vector<CosemAssociationUser> users;
+  CosemAssociationUser currentUser;
+};
+
 class CosemAssociationLnObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 3u;
+
   CosemAssociationLnObject(
     const CosemLogicalName& logicalName,
     const AssociationView& objectList);
+  CosemAssociationLnObject(
+    const CosemLogicalName& logicalName,
+    const AssociationView& objectList,
+    std::uint8_t version);
   CosemAssociationLnObject(
     const CosemLogicalName& logicalName,
     const AssociationView& objectList,
@@ -268,8 +292,17 @@ public:
   CosemAssociationLnObject(
     const CosemLogicalName& logicalName,
     const AssociationView& objectList,
+    std::uint8_t version,
+    CosemAssociationStatus associationStatus);
+  CosemAssociationLnObject(
+    const CosemLogicalName& logicalName,
+    const AssociationView& objectList,
     CosemAssociationStatus associationStatus,
     const CosemLogicalName& securitySetupReference);
+  CosemAssociationLnObject(
+    const CosemLogicalName& logicalName,
+    const AssociationView& objectList,
+    const CosemAssociationLnConfig& config);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
@@ -288,6 +321,8 @@ public:
   CosemAssociationStatus AssociationStatus() const;
   bool HasSecuritySetupReference() const;
   CosemLogicalName SecuritySetupReference() const;
+  std::vector<CosemAssociationUser> Users() const;
+  CosemAssociationUser CurrentUser() const;
 
 private:
   CosemObjectDescriptor descriptor_;
@@ -295,6 +330,8 @@ private:
   CosemAssociationStatus associationStatus_;
   bool hasSecuritySetupReference_;
   CosemLogicalName securitySetupReference_;
+  std::vector<CosemAssociationUser> users_;
+  CosemAssociationUser currentUser_;
   CosemAccessRights rights_;
 };
 

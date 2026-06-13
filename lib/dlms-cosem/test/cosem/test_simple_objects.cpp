@@ -1092,6 +1092,15 @@ TEST(CosemAssociationLnObject, ExposesDescriptorAndObjectList)
   EXPECT_EQ(
     dlms::cosem::MethodAccessMode::Access,
     rights.MethodAccess(4u));
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::NoAccess,
+    rights.AttributeAccess(9u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::NoAccess,
+    rights.MethodAccess(5u));
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(9u, output));
 }
 
 TEST(CosemAssociationLnObject, EncodesAndDecodesAccessRights)
@@ -1226,6 +1235,112 @@ TEST(CosemAssociationLnObject, ExposesSecuritySetupReferenceWhenConfigured)
   EXPECT_EQ(
     dlms::cosem::AttributeAccessMode::ReadOnly,
     rights.AttributeAccess(9u));
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::NoAccess,
+    rights.AttributeAccess(10u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::NoAccess,
+    rights.MethodAccess(5u));
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(10u, output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
+}
+
+TEST(CosemAssociationLnObject, VersionControlsUserAttributesAndMethods)
+{
+  dlms::cosem::AssociationView view;
+  dlms::cosem::CosemAssociationLnConfig config;
+  config.version = dlms::cosem::CosemAssociationLnObject::MaxSupportedVersion;
+  config.associationStatus = dlms::cosem::CosemAssociationStatus::Associated;
+  config.hasSecuritySetupReference = true;
+  config.securitySetupReference = dlms::cosem::SecuritySetupName();
+  dlms::cosem::CosemAssociationUser operatorUser;
+  operatorUser.userId = 7u;
+  operatorUser.userName = "operator";
+  config.users.push_back(operatorUser);
+  config.currentUser = operatorUser;
+
+  dlms::cosem::CosemAssociationLnObject object(
+    dlms::cosem::CurrentAssociationLnName(),
+    view,
+    config);
+
+  const dlms::cosem::CosemObjectDescriptor descriptor =
+    object.Descriptor();
+  EXPECT_EQ(3u, descriptor.key.version);
+  ASSERT_EQ(1u, object.Users().size());
+  EXPECT_EQ(7u, object.Users()[0].userId);
+  EXPECT_EQ("operator", object.Users()[0].userName);
+  EXPECT_EQ(7u, object.CurrentUser().userId);
+
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(10u, output));
+  dlms::cosem::CosemByteBuffer expectedList;
+  expectedList.push_back(0x01u);
+  expectedList.push_back(0x01u);
+  expectedList.push_back(0x02u);
+  expectedList.push_back(0x02u);
+  expectedList.push_back(0x11u);
+  expectedList.push_back(0x07u);
+  expectedList.push_back(0x0Au);
+  expectedList.push_back(0x08u);
+  expectedList.push_back('o');
+  expectedList.push_back('p');
+  expectedList.push_back('e');
+  expectedList.push_back('r');
+  expectedList.push_back('a');
+  expectedList.push_back('t');
+  expectedList.push_back('o');
+  expectedList.push_back('r');
+  EXPECT_EQ(expectedList, output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(11u, output));
+  dlms::cosem::CosemByteBuffer expectedCurrent;
+  expectedCurrent.push_back(0x02u);
+  expectedCurrent.push_back(0x02u);
+  expectedCurrent.push_back(0x11u);
+  expectedCurrent.push_back(0x07u);
+  expectedCurrent.push_back(0x0Au);
+  expectedCurrent.push_back(0x08u);
+  expectedCurrent.push_back('o');
+  expectedCurrent.push_back('p');
+  expectedCurrent.push_back('e');
+  expectedCurrent.push_back('r');
+  expectedCurrent.push_back('a');
+  expectedCurrent.push_back('t');
+  expectedCurrent.push_back('o');
+  expectedCurrent.push_back('r');
+  EXPECT_EQ(expectedCurrent, output);
+
+  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    rights.AttributeAccess(10u));
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    rights.AttributeAccess(11u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::Access,
+    rights.MethodAccess(5u));
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
+}
+
+TEST(CosemAssociationLnObject, NormalizesUnsupportedVersionToMaximum)
+{
+  dlms::cosem::AssociationView view;
+  dlms::cosem::CosemAssociationLnObject object(
+    dlms::cosem::CurrentAssociationLnName(),
+    view,
+    99u);
+
+  EXPECT_EQ(
+    dlms::cosem::CosemAssociationLnObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
 }
 
 TEST(LogicalDeviceNameObject, BuildsReadOnlyDataObject)

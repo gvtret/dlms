@@ -229,7 +229,9 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
      `object_list` и `access_rights` structures; `0.14.0` добавляет
      `association_status`, optional `security_setup_reference` и явные
      unsupported statuses для методов `reply_to_HLS_authentication`,
-     `change_HLS_secret`, `add_object`, `remove_object`.
+     `change_HLS_secret`, `add_object`, `remove_object`; `0.15.0` переводит
+     Association LN на caller-selected version-gated модель до версии `3` и
+     добавляет user-list/current-user surface для версии `2+`.
    - Остаются `associated_partners_id`, application context name,
      xDLMS context info, authentication mechanism name, secret handling и
      выполнение HLS/object add/remove methods.

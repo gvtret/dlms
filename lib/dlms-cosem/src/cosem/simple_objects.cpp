@@ -40,10 +40,14 @@ constexpr std::uint8_t kProfileResetMethodId = 1u;
 constexpr std::uint8_t kProfileCaptureMethodId = 2u;
 constexpr std::uint8_t kAssociationStatusAttributeId = 8u;
 constexpr std::uint8_t kAssociationSecuritySetupReferenceAttributeId = 9u;
+constexpr std::uint8_t kAssociationUserListAttributeId = 10u;
+constexpr std::uint8_t kAssociationCurrentUserAttributeId = 11u;
 constexpr std::uint8_t kAssociationReplyToHlsAuthenticationMethodId = 1u;
 constexpr std::uint8_t kAssociationChangeHlsSecretMethodId = 2u;
 constexpr std::uint8_t kAssociationAddObjectMethodId = 3u;
 constexpr std::uint8_t kAssociationRemoveObjectMethodId = 4u;
+constexpr std::uint8_t kAssociationAddUserMethodId = 5u;
+constexpr std::uint8_t kAssociationRemoveUserMethodId = 6u;
 constexpr std::uint8_t kSecurityPolicyAttributeId = 2u;
 constexpr std::uint8_t kSecuritySuiteAttributeId = 3u;
 constexpr std::uint8_t kClientSystemTitleAttributeId = 4u;
@@ -51,7 +55,7 @@ constexpr std::uint8_t kServerSystemTitleAttributeId = 5u;
 constexpr std::uint8_t kSecurityActivateMethodId = 1u;
 constexpr std::uint8_t kGlobalKeyTransferMethodId = 2u;
 constexpr std::uint8_t kVersion0 = 0u;
-constexpr std::uint8_t kVersion1 = 1u;
+constexpr std::uint8_t kAssociationLnMaxVersion = 3u;
 constexpr std::uint8_t kProfileGenericVersion = 1u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
@@ -667,6 +671,21 @@ bool DecodeExactOctetString(
   return true;
 }
 
+std::uint8_t NormalizeAssociationLnVersion(std::uint8_t version)
+{
+  if (version > kAssociationLnMaxVersion) {
+    return kAssociationLnMaxVersion;
+  }
+  return version;
+}
+
+CosemAssociationUser DefaultAssociationUser()
+{
+  CosemAssociationUser user;
+  user.userId = 0u;
+  return user;
+}
+
 bool StrengthensOrKeepsPolicy(
   std::uint8_t currentPolicy,
   std::uint8_t requestedPolicy)
@@ -831,6 +850,15 @@ void AppendOctetString(
   output.insert(output.end(), data, data + size);
 }
 
+void AppendVisibleString(
+  CosemByteBuffer& output,
+  const std::string& value)
+{
+  output.push_back(kVisibleStringTag);
+  AppendLength(output, value.size());
+  output.insert(output.end(), value.begin(), value.end());
+}
+
 void AppendBufferOctetString(
   CosemByteBuffer& output,
   const CosemByteBuffer& value)
@@ -847,6 +875,25 @@ void AppendLogicalName(
   const CosemLogicalName& logicalName)
 {
   AppendOctetString(output, logicalName.Data(), logicalName.Size());
+}
+
+void AppendAssociationUser(
+  CosemByteBuffer& output,
+  const CosemAssociationUser& user)
+{
+  AppendStructureHeader(output, 2u);
+  AppendUnsigned(output, user.userId);
+  AppendVisibleString(output, user.userName);
+}
+
+void AppendAssociationUserList(
+  CosemByteBuffer& output,
+  const std::vector<CosemAssociationUser>& users)
+{
+  AppendArrayHeader(output, users.size());
+  for (std::size_t i = 0u; i < users.size(); ++i) {
+    AppendAssociationUser(output, users[i]);
+  }
 }
 
 void AppendAttributeAccess(
@@ -1829,12 +1876,27 @@ CosemProfileGenericObject::CaptureObjects() const
   return captureObjects_;
 }
 
+const std::uint8_t CosemAssociationLnObject::MaxSupportedVersion;
+
 CosemAssociationLnObject::CosemAssociationLnObject(
   const CosemLogicalName& logicalName,
   const AssociationView& objectList)
   : CosemAssociationLnObject(
       logicalName,
       objectList,
+      kVersion0,
+      CosemAssociationStatus::Associated)
+{
+}
+
+CosemAssociationLnObject::CosemAssociationLnObject(
+  const CosemLogicalName& logicalName,
+  const AssociationView& objectList,
+  std::uint8_t version)
+  : CosemAssociationLnObject(
+      logicalName,
+      objectList,
+      version,
       CosemAssociationStatus::Associated)
 {
 }
@@ -1843,10 +1905,65 @@ CosemAssociationLnObject::CosemAssociationLnObject(
   const CosemLogicalName& logicalName,
   const AssociationView& objectList,
   CosemAssociationStatus associationStatus)
-  : descriptor_(MakeDescriptor(kAssociationLnClassId, logicalName))
+  : CosemAssociationLnObject(
+      logicalName,
+      objectList,
+      kVersion0,
+      associationStatus)
+{
+}
+
+CosemAssociationLnObject::CosemAssociationLnObject(
+  const CosemLogicalName& logicalName,
+  const AssociationView& objectList,
+  std::uint8_t version,
+  CosemAssociationStatus associationStatus)
+  : CosemAssociationLnObject(
+      logicalName,
+      objectList,
+      CosemAssociationLnConfig{
+        version,
+        associationStatus,
+        false,
+        CosemLogicalName(),
+        std::vector<CosemAssociationUser>(),
+        DefaultAssociationUser()})
+{
+}
+
+CosemAssociationLnObject::CosemAssociationLnObject(
+  const CosemLogicalName& logicalName,
+  const AssociationView& objectList,
+  CosemAssociationStatus associationStatus,
+  const CosemLogicalName& securitySetupReference)
+  : CosemAssociationLnObject(
+      logicalName,
+      objectList,
+      CosemAssociationLnConfig{
+        1u,
+        associationStatus,
+        true,
+        securitySetupReference,
+        std::vector<CosemAssociationUser>(),
+        DefaultAssociationUser()})
+{
+}
+
+CosemAssociationLnObject::CosemAssociationLnObject(
+  const CosemLogicalName& logicalName,
+  const AssociationView& objectList,
+  const CosemAssociationLnConfig& config)
+  : descriptor_(
+      MakeDescriptor(
+        kAssociationLnClassId,
+        NormalizeAssociationLnVersion(config.version),
+        logicalName))
   , objectList_(objectList)
-  , associationStatus_(associationStatus)
-  , hasSecuritySetupReference_(false)
+  , associationStatus_(config.associationStatus)
+  , hasSecuritySetupReference_(config.hasSecuritySetupReference)
+  , securitySetupReference_(config.securitySetupReference)
+  , users_(config.users)
+  , currentUser_(config.currentUser)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
@@ -1867,21 +1984,33 @@ CosemAssociationLnObject::CosemAssociationLnObject(
   rights_.SetMethodAccess(
     kAssociationRemoveObjectMethodId,
     MethodAccessMode::Access);
-}
-
-CosemAssociationLnObject::CosemAssociationLnObject(
-  const CosemLogicalName& logicalName,
-  const AssociationView& objectList,
-  CosemAssociationStatus associationStatus,
-  const CosemLogicalName& securitySetupReference)
-  : CosemAssociationLnObject(logicalName, objectList, associationStatus)
-{
-  descriptor_ = MakeDescriptor(kAssociationLnClassId, kVersion1, logicalName);
-  hasSecuritySetupReference_ = true;
-  securitySetupReference_ = securitySetupReference;
-  rights_.SetAttributeAccess(
-    kAssociationSecuritySetupReferenceAttributeId,
-    AttributeAccessMode::ReadOnly);
+  if (descriptor_.key.version >= 1u && hasSecuritySetupReference_) {
+    rights_.SetAttributeAccess(
+      kAssociationSecuritySetupReferenceAttributeId,
+      AttributeAccessMode::ReadOnly);
+  }
+  if (descriptor_.key.version >= 2u) {
+    rights_.SetAttributeAccess(
+      kAssociationUserListAttributeId,
+      AttributeAccessMode::ReadOnly);
+    rights_.SetAttributeAccess(
+      kAssociationCurrentUserAttributeId,
+      AttributeAccessMode::ReadOnly);
+    rights_.SetMethodAccess(
+      kAssociationAddUserMethodId,
+      MethodAccessMode::Access);
+    rights_.SetMethodAccess(
+      kAssociationRemoveUserMethodId,
+      MethodAccessMode::Access);
+  }
+  if (descriptor_.key.version == 0u && hasSecuritySetupReference_) {
+    hasSecuritySetupReference_ = false;
+    securitySetupReference_ = CosemLogicalName();
+  }
+  if (descriptor_.key.version < 2u) {
+    users_.clear();
+    currentUser_ = DefaultAssociationUser();
+  }
 }
 
 CosemObjectDescriptor CosemAssociationLnObject::Descriptor() const
@@ -1912,8 +2041,21 @@ CosemStatus CosemAssociationLnObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kAssociationSecuritySetupReferenceAttributeId &&
+      descriptor_.key.version >= 1u &&
       hasSecuritySetupReference_) {
     output = EncodeLogicalName(securitySetupReference_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kAssociationUserListAttributeId &&
+      descriptor_.key.version >= 2u) {
+    output.clear();
+    AppendAssociationUserList(output, users_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kAssociationCurrentUserAttributeId &&
+      descriptor_.key.version >= 2u) {
+    output.clear();
+    AppendAssociationUser(output, currentUser_);
     return CosemStatus::Ok;
   }
   output.clear();
@@ -1940,6 +2082,11 @@ CosemStatus CosemAssociationLnObject::InvokeMethod(
       methodId <= kAssociationRemoveObjectMethodId) {
     return CosemStatus::UnsupportedFeature;
   }
+  if (descriptor_.key.version >= 2u &&
+      methodId >= kAssociationAddUserMethodId &&
+      methodId <= kAssociationRemoveUserMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
 }
 
@@ -1961,6 +2108,16 @@ bool CosemAssociationLnObject::HasSecuritySetupReference() const
 CosemLogicalName CosemAssociationLnObject::SecuritySetupReference() const
 {
   return securitySetupReference_;
+}
+
+std::vector<CosemAssociationUser> CosemAssociationLnObject::Users() const
+{
+  return users_;
+}
+
+CosemAssociationUser CosemAssociationLnObject::CurrentUser() const
+{
+  return currentUser_;
 }
 
 CosemSapAssignmentObject::CosemSapAssignmentObject(

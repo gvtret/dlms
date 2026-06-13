@@ -50,12 +50,18 @@ Phase 7 association and SAP object tests:
 
 - Association LN descriptor uses class id `15`, version `0`, and OBIS
   `0.0.40.0.0.255` for the helper default;
+- Association LN descriptor version follows the caller-selected version up to
+  `MaxSupportedVersion`;
 - Association LN attribute `1` returns encoded logical-name bytes;
 - Association LN attribute `2` returns an encoded array of visible objects;
 - Association LN attribute `8` returns encoded `association_status` enum;
 - Association LN version `1` constructor exposes attribute `9` as encoded
   `security_setup_reference` logical-name bytes;
+- Association LN version `2+` exposes `user_list` and `current_user` as
+  documented user-entry structures;
 - Association LN methods `1` through `4` return `UnsupportedFeature`;
+- Association LN version `2+` methods `5` and `6` return
+  `UnsupportedFeature`;
 - unknown Association LN methods return `MethodNotFound`;
 - object-list entries include class id, version, logical name, attribute access
   descriptors, and method access descriptors;

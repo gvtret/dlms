@@ -82,6 +82,12 @@ composite attribute, the same class-level helper rule applies to those
 parameters. Profile Generic `buffer` selector `1` shall expose the range
 descriptor shape, and selector `2` shall expose the entry descriptor shape.
 
+Built-in interface classes shall model the maximum supported version of the
+class. The object descriptor version is selected by the caller. Attribute and
+method availability shall be gated by that selected version, so older object
+instances do not expose newer attributes or methods in access rights or
+read/invoke paths.
+
 ## 6. Simple Interface Objects
 
 The next implementation increment shall add reusable in-memory COSEM interface
@@ -113,7 +119,7 @@ does not introduce a typed COSEM value hierarchy.
 The next implementation increment shall add minimal read-only concrete objects
 for mandatory server model discovery:
 
-- Association LN, class id `15`, version `0`;
+- Association LN, class id `15`, maximum supported version `3`;
 - SAP Assignment, class id `17`, version `0`;
 - Logical Device Name as a Data object at OBIS `0.0.42.0.0.255`.
 
@@ -132,9 +138,16 @@ Rules:
 - Association LN version `1` may expose attribute `9` as
   `security_setup_reference`, encoded as xDLMS Data octet-string logical-name
   bytes;
-- Association LN methods `1` through `4` are exposed in access rights but
-  return `UnsupportedFeature` until HLS, object-list mutation, and association
-  rebinding policies are implemented;
+- Association LN version `2` and later exposes attribute `10` as `user_list`,
+  encoded as an array of user-entry structures;
+- Association LN version `2` and later exposes attribute `11` as
+  `current_user`, encoded as a user-entry structure;
+- Association LN methods `1` through `4` are exposed for all supported
+  versions and return `UnsupportedFeature` until HLS, object-list mutation, and
+  association rebinding policies are implemented;
+- Association LN methods `5` and `6` are exposed only for version `2` and
+  later and return `UnsupportedFeature` until user-list mutation is
+  implemented;
 - SAP Assignment attribute `1` returns its logical name as encoded xDLMS Data
   octet-string bytes;
 - SAP Assignment attribute `2` returns `SAP_assignment_list` as encoded xDLMS

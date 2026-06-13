@@ -54,6 +54,10 @@ Phase 7 association and SAP object tests:
 - Association LN attribute `2` returns an encoded array of visible objects;
 - object-list entries include class id, version, logical name, attribute access
   descriptors, and method access descriptors;
+- Association LN object-list helpers encode/decode visible objects and nested
+  access rights;
+- malformed Association LN object-list bytes return `InvalidArgument` and do
+  not publish partial decoded output;
 - SAP Assignment descriptor uses class id `17`, version `0`, and OBIS
   `0.0.41.0.0.255` for the helper default;
 - SAP Assignment attribute `2` returns an encoded array of SAP/name pairs;

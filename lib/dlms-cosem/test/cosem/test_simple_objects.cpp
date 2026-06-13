@@ -896,6 +896,104 @@ TEST(CosemAssociationLnObject, ExposesDescriptorAndObjectList)
   EXPECT_EQ(expected, output);
 }
 
+TEST(CosemAssociationLnObject, EncodesAndDecodesAccessRights)
+{
+  dlms::cosem::CosemAccessRights rights;
+  rights.SetAttributeAccess(
+    1u,
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+  rights.SetAttributeAccess(
+    2u,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  rights.SetMethodAccess(
+    1u,
+    dlms::cosem::MethodAccessMode::Access);
+
+  const dlms::cosem::CosemByteBuffer encoded =
+    dlms::cosem::EncodeAssociationAccessRights(rights);
+
+  dlms::cosem::CosemAccessRights decoded;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            dlms::cosem::DecodeAssociationAccessRights(
+              encoded,
+              decoded));
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    decoded.AttributeAccess(1u));
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    decoded.AttributeAccess(2u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::Access,
+    decoded.MethodAccess(1u));
+}
+
+TEST(CosemAssociationLnObject, EncodesAndDecodesObjectList)
+{
+  dlms::cosem::AssociationView view;
+  dlms::cosem::AssociationViewObject first;
+  first.descriptor.key.classId = 1u;
+  first.descriptor.key.version = 0u;
+  first.descriptor.key.logicalName = MakeName(1u);
+  first.accessRights.SetAttributeAccess(
+    1u,
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+  view.objects.push_back(first);
+
+  dlms::cosem::AssociationViewObject second;
+  second.descriptor.key.classId = 3u;
+  second.descriptor.key.version = 0u;
+  second.descriptor.key.logicalName = MakeName(3u);
+  second.accessRights.SetAttributeAccess(
+    2u,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  second.accessRights.SetMethodAccess(
+    1u,
+    dlms::cosem::MethodAccessMode::AuthenticatedAccess);
+  view.objects.push_back(second);
+
+  const dlms::cosem::CosemByteBuffer encoded =
+    dlms::cosem::EncodeAssociationObjectList(view);
+
+  dlms::cosem::AssociationView decoded;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            dlms::cosem::DecodeAssociationObjectList(
+              encoded,
+              decoded));
+  ASSERT_EQ(2u, decoded.objects.size());
+  EXPECT_EQ(1u, decoded.objects[0].descriptor.key.classId);
+  EXPECT_EQ(MakeName(1u), decoded.objects[0].descriptor.key.logicalName);
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    decoded.objects[0].accessRights.AttributeAccess(1u));
+  EXPECT_EQ(3u, decoded.objects[1].descriptor.key.classId);
+  EXPECT_EQ(MakeName(3u), decoded.objects[1].descriptor.key.logicalName);
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    decoded.objects[1].accessRights.AttributeAccess(2u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::AuthenticatedAccess,
+    decoded.objects[1].accessRights.MethodAccess(1u));
+}
+
+TEST(CosemAssociationLnObject, RejectsMalformedObjectList)
+{
+  dlms::cosem::AssociationView decoded;
+  decoded.objects.resize(1u);
+
+  dlms::cosem::CosemByteBuffer malformed;
+  malformed.push_back(0x01u);
+  malformed.push_back(0x01u);
+  malformed.push_back(0x02u);
+  malformed.push_back(0x03u);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            dlms::cosem::DecodeAssociationObjectList(
+              malformed,
+              decoded));
+  EXPECT_EQ(1u, decoded.objects.size());
+}
+
 TEST(LogicalDeviceNameObject, BuildsReadOnlyDataObject)
 {
   dlms::cosem::CosemDataObject object =

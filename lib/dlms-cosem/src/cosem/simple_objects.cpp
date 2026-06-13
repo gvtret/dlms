@@ -164,6 +164,24 @@ bool ReadIntegerValue(
          ReadByte(input, offset, value);
 }
 
+bool ReadUnsignedValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint8_t& value)
+{
+  return ReadExpectedTag(input, offset, kUnsignedTag) &&
+         ReadByte(input, offset, value);
+}
+
+bool ReadEnumValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint8_t& value)
+{
+  return ReadExpectedTag(input, offset, kEnumTag) &&
+         ReadByte(input, offset, value);
+}
+
 bool ReadLogicalNameValue(
   const CosemByteBuffer& input,
   std::size_t& offset,
@@ -378,6 +396,189 @@ bool ReadDoubleLongUnsignedValue(
     (static_cast<std::uint32_t>(input[offset + 2u]) << 8u) |
     static_cast<std::uint32_t>(input[offset + 3u]);
   offset += 4u;
+  return true;
+}
+
+bool MapAttributeAccessMode(
+  std::uint8_t value,
+  AttributeAccessMode& mode)
+{
+  switch (value) {
+    case 0u:
+      mode = AttributeAccessMode::NoAccess;
+      return true;
+    case 1u:
+      mode = AttributeAccessMode::ReadOnly;
+      return true;
+    case 2u:
+      mode = AttributeAccessMode::WriteOnly;
+      return true;
+    case 3u:
+      mode = AttributeAccessMode::ReadAndWrite;
+      return true;
+    case 4u:
+      mode = AttributeAccessMode::AuthenticatedReadOnly;
+      return true;
+    case 5u:
+      mode = AttributeAccessMode::AuthenticatedWriteOnly;
+      return true;
+    case 6u:
+      mode = AttributeAccessMode::AuthenticatedReadAndWrite;
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool MapMethodAccessMode(
+  std::uint8_t value,
+  MethodAccessMode& mode)
+{
+  switch (value) {
+    case 0u:
+      mode = MethodAccessMode::NoAccess;
+      return true;
+    case 1u:
+      mode = MethodAccessMode::Access;
+      return true;
+    case 2u:
+      mode = MethodAccessMode::AuthenticatedAccess;
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool SkipAssociationAccessSelectors(
+  const CosemByteBuffer& input,
+  std::size_t& offset)
+{
+  if (offset >= input.size()) {
+    return false;
+  }
+  if (input[offset] == kNullDataTag) {
+    ++offset;
+    return true;
+  }
+
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+
+  for (std::size_t i = 0u; i < count; ++i) {
+    std::uint8_t selector = 0u;
+    if (!ReadIntegerValue(input, offset, selector)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool DecodeAttributeAccessAt(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemAccessRights& rights)
+{
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+
+  for (std::size_t i = 0u; i < count; ++i) {
+    std::size_t fieldCount = 0u;
+    std::uint8_t attributeId = 0u;
+    std::uint8_t modeValue = 0u;
+    AttributeAccessMode mode = AttributeAccessMode::NoAccess;
+    if (!ReadExpectedTag(input, offset, kStructureTag) ||
+        !ReadAxdrLength(input, offset, fieldCount) ||
+        fieldCount != 3u ||
+        !ReadIntegerValue(input, offset, attributeId) ||
+        !ReadEnumValue(input, offset, modeValue) ||
+        !MapAttributeAccessMode(modeValue, mode) ||
+        !SkipAssociationAccessSelectors(input, offset)) {
+      return false;
+    }
+    rights.SetAttributeAccess(attributeId, mode);
+  }
+  return true;
+}
+
+bool DecodeMethodAccessAt(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemAccessRights& rights)
+{
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+
+  for (std::size_t i = 0u; i < count; ++i) {
+    std::size_t fieldCount = 0u;
+    std::uint8_t methodId = 0u;
+    std::uint8_t modeValue = 0u;
+    MethodAccessMode mode = MethodAccessMode::NoAccess;
+    if (!ReadExpectedTag(input, offset, kStructureTag) ||
+        !ReadAxdrLength(input, offset, fieldCount) ||
+        fieldCount != 2u ||
+        !ReadIntegerValue(input, offset, methodId) ||
+        !ReadEnumValue(input, offset, modeValue) ||
+        !MapMethodAccessMode(modeValue, mode)) {
+      return false;
+    }
+    rights.SetMethodAccess(methodId, mode);
+  }
+  return true;
+}
+
+bool DecodeAccessRightsAt(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemAccessRights& rights)
+{
+  std::size_t fieldCount = 0u;
+  CosemAccessRights decoded;
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 2u ||
+      !DecodeAttributeAccessAt(input, offset, decoded) ||
+      !DecodeMethodAccessAt(input, offset, decoded)) {
+    return false;
+  }
+
+  rights = decoded;
+  return true;
+}
+
+bool DecodeObjectListElementAt(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  AssociationViewObject& object)
+{
+  std::size_t fieldCount = 0u;
+  std::uint16_t classId = 0u;
+  std::uint8_t version = 0u;
+  CosemLogicalName logicalName(0u, 0u, 0u, 0u, 0u, 0u);
+  CosemAccessRights accessRights;
+
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 4u ||
+      !ReadLongUnsignedValue(input, offset, classId) ||
+      !ReadUnsignedValue(input, offset, version) ||
+      !ReadLogicalNameValue(input, offset, logicalName) ||
+      !DecodeAccessRightsAt(input, offset, accessRights)) {
+    return false;
+  }
+
+  object.descriptor.key.classId = classId;
+  object.descriptor.key.version = version;
+  object.descriptor.key.logicalName = logicalName;
+  object.accessRights = accessRights;
   return true;
 }
 
@@ -881,6 +1082,73 @@ CosemDataObject MakeInvocationCounterObject(
     AttributeAccessMode::ReadOnly);
 }
 
+CosemByteBuffer EncodeAssociationAccessRights(
+  const CosemAccessRights& rights)
+{
+  CosemByteBuffer output;
+  AppendAccessRights(output, rights);
+  return output;
+}
+
+CosemStatus DecodeAssociationAccessRights(
+  const CosemByteBuffer& input,
+  CosemAccessRights& rights)
+{
+  CosemAccessRights decoded;
+  std::size_t offset = 0u;
+  if (!DecodeAccessRightsAt(input, offset, decoded) ||
+      offset != input.size()) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  rights = decoded;
+  return CosemStatus::Ok;
+}
+
+CosemByteBuffer EncodeAssociationObjectList(
+  const AssociationView& objectList)
+{
+  CosemByteBuffer output;
+  AppendArrayHeader(output, objectList.objects.size());
+  for (std::vector<AssociationViewObject>::const_iterator it =
+         objectList.objects.begin();
+       it != objectList.objects.end();
+       ++it) {
+    AppendObjectListElement(output, *it);
+  }
+  return output;
+}
+
+CosemStatus DecodeAssociationObjectList(
+  const CosemByteBuffer& input,
+  AssociationView& objectList)
+{
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  AssociationView decoded;
+
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  decoded.objects.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    AssociationViewObject object;
+    if (!DecodeObjectListElementAt(input, offset, object)) {
+      return CosemStatus::InvalidArgument;
+    }
+    decoded.objects.push_back(object);
+  }
+
+  if (offset != input.size()) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  objectList = decoded;
+  return CosemStatus::Ok;
+}
+
 CosemDataObject::CosemDataObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& value,
@@ -1232,14 +1500,7 @@ CosemStatus CosemAssociationLnObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kValueAttributeId) {
-    output.clear();
-    AppendArrayHeader(output, objectList_.objects.size());
-    for (std::vector<AssociationViewObject>::const_iterator it =
-           objectList_.objects.begin();
-         it != objectList_.objects.end();
-         ++it) {
-      AppendObjectListElement(output, *it);
-    }
+    output = EncodeAssociationObjectList(objectList_);
     return CosemStatus::Ok;
   }
   output.clear();

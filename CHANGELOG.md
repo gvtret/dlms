@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.11.0 - 2026-06-07
+
+- Added Association LN object-list and access-rights encode/decode helpers for
+  the built-in COSEM discovery model.
+
 ## 0.10.0 - 2026-06-07
 
 - Added Profile Generic selective access range and entry descriptor helpers for

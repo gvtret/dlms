@@ -178,6 +178,16 @@ CosemDataObject MakeLogicalDeviceNameObject(
   const std::string& logicalDeviceName);
 CosemDataObject MakeInvocationCounterObject(
   std::uint32_t invocationCounter);
+CosemByteBuffer EncodeAssociationAccessRights(
+  const CosemAccessRights& rights);
+CosemStatus DecodeAssociationAccessRights(
+  const CosemByteBuffer& input,
+  CosemAccessRights& rights);
+CosemByteBuffer EncodeAssociationObjectList(
+  const AssociationView& objectList);
+CosemStatus DecodeAssociationObjectList(
+  const CosemByteBuffer& input,
+  AssociationView& objectList);
 
 class CosemAssociationLnObject : public ICosemObject
 {

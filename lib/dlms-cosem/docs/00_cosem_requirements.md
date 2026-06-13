@@ -125,6 +125,8 @@ Rules:
   array bytes;
 - each object-list element contains class id, version, logical name, and
   access-right descriptors for one visible object;
+- Association LN shall expose class-level encode/decode helpers for
+  `object_list` and nested access-right structures;
 - SAP Assignment attribute `1` returns its logical name as encoded xDLMS Data
   octet-string bytes;
 - SAP Assignment attribute `2` returns `SAP_assignment_list` as encoded xDLMS

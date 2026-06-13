@@ -309,11 +309,26 @@ public:
 CosemLogicalName CurrentAssociationLnName();
 CosemLogicalName SapAssignmentName();
 CosemLogicalName LogicalDeviceNameObjectName();
+CosemByteBuffer EncodeAssociationAccessRights(
+  const CosemAccessRights& rights);
+CosemStatus DecodeAssociationAccessRights(
+  const CosemByteBuffer& input,
+  CosemAccessRights& rights);
+CosemByteBuffer EncodeAssociationObjectList(
+  const AssociationView& objectList);
+CosemStatus DecodeAssociationObjectList(
+  const CosemByteBuffer& input,
+  AssociationView& objectList);
 ```
 
 Association LN exposes read-only attributes `1` and `2`. SAP Assignment exposes
 read-only attributes `1` and `2`. Their list attributes are returned as encoded
 xDLMS Data array bytes and methods are not supported in this increment.
+Association LN object-list helpers follow the LN `object_list` structure:
+`class_id`, `version`, `logical_name`, and `access_rights`. Access rights decode
+validates attribute access items, method access items, and the documented
+`access_selectors` choice. Selector values are currently validated but not
+stored because `CosemAccessRights` models access modes only.
 
 ```mermaid
 classDiagram

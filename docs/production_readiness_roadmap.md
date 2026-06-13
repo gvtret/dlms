@@ -215,6 +215,8 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
 5. Association LN object list and access rights.
    - Object list must reflect visible COSEM objects and access rights for the
      current association/security context.
+   - Статус: `0.11.0` добавляет class-level encode/decode helpers для
+     `object_list` и `access_rights` structures.
    - `reply_to_HLS_authentication`, object add/remove where supported,
      association status, xDLMS context info.
 6. Push setup and initiative messages.

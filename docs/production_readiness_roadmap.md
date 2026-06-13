@@ -201,8 +201,13 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
      object-correction log, meter parameter journal, event aggregation profiles.
    - Статус: partial built-in `CosemProfileGenericObject` с read-only
      attributes, encoded buffer rows и capture objects добавлен в `0.5.0`;
-     selective access, capture execution и fixed journal schemas остаются
+     `0.9.0` добавляет class-level encode/decode helpers для составных
+     атрибутов `buffer`, `capture_objects` и `sort_object`. Selective access
+     parameter builders, capture execution и fixed journal schemas остаются
      задачами.
+   - Для каждого составного атрибута IC (`array`, `structure`) встроенная IC
+     реализация должна публиковать class-level encode/decode helpers рядом с
+     объектом класса, чтобы прикладной код не разбирал A-XDR вручную.
 4. СПОДЭС/СПОДУС catalogs.
    - OBIS catalogs and parameter lists for meter categories A/B/C/D and ИВКЭ.
    - Event code table and status word formats.

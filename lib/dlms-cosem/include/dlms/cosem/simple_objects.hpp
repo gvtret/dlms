@@ -90,6 +90,22 @@ struct CosemCaptureObject
   std::uint16_t dataIndex;
 };
 
+CosemByteBuffer EncodeProfileGenericCaptureObject(
+  const CosemCaptureObject& object);
+CosemStatus DecodeProfileGenericCaptureObject(
+  const CosemByteBuffer& input,
+  CosemCaptureObject& object);
+CosemByteBuffer EncodeProfileGenericCaptureObjects(
+  const std::vector<CosemCaptureObject>& objects);
+CosemStatus DecodeProfileGenericCaptureObjects(
+  const CosemByteBuffer& input,
+  std::vector<CosemCaptureObject>& objects);
+CosemByteBuffer EncodeProfileGenericBuffer(
+  const std::vector<CosemByteBuffer>& rows);
+CosemStatus DecodeProfileGenericBuffer(
+  const CosemByteBuffer& input,
+  std::vector<CosemByteBuffer>& rows);
+
 class CosemProfileGenericObject : public ICosemObject
 {
 public:

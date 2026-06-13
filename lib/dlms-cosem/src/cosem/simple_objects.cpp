@@ -34,16 +34,22 @@ constexpr std::uint8_t kProfileGenericVersion = 1u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
 constexpr std::uint8_t kNullDataTag = 0x00u;
+constexpr std::uint8_t kBooleanTag = 0x03u;
+constexpr std::uint8_t kDoubleLongTag = 0x05u;
 constexpr std::uint8_t kDoubleLongUnsignedTag = 0x06u;
 constexpr std::uint8_t kDataOctetStringTag = 0x09u;
 constexpr std::uint8_t kIntegerTag = 0x0Fu;
+constexpr std::uint8_t kLongTag = 0x10u;
 constexpr std::uint8_t kUnsignedTag = 0x11u;
 constexpr std::uint8_t kLongUnsignedTag = 0x12u;
+constexpr std::uint8_t kLong64Tag = 0x14u;
+constexpr std::uint8_t kLong64UnsignedTag = 0x15u;
 constexpr std::uint8_t kEnumTag = 0x16u;
 constexpr std::uint8_t kLogicalNameSize = 6u;
 constexpr std::size_t kSystemTitleSize = 8u;
 constexpr std::size_t kSuite0KeySize = 16u;
 constexpr std::size_t kSuite0WrappedKeySize = 24u;
+constexpr std::size_t kMaxProfileGenericDecodeDepth = 16u;
 
 bool IsAxdrEnum(
   const CosemByteBuffer& input,
@@ -82,6 +88,190 @@ bool ReadAxdrLength(
   for (std::size_t i = 0u; i < lengthBytes; ++i) {
     length = (length << 8u) | input[offset++];
   }
+  return true;
+}
+
+bool ReadByte(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint8_t& value)
+{
+  if (offset >= input.size()) {
+    return false;
+  }
+  value = input[offset++];
+  return true;
+}
+
+bool ReadExpectedTag(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint8_t expectedTag)
+{
+  std::uint8_t tag = 0u;
+  return ReadByte(input, offset, tag) && tag == expectedTag;
+}
+
+bool ReadFixedBytes(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::size_t size,
+  const std::uint8_t*& data)
+{
+  if (input.size() - offset < size) {
+    return false;
+  }
+  data = &input[offset];
+  offset += size;
+  return true;
+}
+
+bool ReadLongUnsignedValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint16_t& value)
+{
+  if (!ReadExpectedTag(input, offset, kLongUnsignedTag) ||
+      input.size() - offset < 2u) {
+    return false;
+  }
+
+  value = static_cast<std::uint16_t>(
+    (static_cast<std::uint16_t>(input[offset]) << 8u) |
+    input[offset + 1u]);
+  offset += 2u;
+  return true;
+}
+
+bool ReadIntegerValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint8_t& value)
+{
+  return ReadExpectedTag(input, offset, kIntegerTag) &&
+         ReadByte(input, offset, value);
+}
+
+bool ReadLogicalNameValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemLogicalName& logicalName)
+{
+  std::size_t length = 0u;
+  const std::uint8_t* data = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, length) ||
+      length != kLogicalNameSize ||
+      !ReadFixedBytes(input, offset, length, data)) {
+    return false;
+  }
+
+  logicalName = CosemLogicalName(
+    data[0],
+    data[1],
+    data[2],
+    data[3],
+    data[4],
+    data[5]);
+  return true;
+}
+
+bool SkipDlmsData(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::size_t depth);
+
+bool SkipDlmsDataItems(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::size_t count,
+  std::size_t depth)
+{
+  for (std::size_t i = 0u; i < count; ++i) {
+    if (!SkipDlmsData(input, offset, depth + 1u)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool SkipDlmsData(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::size_t depth)
+{
+  if (depth > kMaxProfileGenericDecodeDepth) {
+    return false;
+  }
+
+  std::uint8_t tag = 0u;
+  if (!ReadByte(input, offset, tag)) {
+    return false;
+  }
+
+  switch (tag) {
+    case kNullDataTag:
+      return true;
+    case kArrayTag:
+    case kStructureTag: {
+      std::size_t count = 0u;
+      return ReadAxdrLength(input, offset, count) &&
+             SkipDlmsDataItems(input, offset, count, depth);
+    }
+    case kBooleanTag:
+    case kIntegerTag:
+    case kUnsignedTag:
+    case kEnumTag:
+      return input.size() - offset >= 1u && (offset += 1u, true);
+    case kLongTag:
+    case kLongUnsignedTag:
+      return input.size() - offset >= 2u && (offset += 2u, true);
+    case kDoubleLongTag:
+    case kDoubleLongUnsignedTag:
+      return input.size() - offset >= 4u && (offset += 4u, true);
+    case kLong64Tag:
+    case kLong64UnsignedTag:
+      return input.size() - offset >= 8u && (offset += 8u, true);
+    case kDataOctetStringTag: {
+      std::size_t length = 0u;
+      if (!ReadAxdrLength(input, offset, length) ||
+          input.size() - offset < length) {
+        return false;
+      }
+      offset += length;
+      return true;
+    }
+    default:
+      return false;
+  }
+}
+
+bool DecodeCaptureObjectAt(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemCaptureObject& object)
+{
+  std::size_t fieldCount = 0u;
+  std::uint16_t classId = 0u;
+  CosemLogicalName logicalName(0u, 0u, 0u, 0u, 0u, 0u);
+  std::uint8_t attributeId = 0u;
+  std::uint16_t dataIndex = 0u;
+
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 4u ||
+      !ReadLongUnsignedValue(input, offset, classId) ||
+      !ReadLogicalNameValue(input, offset, logicalName) ||
+      !ReadIntegerValue(input, offset, attributeId) ||
+      !ReadLongUnsignedValue(input, offset, dataIndex)) {
+    return false;
+  }
+
+  object.object.classId = classId;
+  object.object.version = 0u;
+  object.object.logicalName = logicalName;
+  object.attributeId = attributeId;
+  object.dataIndex = dataIndex;
   return true;
 }
 
@@ -331,24 +521,6 @@ void AppendProfileCaptureObjects(
   }
 }
 
-void AppendProfileSortObject(
-  CosemByteBuffer& output,
-  const std::vector<CosemCaptureObject>& objects)
-{
-  if (objects.empty()) {
-    CosemCaptureObject empty;
-    empty.object.classId = 0u;
-    empty.object.version = 0u;
-    empty.object.logicalName = CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
-    empty.attributeId = 0u;
-    empty.dataIndex = 0u;
-    AppendCaptureObject(output, empty);
-    return;
-  }
-
-  AppendCaptureObject(output, objects[0]);
-}
-
 void AppendSapAssignment(
   CosemByteBuffer& output,
   const SapAssignment& assignment)
@@ -363,6 +535,107 @@ void AppendSapAssignment(
 }
 
 } // namespace
+
+CosemByteBuffer EncodeProfileGenericCaptureObject(
+  const CosemCaptureObject& object)
+{
+  CosemByteBuffer output;
+  AppendCaptureObject(output, object);
+  return output;
+}
+
+CosemStatus DecodeProfileGenericCaptureObject(
+  const CosemByteBuffer& input,
+  CosemCaptureObject& object)
+{
+  CosemCaptureObject decoded;
+  std::size_t offset = 0u;
+  if (!DecodeCaptureObjectAt(input, offset, decoded) ||
+      offset != input.size()) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  object = decoded;
+  return CosemStatus::Ok;
+}
+
+CosemByteBuffer EncodeProfileGenericCaptureObjects(
+  const std::vector<CosemCaptureObject>& objects)
+{
+  CosemByteBuffer output;
+  AppendProfileCaptureObjects(output, objects);
+  return output;
+}
+
+CosemStatus DecodeProfileGenericCaptureObjects(
+  const CosemByteBuffer& input,
+  std::vector<CosemCaptureObject>& objects)
+{
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  std::vector<CosemCaptureObject> decoded;
+
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  decoded.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    CosemCaptureObject object;
+    if (!DecodeCaptureObjectAt(input, offset, object)) {
+      return CosemStatus::InvalidArgument;
+    }
+    decoded.push_back(object);
+  }
+
+  if (offset != input.size()) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  objects.swap(decoded);
+  return CosemStatus::Ok;
+}
+
+CosemByteBuffer EncodeProfileGenericBuffer(
+  const std::vector<CosemByteBuffer>& rows)
+{
+  CosemByteBuffer output;
+  AppendProfileBuffer(output, rows);
+  return output;
+}
+
+CosemStatus DecodeProfileGenericBuffer(
+  const CosemByteBuffer& input,
+  std::vector<CosemByteBuffer>& rows)
+{
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  std::vector<CosemByteBuffer> decoded;
+
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  decoded.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    const std::size_t rowStart = offset;
+    if (offset >= input.size() || input[offset] != kStructureTag ||
+        !SkipDlmsData(input, offset, 0u)) {
+      return CosemStatus::InvalidArgument;
+    }
+    decoded.push_back(
+      CosemByteBuffer(input.begin() + rowStart, input.begin() + offset));
+  }
+
+  if (offset != input.size()) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  rows.swap(decoded);
+  return CosemStatus::Ok;
+}
 
 CosemLogicalName CurrentAssociationLnName()
 {
@@ -645,13 +918,11 @@ CosemStatus CosemProfileGenericObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileBufferAttributeId) {
-    output.clear();
-    AppendProfileBuffer(output, bufferRows_);
+    output = EncodeProfileGenericBuffer(bufferRows_);
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileCaptureObjectsAttributeId) {
-    output.clear();
-    AppendProfileCaptureObjects(output, captureObjects_);
+    output = EncodeProfileGenericCaptureObjects(captureObjects_);
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileCapturePeriodAttributeId) {
@@ -668,7 +939,17 @@ CosemStatus CosemProfileGenericObject::ReadAttribute(
   }
   if (attributeId == kProfileSortObjectAttributeId) {
     output.clear();
-    AppendProfileSortObject(output, captureObjects_);
+    if (captureObjects_.empty()) {
+      CosemCaptureObject empty;
+      empty.object.classId = 0u;
+      empty.object.version = 0u;
+      empty.object.logicalName = CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
+      empty.attributeId = 0u;
+      empty.dataIndex = 0u;
+      output = EncodeProfileGenericCaptureObject(empty);
+    } else {
+      output = EncodeProfileGenericCaptureObject(captureObjects_[0]);
+    }
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileEntriesInUseAttributeId) {

@@ -71,6 +71,12 @@ Rules:
 projection of arbitrary COSEM data values yet. Typed value helpers may be added
 later when interface-class implementations need them.
 
+When a built-in interface class owns an attribute whose DLMS Data type is
+composite (`array` or `structure`), that interface class shall expose
+class-level encode/decode helpers for the documented attribute shape. Callers
+should not need to duplicate IC-specific A-XDR structure parsing in application
+code.
+
 ## 6. Simple Interface Objects
 
 The next implementation increment shall add reusable in-memory COSEM interface

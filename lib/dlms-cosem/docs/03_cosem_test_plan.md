@@ -61,6 +61,20 @@ Phase 7 association and SAP object tests:
 - writes are denied by registry access checks;
 - methods return `MethodNotFound`.
 
+Profile Generic composite attribute tests:
+
+- `capture_object_definition` encodes as a four-field structure containing
+  class id, logical name, attribute index, and data index;
+- `capture_objects` encodes as an array of capture-object structures and
+  decodes back to typed `CosemCaptureObject` entries;
+- malformed capture-object arrays return `InvalidArgument` and do not publish
+  partial decoded output;
+- `buffer` encodes as an array of row structures;
+- `buffer` decode validates each row as a DLMS Data structure and returns the
+  original encoded row bytes for schema-specific application decoding;
+- malformed buffer rows return `InvalidArgument` and do not publish partial
+  decoded output.
+
 ## 2. Integration Tests
 
 Root integration is deferred until `dlms-server` exists. The first integration

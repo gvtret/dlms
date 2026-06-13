@@ -235,6 +235,34 @@ Attribute `1` is read-only logical name. Attribute `2` is the value. Register
 attribute `3` is read-only scaler-unit. Methods are not supported in this
 increment.
 
+`simple_objects.hpp` also exposes a partial Profile Generic IC `7` object and
+class-level helpers for its current composite attributes:
+
+```cpp
+CosemByteBuffer EncodeProfileGenericCaptureObject(
+  const CosemCaptureObject& object);
+CosemStatus DecodeProfileGenericCaptureObject(
+  const CosemByteBuffer& input,
+  CosemCaptureObject& object);
+CosemByteBuffer EncodeProfileGenericCaptureObjects(
+  const std::vector<CosemCaptureObject>& objects);
+CosemStatus DecodeProfileGenericCaptureObjects(
+  const CosemByteBuffer& input,
+  std::vector<CosemCaptureObject>& objects);
+CosemByteBuffer EncodeProfileGenericBuffer(
+  const std::vector<CosemByteBuffer>& rows);
+CosemStatus DecodeProfileGenericBuffer(
+  const CosemByteBuffer& input,
+  std::vector<CosemByteBuffer>& rows);
+```
+
+`CosemCaptureObject` follows the Profile Generic
+`capture_object_definition` structure order from the knowledge base:
+`class_id`, `logical_name`, `attribute_index`, `data_index`. The buffer helpers
+encode and decode the top-level `array`; each decoded row is validated as a
+DLMS Data `structure` and returned as its original encoded bytes because row
+field types are defined by the matching `capture_objects` schema.
+
 The same header also adds minimal discovery objects:
 
 ```cpp

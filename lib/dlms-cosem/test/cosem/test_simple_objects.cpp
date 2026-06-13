@@ -423,6 +423,139 @@ TEST(CosemProfileGenericObject, ExposesReadOnlyProfileAttributes)
   EXPECT_EQ(expectedProfileEntries, output);
 }
 
+TEST(CosemProfileGenericObject, EncodesAndDecodesCaptureObject)
+{
+  dlms::cosem::CosemCaptureObject capture;
+  capture.object.classId = 3u;
+  capture.object.version = 0u;
+  capture.object.logicalName = MakeName(3u);
+  capture.attributeId = 2u;
+  capture.dataIndex = 1u;
+
+  const dlms::cosem::CosemByteBuffer encoded =
+    dlms::cosem::EncodeProfileGenericCaptureObject(capture);
+  EXPECT_EQ(EncodedCaptureObject(capture), encoded);
+
+  dlms::cosem::CosemCaptureObject decoded;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            dlms::cosem::DecodeProfileGenericCaptureObject(
+              encoded,
+              decoded));
+  EXPECT_EQ(capture.object.classId, decoded.object.classId);
+  EXPECT_EQ(0u, decoded.object.version);
+  EXPECT_EQ(capture.object.logicalName, decoded.object.logicalName);
+  EXPECT_EQ(capture.attributeId, decoded.attributeId);
+  EXPECT_EQ(capture.dataIndex, decoded.dataIndex);
+}
+
+TEST(CosemProfileGenericObject, EncodesAndDecodesCaptureObjects)
+{
+  dlms::cosem::CosemCaptureObject first;
+  first.object.classId = 3u;
+  first.object.version = 0u;
+  first.object.logicalName = MakeName(3u);
+  first.attributeId = 2u;
+  first.dataIndex = 0u;
+
+  dlms::cosem::CosemCaptureObject second;
+  second.object.classId = 8u;
+  second.object.version = 0u;
+  second.object.logicalName = MakeName(8u);
+  second.attributeId = 2u;
+  second.dataIndex = 0u;
+
+  std::vector<dlms::cosem::CosemCaptureObject> captures;
+  captures.push_back(first);
+  captures.push_back(second);
+
+  const dlms::cosem::CosemByteBuffer encoded =
+    dlms::cosem::EncodeProfileGenericCaptureObjects(captures);
+  std::vector<dlms::cosem::CosemCaptureObject> decoded;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            dlms::cosem::DecodeProfileGenericCaptureObjects(
+              encoded,
+              decoded));
+
+  ASSERT_EQ(2u, decoded.size());
+  EXPECT_EQ(first.object.classId, decoded[0].object.classId);
+  EXPECT_EQ(first.object.logicalName, decoded[0].object.logicalName);
+  EXPECT_EQ(first.attributeId, decoded[0].attributeId);
+  EXPECT_EQ(first.dataIndex, decoded[0].dataIndex);
+  EXPECT_EQ(second.object.classId, decoded[1].object.classId);
+  EXPECT_EQ(second.object.logicalName, decoded[1].object.logicalName);
+  EXPECT_EQ(second.attributeId, decoded[1].attributeId);
+  EXPECT_EQ(second.dataIndex, decoded[1].dataIndex);
+}
+
+TEST(CosemProfileGenericObject, RejectsMalformedCaptureObjects)
+{
+  std::vector<dlms::cosem::CosemCaptureObject> decoded;
+  decoded.resize(1u);
+
+  dlms::cosem::CosemByteBuffer malformed;
+  malformed.push_back(0x01u);
+  malformed.push_back(0x01u);
+  malformed.push_back(0x02u);
+  malformed.push_back(0x03u);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            dlms::cosem::DecodeProfileGenericCaptureObjects(
+              malformed,
+              decoded));
+  EXPECT_EQ(1u, decoded.size());
+}
+
+TEST(CosemProfileGenericObject, EncodesAndDecodesBufferRows)
+{
+  dlms::cosem::CosemByteBuffer firstRow;
+  firstRow.push_back(0x02u);
+  firstRow.push_back(0x02u);
+  AppendDoubleLongUnsigned(firstRow, 42u);
+  AppendEnum(firstRow, 7u);
+
+  dlms::cosem::CosemByteBuffer secondRow;
+  secondRow.push_back(0x02u);
+  secondRow.push_back(0x01u);
+  secondRow.push_back(0x09u);
+  secondRow.push_back(0x03u);
+  secondRow.push_back(0x41u);
+  secondRow.push_back(0x42u);
+  secondRow.push_back(0x43u);
+
+  std::vector<dlms::cosem::CosemByteBuffer> rows;
+  rows.push_back(firstRow);
+  rows.push_back(secondRow);
+
+  const dlms::cosem::CosemByteBuffer encoded =
+    dlms::cosem::EncodeProfileGenericBuffer(rows);
+  std::vector<dlms::cosem::CosemByteBuffer> decoded;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            dlms::cosem::DecodeProfileGenericBuffer(encoded, decoded));
+  EXPECT_EQ(rows, decoded);
+}
+
+TEST(CosemProfileGenericObject, RejectsMalformedBufferRows)
+{
+  std::vector<dlms::cosem::CosemByteBuffer> decoded;
+  decoded.push_back(Bytes(0xAAu, 0xBBu));
+
+  dlms::cosem::CosemByteBuffer malformed;
+  malformed.push_back(0x01u);
+  malformed.push_back(0x01u);
+  malformed.push_back(0x06u);
+  malformed.push_back(0x00u);
+  malformed.push_back(0x00u);
+  malformed.push_back(0x00u);
+  malformed.push_back(0x01u);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            dlms::cosem::DecodeProfileGenericBuffer(
+              malformed,
+              decoded));
+  ASSERT_EQ(1u, decoded.size());
+  EXPECT_EQ(Bytes(0xAAu, 0xBBu), decoded[0]);
+}
+
 TEST(CosemProfileGenericObject, RejectsWritesAndReportsUnsupportedMethods)
 {
   dlms::cosem::CosemProfileGenericObject object(

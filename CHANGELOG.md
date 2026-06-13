@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.9.0 - 2026-06-07
+
+- Added Profile Generic composite attribute encode/decode helpers for
+  `capture_objects`, `sort_object`, and `buffer` row framing.
+
 ## 0.8.0 - 2026-06-07
 
 - Added xDLMS and client facade support for GET selective access requests with

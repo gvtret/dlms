@@ -355,7 +355,8 @@ TEST(WrapperTcpProfileChannelTest, ReceiveApduEmitsInboundDecodedTrace)
   const std::vector<std::uint8_t> apdu = Bytes(rawApdu, sizeof(rawApdu));
 
   ASSERT_EQ(ProfileStatus::Ok, channel.Open());
-  stream.ScriptRead(EncodeWpdu(apdu));
+  const std::vector<std::uint8_t> wpdu = EncodeWpdu(apdu);
+  stream.ScriptRead(wpdu);
 
   std::vector<std::uint8_t> received;
   ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
@@ -364,11 +365,12 @@ TEST(WrapperTcpProfileChannelTest, ReceiveApduEmitsInboundDecodedTrace)
   EXPECT_EQ(WrapperTcpTraceKind::WireRead, trace.events[0].kind);
   EXPECT_EQ(WrapperTcpTraceDirection::Inbound, trace.events[0].direction);
   EXPECT_EQ(ProfileStatus::Ok, trace.events[0].status);
-  EXPECT_EQ(dlms::wrapper::kPublicClient, trace.events[0].sourcePort);
-  EXPECT_EQ(dlms::wrapper::kManagementLogicalDevice,
-            trace.events[0].destinationPort);
-  EXPECT_EQ(apdu.size(), trace.events[0].apduSize);
-  EXPECT_EQ(apdu.size(), trace.events[0].byteSize);
+  EXPECT_EQ(0u, trace.events[0].sourcePort);
+  EXPECT_EQ(0u, trace.events[0].destinationPort);
+  EXPECT_EQ(0u, trace.events[0].apduSize);
+  EXPECT_EQ(wpdu.size(), trace.events[0].byteSize);
+  ASSERT_NE(static_cast<const std::uint8_t*>(0), trace.events[0].bytes);
+  EXPECT_EQ(wpdu, Bytes(trace.events[0].bytes, trace.events[0].byteSize));
 }
 
 TEST(WrapperTcpProfileChannelTest, ReceiveApduEmitsReadFailureTrace)
@@ -411,11 +413,15 @@ TEST(WrapperTcpProfileChannelTest, ReceiveApduEmitsDecodeFailureTrace)
   std::vector<std::uint8_t> received;
   EXPECT_EQ(ProfileStatus::InvalidFrame, channel.ReceiveApdu(received));
 
-  ASSERT_EQ(1u, trace.events.size());
-  EXPECT_EQ(WrapperTcpTraceKind::DecodeStatus, trace.events[0].kind);
+  ASSERT_EQ(2u, trace.events.size());
+  EXPECT_EQ(WrapperTcpTraceKind::WireRead, trace.events[0].kind);
   EXPECT_EQ(WrapperTcpTraceDirection::Inbound, trace.events[0].direction);
-  EXPECT_EQ(ProfileStatus::InvalidFrame, trace.events[0].status);
+  EXPECT_EQ(ProfileStatus::Ok, trace.events[0].status);
   EXPECT_EQ(sizeof(invalid), trace.events[0].byteSize);
+  EXPECT_EQ(WrapperTcpTraceKind::DecodeStatus, trace.events[1].kind);
+  EXPECT_EQ(WrapperTcpTraceDirection::Inbound, trace.events[1].direction);
+  EXPECT_EQ(ProfileStatus::InvalidFrame, trace.events[1].status);
+  EXPECT_EQ(sizeof(invalid), trace.events[1].byteSize);
 }
 
 TEST(WrapperTcpProfileChannelTest, SmallReceiveBufferDoesNotConsumeApdu)

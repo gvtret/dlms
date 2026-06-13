@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.12.1 - 2026-06-07
+
+- Added a GUI-oriented СПОДЭС OBIS read example and allowed Profile Generic
+  buffer row decoding to validate `date-time`, `date`, and `time` values.
+
 ## 0.12.0 - 2026-06-07
 
 - Added DLMS `date-time`, `date`, and `time` Data codec support plus

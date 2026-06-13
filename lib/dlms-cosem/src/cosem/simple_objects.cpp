@@ -262,6 +262,15 @@ bool SkipDlmsData(
     case kLong64Tag:
     case kLong64UnsignedTag:
       return input.size() - offset >= 8u && (offset += 8u, true);
+    case kDateTimeTag:
+      return input.size() - offset >= kDlmsDateTimeSize &&
+             (offset += kDlmsDateTimeSize, true);
+    case kDateTag:
+      return input.size() - offset >= kDlmsDateSize &&
+             (offset += kDlmsDateSize, true);
+    case kTimeTag:
+      return input.size() - offset >= kDlmsTimeSize &&
+             (offset += kDlmsTimeSize, true);
     case kDataOctetStringTag: {
       std::size_t length = 0u;
       if (!ReadAxdrLength(input, offset, length) ||

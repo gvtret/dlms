@@ -239,6 +239,14 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
         PRIVATE
           dlms_client)
 
+      add_executable(dlms_client_spodes_obis_example
+        tools/client_spodes_obis_example.cpp)
+      target_compile_features(dlms_client_spodes_obis_example PRIVATE cxx_std_11)
+      target_link_libraries(dlms_client_spodes_obis_example
+        PRIVATE
+          dlms_client
+          dlms_cosem)
+
       add_executable(dlms_endpoint_push_listener_example
         tools/endpoint_push_listener_example.cpp)
       target_compile_features(dlms_endpoint_push_listener_example PRIVATE cxx_std_11)
@@ -265,6 +273,8 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
         COMMAND dlms_client_custom_xdlms_service_example)
       add_test(NAME dlms_client_gui_read_example
         COMMAND dlms_client_gui_read_example)
+      add_test(NAME dlms_client_spodes_obis_example
+        COMMAND dlms_client_spodes_obis_example)
       add_test(NAME dlms_endpoint_push_listener_example
         COMMAND dlms_endpoint_push_listener_example)
       add_test(NAME dlms_endpoint_gateway_example

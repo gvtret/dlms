@@ -532,9 +532,18 @@ TEST(CosemProfileGenericObject, EncodesAndDecodesBufferRows)
   secondRow.push_back(0x42u);
   secondRow.push_back(0x43u);
 
+  dlms::cosem::CosemByteBuffer thirdRow;
+  thirdRow.push_back(0x02u);
+  thirdRow.push_back(0x01u);
+  thirdRow.push_back(0x19u);
+  for (std::uint8_t i = 0u; i < 12u; ++i) {
+    thirdRow.push_back(i);
+  }
+
   std::vector<dlms::cosem::CosemByteBuffer> rows;
   rows.push_back(firstRow);
   rows.push_back(secondRow);
+  rows.push_back(thirdRow);
 
   const dlms::cosem::CosemByteBuffer encoded =
     dlms::cosem::EncodeProfileGenericBuffer(rows);

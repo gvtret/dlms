@@ -36,6 +36,11 @@ backend pattern: use `ReadAttribute` with class id and OBIS logical name, check
 `accessResult`, and decode the returned encoded DLMS `Data` through
 `client_data.hpp`.
 
+The root `tools/client_spodes_obis_example.cpp` program extends that pattern to
+typical СПОДЭС reads: Clock `0.0.1.0.0.255`, active energy
+`1.0.1.8.0.255`, and Profile Generic range selection with class-level COSEM
+helpers.
+
 `ReadAttribute` also has a selective-access overload. GUI clients can pass a
 `SelectiveAccessDescriptor` with a selector and encoded DLMS `Data` parameters
 for Profile Generic range/by-entry reads once the UI has built the

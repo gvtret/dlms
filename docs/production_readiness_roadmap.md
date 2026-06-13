@@ -244,7 +244,8 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
    added in `0.6.0`; common typed DLMS Data encode/decode helpers added in
    `0.7.0`; generic xDLMS/client GET selective access added in `0.8.0`;
    Profile Generic selector-specific helpers added in `0.10.0`; DLMS
-   `date-time`, `date`, and `time` typed helpers added in `0.12.0`.
+   `date-time`, `date`, and `time` typed helpers added in `0.12.0`;
+   СПОДЭС OBIS GUI read example added in `0.12.1`.
 
 ## P0. СПОДЭС/СПОДУС completeness gate
 
@@ -339,5 +340,5 @@ library may be described as an extensible DLMS/COSEM framework with partial
     common typed DLMS Data decode/encode helpers добавлены в `0.7.0`; дальше
     GUI-oriented read example добавлен в `0.7.1`; Profile Generic
     selector-specific helpers добавлены в `0.10.0`; DLMS `date-time`, `date`
-    и `time` helpers добавлены в `0.12.0`; дальше нужны примеры чтения
-    типовых СПОДЭС OBIS.
+    и `time` helpers добавлены в `0.12.0`; пример чтения типовых СПОДЭС OBIS
+    добавлен в `0.12.1`.

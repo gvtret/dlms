@@ -43,7 +43,7 @@ Status values:
 | `10` | Schedule | Planned | Needed for scheduled operations. |
 | `11` | Special Days Table | Planned | Needed for tariff calendars. |
 | `12` | Association SN | Application-provided | Framework currently focuses on LN referencing. |
-| `15` | Association LN | Partial | Built-in object exposes object list and class-level encode/decode helpers for `object_list` and access-right structures. Full methods/status/security attributes are incomplete. |
+| `15` | Association LN | Partial | Built-in object exposes object list, association status, optional security setup reference, explicit unsupported methods `1`-`4`, and class-level encode/decode helpers for `object_list` and access-right structures. Full HLS method execution and association-specific policy rebinding are incomplete. |
 | `17` | SAP Assignment | Supported | `CosemSapAssignmentObject` exists. |
 | `18` | Image Transfer | Planned | Needed for firmware/image update flows. |
 | `19` | IEC Local Port Setup | Planned | Needed for local optical-port setup. |

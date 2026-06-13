@@ -342,11 +342,24 @@ CosemByteBuffer EncodeAssociationObjectList(
 CosemStatus DecodeAssociationObjectList(
   const CosemByteBuffer& input,
   AssociationView& objectList);
+
+enum class CosemAssociationStatus
+{
+  NonAssociated = 0,
+  AssociationPending = 1,
+  Associated = 2
+};
 ```
 
-Association LN exposes read-only attributes `1` and `2`. SAP Assignment exposes
-read-only attributes `1` and `2`. Their list attributes are returned as encoded
-xDLMS Data array bytes and methods are not supported in this increment.
+Association LN exposes read-only attributes `1`, `2`, and `8`. Attribute `8`
+is `association_status`, encoded as DLMS Data `enum`. The constructor overload
+that accepts a security setup logical name creates a version `1` object and
+also exposes read-only attribute `9`, `security_setup_reference`, encoded as an
+xDLMS Data octet-string logical name. Association LN methods `1` through `4`
+are published in access rights and return `UnsupportedFeature` until the
+library owns HLS and object-list mutation policy. SAP Assignment exposes
+read-only attributes `1` and `2`; its methods are not supported in this
+increment. Their list attributes are returned as encoded xDLMS Data array bytes.
 Association LN object-list helpers follow the LN `object_list` structure:
 `class_id`, `version`, `logical_name`, and `access_rights`. Access rights decode
 validates attribute access items, method access items, and the documented

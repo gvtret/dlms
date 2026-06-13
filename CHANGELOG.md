@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.14.0 - 2026-06-07
+
+- Added Association LN status and optional security setup reference attributes,
+  and exposed documented Association LN methods as explicit unsupported
+  features.
+
 ## 0.13.0 - 2026-06-07
 
 - Added a built-in partial Clock IC `8` object with read/write support for

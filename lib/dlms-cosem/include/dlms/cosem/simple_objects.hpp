@@ -248,12 +248,28 @@ CosemStatus DecodeAssociationObjectList(
   const CosemByteBuffer& input,
   AssociationView& objectList);
 
+enum class CosemAssociationStatus
+{
+  NonAssociated = 0,
+  AssociationPending = 1,
+  Associated = 2
+};
+
 class CosemAssociationLnObject : public ICosemObject
 {
 public:
   CosemAssociationLnObject(
     const CosemLogicalName& logicalName,
     const AssociationView& objectList);
+  CosemAssociationLnObject(
+    const CosemLogicalName& logicalName,
+    const AssociationView& objectList,
+    CosemAssociationStatus associationStatus);
+  CosemAssociationLnObject(
+    const CosemLogicalName& logicalName,
+    const AssociationView& objectList,
+    CosemAssociationStatus associationStatus,
+    const CosemLogicalName& securitySetupReference);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
@@ -269,10 +285,16 @@ public:
     CosemByteBuffer& output);
 
   AssociationView ObjectList() const;
+  CosemAssociationStatus AssociationStatus() const;
+  bool HasSecuritySetupReference() const;
+  CosemLogicalName SecuritySetupReference() const;
 
 private:
   CosemObjectDescriptor descriptor_;
   AssociationView objectList_;
+  CosemAssociationStatus associationStatus_;
+  bool hasSecuritySetupReference_;
+  CosemLogicalName securitySetupReference_;
   CosemAccessRights rights_;
 };
 

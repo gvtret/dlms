@@ -127,6 +127,14 @@ Rules:
   access-right descriptors for one visible object;
 - Association LN shall expose class-level encode/decode helpers for
   `object_list` and nested access-right structures;
+- Association LN attribute `8` returns `association_status` as DLMS Data
+  `enum`;
+- Association LN version `1` may expose attribute `9` as
+  `security_setup_reference`, encoded as xDLMS Data octet-string logical-name
+  bytes;
+- Association LN methods `1` through `4` are exposed in access rights but
+  return `UnsupportedFeature` until HLS, object-list mutation, and association
+  rebinding policies are implemented;
 - SAP Assignment attribute `1` returns its logical name as encoded xDLMS Data
   octet-string bytes;
 - SAP Assignment attribute `2` returns `SAP_assignment_list` as encoded xDLMS
@@ -134,8 +142,7 @@ Rules:
 - each SAP assignment element contains the logical-device SAP and logical-device
   name as an octet-string;
 - the objects are read-only in this increment;
-- methods such as Association LN HLS methods, add/remove object, and SAP
-  `connect_logical_device` remain out of scope.
+- SAP `connect_logical_device` remains out of scope.
 
 The encoded byte layout is intentionally produced inside `dlms-cosem` without
 depending on `dlms-apdu`; it follows the same xDLMS Data tag values used by the
@@ -183,7 +190,7 @@ DLMS Data `date-time` tag.
 - complete Blue Book interface-class catalog;
 - typed COSEM value model;
 - Profile Generic capture objects;
-- Association LN selective access and methods;
+- Association LN selective access and method execution;
 - Clock adjustment, preset and shift method execution policy;
 - SAP Assignment connect method;
 - short-name referencing;

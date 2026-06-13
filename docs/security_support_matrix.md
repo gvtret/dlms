@@ -37,8 +37,8 @@ Status values:
 | HLS GMAC, mechanism 5 | Supported | `HlsGmacAuthenticator` and client/server endpoint paths exist for Suite 0. |
 | HLS SHA-256, mechanism 6 | Planned | Required for deployments that use this mechanism; no implementation yet. |
 | HLS ECDSA, mechanism 7 | Planned | Requires Suite 1/2 certificate and signature infrastructure. |
-| `reply_to_HLS_authentication` | Partial | Client/server endpoint paths invoke Association LN method 1, but there is no full Association LN IC method object implementation. |
-| `change_HLS_secret` | Planned | Association LN method is not implemented. |
+| `reply_to_HLS_authentication` | Partial | Client/server endpoint paths invoke Association LN method 1; `CosemAssociationLnObject` exposes the method and returns explicit `UnsupportedFeature` until HLS challenge processing is bound to the IC object. |
+| `change_HLS_secret` | Partial | `CosemAssociationLnObject` exposes the method and returns explicit `UnsupportedFeature`; secret update policy and persistence are not implemented. |
 
 ## Ciphered APDU
 

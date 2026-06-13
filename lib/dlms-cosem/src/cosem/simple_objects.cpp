@@ -38,6 +38,12 @@ constexpr std::uint8_t kProfileEntriesInUseAttributeId = 7u;
 constexpr std::uint8_t kProfileProfileEntriesAttributeId = 8u;
 constexpr std::uint8_t kProfileResetMethodId = 1u;
 constexpr std::uint8_t kProfileCaptureMethodId = 2u;
+constexpr std::uint8_t kAssociationStatusAttributeId = 8u;
+constexpr std::uint8_t kAssociationSecuritySetupReferenceAttributeId = 9u;
+constexpr std::uint8_t kAssociationReplyToHlsAuthenticationMethodId = 1u;
+constexpr std::uint8_t kAssociationChangeHlsSecretMethodId = 2u;
+constexpr std::uint8_t kAssociationAddObjectMethodId = 3u;
+constexpr std::uint8_t kAssociationRemoveObjectMethodId = 4u;
 constexpr std::uint8_t kSecurityPolicyAttributeId = 2u;
 constexpr std::uint8_t kSecuritySuiteAttributeId = 3u;
 constexpr std::uint8_t kClientSystemTitleAttributeId = 4u;
@@ -45,6 +51,7 @@ constexpr std::uint8_t kServerSystemTitleAttributeId = 5u;
 constexpr std::uint8_t kSecurityActivateMethodId = 1u;
 constexpr std::uint8_t kGlobalKeyTransferMethodId = 2u;
 constexpr std::uint8_t kVersion0 = 0u;
+constexpr std::uint8_t kVersion1 = 1u;
 constexpr std::uint8_t kProfileGenericVersion = 1u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
@@ -1825,13 +1832,56 @@ CosemProfileGenericObject::CaptureObjects() const
 CosemAssociationLnObject::CosemAssociationLnObject(
   const CosemLogicalName& logicalName,
   const AssociationView& objectList)
+  : CosemAssociationLnObject(
+      logicalName,
+      objectList,
+      CosemAssociationStatus::Associated)
+{
+}
+
+CosemAssociationLnObject::CosemAssociationLnObject(
+  const CosemLogicalName& logicalName,
+  const AssociationView& objectList,
+  CosemAssociationStatus associationStatus)
   : descriptor_(MakeDescriptor(kAssociationLnClassId, logicalName))
   , objectList_(objectList)
+  , associationStatus_(associationStatus)
+  , hasSecuritySetupReference_(false)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
     AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(kValueAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kAssociationStatusAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetMethodAccess(
+    kAssociationReplyToHlsAuthenticationMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kAssociationChangeHlsSecretMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kAssociationAddObjectMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kAssociationRemoveObjectMethodId,
+    MethodAccessMode::Access);
+}
+
+CosemAssociationLnObject::CosemAssociationLnObject(
+  const CosemLogicalName& logicalName,
+  const AssociationView& objectList,
+  CosemAssociationStatus associationStatus,
+  const CosemLogicalName& securitySetupReference)
+  : CosemAssociationLnObject(logicalName, objectList, associationStatus)
+{
+  descriptor_ = MakeDescriptor(kAssociationLnClassId, kVersion1, logicalName);
+  hasSecuritySetupReference_ = true;
+  securitySetupReference_ = securitySetupReference;
+  rights_.SetAttributeAccess(
+    kAssociationSecuritySetupReferenceAttributeId,
+    AttributeAccessMode::ReadOnly);
 }
 
 CosemObjectDescriptor CosemAssociationLnObject::Descriptor() const
@@ -1856,6 +1906,16 @@ CosemStatus CosemAssociationLnObject::ReadAttribute(
     output = EncodeAssociationObjectList(objectList_);
     return CosemStatus::Ok;
   }
+  if (attributeId == kAssociationStatusAttributeId) {
+    output.clear();
+    AppendEnum(output, static_cast<std::uint8_t>(associationStatus_));
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kAssociationSecuritySetupReferenceAttributeId &&
+      hasSecuritySetupReference_) {
+    output = EncodeLogicalName(securitySetupReference_);
+    return CosemStatus::Ok;
+  }
   output.clear();
   return CosemStatus::AttributeNotFound;
 }
@@ -1874,15 +1934,33 @@ CosemStatus CosemAssociationLnObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)methodId;
   (void)input;
   output.clear();
+  if (methodId >= kAssociationReplyToHlsAuthenticationMethodId &&
+      methodId <= kAssociationRemoveObjectMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
 }
 
 AssociationView CosemAssociationLnObject::ObjectList() const
 {
   return objectList_;
+}
+
+CosemAssociationStatus CosemAssociationLnObject::AssociationStatus() const
+{
+  return associationStatus_;
+}
+
+bool CosemAssociationLnObject::HasSecuritySetupReference() const
+{
+  return hasSecuritySetupReference_;
+}
+
+CosemLogicalName CosemAssociationLnObject::SecuritySetupReference() const
+{
+  return securitySetupReference_;
 }
 
 CosemSapAssignmentObject::CosemSapAssignmentObject(

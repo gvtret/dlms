@@ -1028,6 +1028,10 @@ TEST(CosemAssociationLnObject, ExposesDescriptorAndObjectList)
   EXPECT_EQ(0u, descriptor.key.version);
   EXPECT_EQ(dlms::cosem::CurrentAssociationLnName(),
             descriptor.key.logicalName);
+  EXPECT_EQ(
+    dlms::cosem::CosemAssociationStatus::Associated,
+    object.AssociationStatus());
+  EXPECT_FALSE(object.HasSecuritySetupReference());
 
   dlms::cosem::CosemByteBuffer output;
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
@@ -1073,6 +1077,21 @@ TEST(CosemAssociationLnObject, ExposesDescriptorAndObjectList)
   expected.push_back(0x16u);
   expected.push_back(0x01u);
   EXPECT_EQ(expected, output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(8u, output));
+  EXPECT_EQ(Bytes(0x16u, 0x02u), output);
+
+  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    rights.AttributeAccess(8u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::Access,
+    rights.MethodAccess(1u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::Access,
+    rights.MethodAccess(4u));
 }
 
 TEST(CosemAssociationLnObject, EncodesAndDecodesAccessRights)
@@ -1171,6 +1190,42 @@ TEST(CosemAssociationLnObject, RejectsMalformedObjectList)
               malformed,
               decoded));
   EXPECT_EQ(1u, decoded.objects.size());
+}
+
+TEST(CosemAssociationLnObject, ExposesSecuritySetupReferenceWhenConfigured)
+{
+  dlms::cosem::AssociationView view;
+  dlms::cosem::CosemAssociationLnObject object(
+    dlms::cosem::CurrentAssociationLnName(),
+    view,
+    dlms::cosem::CosemAssociationStatus::AssociationPending,
+    dlms::cosem::SecuritySetupName());
+
+  const dlms::cosem::CosemObjectDescriptor descriptor =
+    object.Descriptor();
+  EXPECT_EQ(15u, descriptor.key.classId);
+  EXPECT_EQ(1u, descriptor.key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemAssociationStatus::AssociationPending,
+    object.AssociationStatus());
+  EXPECT_TRUE(object.HasSecuritySetupReference());
+  EXPECT_EQ(
+    dlms::cosem::SecuritySetupName(),
+    object.SecuritySetupReference());
+
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(8u, output));
+  EXPECT_EQ(Bytes(0x16u, 0x01u), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(9u, output));
+  EXPECT_EQ(EncodedLogicalName(dlms::cosem::SecuritySetupName()), output);
+
+  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    rights.AttributeAccess(9u));
 }
 
 TEST(LogicalDeviceNameObject, BuildsReadOnlyDataObject)
@@ -1277,8 +1332,14 @@ TEST(DiscoveryObjects, RejectUnsupportedAttributesWritesAndMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             association.WriteAttribute(2u, bytes));
   output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
             association.InvokeMethod(1u, bytes, output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            association.InvokeMethod(4u, bytes, output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            association.InvokeMethod(99u, bytes, output));
   EXPECT_TRUE(output.empty());
   output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,

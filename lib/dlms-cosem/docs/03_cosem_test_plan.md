@@ -52,6 +52,11 @@ Phase 7 association and SAP object tests:
   `0.0.40.0.0.255` for the helper default;
 - Association LN attribute `1` returns encoded logical-name bytes;
 - Association LN attribute `2` returns an encoded array of visible objects;
+- Association LN attribute `8` returns encoded `association_status` enum;
+- Association LN version `1` constructor exposes attribute `9` as encoded
+  `security_setup_reference` logical-name bytes;
+- Association LN methods `1` through `4` return `UnsupportedFeature`;
+- unknown Association LN methods return `MethodNotFound`;
 - object-list entries include class id, version, logical name, attribute access
   descriptors, and method access descriptors;
 - Association LN object-list helpers encode/decode visible objects and nested
@@ -63,7 +68,7 @@ Phase 7 association and SAP object tests:
 - SAP Assignment attribute `2` returns an encoded array of SAP/name pairs;
 - logical-device name helper returns OBIS `0.0.42.0.0.255`;
 - writes are denied by registry access checks;
-- methods return `MethodNotFound`.
+- unsupported SAP methods return `MethodNotFound`.
 
 Clock object tests:
 

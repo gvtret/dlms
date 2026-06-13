@@ -1,5 +1,7 @@
 #include "dlms/endpoint/endpoint_options.hpp"
 
+#include "dlms/hdlc/hdlc_address.hpp"
+
 namespace {
 
 bool IsEmpty(const char* value)
@@ -30,6 +32,9 @@ EndpointProfileOptions DefaultEndpointProfileOptions()
   options.kind = EndpointProfileKind::Wrapper;
   options.clientSap = 16u;
   options.serverSap = 1u;
+  options.hdlcClientAddress = 0x10u;
+  options.hdlcLogicalDeviceAddress = 1u;
+  options.hdlcPhysicalDeviceAddress = 0u;
   options.hdlcUseSession = false;
   options.maxApduSize = 1024u;
   return options;
@@ -128,8 +133,21 @@ EndpointStatus ValidateEndpointProfileOptions(
       return EndpointStatus::Ok;
     case EndpointProfileKind::Hdlc:
       if (options.clientSap > 0x7Fu ||
-          options.serverSap > 0x3FFFu) {
+          options.serverSap > 0x3FFFu ||
+          options.hdlcClientAddress == 0u ||
+          options.hdlcClientAddress > 0x7Fu ||
+          options.hdlcLogicalDeviceAddress > 0x3FFFu ||
+          options.hdlcPhysicalDeviceAddress > 0x3FFFu) {
         return EndpointStatus::InvalidArgument;
+      }
+      {
+        dlms::hdlc::HdlcAddress serverAddress;
+        if (dlms::hdlc::DlmsHdlcAddress::MakeServerAddress(
+              options.hdlcLogicalDeviceAddress,
+              options.hdlcPhysicalDeviceAddress,
+              serverAddress) != dlms::hdlc::HdlcStatus::Ok) {
+          return EndpointStatus::InvalidArgument;
+        }
       }
       return EndpointStatus::Ok;
     default:

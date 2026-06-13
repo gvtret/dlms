@@ -34,9 +34,9 @@ dlms::profile::ApduChannelOptions MakeApduChannelOptions(
     dlms::profile::DefaultApduChannelOptions();
   channelOptions.localWrapperPort = options.clientSap;
   channelOptions.remoteWrapperPort = options.serverSap;
-  channelOptions.hdlcClientAddress =
-    static_cast<std::uint8_t>(options.clientSap);
-  channelOptions.hdlcLogicalDeviceAddress = options.serverSap;
+  channelOptions.hdlcClientAddress = options.hdlcClientAddress;
+  channelOptions.hdlcLogicalDeviceAddress = options.hdlcLogicalDeviceAddress;
+  channelOptions.hdlcPhysicalDeviceAddress = options.hdlcPhysicalDeviceAddress;
   channelOptions.hdlcUseSession = options.hdlcUseSession;
   channelOptions.maximumApduSize = options.maxApduSize;
   return channelOptions;
@@ -49,9 +49,9 @@ dlms::profile::ApduChannelOptions MakeAcceptedApduChannelOptions(
     dlms::profile::DefaultApduChannelOptions();
   channelOptions.localWrapperPort = options.serverSap;
   channelOptions.remoteWrapperPort = options.clientSap;
-  channelOptions.hdlcClientAddress =
-    static_cast<std::uint8_t>(options.clientSap);
-  channelOptions.hdlcLogicalDeviceAddress = options.serverSap;
+  channelOptions.hdlcClientAddress = options.hdlcClientAddress;
+  channelOptions.hdlcLogicalDeviceAddress = options.hdlcLogicalDeviceAddress;
+  channelOptions.hdlcPhysicalDeviceAddress = options.hdlcPhysicalDeviceAddress;
   channelOptions.hdlcDirection =
     dlms::profile::HdlcProfileDirection::ServerToClient;
   channelOptions.hdlcRole = dlms::profile::HdlcProfileRole::Server;

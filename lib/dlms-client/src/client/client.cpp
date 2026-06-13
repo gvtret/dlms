@@ -284,6 +284,7 @@ dlms::profile::ApduChannelOptions MakeHdlcTcpChannelOptions(
   channel.hdlcWindowSizeReceive = options.hdlcTcp.windowSizeRx;
   channel.hdlcRetryCount = options.hdlcTcp.retryCount;
   channel.hdlcRetryDelayMilliseconds = options.hdlcTcp.retryDelayMs;
+  channel.hdlcProfileTraceSink = options.hdlcProfileTraceSink;
   return channel;
 }
 

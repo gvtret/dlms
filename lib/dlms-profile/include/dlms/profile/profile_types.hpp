@@ -67,8 +67,8 @@ enum class WrapperTcpTraceDirection
 
 enum class WrapperTcpTraceKind
 {
-  EncodedFrame,
-  DecodedFrame,
+  WireWrite,
+  WireRead,
   ReadStatus,
   DecodeStatus
 };
@@ -93,11 +93,44 @@ public:
   virtual void OnWrapperTcpTrace(const WrapperTcpTraceEvent& event) = 0;
 };
 
+enum class HdlcProfileTraceDirection
+{
+  Outbound,
+  Inbound
+};
+
+enum class HdlcProfileTraceKind
+{
+  WireWrite,
+  WireRead,
+  ReadStatus,
+  DecodeStatus
+};
+
+struct HdlcProfileTraceEvent
+{
+  HdlcProfileTraceKind kind;
+  HdlcProfileTraceDirection direction;
+  ProfileStatus status;
+  std::size_t encodedSize;
+  std::size_t apduSize;
+  const std::uint8_t* bytes;
+  std::size_t byteSize;
+};
+
+class IHdlcProfileTraceSink
+{
+public:
+  virtual ~IHdlcProfileTraceSink() {}
+  virtual void OnHdlcProfileTrace(const HdlcProfileTraceEvent& event) = 0;
+};
+
 struct ApduChannelOptions
 {
   std::uint16_t localWrapperPort;
   std::uint16_t remoteWrapperPort;
   IWrapperTcpTraceSink* wrapperTcpTraceSink;
+  IHdlcProfileTraceSink* hdlcProfileTraceSink;
 
   std::uint8_t hdlcClientAddress;
   std::uint16_t hdlcLogicalDeviceAddress;

@@ -289,7 +289,7 @@ TEST(WrapperTcpProfileChannelTest, SendApduEmitsOutboundTrace)
   ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(apdu)));
 
   ASSERT_EQ(1u, trace.events.size());
-  EXPECT_EQ(WrapperTcpTraceKind::EncodedFrame, trace.events[0].kind);
+  EXPECT_EQ(WrapperTcpTraceKind::WireWrite, trace.events[0].kind);
   EXPECT_EQ(WrapperTcpTraceDirection::Outbound, trace.events[0].direction);
   EXPECT_EQ(ProfileStatus::Ok, trace.events[0].status);
   EXPECT_EQ(options.localWrapperPort, trace.events[0].sourcePort);
@@ -361,7 +361,7 @@ TEST(WrapperTcpProfileChannelTest, ReceiveApduEmitsInboundDecodedTrace)
   ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
 
   ASSERT_EQ(1u, trace.events.size());
-  EXPECT_EQ(WrapperTcpTraceKind::DecodedFrame, trace.events[0].kind);
+  EXPECT_EQ(WrapperTcpTraceKind::WireRead, trace.events[0].kind);
   EXPECT_EQ(WrapperTcpTraceDirection::Inbound, trace.events[0].direction);
   EXPECT_EQ(ProfileStatus::Ok, trace.events[0].status);
   EXPECT_EQ(dlms::wrapper::kPublicClient, trace.events[0].sourcePort);

@@ -104,9 +104,11 @@ EndpointStatus ClientEndpoint::CreateClient()
       clientOptions.profile = dlms::client::ClientProfile::HdlcTcp;
       clientOptions.hdlcTcp.host = options_.transport.host;
       clientOptions.hdlcTcp.port = options_.transport.port;
-      clientOptions.hdlcTcp.clientAddress =
-        static_cast<std::uint8_t>(options_.profile.clientSap);
-      clientOptions.hdlcTcp.logicalDeviceAddress = options_.profile.serverSap;
+      clientOptions.hdlcTcp.clientAddress = options_.profile.hdlcClientAddress;
+      clientOptions.hdlcTcp.logicalDeviceAddress =
+        options_.profile.hdlcLogicalDeviceAddress;
+      clientOptions.hdlcTcp.physicalDeviceAddress =
+        options_.profile.hdlcPhysicalDeviceAddress;
       clientOptions.hdlcTcp.useDataLinkSession =
         options_.profile.hdlcUseSession;
       break;
@@ -162,6 +164,10 @@ EndpointStatus ClientEndpoint::CreateClient()
     default:
       return EndpointStatus::InvalidArgument;
   }
+
+  clientOptions.wrapperTcpTraceSink = options_.wrapperTcpTraceSink;
+  clientOptions.hdlcProfileTraceSink = options_.hdlcProfileTraceSink;
+  clientOptions.associationTraceSink = options_.associationTraceSink;
 
   status = MapClientStatus(
     dlms::client::ValidateDlmsClientOptions(clientOptions));

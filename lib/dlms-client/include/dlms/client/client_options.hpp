@@ -86,6 +86,7 @@ struct DlmsClientOptions
   ClientHighLevelSecurityOptions highLevelSecurity;
   ClientSecurityOptions security;
   dlms::profile::IWrapperTcpTraceSink* wrapperTcpTraceSink;
+  dlms::profile::IHdlcProfileTraceSink* hdlcProfileTraceSink;
   dlms::association::IAssociationTraceSink* associationTraceSink;
   bool associationHasProposedQualityOfService;
   std::int8_t associationProposedQualityOfService;

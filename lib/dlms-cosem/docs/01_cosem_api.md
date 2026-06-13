@@ -228,12 +228,35 @@ public:
   void SetValue(const CosemByteBuffer& value);
   void SetScalerUnit(const CosemByteBuffer& scalerUnit);
 };
+
+class CosemClockObject : public ICosemObject
+{
+public:
+  CosemClockObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& time,
+    std::int16_t timeZone,
+    std::uint8_t status,
+    const CosemByteBuffer& daylightSavingsBegin,
+    const CosemByteBuffer& daylightSavingsEnd,
+    std::int8_t daylightSavingsDeviation,
+    bool daylightSavingsEnabled,
+    CosemClockBase clockBase);
+};
 ```
 
-The constructors create descriptors with class ids `1` and `3`, version `0`.
+The constructors create descriptors with class ids `1`, `3`, and `8`, version `0`.
 Attribute `1` is read-only logical name. Attribute `2` is the value. Register
 attribute `3` is read-only scaler-unit. Methods are not supported in this
 increment.
+
+Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
+formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
+different from the generic DLMS Data `date-time` tag. Clock methods
+`adjust_to_quarter`, `adjust_to_measuring_period`, `adjust_to_minute`,
+`adjust_to_preset_time`, `preset_adjusting_time`, and `shift_time` are exposed
+in access rights but return `UnsupportedFeature` until a time-adjustment policy
+is added.
 
 `simple_objects.hpp` also exposes a partial Profile Generic IC `7` object and
 class-level helpers for its current composite attributes:

@@ -141,7 +141,38 @@ The encoded byte layout is intentionally produced inside `dlms-cosem` without
 depending on `dlms-apdu`; it follows the same xDLMS Data tag values used by the
 APDU layer.
 
-## 8. Out Of Scope
+## 8. Clock Object
+
+The next implementation increment shall add a partial in-memory Clock object:
+
+- Clock, class id `8`, version `0`.
+
+Rules:
+
+- attribute `1` returns the logical name encoded as xDLMS Data octet-string
+  bytes;
+- attribute `2` returns and writes `time` as a DLMS Data octet-string
+  containing the documented 12-byte date-time octets;
+- attribute `3` returns and writes `time_zone` as DLMS Data `long`;
+- attribute `4` returns `status` as DLMS Data `unsigned` and is read-only;
+- attributes `5` and `6` return and write daylight-saving begin/end values as
+  DLMS Data octet-strings containing 12-byte date-time octets;
+- attribute `7` returns and writes daylight-saving deviation as DLMS Data
+  `integer`;
+- attribute `8` returns and writes daylight-saving enabled as DLMS Data
+  `boolean`;
+- attribute `9` returns and writes clock base as DLMS Data `enum`;
+- writes validate exact DLMS Data tags and lengths before mutating object
+  state;
+- clock methods `1` through `6` are exposed with method access rights but
+  return `UnsupportedFeature` until the library has an explicit
+  time-adjustment policy.
+
+Clock date-time attributes intentionally use DLMS Data `octet-string` wrapping
+around the 12 documented date-time octets. They are not encoded with the generic
+DLMS Data `date-time` tag.
+
+## 9. Out Of Scope
 
 - xDLMS APDU encode/decode;
 - GET/SET/ACTION request orchestration;
@@ -153,6 +184,7 @@ APDU layer.
 - typed COSEM value model;
 - Profile Generic capture objects;
 - Association LN selective access and methods;
+- Clock adjustment, preset and shift method execution policy;
 - SAP Assignment connect method;
 - short-name referencing;
 - public client and server facades.

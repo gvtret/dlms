@@ -38,7 +38,7 @@ Status values:
 | `5` | Demand Register | Planned | Needed for demand and load-profile related parameters. |
 | `6` | Register Activation | Planned | Needed for tariff/register activation scenarios. |
 | `7` | Profile Generic | Partial | `CosemProfileGenericObject` exposes read-only profile attributes and class-level helpers for `buffer`, `capture_objects`, `sort_object`, range descriptor and entry descriptor composite encoding/decoding. Capture execution and journal schemas remain planned. |
-| `8` | Clock | Planned | Required for timestamps, schedules and event fixation. |
+| `8` | Clock | Partial | `CosemClockObject` exposes documented clock attributes with read/write support where implemented; adjust/preset/shift methods are explicit unsupported features. |
 | `9` | Script Table | Planned | Needed for control actions and scripts. |
 | `10` | Schedule | Planned | Needed for scheduled operations. |
 | `11` | Special Days Table | Planned | Needed for tariff calendars. |

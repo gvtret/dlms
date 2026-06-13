@@ -26,6 +26,18 @@ dlms::cosem::CosemByteBuffer Bytes(
   return bytes;
 }
 
+dlms::cosem::CosemByteBuffer Bytes3(
+  std::uint8_t first,
+  std::uint8_t second,
+  std::uint8_t third)
+{
+  dlms::cosem::CosemByteBuffer bytes;
+  bytes.push_back(first);
+  bytes.push_back(second);
+  bytes.push_back(third);
+  return bytes;
+}
+
 dlms::security::SecurityByteView SecurityView(
   const std::vector<std::uint8_t>& bytes)
 {
@@ -165,6 +177,16 @@ dlms::cosem::CosemByteBuffer EncodedOctetString(
   for (std::size_t i = 0; i < value.size(); ++i) {
     bytes.push_back(static_cast<std::uint8_t>(value[i]));
   }
+  return bytes;
+}
+
+dlms::cosem::CosemByteBuffer EncodedRawOctetString(
+  const dlms::cosem::CosemByteBuffer& value)
+{
+  dlms::cosem::CosemByteBuffer bytes;
+  bytes.push_back(0x09u);
+  bytes.push_back(static_cast<std::uint8_t>(value.size()));
+  bytes.insert(bytes.end(), value.begin(), value.end());
   return bytes;
 }
 
@@ -332,6 +354,154 @@ TEST(CosemRegisterObject, WritesValueAndRejectsUnsupportedMembers)
   output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(1u, updated, output));
+  EXPECT_TRUE(output.empty());
+}
+
+TEST(CosemClockObject, ExposesClockAttributes)
+{
+  dlms::cosem::CosemByteBuffer time;
+  for (std::uint8_t i = 0u; i < 12u; ++i) {
+    time.push_back(static_cast<std::uint8_t>(0x10u + i));
+  }
+  dlms::cosem::CosemByteBuffer dstBegin;
+  dlms::cosem::CosemByteBuffer dstEnd;
+  for (std::uint8_t i = 0u; i < 12u; ++i) {
+    dstBegin.push_back(static_cast<std::uint8_t>(0x20u + i));
+    dstEnd.push_back(static_cast<std::uint8_t>(0x30u + i));
+  }
+
+  dlms::cosem::CosemClockObject object(
+    MakeName(8u),
+    time,
+    180,
+    0x80u,
+    dstBegin,
+    dstEnd,
+    -60,
+    true,
+    dlms::cosem::CosemClockBase::InternalCrystal);
+
+  const dlms::cosem::CosemObjectDescriptor descriptor =
+    object.Descriptor();
+  EXPECT_EQ(8u, descriptor.key.classId);
+  EXPECT_EQ(0u, descriptor.key.version);
+  EXPECT_EQ(MakeName(8u), descriptor.key.logicalName);
+
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, output));
+  EXPECT_EQ(EncodedLogicalName(MakeName(8u)), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, output));
+  EXPECT_EQ(EncodedRawOctetString(time), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, output));
+  EXPECT_EQ(Bytes3(0x10u, 0x00u, 0xB4u), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, output));
+  EXPECT_EQ(Bytes(0x11u, 0x80u), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, output));
+  EXPECT_EQ(EncodedRawOctetString(dstBegin), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, output));
+  EXPECT_EQ(EncodedRawOctetString(dstEnd), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(7u, output));
+  EXPECT_EQ(Bytes(0x0Fu, 0xC4u), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(8u, output));
+  EXPECT_EQ(Bytes(0x03u, 0x01u), output);
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(9u, output));
+  EXPECT_EQ(Bytes(0x16u, 0x01u), output);
+}
+
+TEST(CosemClockObject, WritesMutableClockAttributes)
+{
+  dlms::cosem::CosemByteBuffer value(12u, 0x11u);
+  dlms::cosem::CosemClockObject object(
+    MakeName(8u),
+    value,
+    0,
+    0u,
+    value,
+    value,
+    0,
+    false,
+    dlms::cosem::CosemClockBase::NotDefined);
+
+  dlms::cosem::CosemByteBuffer updated(12u, 0x22u);
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(2u, EncodedRawOctetString(updated)));
+  EXPECT_EQ(updated, object.Time());
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(3u, Bytes3(0x10u, 0xFFu, 0x4Cu)));
+  EXPECT_EQ(-180, object.TimeZone());
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(5u, EncodedRawOctetString(updated)));
+  EXPECT_EQ(updated, object.DaylightSavingsBegin());
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(6u, EncodedRawOctetString(updated)));
+  EXPECT_EQ(updated, object.DaylightSavingsEnd());
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(7u, Bytes(0x0Fu, 0x3Cu)));
+  EXPECT_EQ(60, object.DaylightSavingsDeviation());
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(8u, Bytes(0x03u, 0x01u)));
+  EXPECT_TRUE(object.DaylightSavingsEnabled());
+
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(9u, Bytes(0x16u, 0x04u)));
+  EXPECT_EQ(
+    dlms::cosem::CosemClockBase::Gps,
+    object.ClockBase());
+}
+
+TEST(CosemClockObject, RejectsInvalidWritesAndUnsupportedMethods)
+{
+  dlms::cosem::CosemByteBuffer value(12u, 0x11u);
+  dlms::cosem::CosemClockObject object(
+    MakeName(8u),
+    value,
+    0,
+    0u,
+    value,
+    value,
+    0,
+    false,
+    dlms::cosem::CosemClockBase::NotDefined);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.WriteAttribute(1u, EncodedRawOctetString(value)));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.WriteAttribute(4u, Bytes(0x11u, 0x00u)));
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(2u, Bytes(0x09u, 0x01u)));
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(9u, Bytes(0x16u, 0xFFu)));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.WriteAttribute(99u, Bytes(0x00u, 0x00u)));
+
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, Bytes(0x0Fu, 0x00u), output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(99u, Bytes(0x0Fu, 0x00u), output));
   EXPECT_TRUE(output.empty());
 }
 

@@ -7,6 +7,7 @@ namespace {
 
 constexpr std::uint16_t kDataClassId = 1u;
 constexpr std::uint16_t kRegisterClassId = 3u;
+constexpr std::uint16_t kClockClassId = 8u;
 constexpr std::uint16_t kProfileGenericClassId = 7u;
 constexpr std::uint16_t kAssociationLnClassId = 15u;
 constexpr std::uint16_t kSapAssignmentClassId = 17u;
@@ -14,6 +15,20 @@ constexpr std::uint16_t kSecuritySetupClassId = 64u;
 constexpr std::uint8_t kLogicalNameAttributeId = 1u;
 constexpr std::uint8_t kValueAttributeId = 2u;
 constexpr std::uint8_t kScalerUnitAttributeId = 3u;
+constexpr std::uint8_t kClockTimeAttributeId = 2u;
+constexpr std::uint8_t kClockTimeZoneAttributeId = 3u;
+constexpr std::uint8_t kClockStatusAttributeId = 4u;
+constexpr std::uint8_t kClockDaylightSavingsBeginAttributeId = 5u;
+constexpr std::uint8_t kClockDaylightSavingsEndAttributeId = 6u;
+constexpr std::uint8_t kClockDaylightSavingsDeviationAttributeId = 7u;
+constexpr std::uint8_t kClockDaylightSavingsEnabledAttributeId = 8u;
+constexpr std::uint8_t kClockBaseAttributeId = 9u;
+constexpr std::uint8_t kClockAdjustToQuarterMethodId = 1u;
+constexpr std::uint8_t kClockAdjustToMeasuringPeriodMethodId = 2u;
+constexpr std::uint8_t kClockAdjustToMinuteMethodId = 3u;
+constexpr std::uint8_t kClockAdjustToPresetTimeMethodId = 4u;
+constexpr std::uint8_t kClockPresetAdjustingTimeMethodId = 5u;
+constexpr std::uint8_t kClockShiftTimeMethodId = 6u;
 constexpr std::uint8_t kProfileBufferAttributeId = 2u;
 constexpr std::uint8_t kProfileCaptureObjectsAttributeId = 3u;
 constexpr std::uint8_t kProfileCapturePeriodAttributeId = 4u;
@@ -53,6 +68,7 @@ constexpr std::uint8_t kDateTimeTag = 0x19u;
 constexpr std::uint8_t kDateTag = 0x1Au;
 constexpr std::uint8_t kTimeTag = 0x1Bu;
 constexpr std::uint8_t kLogicalNameSize = 6u;
+constexpr std::size_t kClockDateTimeOctetStringSize = 12u;
 constexpr std::uint8_t kProfileGenericRangeSelector = 1u;
 constexpr std::uint8_t kProfileGenericEntrySelector = 2u;
 constexpr std::size_t kSystemTitleSize = 8u;
@@ -155,6 +171,24 @@ bool ReadLongUnsignedValue(
   return true;
 }
 
+bool ReadLongValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::int16_t& value)
+{
+  if (!ReadExpectedTag(input, offset, kLongTag) ||
+      input.size() - offset < 2u) {
+    return false;
+  }
+
+  const std::uint16_t raw = static_cast<std::uint16_t>(
+    (static_cast<std::uint16_t>(input[offset]) << 8u) |
+    input[offset + 1u]);
+  value = static_cast<std::int16_t>(raw);
+  offset += 2u;
+  return true;
+}
+
 bool ReadIntegerValue(
   const CosemByteBuffer& input,
   std::size_t& offset,
@@ -162,6 +196,21 @@ bool ReadIntegerValue(
 {
   return ReadExpectedTag(input, offset, kIntegerTag) &&
          ReadByte(input, offset, value);
+}
+
+bool ReadBooleanValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  bool& value)
+{
+  std::uint8_t raw = 0u;
+  if (!ReadExpectedTag(input, offset, kBooleanTag) ||
+      !ReadByte(input, offset, raw)) {
+    return false;
+  }
+
+  value = raw != 0u;
+  return true;
 }
 
 bool ReadUnsignedValue(
@@ -591,6 +640,26 @@ bool DecodeObjectListElementAt(
   return true;
 }
 
+bool DecodeExactOctetString(
+  const CosemByteBuffer& input,
+  std::size_t expectedSize,
+  CosemByteBuffer& value)
+{
+  std::size_t offset = 0u;
+  std::size_t length = 0u;
+  const std::uint8_t* data = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, length) ||
+      length != expectedSize ||
+      !ReadFixedBytes(input, offset, length, data) ||
+      offset != input.size()) {
+    return false;
+  }
+
+  value.assign(data, data + length);
+  return true;
+}
+
 bool StrengthensOrKeepsPolicy(
   std::uint8_t currentPolicy,
   std::uint8_t requestedPolicy)
@@ -713,10 +782,24 @@ void AppendDoubleLongUnsigned(CosemByteBuffer& output, std::uint32_t value)
   output.push_back(static_cast<std::uint8_t>(value & 0xffu));
 }
 
+void AppendLong(CosemByteBuffer& output, std::int16_t value)
+{
+  const std::uint16_t raw = static_cast<std::uint16_t>(value);
+  output.push_back(kLongTag);
+  output.push_back(static_cast<std::uint8_t>(raw >> 8u));
+  output.push_back(static_cast<std::uint8_t>(raw & 0xffu));
+}
+
 void AppendUnsigned(CosemByteBuffer& output, std::uint8_t value)
 {
   output.push_back(kUnsignedTag);
   output.push_back(value);
+}
+
+void AppendBoolean(CosemByteBuffer& output, bool value)
+{
+  output.push_back(kBooleanTag);
+  output.push_back(value ? 1u : 0u);
 }
 
 void AppendInteger(CosemByteBuffer& output, std::uint8_t value)
@@ -739,6 +822,17 @@ void AppendOctetString(
   output.push_back(kDataOctetStringTag);
   AppendLength(output, size);
   output.insert(output.end(), data, data + size);
+}
+
+void AppendBufferOctetString(
+  CosemByteBuffer& output,
+  const CosemByteBuffer& value)
+{
+  static const std::uint8_t kEmpty = 0u;
+  AppendOctetString(
+    output,
+    value.empty() ? &kEmpty : &value[0],
+    value.size());
 }
 
 void AppendLogicalName(
@@ -1325,6 +1419,256 @@ void CosemRegisterObject::SetScalerUnit(
   const CosemByteBuffer& scalerUnit)
 {
   scalerUnit_ = scalerUnit;
+}
+
+CosemClockObject::CosemClockObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& time,
+  std::int16_t timeZone,
+  std::uint8_t status,
+  const CosemByteBuffer& daylightSavingsBegin,
+  const CosemByteBuffer& daylightSavingsEnd,
+  std::int8_t daylightSavingsDeviation,
+  bool daylightSavingsEnabled,
+  CosemClockBase clockBase)
+  : descriptor_(MakeDescriptor(kClockClassId, logicalName))
+  , time_(time)
+  , timeZone_(timeZone)
+  , status_(status)
+  , daylightSavingsBegin_(daylightSavingsBegin)
+  , daylightSavingsEnd_(daylightSavingsEnd)
+  , daylightSavingsDeviation_(daylightSavingsDeviation)
+  , daylightSavingsEnabled_(daylightSavingsEnabled)
+  , clockBase_(clockBase)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kClockTimeAttributeId,
+    AttributeAccessMode::ReadAndWrite);
+  rights_.SetAttributeAccess(
+    kClockTimeZoneAttributeId,
+    AttributeAccessMode::ReadAndWrite);
+  rights_.SetAttributeAccess(
+    kClockStatusAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kClockDaylightSavingsBeginAttributeId,
+    AttributeAccessMode::ReadAndWrite);
+  rights_.SetAttributeAccess(
+    kClockDaylightSavingsEndAttributeId,
+    AttributeAccessMode::ReadAndWrite);
+  rights_.SetAttributeAccess(
+    kClockDaylightSavingsDeviationAttributeId,
+    AttributeAccessMode::ReadAndWrite);
+  rights_.SetAttributeAccess(
+    kClockDaylightSavingsEnabledAttributeId,
+    AttributeAccessMode::ReadAndWrite);
+  rights_.SetAttributeAccess(
+    kClockBaseAttributeId,
+    AttributeAccessMode::ReadAndWrite);
+  rights_.SetMethodAccess(
+    kClockAdjustToQuarterMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kClockAdjustToMeasuringPeriodMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kClockAdjustToMinuteMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kClockAdjustToPresetTimeMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kClockPresetAdjustingTimeMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(kClockShiftTimeMethodId, MethodAccessMode::Access);
+}
+
+CosemObjectDescriptor CosemClockObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemClockObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemClockObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  output.clear();
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockTimeAttributeId) {
+    AppendBufferOctetString(output, time_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockTimeZoneAttributeId) {
+    AppendLong(output, timeZone_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockStatusAttributeId) {
+    AppendUnsigned(output, status_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsBeginAttributeId) {
+    AppendBufferOctetString(output, daylightSavingsBegin_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsEndAttributeId) {
+    AppendBufferOctetString(output, daylightSavingsEnd_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsDeviationAttributeId) {
+    AppendInteger(
+      output,
+      static_cast<std::uint8_t>(daylightSavingsDeviation_));
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsEnabledAttributeId) {
+    AppendBoolean(output, daylightSavingsEnabled_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockBaseAttributeId) {
+    AppendEnum(output, static_cast<std::uint8_t>(clockBase_));
+    return CosemStatus::Ok;
+  }
+
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemClockObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kLogicalNameAttributeId ||
+      attributeId == kClockStatusAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  if (attributeId == kClockTimeAttributeId) {
+    CosemByteBuffer value;
+    if (!DecodeExactOctetString(input, kClockDateTimeOctetStringSize, value)) {
+      return CosemStatus::InvalidArgument;
+    }
+    time_ = value;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockTimeZoneAttributeId) {
+    std::int16_t value = 0;
+    std::size_t offset = 0u;
+    if (!ReadLongValue(input, offset, value) || offset != input.size()) {
+      return CosemStatus::InvalidArgument;
+    }
+    timeZone_ = value;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsBeginAttributeId) {
+    CosemByteBuffer value;
+    if (!DecodeExactOctetString(input, kClockDateTimeOctetStringSize, value)) {
+      return CosemStatus::InvalidArgument;
+    }
+    daylightSavingsBegin_ = value;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsEndAttributeId) {
+    CosemByteBuffer value;
+    if (!DecodeExactOctetString(input, kClockDateTimeOctetStringSize, value)) {
+      return CosemStatus::InvalidArgument;
+    }
+    daylightSavingsEnd_ = value;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsDeviationAttributeId) {
+    std::uint8_t value = 0u;
+    std::size_t offset = 0u;
+    if (!ReadIntegerValue(input, offset, value) || offset != input.size()) {
+      return CosemStatus::InvalidArgument;
+    }
+    daylightSavingsDeviation_ = static_cast<std::int8_t>(value);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockDaylightSavingsEnabledAttributeId) {
+    bool value = false;
+    std::size_t offset = 0u;
+    if (!ReadBooleanValue(input, offset, value) || offset != input.size()) {
+      return CosemStatus::InvalidArgument;
+    }
+    daylightSavingsEnabled_ = value;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kClockBaseAttributeId) {
+    std::uint8_t value = 0u;
+    std::size_t offset = 0u;
+    if (!ReadEnumValue(input, offset, value) ||
+        offset != input.size() ||
+        value > static_cast<std::uint8_t>(CosemClockBase::RadioControlled)) {
+      return CosemStatus::InvalidArgument;
+    }
+    clockBase_ = static_cast<CosemClockBase>(value);
+    return CosemStatus::Ok;
+  }
+
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemClockObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId >= kClockAdjustToQuarterMethodId &&
+      methodId <= kClockShiftTimeMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemClockObject::Time() const
+{
+  return time_;
+}
+
+std::int16_t CosemClockObject::TimeZone() const
+{
+  return timeZone_;
+}
+
+std::uint8_t CosemClockObject::Status() const
+{
+  return status_;
+}
+
+const CosemByteBuffer& CosemClockObject::DaylightSavingsBegin() const
+{
+  return daylightSavingsBegin_;
+}
+
+const CosemByteBuffer& CosemClockObject::DaylightSavingsEnd() const
+{
+  return daylightSavingsEnd_;
+}
+
+std::int8_t CosemClockObject::DaylightSavingsDeviation() const
+{
+  return daylightSavingsDeviation_;
+}
+
+bool CosemClockObject::DaylightSavingsEnabled() const
+{
+  return daylightSavingsEnabled_;
+}
+
+CosemClockBase CosemClockObject::ClockBase() const
+{
+  return clockBase_;
 }
 
 CosemProfileGenericObject::CosemProfileGenericObject(

@@ -65,6 +65,22 @@ Phase 7 association and SAP object tests:
 - writes are denied by registry access checks;
 - methods return `MethodNotFound`.
 
+Clock object tests:
+
+- Clock descriptor uses class id `8`, version `0`, and the configured logical
+  name;
+- Clock attribute `1` returns encoded logical-name bytes;
+- Clock attributes `2`, `5`, and `6` return 12-byte date-time values wrapped as
+  DLMS Data octet-strings;
+- Clock attributes `3`, `4`, `7`, `8`, and `9` return the documented DLMS Data
+  scalar tags;
+- mutable attributes update object state only after exact tag and length
+  validation;
+- logical name and status writes are rejected;
+- malformed writes leave previous values unchanged;
+- methods `1` through `6` return `UnsupportedFeature`;
+- unknown methods return `MethodNotFound`.
+
 Profile Generic composite attribute tests:
 
 - `capture_object_definition` encodes as a four-field structure containing

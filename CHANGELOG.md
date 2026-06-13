@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.13.0 - 2026-06-07
+
+- Added a built-in partial Clock IC `8` object with read/write support for
+  documented clock attributes and explicit unsupported clock methods.
+
 ## 0.12.1 - 2026-06-07
 
 - Added a GUI-oriented СПОДЭС OBIS read example and allowed Profile Generic

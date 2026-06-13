@@ -73,6 +73,65 @@ private:
   CosemAccessRights rights_;
 };
 
+enum class CosemClockBase
+{
+  NotDefined = 0,
+  InternalCrystal = 1,
+  MainsFrequency50Hz = 2,
+  MainsFrequency60Hz = 3,
+  Gps = 4,
+  RadioControlled = 5
+};
+
+class CosemClockObject : public ICosemObject
+{
+public:
+  CosemClockObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& time,
+    std::int16_t timeZone,
+    std::uint8_t status,
+    const CosemByteBuffer& daylightSavingsBegin,
+    const CosemByteBuffer& daylightSavingsEnd,
+    std::int8_t daylightSavingsDeviation,
+    bool daylightSavingsEnabled,
+    CosemClockBase clockBase);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Time() const;
+  std::int16_t TimeZone() const;
+  std::uint8_t Status() const;
+  const CosemByteBuffer& DaylightSavingsBegin() const;
+  const CosemByteBuffer& DaylightSavingsEnd() const;
+  std::int8_t DaylightSavingsDeviation() const;
+  bool DaylightSavingsEnabled() const;
+  CosemClockBase ClockBase() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer time_;
+  std::int16_t timeZone_;
+  std::uint8_t status_;
+  CosemByteBuffer daylightSavingsBegin_;
+  CosemByteBuffer daylightSavingsEnd_;
+  std::int8_t daylightSavingsDeviation_;
+  bool daylightSavingsEnabled_;
+  CosemClockBase clockBase_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemProfileGenericSortMethod
 {
   Fifo = 1,

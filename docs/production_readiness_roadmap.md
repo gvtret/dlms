@@ -176,7 +176,8 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
 Текущий статус зафиксирован в `docs/ic_support_matrix.md`.
 Сверка `0.4.11` по базе знаний подтвердила, что built-in IC coverage был
 ограничен Data `1`, Register `3`, Association LN `15`, SAP Assignment `17` и
-частичным Security Setup `64`; `0.5.0` добавляет partial Profile Generic `7`.
+частичным Security Setup `64`; `0.5.0` добавляет partial Profile Generic `7`,
+а `0.13.0` добавляет partial Clock `8`.
 Остальные IC из ГОСТ Р 58940-2020 table 7.1 и DLMS UA Blue Book должны
 оставаться `Planned` или `Application-provided` до явной реализации.
 
@@ -208,23 +209,32 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
    - Для каждого составного атрибута IC (`array`, `structure`) встроенная IC
      реализация должна публиковать class-level encode/decode helpers рядом с
      объектом класса, чтобы прикладной код не разбирал A-XDR вручную.
-4. СПОДЭС/СПОДУС catalogs.
+4. Clock.
+   - Clock `8` нужен GUI-клиенту для чтения и настройки времени, часового
+     пояса, статуса, daylight-saving параметров и clock base.
+   - Статус: `0.13.0` добавляет partial built-in `CosemClockObject` с
+     read/write поддержкой документированных атрибутов `1`-`9`. Атрибуты
+     `time`, `daylight_savings_begin` и `daylight_savings_end` валидируются как
+     DLMS Data `octet-string` с 12 байтами date-time. Методы `1`-`6`
+     возвращают `UnsupportedFeature`, пока не зафиксирована политика
+     корректировки времени.
+5. СПОДЭС/СПОДУС catalogs.
    - OBIS catalogs and parameter lists for meter categories A/B/C/D and ИВКЭ.
    - Event code table and status word formats.
    - Access policy profiles for public reader/configurator modes.
-5. Association LN object list and access rights.
+6. Association LN object list and access rights.
    - Object list must reflect visible COSEM objects and access rights for the
      current association/security context.
    - Статус: `0.11.0` добавляет class-level encode/decode helpers для
      `object_list` и `access_rights` structures.
    - `reply_to_HLS_authentication`, object add/remove where supported,
      association status, xDLMS context info.
-6. Push setup and initiative messages.
+7. Push setup and initiative messages.
    - Push Setup IC `40` version handling.
    - Notification payload structures required by СПОДЭС/СПОДУС.
    - Rule: transmit only actual data not yet sent/confirmed where this is part
      of ИВКЭ behavior.
-7. Image Transfer and control classes.
+8. Image Transfer and control classes.
    - Image Transfer IC `18` block flow.
    - Disconnect Control `70`, Limiter `71`, schedules and script execution
      needed by meter operations.
@@ -245,7 +255,8 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
    `0.7.0`; generic xDLMS/client GET selective access added in `0.8.0`;
    Profile Generic selector-specific helpers added in `0.10.0`; DLMS
    `date-time`, `date`, and `time` typed helpers added in `0.12.0`;
-   СПОДЭС OBIS GUI read example added in `0.12.1`.
+   СПОДЭС OBIS GUI read example added in `0.12.1`; partial Clock `8`
+   attribute object added in `0.13.0`.
 
 ## P0. СПОДЭС/СПОДУС completeness gate
 
@@ -341,4 +352,4 @@ library may be described as an extensible DLMS/COSEM framework with partial
     GUI-oriented read example добавлен в `0.7.1`; Profile Generic
     selector-specific helpers добавлены в `0.10.0`; DLMS `date-time`, `date`
     и `time` helpers добавлены в `0.12.0`; пример чтения типовых СПОДЭС OBIS
-    добавлен в `0.12.1`.
+    добавлен в `0.12.1`; partial Clock `8` object добавлен в `0.13.0`.

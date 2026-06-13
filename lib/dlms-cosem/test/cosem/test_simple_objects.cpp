@@ -146,6 +146,16 @@ dlms::cosem::CosemByteBuffer EncodedCaptureObject(
   return bytes;
 }
 
+dlms::cosem::CosemByteBuffer EncodedDateTime(std::uint8_t seed)
+{
+  dlms::cosem::CosemByteBuffer bytes;
+  bytes.push_back(0x19u);
+  for (std::uint8_t i = 0u; i < 12u; ++i) {
+    bytes.push_back(static_cast<std::uint8_t>(seed + i));
+  }
+  return bytes;
+}
+
 dlms::cosem::CosemByteBuffer EncodedOctetString(
   const std::string& value)
 {
@@ -532,6 +542,149 @@ TEST(CosemProfileGenericObject, EncodesAndDecodesBufferRows)
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             dlms::cosem::DecodeProfileGenericBuffer(encoded, decoded));
   EXPECT_EQ(rows, decoded);
+}
+
+TEST(CosemProfileGenericObject, ExposesSelectiveAccessSelectors)
+{
+  EXPECT_EQ(1u, dlms::cosem::ProfileGenericRangeAccessSelector());
+  EXPECT_EQ(2u, dlms::cosem::ProfileGenericEntryAccessSelector());
+}
+
+TEST(CosemProfileGenericObject, EncodesAndDecodesRangeDescriptor)
+{
+  dlms::cosem::CosemCaptureObject restrictingObject;
+  restrictingObject.object.classId = 8u;
+  restrictingObject.object.version = 0u;
+  restrictingObject.object.logicalName = MakeName(8u);
+  restrictingObject.attributeId = 2u;
+  restrictingObject.dataIndex = 0u;
+
+  dlms::cosem::CosemCaptureObject selectedObject;
+  selectedObject.object.classId = 3u;
+  selectedObject.object.version = 0u;
+  selectedObject.object.logicalName = MakeName(3u);
+  selectedObject.attributeId = 2u;
+  selectedObject.dataIndex = 0u;
+
+  dlms::cosem::CosemProfileGenericRangeDescriptor descriptor;
+  descriptor.restrictingObject = restrictingObject;
+  descriptor.fromValue = EncodedDateTime(0x10u);
+  descriptor.toValue = EncodedDateTime(0x20u);
+  descriptor.selectedValues.push_back(selectedObject);
+
+  dlms::cosem::CosemByteBuffer expected;
+  expected.push_back(0x02u);
+  expected.push_back(0x04u);
+  const dlms::cosem::CosemByteBuffer restricting =
+    EncodedCaptureObject(restrictingObject);
+  expected.insert(expected.end(), restricting.begin(), restricting.end());
+  expected.insert(
+    expected.end(),
+    descriptor.fromValue.begin(),
+    descriptor.fromValue.end());
+  expected.insert(
+    expected.end(),
+    descriptor.toValue.begin(),
+    descriptor.toValue.end());
+  expected.push_back(0x01u);
+  expected.push_back(0x01u);
+  const dlms::cosem::CosemByteBuffer selected =
+    EncodedCaptureObject(selectedObject);
+  expected.insert(expected.end(), selected.begin(), selected.end());
+
+  const dlms::cosem::CosemByteBuffer encoded =
+    dlms::cosem::EncodeProfileGenericRangeDescriptor(descriptor);
+  EXPECT_EQ(expected, encoded);
+
+  dlms::cosem::CosemProfileGenericRangeDescriptor decoded;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            dlms::cosem::DecodeProfileGenericRangeDescriptor(
+              encoded,
+              decoded));
+  EXPECT_EQ(
+    descriptor.restrictingObject.object.classId,
+    decoded.restrictingObject.object.classId);
+  EXPECT_EQ(
+    descriptor.restrictingObject.object.logicalName,
+    decoded.restrictingObject.object.logicalName);
+  EXPECT_EQ(
+    descriptor.restrictingObject.attributeId,
+    decoded.restrictingObject.attributeId);
+  EXPECT_EQ(
+    descriptor.restrictingObject.dataIndex,
+    decoded.restrictingObject.dataIndex);
+  EXPECT_EQ(descriptor.fromValue, decoded.fromValue);
+  EXPECT_EQ(descriptor.toValue, decoded.toValue);
+  ASSERT_EQ(1u, decoded.selectedValues.size());
+  EXPECT_EQ(
+    selectedObject.object.classId,
+    decoded.selectedValues[0].object.classId);
+  EXPECT_EQ(
+    selectedObject.object.logicalName,
+    decoded.selectedValues[0].object.logicalName);
+  EXPECT_EQ(selectedObject.attributeId, decoded.selectedValues[0].attributeId);
+  EXPECT_EQ(selectedObject.dataIndex, decoded.selectedValues[0].dataIndex);
+}
+
+TEST(CosemProfileGenericObject, EncodesAndDecodesEntryDescriptor)
+{
+  dlms::cosem::CosemProfileGenericEntryDescriptor descriptor;
+  descriptor.fromEntry = 1u;
+  descriptor.toEntry = 10u;
+  descriptor.fromSelectedValue = 2u;
+  descriptor.toSelectedValue = 0u;
+
+  dlms::cosem::CosemByteBuffer expected;
+  expected.push_back(0x02u);
+  expected.push_back(0x04u);
+  AppendDoubleLongUnsigned(expected, 1u);
+  AppendDoubleLongUnsigned(expected, 10u);
+  AppendLongUnsigned(expected, 2u);
+  AppendLongUnsigned(expected, 0u);
+
+  const dlms::cosem::CosemByteBuffer encoded =
+    dlms::cosem::EncodeProfileGenericEntryDescriptor(descriptor);
+  EXPECT_EQ(expected, encoded);
+
+  dlms::cosem::CosemProfileGenericEntryDescriptor decoded;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            dlms::cosem::DecodeProfileGenericEntryDescriptor(
+              encoded,
+              decoded));
+  EXPECT_EQ(descriptor.fromEntry, decoded.fromEntry);
+  EXPECT_EQ(descriptor.toEntry, decoded.toEntry);
+  EXPECT_EQ(descriptor.fromSelectedValue, decoded.fromSelectedValue);
+  EXPECT_EQ(descriptor.toSelectedValue, decoded.toSelectedValue);
+}
+
+TEST(CosemProfileGenericObject, RejectsMalformedRangeDescriptor)
+{
+  dlms::cosem::CosemCaptureObject restrictingObject;
+  restrictingObject.object.classId = 8u;
+  restrictingObject.object.version = 0u;
+  restrictingObject.object.logicalName = MakeName(8u);
+  restrictingObject.attributeId = 2u;
+  restrictingObject.dataIndex = 0u;
+
+  dlms::cosem::CosemByteBuffer malformed;
+  malformed.push_back(0x02u);
+  malformed.push_back(0x04u);
+  const dlms::cosem::CosemByteBuffer restricting =
+    EncodedCaptureObject(restrictingObject);
+  malformed.insert(malformed.end(), restricting.begin(), restricting.end());
+  malformed.push_back(0x00u);
+  const dlms::cosem::CosemByteBuffer toValue = EncodedDateTime(0x20u);
+  malformed.insert(malformed.end(), toValue.begin(), toValue.end());
+  malformed.push_back(0x01u);
+  malformed.push_back(0x00u);
+
+  dlms::cosem::CosemProfileGenericRangeDescriptor decoded;
+  decoded.selectedValues.resize(1u);
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            dlms::cosem::DecodeProfileGenericRangeDescriptor(
+              malformed,
+              decoded));
+  EXPECT_EQ(1u, decoded.selectedValues.size());
 }
 
 TEST(CosemProfileGenericObject, RejectsMalformedBufferRows)

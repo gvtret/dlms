@@ -90,6 +90,24 @@ struct CosemCaptureObject
   std::uint16_t dataIndex;
 };
 
+struct CosemProfileGenericRangeDescriptor
+{
+  CosemCaptureObject restrictingObject;
+  CosemByteBuffer fromValue;
+  CosemByteBuffer toValue;
+  std::vector<CosemCaptureObject> selectedValues;
+};
+
+struct CosemProfileGenericEntryDescriptor
+{
+  std::uint32_t fromEntry;
+  std::uint32_t toEntry;
+  std::uint16_t fromSelectedValue;
+  std::uint16_t toSelectedValue;
+};
+
+std::uint8_t ProfileGenericRangeAccessSelector();
+std::uint8_t ProfileGenericEntryAccessSelector();
 CosemByteBuffer EncodeProfileGenericCaptureObject(
   const CosemCaptureObject& object);
 CosemStatus DecodeProfileGenericCaptureObject(
@@ -105,6 +123,16 @@ CosemByteBuffer EncodeProfileGenericBuffer(
 CosemStatus DecodeProfileGenericBuffer(
   const CosemByteBuffer& input,
   std::vector<CosemByteBuffer>& rows);
+CosemByteBuffer EncodeProfileGenericRangeDescriptor(
+  const CosemProfileGenericRangeDescriptor& descriptor);
+CosemStatus DecodeProfileGenericRangeDescriptor(
+  const CosemByteBuffer& input,
+  CosemProfileGenericRangeDescriptor& descriptor);
+CosemByteBuffer EncodeProfileGenericEntryDescriptor(
+  const CosemProfileGenericEntryDescriptor& descriptor);
+CosemStatus DecodeProfileGenericEntryDescriptor(
+  const CosemByteBuffer& input,
+  CosemProfileGenericEntryDescriptor& descriptor);
 
 class CosemProfileGenericObject : public ICosemObject
 {

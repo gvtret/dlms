@@ -38,6 +38,8 @@ constexpr std::uint8_t kBooleanTag = 0x03u;
 constexpr std::uint8_t kDoubleLongTag = 0x05u;
 constexpr std::uint8_t kDoubleLongUnsignedTag = 0x06u;
 constexpr std::uint8_t kDataOctetStringTag = 0x09u;
+constexpr std::uint8_t kVisibleStringTag = 0x0Au;
+constexpr std::uint8_t kUtf8StringTag = 0x0Cu;
 constexpr std::uint8_t kIntegerTag = 0x0Fu;
 constexpr std::uint8_t kLongTag = 0x10u;
 constexpr std::uint8_t kUnsignedTag = 0x11u;
@@ -45,11 +47,21 @@ constexpr std::uint8_t kLongUnsignedTag = 0x12u;
 constexpr std::uint8_t kLong64Tag = 0x14u;
 constexpr std::uint8_t kLong64UnsignedTag = 0x15u;
 constexpr std::uint8_t kEnumTag = 0x16u;
+constexpr std::uint8_t kFloat32Tag = 0x17u;
+constexpr std::uint8_t kFloat64Tag = 0x18u;
+constexpr std::uint8_t kDateTimeTag = 0x19u;
+constexpr std::uint8_t kDateTag = 0x1Au;
+constexpr std::uint8_t kTimeTag = 0x1Bu;
 constexpr std::uint8_t kLogicalNameSize = 6u;
+constexpr std::uint8_t kProfileGenericRangeSelector = 1u;
+constexpr std::uint8_t kProfileGenericEntrySelector = 2u;
 constexpr std::size_t kSystemTitleSize = 8u;
 constexpr std::size_t kSuite0KeySize = 16u;
 constexpr std::size_t kSuite0WrappedKeySize = 24u;
 constexpr std::size_t kMaxProfileGenericDecodeDepth = 16u;
+constexpr std::size_t kDlmsDateTimeSize = 12u;
+constexpr std::size_t kDlmsDateSize = 5u;
+constexpr std::size_t kDlmsTimeSize = 4u;
 
 bool IsAxdrEnum(
   const CosemByteBuffer& input,
@@ -246,6 +258,55 @@ bool SkipDlmsData(
   }
 }
 
+bool SkipProfileGenericRangeValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset)
+{
+  std::uint8_t tag = 0u;
+  if (!ReadByte(input, offset, tag)) {
+    return false;
+  }
+
+  switch (tag) {
+    case kDoubleLongTag:
+    case kDoubleLongUnsignedTag:
+    case kFloat32Tag:
+      return input.size() - offset >= 4u && (offset += 4u, true);
+    case kDataOctetStringTag:
+    case kVisibleStringTag:
+    case kUtf8StringTag: {
+      std::size_t length = 0u;
+      if (!ReadAxdrLength(input, offset, length) ||
+          input.size() - offset < length) {
+        return false;
+      }
+      offset += length;
+      return true;
+    }
+    case kIntegerTag:
+    case kUnsignedTag:
+      return input.size() - offset >= 1u && (offset += 1u, true);
+    case kLongTag:
+    case kLongUnsignedTag:
+      return input.size() - offset >= 2u && (offset += 2u, true);
+    case kLong64Tag:
+    case kLong64UnsignedTag:
+    case kFloat64Tag:
+      return input.size() - offset >= 8u && (offset += 8u, true);
+    case kDateTimeTag:
+      return input.size() - offset >= kDlmsDateTimeSize &&
+             (offset += kDlmsDateTimeSize, true);
+    case kDateTag:
+      return input.size() - offset >= kDlmsDateSize &&
+             (offset += kDlmsDateSize, true);
+    case kTimeTag:
+      return input.size() - offset >= kDlmsTimeSize &&
+             (offset += kDlmsTimeSize, true);
+    default:
+      return false;
+  }
+}
+
 bool DecodeCaptureObjectAt(
   const CosemByteBuffer& input,
   std::size_t& offset,
@@ -272,6 +333,51 @@ bool DecodeCaptureObjectAt(
   object.object.logicalName = logicalName;
   object.attributeId = attributeId;
   object.dataIndex = dataIndex;
+  return true;
+}
+
+bool DecodeCaptureObjectsAt(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::vector<CosemCaptureObject>& objects)
+{
+  std::size_t count = 0u;
+  std::vector<CosemCaptureObject> decoded;
+
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+
+  decoded.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    CosemCaptureObject object;
+    if (!DecodeCaptureObjectAt(input, offset, object)) {
+      return false;
+    }
+    decoded.push_back(object);
+  }
+
+  objects.swap(decoded);
+  return true;
+}
+
+bool ReadDoubleLongUnsignedValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint32_t& value)
+{
+  if (!ReadExpectedTag(input, offset, kDoubleLongUnsignedTag) ||
+      input.size() - offset < 4u) {
+    return false;
+  }
+
+  value =
+    (static_cast<std::uint32_t>(input[offset]) << 24u) |
+    (static_cast<std::uint32_t>(input[offset + 1u]) << 16u) |
+    (static_cast<std::uint32_t>(input[offset + 2u]) << 8u) |
+    static_cast<std::uint32_t>(input[offset + 3u]);
+  offset += 4u;
   return true;
 }
 
@@ -536,6 +642,16 @@ void AppendSapAssignment(
 
 } // namespace
 
+std::uint8_t ProfileGenericRangeAccessSelector()
+{
+  return kProfileGenericRangeSelector;
+}
+
+std::uint8_t ProfileGenericEntryAccessSelector()
+{
+  return kProfileGenericEntrySelector;
+}
+
 CosemByteBuffer EncodeProfileGenericCaptureObject(
   const CosemCaptureObject& object)
 {
@@ -572,24 +688,10 @@ CosemStatus DecodeProfileGenericCaptureObjects(
   std::vector<CosemCaptureObject>& objects)
 {
   std::size_t offset = 0u;
-  std::size_t count = 0u;
   std::vector<CosemCaptureObject> decoded;
 
-  if (!ReadExpectedTag(input, offset, kArrayTag) ||
-      !ReadAxdrLength(input, offset, count)) {
-    return CosemStatus::InvalidArgument;
-  }
-
-  decoded.reserve(count);
-  for (std::size_t i = 0u; i < count; ++i) {
-    CosemCaptureObject object;
-    if (!DecodeCaptureObjectAt(input, offset, object)) {
-      return CosemStatus::InvalidArgument;
-    }
-    decoded.push_back(object);
-  }
-
-  if (offset != input.size()) {
+  if (!DecodeCaptureObjectsAt(input, offset, decoded) ||
+      offset != input.size()) {
     return CosemStatus::InvalidArgument;
   }
 
@@ -634,6 +736,98 @@ CosemStatus DecodeProfileGenericBuffer(
   }
 
   rows.swap(decoded);
+  return CosemStatus::Ok;
+}
+
+CosemByteBuffer EncodeProfileGenericRangeDescriptor(
+  const CosemProfileGenericRangeDescriptor& descriptor)
+{
+  CosemByteBuffer output;
+  AppendStructureHeader(output, 4u);
+  AppendCaptureObject(output, descriptor.restrictingObject);
+  output.insert(
+    output.end(),
+    descriptor.fromValue.begin(),
+    descriptor.fromValue.end());
+  output.insert(
+    output.end(),
+    descriptor.toValue.begin(),
+    descriptor.toValue.end());
+  AppendProfileCaptureObjects(output, descriptor.selectedValues);
+  return output;
+}
+
+CosemStatus DecodeProfileGenericRangeDescriptor(
+  const CosemByteBuffer& input,
+  CosemProfileGenericRangeDescriptor& descriptor)
+{
+  std::size_t offset = 0u;
+  std::size_t fieldCount = 0u;
+  CosemProfileGenericRangeDescriptor decoded;
+
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 4u ||
+      !DecodeCaptureObjectAt(
+        input,
+        offset,
+        decoded.restrictingObject)) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  std::size_t valueStart = offset;
+  if (!SkipProfileGenericRangeValue(input, offset)) {
+    return CosemStatus::InvalidArgument;
+  }
+  decoded.fromValue.assign(input.begin() + valueStart, input.begin() + offset);
+
+  valueStart = offset;
+  if (!SkipProfileGenericRangeValue(input, offset)) {
+    return CosemStatus::InvalidArgument;
+  }
+  decoded.toValue.assign(input.begin() + valueStart, input.begin() + offset);
+
+  if (!DecodeCaptureObjectsAt(input, offset, decoded.selectedValues) ||
+      offset != input.size()) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  descriptor = decoded;
+  return CosemStatus::Ok;
+}
+
+CosemByteBuffer EncodeProfileGenericEntryDescriptor(
+  const CosemProfileGenericEntryDescriptor& descriptor)
+{
+  CosemByteBuffer output;
+  AppendStructureHeader(output, 4u);
+  AppendDoubleLongUnsigned(output, descriptor.fromEntry);
+  AppendDoubleLongUnsigned(output, descriptor.toEntry);
+  AppendLongUnsigned(output, descriptor.fromSelectedValue);
+  AppendLongUnsigned(output, descriptor.toSelectedValue);
+  return output;
+}
+
+CosemStatus DecodeProfileGenericEntryDescriptor(
+  const CosemByteBuffer& input,
+  CosemProfileGenericEntryDescriptor& descriptor)
+{
+  std::size_t offset = 0u;
+  std::size_t fieldCount = 0u;
+  CosemProfileGenericEntryDescriptor decoded;
+
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 4u ||
+      !ReadDoubleLongUnsignedValue(input, offset, decoded.fromEntry) ||
+      !ReadDoubleLongUnsignedValue(input, offset, decoded.toEntry) ||
+      !ReadLongUnsignedValue(input, offset, decoded.fromSelectedValue) ||
+      !ReadLongUnsignedValue(input, offset, decoded.toSelectedValue) ||
+      offset != input.size()) {
+    return CosemStatus::InvalidArgument;
+  }
+
+  descriptor = decoded;
   return CosemStatus::Ok;
 }
 

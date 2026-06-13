@@ -77,6 +77,11 @@ class-level encode/decode helpers for the documented attribute shape. Callers
 should not need to duplicate IC-specific A-XDR structure parsing in application
 code.
 
+When a built-in interface class documents selective access parameters for a
+composite attribute, the same class-level helper rule applies to those
+parameters. Profile Generic `buffer` selector `1` shall expose the range
+descriptor shape, and selector `2` shall expose the entry descriptor shape.
+
 ## 6. Simple Interface Objects
 
 The next implementation increment shall add reusable in-memory COSEM interface

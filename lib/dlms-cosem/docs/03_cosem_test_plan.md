@@ -73,7 +73,14 @@ Profile Generic composite attribute tests:
 - `buffer` decode validates each row as a DLMS Data structure and returns the
   original encoded row bytes for schema-specific application decoding;
 - malformed buffer rows return `InvalidArgument` and do not publish partial
-  decoded output.
+  decoded output;
+- Profile Generic selector constants expose `1` for range descriptor and `2`
+  for entry descriptor;
+- range descriptor helpers encode/decode restricting object, boundary values,
+  and selected columns;
+- entry descriptor helpers encode/decode entry and selected-value ranges;
+- malformed range descriptors return `InvalidArgument` and do not publish
+  partial decoded output.
 
 ## 2. Integration Tests
 

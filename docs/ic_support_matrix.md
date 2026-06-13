@@ -37,7 +37,7 @@ Status values:
 | `4` | Extended Register | Planned | Needed for СПОДЭС/СПОДУС meter model coverage. |
 | `5` | Demand Register | Planned | Needed for demand and load-profile related parameters. |
 | `6` | Register Activation | Planned | Needed for tariff/register activation scenarios. |
-| `7` | Profile Generic | Partial | `CosemProfileGenericObject` exposes read-only profile attributes and class-level helpers for `buffer`, `capture_objects`, and `sort_object` composite encoding/decoding. Selective access parameter builders, capture execution and journal schemas remain planned. |
+| `7` | Profile Generic | Partial | `CosemProfileGenericObject` exposes read-only profile attributes and class-level helpers for `buffer`, `capture_objects`, `sort_object`, range descriptor and entry descriptor composite encoding/decoding. Capture execution and journal schemas remain planned. |
 | `8` | Clock | Planned | Required for timestamps, schedules and event fixation. |
 | `9` | Script Table | Planned | Needed for control actions and scripts. |
 | `10` | Schedule | Planned | Needed for scheduled operations. |

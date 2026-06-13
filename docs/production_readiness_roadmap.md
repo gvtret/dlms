@@ -202,9 +202,9 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
    - Статус: partial built-in `CosemProfileGenericObject` с read-only
      attributes, encoded buffer rows и capture objects добавлен в `0.5.0`;
      `0.9.0` добавляет class-level encode/decode helpers для составных
-     атрибутов `buffer`, `capture_objects` и `sort_object`. Selective access
-     parameter builders, capture execution и fixed journal schemas остаются
-     задачами.
+     атрибутов `buffer`, `capture_objects` и `sort_object`; `0.10.0`
+     добавляет range и entry selective access descriptor helpers. Capture
+     execution и fixed journal schemas остаются задачами.
    - Для каждого составного атрибута IC (`array`, `structure`) встроенная IC
      реализация должна публиковать class-level encode/decode helpers рядом с
      объектом класса, чтобы прикладной код не разбирал A-XDR вручную.
@@ -241,7 +241,7 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
    result reporting. Статус: `ReadAttribute`, `WriteAttribute` и `CallMethod`
    added in `0.6.0`; common typed DLMS Data encode/decode helpers added in
    `0.7.0`; generic xDLMS/client GET selective access added in `0.8.0`;
-   Profile Generic selector-specific UX helpers remain planned.
+   Profile Generic selector-specific helpers added in `0.10.0`.
 
 ## P0. СПОДЭС/СПОДУС completeness gate
 
@@ -334,5 +334,6 @@ library may be described as an extensible DLMS/COSEM framework with partial
 12. P0: довести `dlms-client` до удобного backend API для GUI-клиента вместо
     Gurux. Статус: detailed class-id/OBIS helpers добавлены в `0.6.0`; дальше
     common typed DLMS Data decode/encode helpers добавлены в `0.7.0`; дальше
-    GUI-oriented read example добавлен в `0.7.1`; дальше нужны Profile
-    Generic selector-specific helpers и примеры чтения типовых СПОДЭС OBIS.
+    GUI-oriented read example добавлен в `0.7.1`; Profile Generic
+    selector-specific helpers добавлены в `0.10.0`; дальше нужны примеры
+    чтения типовых СПОДЭС OBIS.

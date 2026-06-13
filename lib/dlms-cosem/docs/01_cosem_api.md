@@ -254,6 +254,18 @@ CosemByteBuffer EncodeProfileGenericBuffer(
 CosemStatus DecodeProfileGenericBuffer(
   const CosemByteBuffer& input,
   std::vector<CosemByteBuffer>& rows);
+std::uint8_t ProfileGenericRangeAccessSelector();
+std::uint8_t ProfileGenericEntryAccessSelector();
+CosemByteBuffer EncodeProfileGenericRangeDescriptor(
+  const CosemProfileGenericRangeDescriptor& descriptor);
+CosemStatus DecodeProfileGenericRangeDescriptor(
+  const CosemByteBuffer& input,
+  CosemProfileGenericRangeDescriptor& descriptor);
+CosemByteBuffer EncodeProfileGenericEntryDescriptor(
+  const CosemProfileGenericEntryDescriptor& descriptor);
+CosemStatus DecodeProfileGenericEntryDescriptor(
+  const CosemByteBuffer& input,
+  CosemProfileGenericEntryDescriptor& descriptor);
 ```
 
 `CosemCaptureObject` follows the Profile Generic
@@ -262,6 +274,18 @@ CosemStatus DecodeProfileGenericBuffer(
 encode and decode the top-level `array`; each decoded row is validated as a
 DLMS Data `structure` and returned as its original encoded bytes because row
 field types are defined by the matching `capture_objects` schema.
+
+Selective access helpers build the `buffer` access parameters documented for
+Profile Generic:
+
+- selector `1` uses `CosemProfileGenericRangeDescriptor`, encoded as
+  `restricting_object`, `from_value`, `to_value`, and `selected_values`;
+- selector `2` uses `CosemProfileGenericEntryDescriptor`, encoded as
+  `from_entry`, `to_entry`, `from_selected_value`, and `to_selected_value`.
+
+Range descriptor boundary values are stored as encoded simple DLMS Data bytes.
+The decoder validates the allowed simple data tags, including `date-time`,
+`date`, and `time`, but keeps the exact encoded value for the caller.
 
 The same header also adds minimal discovery objects:
 

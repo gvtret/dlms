@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.10.0 - 2026-06-07
+
+- Added Profile Generic selective access range and entry descriptor helpers for
+  building and validating selector `1` and selector `2` parameters.
+
 ## 0.9.0 - 2026-06-07
 
 - Added Profile Generic composite attribute encode/decode helpers for

@@ -549,10 +549,6 @@ ProfileStatus HdlcProfileChannel::SendSessionInformation(
     if (status != ProfileStatus::Ok) {
       return status;
     }
-    status = ReceiveSessionControlFrameWithRetry(frameBytes);
-    if (status != ProfileStatus::Ok) {
-      return status;
-    }
     offset += currentSize;
   }
 
@@ -645,6 +641,9 @@ ProfileStatus HdlcProfileChannel::ReceiveSessionControlFrame()
   if (status != ProfileStatus::Ok) {
     return status;
   }
+  if (frame.control.FrameKind() == dlms::hdlc::HdlcFrameKind::Information) {
+    return DecodeFrameToPendingApdu(frame);
+  }
   status = MapHdlcStatus(session_.ReceiveFrame(frame));
   if (status != ProfileStatus::Ok) {
     return status;
@@ -689,7 +688,8 @@ ProfileStatus HdlcProfileChannel::DecodeFrameToPendingApdu(
   ProfileStatus status =
     MapHdlcStatus(reassembler_.PushFrame(frame, completed, hasCompleted));
   if (status == ProfileStatus::NeedMoreData) {
-    return ProfileStatus::NeedMoreData;
+    const ProfileStatus rrStatus = SendSessionReceiveReady(true);
+    return rrStatus == ProfileStatus::Ok ? ProfileStatus::NeedMoreData : rrStatus;
   }
   if (status != ProfileStatus::Ok) {
     reassembler_.Reset();
@@ -710,7 +710,7 @@ ProfileStatus HdlcProfileChannel::DecodeFrameToPendingApdu(
     return status;
   }
 
-  return SendSessionReceiveReady(true);
+  return ProfileStatus::Ok;
 }
 
 ProfileStatus HdlcProfileChannel::DecodeCompleteInformationToPendingApdu(

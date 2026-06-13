@@ -185,9 +185,27 @@ public:
           reads_.push_back(response);
         }
       } else if (kind == dlms::hdlc::HdlcFrameKind::Information) {
-        if (server_.BuildReceiveReadyFrame(true, response) ==
-            dlms::hdlc::HdlcStatus::Ok) {
-          reads_.push_back(response);
+        if (informationResponseApdu_.empty()) {
+          if (server_.BuildReceiveReadyFrame(true, response) ==
+              dlms::hdlc::HdlcStatus::Ok) {
+            reads_.push_back(response);
+          }
+        } else {
+          std::vector<std::uint8_t> lpdu;
+          const dlms::llc::LlcStatus llcStatus =
+            dlms::llc::EncodeLpdu(
+              dlms::llc::MakeLlcHeader(dlms::llc::LlcDirection::ServerToClient),
+              &informationResponseApdu_[0],
+              informationResponseApdu_.size(),
+              lpdu);
+          if (llcStatus == dlms::llc::LlcStatus::Ok &&
+              server_.BuildInformationFrame(&lpdu[0],
+                                            lpdu.size(),
+                                            true,
+                                            response) ==
+                dlms::hdlc::HdlcStatus::Ok) {
+            reads_.push_back(response);
+          }
         }
       }
     }
@@ -209,6 +227,11 @@ public:
     autoRespond_ = autoRespond;
   }
 
+  void SetInformationResponseApdu(const std::vector<std::uint8_t>& apdu)
+  {
+    informationResponseApdu_ = apdu;
+  }
+
   const std::vector<std::vector<std::uint8_t> >& Writes() const
   {
     return writes_;
@@ -222,6 +245,7 @@ private:
   std::deque<TransportStatus> readStatuses_;
   std::deque<std::vector<std::uint8_t> > reads_;
   std::vector<std::vector<std::uint8_t> > writes_;
+  std::vector<std::uint8_t> informationResponseApdu_;
 };
 
 class RecordingWrapperTcpTraceSink : public IWrapperTcpTraceSink
@@ -687,6 +711,31 @@ TEST(HdlcProfileChannelTest, SessionModeSendsIFrameAndConsumesRr)
             frame.control.FrameKind());
 }
 
+TEST(HdlcProfileChannelTest, SessionModeQueuesPiggybackedInformationResponse)
+{
+  HdlcAutoPeerStream stream(128u);
+  ApduChannelOptions options = DefaultApduChannelOptions();
+  options.hdlcUseSession = true;
+  options.hdlcRole = HdlcProfileRole::Client;
+  HdlcProfileChannel channel(stream, options);
+  const std::uint8_t rawRequest[] = {0x60, 0x01, 0x00};
+  const std::uint8_t rawResponse[] = {0x61, 0x01, 0x00};
+  const std::vector<std::uint8_t> request =
+    Bytes(rawRequest, sizeof(rawRequest));
+  const std::vector<std::uint8_t> response =
+    Bytes(rawResponse, sizeof(rawResponse));
+  stream.SetInformationResponseApdu(response);
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  ASSERT_EQ(ProfileStatus::Ok, channel.ConnectDataLink());
+  ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(request)));
+
+  std::vector<std::uint8_t> received;
+  ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
+  EXPECT_EQ(response, received);
+  ASSERT_EQ(2u, stream.Writes().size());
+}
+
 TEST(HdlcProfileChannelTest, ConnectDataLinkRetriesSnrmAfterWouldBlock)
 {
   HdlcAutoPeerStream stream(128u);
@@ -703,7 +752,7 @@ TEST(HdlcProfileChannelTest, ConnectDataLinkRetriesSnrmAfterWouldBlock)
   EXPECT_EQ(2u, stream.Writes().size());
 }
 
-TEST(HdlcProfileChannelTest, SessionModeRetransmitsIFrameAfterWouldBlock)
+TEST(HdlcProfileChannelTest, SessionModeDoesNotRetransmitFinalIFrameWithoutAck)
 {
   HdlcAutoPeerStream stream(128u);
   ApduChannelOptions options = DefaultApduChannelOptions();
@@ -720,8 +769,7 @@ TEST(HdlcProfileChannelTest, SessionModeRetransmitsIFrameAfterWouldBlock)
   stream.ScriptReadStatus(TransportStatus::WouldBlock);
   ASSERT_EQ(ProfileStatus::Ok, channel.SendApdu(View(apdu)));
 
-  ASSERT_EQ(3u, stream.Writes().size());
-  EXPECT_EQ(stream.Writes()[1], stream.Writes()[2]);
+  ASSERT_EQ(2u, stream.Writes().size());
 }
 
 TEST(HdlcProfileChannelTest, SessionModeReassemblesSegmentedInformation)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.16.1 - 2026-06-13
+
+- Fixed HDLC session-mode APDU exchange so a final client I-frame no longer
+  waits for a separate RR acknowledgement, and piggybacked server I-frame
+  responses are queued for `ReceiveApdu()` instead of being consumed as control
+  acknowledgements.
+
 ## 0.16.0 - 2026-06-13
 
 - Added explicit HDLC client, logical-device, and physical-device addressing

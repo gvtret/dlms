@@ -449,6 +449,22 @@ when writable. A setter exposes backend-driven refresh of the assigned
 HDLC `device_address`. IC defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids.
 
+`simple_objects.hpp` also exposes a partial Register Table IC `61`
+(`CosemRegisterTableObject`) with class version `0`. The constructors
+take the `table_cell_values`, `single_buffer`,
+`table_cell_definition` and `table_entries` payloads as encoded DLMS
+Data buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` shared by the mutable attributes
+(`3`-`5`), and an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1` (logical_name)
+and attribute `2` (table_cell_values) are read-only; attributes `3`-`5`
+honor the caller access mode and replace the stored buffer in-place
+when writable. A setter exposes backend-driven refresh of
+`table_cell_values` from a future register-table backend. Methods `1`
+`table_entry` and `2` `update_table_entry` dispatch application-defined
+column selection and update and are surfaced as `UnsupportedFeature`;
+other method ids report `MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

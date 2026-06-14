@@ -4134,4 +4134,159 @@ TEST(CosemIecHdlcSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct RegisterTableBuffers
+{
+  dlms::cosem::CosemByteBuffer tableCellValues;
+  dlms::cosem::CosemByteBuffer singleBuffer;
+  dlms::cosem::CosemByteBuffer tableCellDefinition;
+  dlms::cosem::CosemByteBuffer tableEntries;
+};
+
+RegisterTableBuffers MakeSampleRegisterTable()
+{
+  RegisterTableBuffers b;
+  // array(2){ array(1){long-unsigned 10}, array(1){long-unsigned 20} }
+  b.tableCellValues = BytesFromList({
+    0x01u, 0x02u,
+      0x01u, 0x01u, 0x12u, 0x00u, 0x0Au,
+      0x01u, 0x01u, 0x12u, 0x00u, 0x14u});
+  // boolean true
+  b.singleBuffer = BytesFromList({0x03u, 0x01u});
+  // structure(3){ long-unsigned 3 (Register), octet-string 6, integer 2 }
+  b.tableCellDefinition = BytesFromList({
+    0x02u, 0x03u,
+      0x12u, 0x00u, 0x03u,
+      0x09u, 0x06u, 0x01u, 0x00u, 0x01u, 0x08u, 0x00u, 0xFFu,
+      0x0Fu, 0x02u});
+  // long-unsigned 2
+  b.tableEntries = BytesFromList({0x12u, 0x00u, 0x02u});
+  return b;
+}
+
+dlms::cosem::CosemRegisterTableObject MakeRegisterTableObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const RegisterTableBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemRegisterTableObject(
+    name,
+    b.tableCellValues, b.singleBuffer, b.tableCellDefinition,
+    b.tableEntries, access);
+}
+
+} // namespace
+
+TEST(CosemRegisterTableObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 61u, 0u, 0u, 255u);
+  const RegisterTableBuffers b = MakeSampleRegisterTable();
+  dlms::cosem::CosemRegisterTableObject object = MakeRegisterTableObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(61u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemRegisterTableObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.tableCellValues, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.singleBuffer, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.tableCellDefinition, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.tableEntries, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(6u, out));
+}
+
+TEST(CosemRegisterTableObject, MutableAttributesHonorCallerAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 61u, 0u, 0u, 255u);
+  const RegisterTableBuffers b = MakeSampleRegisterTable();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x12u, 0x00u, 0x05u});
+
+  dlms::cosem::CosemRegisterTableObject writable = MakeRegisterTableObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {3u, 4u, 5u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.SingleBuffer());
+  EXPECT_EQ(replacement, writable.TableEntries());
+  // Read-only attributes always reject writes.
+  for (std::uint8_t id : {1u, 2u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemRegisterTableObject readOnly = MakeRegisterTableObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {3u, 4u, 5u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.singleBuffer, readOnly.SingleBuffer());
+  EXPECT_EQ(b.tableEntries, readOnly.TableEntries());
+}
+
+TEST(CosemRegisterTableObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 61u, 0u, 0u, 255u);
+  const RegisterTableBuffers b = MakeSampleRegisterTable();
+  dlms::cosem::CosemRegisterTableObject object = MakeRegisterTableObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x12u, 0x00u, 0x01u});
+  for (std::uint8_t method : {1u, 2u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {3u, 4u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemRegisterTableObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 61u, 0u, 0u, 255u);
+  const RegisterTableBuffers b = MakeSampleRegisterTable();
+  dlms::cosem::CosemRegisterTableObject object(
+    name,
+    b.tableCellValues, b.singleBuffer, b.tableCellDefinition,
+    b.tableEntries, dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemRegisterTableObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

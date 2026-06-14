@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.30.0 - 2026-06-15
+
+- Added Register Table IC `61` built-in object
+  (`CosemRegisterTableObject`) with class version `0`, exposing
+  `table_cell_values`, `single_buffer`, `table_cell_definition` and
+  `table_entries` as opaque encoded DLMS Data buffers prepared by the
+  caller.
+- Attributes `3`-`5` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name and table_cell_values (`1`, `2`) are read-only with a
+  setter that exposes backend-driven refresh of `table_cell_values`
+  from a future register-table backend.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Added Register Table methods `1` `table_entry` and `2`
+  `update_table_entry` as explicit `UnsupportedFeature`
+  (application-defined column selection and update); other method ids
+  report `MethodNotFound`.
+
 ## 0.29.0 - 2026-06-15
 
 - Added IEC HDLC Setup IC `23` built-in object

@@ -324,6 +324,24 @@ IEC HDLC Setup tests:
   ids and clears method output (IC defines no methods);
 - IEC HDLC Setup normalizes versions above `MaxSupportedVersion`.
 
+Register Table tests:
+
+- Register Table exposes attributes `1` logical_name, `2`
+  table_cell_values, `3` single_buffer, `4` table_cell_definition and
+  `5` table_entries as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute ids;
+- Register Table mutable attributes (`3`-`5`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode is
+  read-only, leaving the stored buffers unchanged;
+- Register Table rejects writes to logical_name and table_cell_values
+  (`1`, `2`) with `AccessDenied`, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- Register Table methods `1` `table_entry` and `2` `update_table_entry`
+  report `UnsupportedFeature` and clear method output; other method ids
+  report `MethodNotFound`;
+- Register Table normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

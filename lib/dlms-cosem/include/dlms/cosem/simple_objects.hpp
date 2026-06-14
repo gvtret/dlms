@@ -738,6 +738,56 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemRegisterTableObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemRegisterTableObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& tableCellValues,
+    const CosemByteBuffer& singleBuffer,
+    const CosemByteBuffer& tableCellDefinition,
+    const CosemByteBuffer& tableEntries,
+    AttributeAccessMode mutableAccess);
+  CosemRegisterTableObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& tableCellValues,
+    const CosemByteBuffer& singleBuffer,
+    const CosemByteBuffer& tableCellDefinition,
+    const CosemByteBuffer& tableEntries,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& TableCellValues() const;
+  const CosemByteBuffer& SingleBuffer() const;
+  const CosemByteBuffer& TableCellDefinition() const;
+  const CosemByteBuffer& TableEntries() const;
+
+  void SetTableCellValues(const CosemByteBuffer& value);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer tableCellValues_;
+  CosemByteBuffer singleBuffer_;
+  CosemByteBuffer tableCellDefinition_;
+  CosemByteBuffer tableEntries_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

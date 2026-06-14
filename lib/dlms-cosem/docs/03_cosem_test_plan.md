@@ -151,6 +151,19 @@ Demand Register tests:
   `MethodNotFound`;
 - Demand Register normalizes versions above `MaxSupportedVersion`.
 
+Register Activation tests:
+
+- Register Activation exposes attributes `1` logical_name,
+  `2` register_assignment, `3` mask_list and `4` active_mask as the encoded
+  DLMS Data buffers supplied by the caller, and reports `AttributeNotFound`
+  for undefined attribute ids;
+- Register Activation rejects writes to every defined attribute with
+  `AccessDenied` and reports `AttributeNotFound` for undefined attribute ids;
+- Register Activation methods `1` `add_register`, `2` `add_mask` and
+  `3` `delete_mask` report `UnsupportedFeature` and clear method output;
+  other method ids report `MethodNotFound`;
+- Register Activation normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

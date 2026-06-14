@@ -2758,3 +2758,99 @@ TEST(CosemDemandRegisterObject, NormalizesVersionAboveMax)
             object.Descriptor().key.version);
 }
 
+TEST(CosemRegisterActivationObject, ExposesAssignmentMaskListAndActiveMask)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 14u, 0u, 1u, 255u);
+  const dlms::cosem::CosemByteBuffer assignment = BytesFromList({
+    0x01u, 0x01u,
+    0x02u, 0x02u,
+    0x12u, 0x00u, 0x03u,
+    0x09u, 0x06u, 0x01u, 0x00u, 0x01u, 0x08u, 0x00u, 0xFFu});
+  const dlms::cosem::CosemByteBuffer maskList = BytesFromList({
+    0x01u, 0x01u,
+    0x02u, 0x02u,
+    0x09u, 0x05u, 0x4Du, 0x41u, 0x49u, 0x4Eu, 0x00u,
+    0x01u, 0x01u, 0x12u, 0x00u, 0x01u});
+  const dlms::cosem::CosemByteBuffer activeMask = BytesFromList({
+    0x09u, 0x05u, 0x4Du, 0x41u, 0x49u, 0x4Eu, 0x00u});
+
+  dlms::cosem::CosemRegisterActivationObject object(
+    name, assignment, maskList, activeMask);
+
+  EXPECT_EQ(6u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(dlms::cosem::CosemRegisterActivationObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(assignment, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(maskList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(activeMask, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+}
+
+TEST(CosemRegisterActivationObject, RejectsAllAttributeWrites)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 14u, 0u, 1u, 255u);
+  dlms::cosem::CosemRegisterActivationObject object(
+    name,
+    BytesFromList({0x01u, 0x00u}),
+    BytesFromList({0x01u, 0x00u}),
+    BytesFromList({0x09u, 0x00u}));
+
+  const dlms::cosem::CosemByteBuffer probe = BytesFromList({0x09u, 0x00u});
+  for (std::uint8_t attr = 1u; attr <= 4u; ++attr) {
+    EXPECT_EQ(
+      dlms::cosem::CosemStatus::AccessDenied,
+      object.WriteAttribute(attr, probe));
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.WriteAttribute(99u, probe));
+}
+
+TEST(CosemRegisterActivationObject, MethodsAreUnsupportedAndOthersNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 14u, 0u, 1u, 255u);
+  dlms::cosem::CosemRegisterActivationObject object(
+    name,
+    BytesFromList({0x01u, 0x00u}),
+    BytesFromList({0x01u, 0x00u}),
+    BytesFromList({0x09u, 0x00u}));
+
+  dlms::cosem::CosemByteBuffer in = BytesFromList({0x00u});
+  for (std::uint8_t method = 1u; method <= 3u; ++method) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu, 0xBBu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(method, in, out));
+    EXPECT_TRUE(out.empty());
+  }
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xCCu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(4u, in, out));
+  EXPECT_TRUE(out.empty());
+}
+
+TEST(CosemRegisterActivationObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 14u, 0u, 1u, 255u);
+  dlms::cosem::CosemRegisterActivationObject object(
+    name,
+    BytesFromList({0x01u, 0x00u}),
+    BytesFromList({0x01u, 0x00u}),
+    BytesFromList({0x09u, 0x00u}),
+    99u);
+  EXPECT_EQ(dlms::cosem::CosemRegisterActivationObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
+}
+
+

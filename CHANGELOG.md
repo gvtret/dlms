@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.21.0 - 2026-06-15
+
+- Added Register Activation IC `6` built-in object
+  (`CosemRegisterActivationObject`) with class version `0`, exposing
+  attributes `1` logical_name, `2` register_assignment, `3` mask_list and
+  `4` active_mask as opaque encoded DLMS Data buffers prepared by the caller.
+  All attributes are read-only.
+- Added explicit `MaxSupportedVersion` constant and version-taking
+  constructor for Register Activation; constructors normalize versions above
+  the maximum.
+- Added Register Activation methods `1` `add_register`, `2` `add_mask` and
+  `3` `delete_mask` as explicit `UnsupportedFeature` (application-defined
+  semantics); other method ids report `MethodNotFound`.
+
 ## 0.20.0 - 2026-06-15
 
 - Added Demand Register IC `5` built-in object

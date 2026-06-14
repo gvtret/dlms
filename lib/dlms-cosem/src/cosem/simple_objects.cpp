@@ -1966,6 +1966,162 @@ void CosemDemandRegisterObject::SetNumberOfPeriods(
   numberOfPeriods_ = numberOfPeriods;
 }
 
+namespace {
+constexpr std::uint16_t kRegisterActivationClassId = 6u;
+constexpr std::uint8_t kRegisterActivationRegisterAssignmentAttributeId = 2u;
+constexpr std::uint8_t kRegisterActivationMaskListAttributeId = 3u;
+constexpr std::uint8_t kRegisterActivationActiveMaskAttributeId = 4u;
+constexpr std::uint8_t kRegisterActivationAddRegisterMethodId = 1u;
+constexpr std::uint8_t kRegisterActivationAddMaskMethodId = 2u;
+constexpr std::uint8_t kRegisterActivationDeleteMaskMethodId = 3u;
+} // namespace
+
+const std::uint8_t CosemRegisterActivationObject::MaxSupportedVersion;
+
+CosemRegisterActivationObject::CosemRegisterActivationObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& registerAssignment,
+  const CosemByteBuffer& maskList,
+  const CosemByteBuffer& activeMask)
+  : CosemRegisterActivationObject(
+      logicalName,
+      registerAssignment,
+      maskList,
+      activeMask,
+      kVersion0)
+{
+}
+
+CosemRegisterActivationObject::CosemRegisterActivationObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& registerAssignment,
+  const CosemByteBuffer& maskList,
+  const CosemByteBuffer& activeMask,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kRegisterActivationClassId,
+      NormalizeVersion(
+        version,
+        CosemRegisterActivationObject::MaxSupportedVersion),
+      logicalName))
+  , registerAssignment_(registerAssignment)
+  , maskList_(maskList)
+  , activeMask_(activeMask)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kRegisterActivationRegisterAssignmentAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kRegisterActivationMaskListAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kRegisterActivationActiveMaskAttributeId,
+    AttributeAccessMode::ReadOnly);
+}
+
+CosemObjectDescriptor CosemRegisterActivationObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemRegisterActivationObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemRegisterActivationObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kRegisterActivationRegisterAssignmentAttributeId) {
+    output = registerAssignment_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kRegisterActivationMaskListAttributeId) {
+    output = maskList_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kRegisterActivationActiveMaskAttributeId) {
+    output = activeMask_;
+    return CosemStatus::Ok;
+  }
+  output.clear();
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemRegisterActivationObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  (void)input;
+  if (attributeId == kLogicalNameAttributeId
+      || attributeId == kRegisterActivationRegisterAssignmentAttributeId
+      || attributeId == kRegisterActivationMaskListAttributeId
+      || attributeId == kRegisterActivationActiveMaskAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemRegisterActivationObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // methods 1 (add_register), 2 (add_mask) and 3 (delete_mask) mutate
+  // assignment / mask state owned by the application. The built-in object
+  // surfaces them explicitly as UnsupportedFeature; a future backend can
+  // attach mutating policy without changing the object surface.
+  if (methodId == kRegisterActivationAddRegisterMethodId
+      || methodId == kRegisterActivationAddMaskMethodId
+      || methodId == kRegisterActivationDeleteMaskMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemRegisterActivationObject::RegisterAssignment() const
+{
+  return registerAssignment_;
+}
+
+const CosemByteBuffer& CosemRegisterActivationObject::MaskList() const
+{
+  return maskList_;
+}
+
+const CosemByteBuffer& CosemRegisterActivationObject::ActiveMask() const
+{
+  return activeMask_;
+}
+
+void CosemRegisterActivationObject::SetRegisterAssignment(
+  const CosemByteBuffer& assignment)
+{
+  registerAssignment_ = assignment;
+}
+
+void CosemRegisterActivationObject::SetMaskList(
+  const CosemByteBuffer& maskList)
+{
+  maskList_ = maskList;
+}
+
+void CosemRegisterActivationObject::SetActiveMask(
+  const CosemByteBuffer& activeMask)
+{
+  activeMask_ = activeMask;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

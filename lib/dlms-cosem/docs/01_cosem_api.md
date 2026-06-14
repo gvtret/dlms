@@ -305,6 +305,17 @@ period (encoded on read); attribute `9` is read-only number_of_periods
 `UnsupportedFeature` (application-defined semantics); other method ids report
 `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Register Activation IC `6`
+(`CosemRegisterActivationObject`) with class version `0`. The constructors
+take the register_assignment, mask_list and active_mask payloads as encoded
+DLMS Data buffers prepared by the caller, plus the logical name and an
+optional explicit version that is normalized to `MaxSupportedVersion` when
+out of range. Attribute `1` is read-only logical name; attributes `2`, `3`
+and `4` are read-only register_assignment, mask_list and active_mask
+respectively. Methods `1` `add_register`, `2` `add_mask` and `3`
+`delete_mask` mutate caller-owned assignment state and are surfaced as
+`UnsupportedFeature`; other method ids report `MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

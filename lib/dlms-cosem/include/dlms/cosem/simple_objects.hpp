@@ -214,6 +214,52 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemRegisterActivationObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemRegisterActivationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& registerAssignment,
+    const CosemByteBuffer& maskList,
+    const CosemByteBuffer& activeMask);
+  CosemRegisterActivationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& registerAssignment,
+    const CosemByteBuffer& maskList,
+    const CosemByteBuffer& activeMask,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& RegisterAssignment() const;
+  const CosemByteBuffer& MaskList() const;
+  const CosemByteBuffer& ActiveMask() const;
+
+  void SetRegisterAssignment(const CosemByteBuffer& assignment);
+  void SetMaskList(const CosemByteBuffer& maskList);
+  void SetActiveMask(const CosemByteBuffer& activeMask);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer registerAssignment_;
+  CosemByteBuffer maskList_;
+  CosemByteBuffer activeMask_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

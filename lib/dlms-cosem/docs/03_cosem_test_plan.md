@@ -1008,6 +1008,32 @@ PRIME PLC Application Identification tests:
 - PRIME PLC Application Identification normalizes versions
   above `MaxSupportedVersion`.
 
+S-FSK PLC PHY & MAC Setup tests:
+
+- S-FSK PLC PHY & MAC Setup exposes attributes `1`
+  logical_name and `2`-`16` (initiator/delta electrical phase,
+  max received/transmit gain, search initiator timeout,
+  mark/space frequency, mac_address, mac_group_addresses,
+  repeater, repeater_status, min_deltacredit,
+  initiator_mac_address, synchronization_locked,
+  transmission_speed) as the encoded DLMS Data buffers supplied
+  by the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- S-FSK PLC PHY & MAC Setup mutable attributes (`2`-`16`)
+  writes succeed when the caller-selected access mode permits
+  writes and replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving the
+  stored buffers unchanged;
+- S-FSK PLC PHY & MAC Setup rejects writes to logical_name
+  (`1`) with `AccessDenied`, and reports `AttributeNotFound`
+  for undefined attribute ids;
+- S-FSK PLC PHY & MAC Setup `InvokeMethod` reports
+  `UnsupportedFeature` for method `1` `reset` and
+  `MethodNotFound` for every other method id, always clearing
+  method output;
+- S-FSK PLC PHY & MAC Setup normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

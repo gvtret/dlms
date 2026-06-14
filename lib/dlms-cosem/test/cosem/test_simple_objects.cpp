@@ -9538,4 +9538,156 @@ TEST(CosemPrimePlcApplicationIdentificationObject,
     object.Descriptor().key.version);
 }
 
+namespace {
+
+dlms::cosem::CosemSFskPlcPhyMacSetupObject::Attributes
+MakeSampleSFskPlcPhyMacSetup()
+{
+  dlms::cosem::CosemSFskPlcPhyMacSetupObject::Attributes a;
+  // enum 0x01
+  a.initiatorElectricalPhase = BytesFromList({0x16u, 0x01u});
+  a.deltaElectricalPhase = BytesFromList({0x16u, 0x02u});
+  // unsigned 0x10
+  a.maxReceivedGain = BytesFromList({0x11u, 0x10u});
+  a.maxTransmitGain = BytesFromList({0x11u, 0x20u});
+  a.searchInitiatorTimeout = BytesFromList({0x11u, 0x30u});
+  // double-long-unsigned
+  a.markFrequency = BytesFromList({0x06u, 0x00u, 0x00u, 0x12u, 0xC0u});
+  a.spaceFrequency = BytesFromList({0x06u, 0x00u, 0x00u, 0x18u, 0x00u});
+  // long-unsigned 0x1234
+  a.macAddress = BytesFromList({0x12u, 0x12u, 0x34u});
+  // empty array of long-unsigned
+  a.macGroupAddresses = BytesFromList({0x01u, 0x00u});
+  // enum 0x00
+  a.repeater = BytesFromList({0x16u, 0x00u});
+  // boolean false
+  a.repeaterStatus = BytesFromList({0x03u, 0x00u});
+  a.minDeltaCredit = BytesFromList({0x11u, 0x05u});
+  a.initiatorMacAddress = BytesFromList({0x12u, 0x56u, 0x78u});
+  a.synchronizationLocked = BytesFromList({0x03u, 0xFFu});
+  // enum 0x02 (4800)
+  a.transmissionSpeed = BytesFromList({0x16u, 0x02u});
+  return a;
+}
+
+dlms::cosem::CosemSFskPlcPhyMacSetupObject
+MakeSFskPlcPhyMacSetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const dlms::cosem::CosemSFskPlcPhyMacSetupObject::Attributes& a,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemSFskPlcPhyMacSetupObject(name, a, access);
+}
+
+} // namespace
+
+TEST(CosemSFskPlcPhyMacSetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 0u, 0u, 255u);
+  const auto attrs = MakeSampleSFskPlcPhyMacSetup();
+  dlms::cosem::CosemSFskPlcPhyMacSetupObject object =
+    MakeSFskPlcPhyMacSetupObject(
+      name, attrs, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(50u, object.Descriptor().key.classId);
+  EXPECT_EQ(1u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskPlcPhyMacSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  const dlms::cosem::CosemByteBuffer* expected[] = {
+    &attrs.initiatorElectricalPhase, &attrs.deltaElectricalPhase,
+    &attrs.maxReceivedGain, &attrs.maxTransmitGain,
+    &attrs.searchInitiatorTimeout, &attrs.markFrequency,
+    &attrs.spaceFrequency, &attrs.macAddress,
+    &attrs.macGroupAddresses, &attrs.repeater,
+    &attrs.repeaterStatus, &attrs.minDeltaCredit,
+    &attrs.initiatorMacAddress, &attrs.synchronizationLocked,
+    &attrs.transmissionSpeed};
+  std::uint8_t attrId = 2u;
+  for (const auto* exp : expected) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              object.ReadAttribute(attrId, out))
+      << "attr " << static_cast<unsigned>(attrId);
+    EXPECT_EQ(*exp, out)
+      << "attr " << static_cast<unsigned>(attrId);
+    ++attrId;
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(17u, out));
+}
+
+TEST(CosemSFskPlcPhyMacSetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 0u, 0u, 255u);
+  const auto attrs = MakeSampleSFskPlcPhyMacSetup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x09u, 0x02u, 0xAAu, 0xBBu});
+
+  dlms::cosem::CosemSFskPlcPhyMacSetupObject writable =
+    MakeSFskPlcPhyMacSetupObject(
+      name, attrs, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr = 2u; attr <= 16u; ++attr) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(attr, replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement,
+            writable.AttributeData().transmissionSpeed);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemSFskPlcPhyMacSetupObject readOnly =
+    MakeSFskPlcPhyMacSetupObject(
+      name, attrs, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(7u, replacement));
+  EXPECT_EQ(attrs.markFrequency,
+            readOnly.AttributeData().markFrequency);
+}
+
+TEST(CosemSFskPlcPhyMacSetupObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 0u, 0u, 255u);
+  dlms::cosem::CosemSFskPlcPhyMacSetupObject object =
+    MakeSFskPlcPhyMacSetupObject(
+      name, MakeSampleSFskPlcPhyMacSetup(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  for (std::uint8_t method : {0u, 2u, 99u, 255u}) {
+    out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemSFskPlcPhyMacSetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 0u, 0u, 255u);
+  dlms::cosem::CosemSFskPlcPhyMacSetupObject object(
+    name, MakeSampleSFskPlcPhyMacSetup(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskPlcPhyMacSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

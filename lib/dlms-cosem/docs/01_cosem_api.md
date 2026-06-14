@@ -1045,6 +1045,25 @@ application identifier when the host stack reassigns it. IC v0
 defines no methods; `InvokeMethod` reports `MethodNotFound` for
 all method ids and clears method output.
 
+`simple_objects.hpp` also exposes a partial S-FSK PLC PHY & MAC
+Setup IC `50` (`CosemSFskPlcPhyMacSetupObject`) with class
+version `1`. The constructors take an `Attributes` aggregate
+carrying initiator/delta electrical phase, max received/transmit
+gain, search initiator timeout, mark/space frequency,
+mac_address, mac_group_addresses, repeater, repeater_status,
+min_deltacredit, initiator_mac_address, synchronization_locked
+and transmission_speed as encoded DLMS Data buffers prepared by
+the caller, the logical name, a caller-selected
+`AttributeAccessMode` shared by the mutable attributes
+(`2`-`16`), and an optional explicit version that is normalized
+to `MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name) is read-only; the mutable attributes honor the
+caller access mode and replace the stored buffer in-place when
+writable. IC v1 defines a single method (`1` `reset`);
+`InvokeMethod` reports `UnsupportedFeature` for method `1` and
+`MethodNotFound` for every other method id, always clearing
+method output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

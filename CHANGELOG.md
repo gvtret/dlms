@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.65.0 - 2026-06-15
+
+- Added S-FSK PLC PHY & MAC Setup IC `50` built-in object
+  (`CosemSFskPlcPhyMacSetupObject`) with class version `1`,
+  exposing initiator/delta electrical phase, max
+  received/transmit gain, search initiator timeout, mark/space
+  frequency, mac_address, mac_group_addresses, repeater,
+  repeater_status, min_deltacredit, initiator_mac_address,
+  synchronization_locked and transmission_speed as opaque
+  encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`16` share a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer
+  in-place when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Method `1` `reset` returns `UnsupportedFeature`; undefined
+  method ids return `MethodNotFound`; method output is always
+  cleared.
+
 ## 0.64.0 - 2026-06-15
 
 - Added PRIME PLC Application Identification IC `85` built-in

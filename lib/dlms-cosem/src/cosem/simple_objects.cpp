@@ -10119,6 +10119,134 @@ CosemPrimePlcApplicationIdentificationObject::ApplicationIdentifier()
   return applicationIdentifier_;
 }
 
+namespace {
+constexpr std::uint16_t kSFskPlcPhyMacSetupClassId = 50u;
+constexpr std::uint8_t kSFskPlcPhyMacSetupResetMethodId = 1u;
+constexpr std::uint8_t kSFskPlcPhyMacSetupFirstMutableAttributeId = 2u;
+constexpr std::uint8_t kSFskPlcPhyMacSetupLastMutableAttributeId = 16u;
+} // namespace
+
+const std::uint8_t CosemSFskPlcPhyMacSetupObject::MaxSupportedVersion;
+
+CosemSFskPlcPhyMacSetupObject::CosemSFskPlcPhyMacSetupObject(
+  const CosemLogicalName& logicalName,
+  const Attributes& attributes,
+  AttributeAccessMode mutableAccess)
+  : CosemSFskPlcPhyMacSetupObject(
+      logicalName, attributes, mutableAccess,
+      CosemSFskPlcPhyMacSetupObject::MaxSupportedVersion)
+{
+}
+
+CosemSFskPlcPhyMacSetupObject::CosemSFskPlcPhyMacSetupObject(
+  const CosemLogicalName& logicalName,
+  const Attributes& attributes,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSFskPlcPhyMacSetupClassId,
+      NormalizeVersion(
+        version,
+        CosemSFskPlcPhyMacSetupObject::MaxSupportedVersion),
+      logicalName))
+  , attributes_(attributes)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr =
+         kSFskPlcPhyMacSetupFirstMutableAttributeId;
+       attr <= kSFskPlcPhyMacSetupLastMutableAttributeId; ++attr) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
+}
+
+CosemObjectDescriptor CosemSFskPlcPhyMacSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSFskPlcPhyMacSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSFskPlcPhyMacSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case 2u: output = attributes_.initiatorElectricalPhase; return CosemStatus::Ok;
+    case 3u: output = attributes_.deltaElectricalPhase; return CosemStatus::Ok;
+    case 4u: output = attributes_.maxReceivedGain; return CosemStatus::Ok;
+    case 5u: output = attributes_.maxTransmitGain; return CosemStatus::Ok;
+    case 6u: output = attributes_.searchInitiatorTimeout; return CosemStatus::Ok;
+    case 7u: output = attributes_.markFrequency; return CosemStatus::Ok;
+    case 8u: output = attributes_.spaceFrequency; return CosemStatus::Ok;
+    case 9u: output = attributes_.macAddress; return CosemStatus::Ok;
+    case 10u: output = attributes_.macGroupAddresses; return CosemStatus::Ok;
+    case 11u: output = attributes_.repeater; return CosemStatus::Ok;
+    case 12u: output = attributes_.repeaterStatus; return CosemStatus::Ok;
+    case 13u: output = attributes_.minDeltaCredit; return CosemStatus::Ok;
+    case 14u: output = attributes_.initiatorMacAddress; return CosemStatus::Ok;
+    case 15u: output = attributes_.synchronizationLocked; return CosemStatus::Ok;
+    case 16u: output = attributes_.transmissionSpeed; return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskPlcPhyMacSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case 2u: target = &attributes_.initiatorElectricalPhase; break;
+    case 3u: target = &attributes_.deltaElectricalPhase; break;
+    case 4u: target = &attributes_.maxReceivedGain; break;
+    case 5u: target = &attributes_.maxTransmitGain; break;
+    case 6u: target = &attributes_.searchInitiatorTimeout; break;
+    case 7u: target = &attributes_.markFrequency; break;
+    case 8u: target = &attributes_.spaceFrequency; break;
+    case 9u: target = &attributes_.macAddress; break;
+    case 10u: target = &attributes_.macGroupAddresses; break;
+    case 11u: target = &attributes_.repeater; break;
+    case 12u: target = &attributes_.repeaterStatus; break;
+    case 13u: target = &attributes_.minDeltaCredit; break;
+    case 14u: target = &attributes_.initiatorMacAddress; break;
+    case 15u: target = &attributes_.synchronizationLocked; break;
+    case 16u: target = &attributes_.transmissionSpeed; break;
+    case kLogicalNameAttributeId: return CosemStatus::AccessDenied;
+    default: return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemSFskPlcPhyMacSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kSFskPlcPhyMacSetupResetMethodId)
+    return CosemStatus::UnsupportedFeature;
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemSFskPlcPhyMacSetupObject::Attributes&
+CosemSFskPlcPhyMacSetupObject::AttributeData() const
+{
+  return attributes_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

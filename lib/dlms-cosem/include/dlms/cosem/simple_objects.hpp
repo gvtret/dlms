@@ -2552,6 +2552,61 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemSFskPlcPhyMacSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  struct Attributes
+  {
+    CosemByteBuffer initiatorElectricalPhase;
+    CosemByteBuffer deltaElectricalPhase;
+    CosemByteBuffer maxReceivedGain;
+    CosemByteBuffer maxTransmitGain;
+    CosemByteBuffer searchInitiatorTimeout;
+    CosemByteBuffer markFrequency;
+    CosemByteBuffer spaceFrequency;
+    CosemByteBuffer macAddress;
+    CosemByteBuffer macGroupAddresses;
+    CosemByteBuffer repeater;
+    CosemByteBuffer repeaterStatus;
+    CosemByteBuffer minDeltaCredit;
+    CosemByteBuffer initiatorMacAddress;
+    CosemByteBuffer synchronizationLocked;
+    CosemByteBuffer transmissionSpeed;
+  };
+
+  CosemSFskPlcPhyMacSetupObject(
+    const CosemLogicalName& logicalName,
+    const Attributes& attributes,
+    AttributeAccessMode mutableAccess);
+  CosemSFskPlcPhyMacSetupObject(
+    const CosemLogicalName& logicalName,
+    const Attributes& attributes,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const Attributes& AttributeData() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  Attributes attributes_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

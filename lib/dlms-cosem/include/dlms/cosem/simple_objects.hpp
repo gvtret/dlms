@@ -2312,6 +2312,70 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPrimePlcMacFunctionalParametersObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemPrimePlcMacFunctionalParametersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& lnid,
+    const CosemByteBuffer& lsid,
+    const CosemByteBuffer& sid,
+    const CosemByteBuffer& sna,
+    const CosemByteBuffer& state,
+    const CosemByteBuffer& sct,
+    const CosemByteBuffer& scd,
+    const CosemByteBuffer& capabilities,
+    AttributeAccessMode mutableAccess);
+  CosemPrimePlcMacFunctionalParametersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& lnid,
+    const CosemByteBuffer& lsid,
+    const CosemByteBuffer& sid,
+    const CosemByteBuffer& sna,
+    const CosemByteBuffer& state,
+    const CosemByteBuffer& sct,
+    const CosemByteBuffer& scd,
+    const CosemByteBuffer& capabilities,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Lnid() const;
+  const CosemByteBuffer& Lsid() const;
+  const CosemByteBuffer& Sid() const;
+  const CosemByteBuffer& Sna() const;
+  const CosemByteBuffer& State() const;
+  const CosemByteBuffer& Sct() const;
+  const CosemByteBuffer& Scd() const;
+  const CosemByteBuffer& Capabilities() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer lnid_;
+  CosemByteBuffer lsid_;
+  CosemByteBuffer sid_;
+  CosemByteBuffer sna_;
+  CosemByteBuffer state_;
+  CosemByteBuffer sct_;
+  CosemByteBuffer scd_;
+  CosemByteBuffer capabilities_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

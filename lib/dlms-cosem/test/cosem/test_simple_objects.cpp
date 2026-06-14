@@ -8839,4 +8839,169 @@ TEST(CosemPrimePlcMacSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct PrimePlcMacFunctionalParamsBuffers
+{
+  dlms::cosem::CosemByteBuffer lnid;
+  dlms::cosem::CosemByteBuffer lsid;
+  dlms::cosem::CosemByteBuffer sid;
+  dlms::cosem::CosemByteBuffer sna;
+  dlms::cosem::CosemByteBuffer state;
+  dlms::cosem::CosemByteBuffer sct;
+  dlms::cosem::CosemByteBuffer scd;
+  dlms::cosem::CosemByteBuffer capabilities;
+};
+
+PrimePlcMacFunctionalParamsBuffers
+MakeSamplePrimePlcMacFunctionalParams()
+{
+  PrimePlcMacFunctionalParamsBuffers b;
+  // long-unsigned 0x0042
+  b.lnid = BytesFromList({0x12u, 0x00u, 0x42u});
+  // unsigned 1
+  b.lsid = BytesFromList({0x11u, 0x01u});
+  // unsigned 2
+  b.sid = BytesFromList({0x11u, 0x02u});
+  // octet-string(6) EUI-48 12:34:56:78:9A:BC
+  b.sna = BytesFromList(
+    {0x09u, 0x06u, 0x12u, 0x34u, 0x56u, 0x78u, 0x9Au, 0xBCu});
+  // enum 3 (Terminal connected)
+  b.state = BytesFromList({0x16u, 0x03u});
+  // long-unsigned 0x0007
+  b.sct = BytesFromList({0x12u, 0x00u, 0x07u});
+  // long-unsigned 0x0005
+  b.scd = BytesFromList({0x12u, 0x00u, 0x05u});
+  // bit-string(8) 0b10100101
+  b.capabilities = BytesFromList({0x04u, 0x08u, 0xA5u});
+  return b;
+}
+
+dlms::cosem::CosemPrimePlcMacFunctionalParametersObject
+MakePrimePlcMacFunctionalParamsObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const PrimePlcMacFunctionalParamsBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemPrimePlcMacFunctionalParametersObject(
+    name, b.lnid, b.lsid, b.sid, b.sna, b.state, b.sct, b.scd,
+    b.capabilities, access);
+}
+
+} // namespace
+
+TEST(CosemPrimePlcMacFunctionalParametersObject,
+     ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 2u, 0u, 255u);
+  const PrimePlcMacFunctionalParamsBuffers b =
+    MakeSamplePrimePlcMacFunctionalParams();
+  dlms::cosem::CosemPrimePlcMacFunctionalParametersObject object =
+    MakePrimePlcMacFunctionalParamsObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(81u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacFunctionalParametersObject::
+      MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  const dlms::cosem::CosemByteBuffer* expected[] = {
+    &b.lnid, &b.lsid, &b.sid, &b.sna, &b.state, &b.sct, &b.scd,
+    &b.capabilities};
+  std::uint8_t attrId = 2u;
+  for (const auto* exp : expected) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              object.ReadAttribute(attrId, out))
+      << "attr " << static_cast<unsigned>(attrId);
+    EXPECT_EQ(*exp, out)
+      << "attr " << static_cast<unsigned>(attrId);
+    ++attrId;
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(10u, out));
+}
+
+TEST(CosemPrimePlcMacFunctionalParametersObject,
+     MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 2u, 0u, 255u);
+  const PrimePlcMacFunctionalParamsBuffers b =
+    MakeSamplePrimePlcMacFunctionalParams();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x12u, 0x10u, 0x00u});
+
+  dlms::cosem::CosemPrimePlcMacFunctionalParametersObject writable =
+    MakePrimePlcMacFunctionalParamsObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(attr, replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement, writable.Lnid());
+  EXPECT_EQ(replacement, writable.Lsid());
+  EXPECT_EQ(replacement, writable.Sid());
+  EXPECT_EQ(replacement, writable.Sna());
+  EXPECT_EQ(replacement, writable.State());
+  EXPECT_EQ(replacement, writable.Sct());
+  EXPECT_EQ(replacement, writable.Scd());
+  EXPECT_EQ(replacement, writable.Capabilities());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemPrimePlcMacFunctionalParametersObject readOnly =
+    MakePrimePlcMacFunctionalParamsObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(b.lnid, readOnly.Lnid());
+}
+
+TEST(CosemPrimePlcMacFunctionalParametersObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 2u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcMacFunctionalParametersObject object =
+    MakePrimePlcMacFunctionalParamsObject(
+      name, MakeSamplePrimePlcMacFunctionalParams(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemPrimePlcMacFunctionalParametersObject,
+     NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 2u, 0u, 255u);
+  const PrimePlcMacFunctionalParamsBuffers b =
+    MakeSamplePrimePlcMacFunctionalParams();
+  dlms::cosem::CosemPrimePlcMacFunctionalParametersObject object(
+    name, b.lnid, b.lsid, b.sid, b.sna, b.state, b.sct, b.scd,
+    b.capabilities,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacFunctionalParametersObject::
+      MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

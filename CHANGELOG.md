@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.60.0 - 2026-06-15
+
+- Added PRIME PLC MAC Functional Parameters IC `81` built-in
+  object (`CosemPrimePlcMacFunctionalParametersObject`) with
+  class version `0`, exposing `lnid` (long-unsigned), `lsid`,
+  `sid` (unsigned), `sna` (octet-string EUI-48), `state` (enum),
+  `sct`, `scd` (long-unsigned) and `capabilities` (bit-string)
+  as opaque encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`9` share a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer
+  in-place when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IC v0 defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for every method id and clears method output.
+
 ## 0.59.0 - 2026-06-15
 
 - Added PRIME PLC MAC Setup IC `80` built-in object

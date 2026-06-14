@@ -903,6 +903,26 @@ PRIME PLC MAC Setup tests:
 - PRIME PLC MAC Setup normalizes versions above
   `MaxSupportedVersion`.
 
+PRIME PLC MAC Functional Parameters tests:
+
+- PRIME PLC MAC Functional Parameters exposes attributes `1`
+  logical_name and `2`-`9` (lnid, lsid, sid, sna, state, sct,
+  scd, capabilities) as the encoded DLMS Data buffers supplied
+  by the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- PRIME PLC MAC Functional Parameters mutable attributes
+  (`2`-`9`) writes succeed when the caller-selected access mode
+  permits writes and replace the stored buffer in-place; writes
+  report `AccessDenied` when the access mode is read-only,
+  leaving the stored buffers unchanged;
+- PRIME PLC MAC Functional Parameters rejects writes to
+  logical_name (`1`) with `AccessDenied`, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- PRIME PLC MAC Functional Parameters `InvokeMethod` reports
+  `MethodNotFound` for every method id and clears method output;
+- PRIME PLC MAC Functional Parameters normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

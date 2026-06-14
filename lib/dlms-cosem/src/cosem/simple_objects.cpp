@@ -9316,6 +9316,240 @@ CosemPrimePlcMacSetupObject::MacMaxLnid() const
   return macMaxLnid_;
 }
 
+namespace {
+constexpr std::uint16_t kPrimePlcMacFunctionalParamsClassId = 81u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsLnidId = 2u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsLsidId = 3u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsSidId = 4u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsSnaId = 5u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsStateId = 6u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsSctId = 7u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsScdId = 8u;
+constexpr std::uint8_t
+  kPrimePlcMacFunctionalParamsCapabilitiesId = 9u;
+} // namespace
+
+const std::uint8_t
+  CosemPrimePlcMacFunctionalParametersObject::MaxSupportedVersion;
+
+CosemPrimePlcMacFunctionalParametersObject::
+  CosemPrimePlcMacFunctionalParametersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& lnid,
+    const CosemByteBuffer& lsid,
+    const CosemByteBuffer& sid,
+    const CosemByteBuffer& sna,
+    const CosemByteBuffer& state,
+    const CosemByteBuffer& sct,
+    const CosemByteBuffer& scd,
+    const CosemByteBuffer& capabilities,
+    AttributeAccessMode mutableAccess)
+  : CosemPrimePlcMacFunctionalParametersObject(
+      logicalName, lnid, lsid, sid, sna, state, sct, scd,
+      capabilities, mutableAccess,
+      CosemPrimePlcMacFunctionalParametersObject::
+        MaxSupportedVersion)
+{
+}
+
+CosemPrimePlcMacFunctionalParametersObject::
+  CosemPrimePlcMacFunctionalParametersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& lnid,
+    const CosemByteBuffer& lsid,
+    const CosemByteBuffer& sid,
+    const CosemByteBuffer& sna,
+    const CosemByteBuffer& state,
+    const CosemByteBuffer& sct,
+    const CosemByteBuffer& scd,
+    const CosemByteBuffer& capabilities,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPrimePlcMacFunctionalParamsClassId,
+      NormalizeVersion(
+        version,
+        CosemPrimePlcMacFunctionalParametersObject::
+          MaxSupportedVersion),
+      logicalName))
+  , lnid_(lnid)
+  , lsid_(lsid)
+  , sid_(sid)
+  , sna_(sna)
+  , state_(state)
+  , sct_(sct)
+  , scd_(scd)
+  , capabilities_(capabilities)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr :
+       {kPrimePlcMacFunctionalParamsLnidId,
+        kPrimePlcMacFunctionalParamsLsidId,
+        kPrimePlcMacFunctionalParamsSidId,
+        kPrimePlcMacFunctionalParamsSnaId,
+        kPrimePlcMacFunctionalParamsStateId,
+        kPrimePlcMacFunctionalParamsSctId,
+        kPrimePlcMacFunctionalParamsScdId,
+        kPrimePlcMacFunctionalParamsCapabilitiesId}) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
+}
+
+CosemObjectDescriptor
+CosemPrimePlcMacFunctionalParametersObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemPrimePlcMacFunctionalParametersObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus
+CosemPrimePlcMacFunctionalParametersObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsLnidId:
+      output = lnid_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsLsidId:
+      output = lsid_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsSidId:
+      output = sid_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsSnaId:
+      output = sna_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsStateId:
+      output = state_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsSctId:
+      output = sct_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsScdId:
+      output = scd_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsCapabilitiesId:
+      output = capabilities_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus
+CosemPrimePlcMacFunctionalParametersObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case kPrimePlcMacFunctionalParamsLnidId:
+      target = &lnid_;
+      break;
+    case kPrimePlcMacFunctionalParamsLsidId:
+      target = &lsid_;
+      break;
+    case kPrimePlcMacFunctionalParamsSidId:
+      target = &sid_;
+      break;
+    case kPrimePlcMacFunctionalParamsSnaId:
+      target = &sna_;
+      break;
+    case kPrimePlcMacFunctionalParamsStateId:
+      target = &state_;
+      break;
+    case kPrimePlcMacFunctionalParamsSctId:
+      target = &sct_;
+      break;
+    case kPrimePlcMacFunctionalParamsScdId:
+      target = &scd_;
+      break;
+    case kPrimePlcMacFunctionalParamsCapabilitiesId:
+      target = &capabilities_;
+      break;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus
+CosemPrimePlcMacFunctionalParametersObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IC v0 defines no methods.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::Lnid() const
+{
+  return lnid_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::Lsid() const
+{
+  return lsid_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::Sid() const
+{
+  return sid_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::Sna() const
+{
+  return sna_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::State() const
+{
+  return state_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::Sct() const
+{
+  return sct_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::Scd() const
+{
+  return scd_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::Capabilities() const
+{
+  return capabilities_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

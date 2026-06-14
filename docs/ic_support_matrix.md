@@ -54,7 +54,7 @@ Status values:
 | `24` | IEC twisted pair setup | Application-provided | No built-in implementation. |
 | `25` | M-Bus slave port setup | Application-provided | No built-in implementation. |
 | `26` | Utility Tables | Application-provided | No built-in implementation. |
-| `27` | Modem Configuration | Application-provided | No built-in implementation. |
+| `27` | Modem Configuration | Partial | `CosemModemConfigurationObject` exposes communication_speed (enum), initialisation_strings (array of structure) and modem_profile (array of octet-string) as opaque encoded DLMS Data buffers prepared by the caller. Class version `1`, constructor normalization to `MaxSupportedVersion`. logical_name (`1`) is read-only; attributes `2`-`4` share a caller-selected `AttributeAccessMode` (writes replace the stored buffer in-place when permitted). IC defines no methods; `InvokeMethod` reports `MethodNotFound` for all ids. |
 | `28` | Auto Answer | Application-provided | No built-in implementation. |
 | `29` | Auto Connect | Application-provided | No built-in implementation. |
 | `30` | Data Protection | Planned | Needed for complete protected data model. |

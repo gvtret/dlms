@@ -339,6 +339,25 @@ the stored buffer in-place when writable. Method `1` `execute` dispatches
 application-defined script semantics and is surfaced as
 `UnsupportedFeature`; other method ids report `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Activity Calendar IC `20`
+(`CosemActivityCalendarObject`) with class version `0`. The constructors
+take the active and passive calendar payloads
+(`calendar_name_active`, `season_profile_active`,
+`week_profile_table_active`, `day_profile_table_active`,
+`calendar_name_passive`, `season_profile_passive`,
+`week_profile_table_passive`, `day_profile_table_passive`) and the
+`activate_passive_calendar_time` payload as encoded DLMS Data buffers
+prepared by the caller, plus the logical name, a caller-selected
+`AttributeAccessMode` shared by the five passive-side attributes (6-10)
+and an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1` (logical_name) and
+attributes `2`-`5` (the active calendar snapshot) are read-only;
+attributes `6`-`10` honor the caller passive access mode and replace the
+stored buffer in-place when writable. Method `1`
+`activate_passive_calendar` dispatches application-defined activation
+policy (copying passive into active at meter time) and is surfaced as
+`UnsupportedFeature`; other method ids report `MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

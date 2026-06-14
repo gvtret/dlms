@@ -345,6 +345,80 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemActivityCalendarObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemActivityCalendarObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& calendarNameActive,
+    const CosemByteBuffer& seasonProfileActive,
+    const CosemByteBuffer& weekProfileTableActive,
+    const CosemByteBuffer& dayProfileTableActive,
+    const CosemByteBuffer& calendarNamePassive,
+    const CosemByteBuffer& seasonProfilePassive,
+    const CosemByteBuffer& weekProfileTablePassive,
+    const CosemByteBuffer& dayProfileTablePassive,
+    const CosemByteBuffer& activatePassiveCalendarTime,
+    AttributeAccessMode passiveAccess);
+  CosemActivityCalendarObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& calendarNameActive,
+    const CosemByteBuffer& seasonProfileActive,
+    const CosemByteBuffer& weekProfileTableActive,
+    const CosemByteBuffer& dayProfileTableActive,
+    const CosemByteBuffer& calendarNamePassive,
+    const CosemByteBuffer& seasonProfilePassive,
+    const CosemByteBuffer& weekProfileTablePassive,
+    const CosemByteBuffer& dayProfileTablePassive,
+    const CosemByteBuffer& activatePassiveCalendarTime,
+    AttributeAccessMode passiveAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& CalendarNameActive() const;
+  const CosemByteBuffer& SeasonProfileActive() const;
+  const CosemByteBuffer& WeekProfileTableActive() const;
+  const CosemByteBuffer& DayProfileTableActive() const;
+  const CosemByteBuffer& CalendarNamePassive() const;
+  const CosemByteBuffer& SeasonProfilePassive() const;
+  const CosemByteBuffer& WeekProfileTablePassive() const;
+  const CosemByteBuffer& DayProfileTablePassive() const;
+  const CosemByteBuffer& ActivatePassiveCalendarTime() const;
+
+  void SetCalendarNamePassive(const CosemByteBuffer& value);
+  void SetSeasonProfilePassive(const CosemByteBuffer& value);
+  void SetWeekProfileTablePassive(const CosemByteBuffer& value);
+  void SetDayProfileTablePassive(const CosemByteBuffer& value);
+  void SetActivatePassiveCalendarTime(const CosemByteBuffer& value);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer calendarNameActive_;
+  CosemByteBuffer seasonProfileActive_;
+  CosemByteBuffer weekProfileTableActive_;
+  CosemByteBuffer dayProfileTableActive_;
+  CosemByteBuffer calendarNamePassive_;
+  CosemByteBuffer seasonProfilePassive_;
+  CosemByteBuffer weekProfileTablePassive_;
+  CosemByteBuffer dayProfileTablePassive_;
+  CosemByteBuffer activatePassiveCalendarTime_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

@@ -198,6 +198,30 @@ Script Table tests:
   clears method output; other method ids report `MethodNotFound`;
 - Script Table normalizes versions above `MaxSupportedVersion`.
 
+Activity Calendar tests:
+
+- Activity Calendar exposes attributes `1` logical_name, `2`-`5` active
+  calendar snapshot (calendar_name_active, season_profile_active,
+  week_profile_table_active, day_profile_table_active), `6`-`9` passive
+  calendar (calendar_name_passive, season_profile_passive,
+  week_profile_table_passive, day_profile_table_passive) and `10`
+  activate_passive_calendar_time as the encoded DLMS Data buffers
+  supplied by the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Activity Calendar passive attributes (`6`-`10`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place;
+- Activity Calendar passive attributes (`6`-`10`) writes report
+  `AccessDenied` when the caller-selected access mode is read-only,
+  leaving the stored buffers unchanged;
+- Activity Calendar rejects writes to `logical_name` and the active
+  snapshot attributes (`2`-`5`) with `AccessDenied`, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Activity Calendar method `1` `activate_passive_calendar` reports
+  `UnsupportedFeature` and clears method output; other method ids report
+  `MethodNotFound`;
+- Activity Calendar normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -3065,4 +3065,219 @@ TEST(CosemScriptTableObject, NormalizesVersionAboveMax)
             object.Descriptor().key.version);
 }
 
+namespace {
+
+struct ActivityCalendarBuffers
+{
+  dlms::cosem::CosemByteBuffer calendarNameActive;
+  dlms::cosem::CosemByteBuffer seasonProfileActive;
+  dlms::cosem::CosemByteBuffer weekProfileTableActive;
+  dlms::cosem::CosemByteBuffer dayProfileTableActive;
+  dlms::cosem::CosemByteBuffer calendarNamePassive;
+  dlms::cosem::CosemByteBuffer seasonProfilePassive;
+  dlms::cosem::CosemByteBuffer weekProfileTablePassive;
+  dlms::cosem::CosemByteBuffer dayProfileTablePassive;
+  dlms::cosem::CosemByteBuffer activatePassiveCalendarTime;
+};
+
+ActivityCalendarBuffers MakeSampleActivityCalendar()
+{
+  ActivityCalendarBuffers b;
+  b.calendarNameActive = BytesFromList({
+    0x09u, 0x06u, 'A', 'C', 'T', 'I', 'V', 'E'});
+  b.seasonProfileActive = BytesFromList({0x01u, 0x00u});
+  b.weekProfileTableActive = BytesFromList({0x01u, 0x00u});
+  b.dayProfileTableActive = BytesFromList({0x01u, 0x00u});
+  b.calendarNamePassive = BytesFromList({
+    0x09u, 0x07u, 'P', 'A', 'S', 'S', 'I', 'V', 'E'});
+  b.seasonProfilePassive = BytesFromList({
+    0x01u, 0x01u,
+    0x02u, 0x03u,
+      0x09u, 0x06u, 'S', 'U', 'M', 'M', 'E', 'R',
+      0x09u, 0x05u, 0x07u, 0xE5u, 0x06u, 0x15u, 0x00u,
+      0x09u, 0x06u, 'W', 'E', 'E', 'K', 'D', 'Y'});
+  b.weekProfileTablePassive = BytesFromList({0x01u, 0x00u});
+  b.dayProfileTablePassive = BytesFromList({0x01u, 0x00u});
+  b.activatePassiveCalendarTime = BytesFromList({
+    0x09u, 0x0Cu,
+    0x07u, 0xE5u, 0x07u, 0x01u, 0xFFu,
+    0x00u, 0x00u, 0x00u, 0x00u,
+    0x80u, 0x00u, 0x00u});
+  return b;
+}
+
+} // namespace
+
+TEST(CosemActivityCalendarObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 13u, 0u, 0u, 255u);
+  const ActivityCalendarBuffers b = MakeSampleActivityCalendar();
+  dlms::cosem::CosemActivityCalendarObject object(
+    name,
+    b.calendarNameActive,
+    b.seasonProfileActive,
+    b.weekProfileTableActive,
+    b.dayProfileTableActive,
+    b.calendarNamePassive,
+    b.seasonProfilePassive,
+    b.weekProfileTablePassive,
+    b.dayProfileTablePassive,
+    b.activatePassiveCalendarTime,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(20u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemActivityCalendarObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.calendarNameActive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.seasonProfileActive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.weekProfileTableActive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.dayProfileTableActive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.calendarNamePassive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.seasonProfilePassive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.weekProfileTablePassive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
+  EXPECT_EQ(b.dayProfileTablePassive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.activatePassiveCalendarTime, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(11u, out));
+}
+
+TEST(CosemActivityCalendarObject, PassiveAttributesHonorCallerAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 13u, 0u, 0u, 255u);
+  const ActivityCalendarBuffers b = MakeSampleActivityCalendar();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x09u, 0x03u, 'N', 'E', 'W'});
+
+  dlms::cosem::CosemActivityCalendarObject writable(
+    name,
+    b.calendarNameActive, b.seasonProfileActive,
+    b.weekProfileTableActive, b.dayProfileTableActive,
+    b.calendarNamePassive, b.seasonProfilePassive,
+    b.weekProfileTablePassive, b.dayProfileTablePassive,
+    b.activatePassiveCalendarTime,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(6u, replacement));
+  EXPECT_EQ(replacement, writable.CalendarNamePassive());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(7u, replacement));
+  EXPECT_EQ(replacement, writable.SeasonProfilePassive());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(8u, replacement));
+  EXPECT_EQ(replacement, writable.WeekProfileTablePassive());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(9u, replacement));
+  EXPECT_EQ(replacement, writable.DayProfileTablePassive());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(10u, replacement));
+  EXPECT_EQ(replacement, writable.ActivatePassiveCalendarTime());
+
+  dlms::cosem::CosemActivityCalendarObject readOnly(
+    name,
+    b.calendarNameActive, b.seasonProfileActive,
+    b.weekProfileTableActive, b.dayProfileTableActive,
+    b.calendarNamePassive, b.seasonProfilePassive,
+    b.weekProfileTablePassive, b.dayProfileTablePassive,
+    b.activatePassiveCalendarTime,
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+
+  for (std::uint8_t id = 6u; id <= 10u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(id, replacement));
+  }
+  EXPECT_EQ(b.calendarNamePassive, readOnly.CalendarNamePassive());
+  EXPECT_EQ(b.activatePassiveCalendarTime,
+            readOnly.ActivatePassiveCalendarTime());
+}
+
+TEST(CosemActivityCalendarObject, ActiveAttributesAndLogicalNameAreReadOnly)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 13u, 0u, 0u, 255u);
+  const ActivityCalendarBuffers b = MakeSampleActivityCalendar();
+  dlms::cosem::CosemActivityCalendarObject object(
+    name,
+    b.calendarNameActive, b.seasonProfileActive,
+    b.weekProfileTableActive, b.dayProfileTableActive,
+    b.calendarNamePassive, b.seasonProfilePassive,
+    b.weekProfileTablePassive, b.dayProfileTablePassive,
+    b.activatePassiveCalendarTime,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer payload =
+    BytesFromList({0x09u, 0x01u, 0x00u});
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            object.WriteAttribute(1u, payload));
+  for (std::uint8_t id = 2u; id <= 5u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              object.WriteAttribute(id, payload));
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.WriteAttribute(99u, payload));
+}
+
+TEST(CosemActivityCalendarObject,
+     ActivatePassiveCalendarIsUnsupportedAndOthersNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 13u, 0u, 0u, 255u);
+  const ActivityCalendarBuffers b = MakeSampleActivityCalendar();
+  dlms::cosem::CosemActivityCalendarObject object(
+    name,
+    b.calendarNameActive, b.seasonProfileActive,
+    b.weekProfileTableActive, b.dayProfileTableActive,
+    b.calendarNamePassive, b.seasonProfilePassive,
+    b.weekProfileTablePassive, b.dayProfileTablePassive,
+    b.activatePassiveCalendarTime,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu, 0xBBu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+
+  out = BytesFromList({0xCCu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(2u, in, out));
+  EXPECT_TRUE(out.empty());
+}
+
+TEST(CosemActivityCalendarObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 13u, 0u, 0u, 255u);
+  const ActivityCalendarBuffers b = MakeSampleActivityCalendar();
+  dlms::cosem::CosemActivityCalendarObject object(
+    name,
+    b.calendarNameActive, b.seasonProfileActive,
+    b.weekProfileTableActive, b.dayProfileTableActive,
+    b.calendarNamePassive, b.seasonProfilePassive,
+    b.weekProfileTablePassive, b.dayProfileTablePassive,
+    b.activatePassiveCalendarTime,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemActivityCalendarObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

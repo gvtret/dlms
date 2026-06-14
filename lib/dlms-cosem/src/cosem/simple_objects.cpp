@@ -2398,6 +2398,324 @@ void CosemScriptTableObject::SetScripts(const CosemByteBuffer& scripts)
   scripts_ = scripts;
 }
 
+namespace {
+constexpr std::uint16_t kActivityCalendarClassId = 20u;
+constexpr std::uint8_t kActivityCalendarCalendarNameActiveAttributeId = 2u;
+constexpr std::uint8_t kActivityCalendarSeasonProfileActiveAttributeId = 3u;
+constexpr std::uint8_t kActivityCalendarWeekProfileTableActiveAttributeId =
+  4u;
+constexpr std::uint8_t kActivityCalendarDayProfileTableActiveAttributeId =
+  5u;
+constexpr std::uint8_t kActivityCalendarCalendarNamePassiveAttributeId = 6u;
+constexpr std::uint8_t kActivityCalendarSeasonProfilePassiveAttributeId =
+  7u;
+constexpr std::uint8_t kActivityCalendarWeekProfileTablePassiveAttributeId =
+  8u;
+constexpr std::uint8_t kActivityCalendarDayProfileTablePassiveAttributeId =
+  9u;
+constexpr std::uint8_t kActivityCalendarActivatePassiveCalendarTimeAttributeId
+  = 10u;
+constexpr std::uint8_t kActivityCalendarActivatePassiveCalendarMethodId =
+  1u;
+
+bool IsAccessWritable(AttributeAccessMode mode)
+{
+  return mode == AttributeAccessMode::WriteOnly
+      || mode == AttributeAccessMode::ReadAndWrite
+      || mode == AttributeAccessMode::AuthenticatedWriteOnly
+      || mode == AttributeAccessMode::AuthenticatedReadAndWrite;
+}
+} // namespace
+
+const std::uint8_t CosemActivityCalendarObject::MaxSupportedVersion;
+
+CosemActivityCalendarObject::CosemActivityCalendarObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& calendarNameActive,
+  const CosemByteBuffer& seasonProfileActive,
+  const CosemByteBuffer& weekProfileTableActive,
+  const CosemByteBuffer& dayProfileTableActive,
+  const CosemByteBuffer& calendarNamePassive,
+  const CosemByteBuffer& seasonProfilePassive,
+  const CosemByteBuffer& weekProfileTablePassive,
+  const CosemByteBuffer& dayProfileTablePassive,
+  const CosemByteBuffer& activatePassiveCalendarTime,
+  AttributeAccessMode passiveAccess)
+  : CosemActivityCalendarObject(
+      logicalName,
+      calendarNameActive,
+      seasonProfileActive,
+      weekProfileTableActive,
+      dayProfileTableActive,
+      calendarNamePassive,
+      seasonProfilePassive,
+      weekProfileTablePassive,
+      dayProfileTablePassive,
+      activatePassiveCalendarTime,
+      passiveAccess,
+      kVersion0)
+{
+}
+
+CosemActivityCalendarObject::CosemActivityCalendarObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& calendarNameActive,
+  const CosemByteBuffer& seasonProfileActive,
+  const CosemByteBuffer& weekProfileTableActive,
+  const CosemByteBuffer& dayProfileTableActive,
+  const CosemByteBuffer& calendarNamePassive,
+  const CosemByteBuffer& seasonProfilePassive,
+  const CosemByteBuffer& weekProfileTablePassive,
+  const CosemByteBuffer& dayProfileTablePassive,
+  const CosemByteBuffer& activatePassiveCalendarTime,
+  AttributeAccessMode passiveAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kActivityCalendarClassId,
+      NormalizeVersion(
+        version,
+        CosemActivityCalendarObject::MaxSupportedVersion),
+      logicalName))
+  , calendarNameActive_(calendarNameActive)
+  , seasonProfileActive_(seasonProfileActive)
+  , weekProfileTableActive_(weekProfileTableActive)
+  , dayProfileTableActive_(dayProfileTableActive)
+  , calendarNamePassive_(calendarNamePassive)
+  , seasonProfilePassive_(seasonProfilePassive)
+  , weekProfileTablePassive_(weekProfileTablePassive)
+  , dayProfileTablePassive_(dayProfileTablePassive)
+  , activatePassiveCalendarTime_(activatePassiveCalendarTime)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kActivityCalendarCalendarNameActiveAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kActivityCalendarSeasonProfileActiveAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kActivityCalendarWeekProfileTableActiveAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kActivityCalendarDayProfileTableActiveAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kActivityCalendarCalendarNamePassiveAttributeId, passiveAccess);
+  rights_.SetAttributeAccess(
+    kActivityCalendarSeasonProfilePassiveAttributeId, passiveAccess);
+  rights_.SetAttributeAccess(
+    kActivityCalendarWeekProfileTablePassiveAttributeId, passiveAccess);
+  rights_.SetAttributeAccess(
+    kActivityCalendarDayProfileTablePassiveAttributeId, passiveAccess);
+  rights_.SetAttributeAccess(
+    kActivityCalendarActivatePassiveCalendarTimeAttributeId,
+    passiveAccess);
+}
+
+CosemObjectDescriptor CosemActivityCalendarObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemActivityCalendarObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemActivityCalendarObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kActivityCalendarCalendarNameActiveAttributeId:
+      output = calendarNameActive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarSeasonProfileActiveAttributeId:
+      output = seasonProfileActive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarWeekProfileTableActiveAttributeId:
+      output = weekProfileTableActive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarDayProfileTableActiveAttributeId:
+      output = dayProfileTableActive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarCalendarNamePassiveAttributeId:
+      output = calendarNamePassive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarSeasonProfilePassiveAttributeId:
+      output = seasonProfilePassive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarWeekProfileTablePassiveAttributeId:
+      output = weekProfileTablePassive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarDayProfileTablePassiveAttributeId:
+      output = dayProfileTablePassive_;
+      return CosemStatus::Ok;
+    case kActivityCalendarActivatePassiveCalendarTimeAttributeId:
+      output = activatePassiveCalendarTime_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemActivityCalendarObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kActivityCalendarCalendarNamePassiveAttributeId: {
+      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        calendarNamePassive_ = input;
+        return CosemStatus::Ok;
+      }
+      return CosemStatus::AccessDenied;
+    }
+    case kActivityCalendarSeasonProfilePassiveAttributeId: {
+      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        seasonProfilePassive_ = input;
+        return CosemStatus::Ok;
+      }
+      return CosemStatus::AccessDenied;
+    }
+    case kActivityCalendarWeekProfileTablePassiveAttributeId: {
+      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        weekProfileTablePassive_ = input;
+        return CosemStatus::Ok;
+      }
+      return CosemStatus::AccessDenied;
+    }
+    case kActivityCalendarDayProfileTablePassiveAttributeId: {
+      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        dayProfileTablePassive_ = input;
+        return CosemStatus::Ok;
+      }
+      return CosemStatus::AccessDenied;
+    }
+    case kActivityCalendarActivatePassiveCalendarTimeAttributeId: {
+      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        activatePassiveCalendarTime_ = input;
+        return CosemStatus::Ok;
+      }
+      return CosemStatus::AccessDenied;
+    }
+    case kLogicalNameAttributeId:
+    case kActivityCalendarCalendarNameActiveAttributeId:
+    case kActivityCalendarSeasonProfileActiveAttributeId:
+    case kActivityCalendarWeekProfileTableActiveAttributeId:
+    case kActivityCalendarDayProfileTableActiveAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemActivityCalendarObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // method 1 (activate_passive_calendar) is application-defined: it
+  // atomically copies passive attributes into the active set at meter
+  // time. The built-in object surfaces it explicitly as UnsupportedFeature
+  // so that a future backend can attach activation policy without changing
+  // the object surface.
+  if (methodId == kActivityCalendarActivatePassiveCalendarMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemActivityCalendarObject::CalendarNameActive() const
+{
+  return calendarNameActive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::SeasonProfileActive() const
+{
+  return seasonProfileActive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::WeekProfileTableActive() const
+{
+  return weekProfileTableActive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::DayProfileTableActive() const
+{
+  return dayProfileTableActive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::CalendarNamePassive() const
+{
+  return calendarNamePassive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::SeasonProfilePassive() const
+{
+  return seasonProfilePassive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::WeekProfileTablePassive() const
+{
+  return weekProfileTablePassive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::DayProfileTablePassive() const
+{
+  return dayProfileTablePassive_;
+}
+
+const CosemByteBuffer&
+CosemActivityCalendarObject::ActivatePassiveCalendarTime() const
+{
+  return activatePassiveCalendarTime_;
+}
+
+void CosemActivityCalendarObject::SetCalendarNamePassive(
+  const CosemByteBuffer& value)
+{
+  calendarNamePassive_ = value;
+}
+
+void CosemActivityCalendarObject::SetSeasonProfilePassive(
+  const CosemByteBuffer& value)
+{
+  seasonProfilePassive_ = value;
+}
+
+void CosemActivityCalendarObject::SetWeekProfileTablePassive(
+  const CosemByteBuffer& value)
+{
+  weekProfileTablePassive_ = value;
+}
+
+void CosemActivityCalendarObject::SetDayProfileTablePassive(
+  const CosemByteBuffer& value)
+{
+  dayProfileTablePassive_ = value;
+}
+
+void CosemActivityCalendarObject::SetActivatePassiveCalendarTime(
+  const CosemByteBuffer& value)
+{
+  activatePassiveCalendarTime_ = value;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.24.0 - 2026-06-15
+
+- Added Activity Calendar IC `20` built-in object
+  (`CosemActivityCalendarObject`) with class version `0`, exposing
+  attributes `1` logical_name, `2`-`5` active calendar snapshot
+  (calendar_name_active, season_profile_active,
+  week_profile_table_active, day_profile_table_active), `6`-`9` passive
+  calendar (calendar_name_passive, season_profile_passive,
+  week_profile_table_passive, day_profile_table_passive) and `10`
+  activate_passive_calendar_time as opaque encoded DLMS Data buffers
+  prepared by the caller.
+- Passive attributes (`6`-`10`) share a caller-selected access mode
+  (writes replace the stored buffer in-place when permitted); logical_name
+  and active snapshot attributes (`2`-`5`) are read-only.
+- Added explicit `MaxSupportedVersion` constant and version-taking
+  constructor for Activity Calendar; constructors normalize versions
+  above the maximum.
+- Added Activity Calendar method `1` `activate_passive_calendar` as
+  explicit `UnsupportedFeature` (application-defined activation policy);
+  other method ids report `MethodNotFound`.
+
 ## 0.23.0 - 2026-06-15
 
 - Added Script Table IC `9` built-in object

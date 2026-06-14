@@ -1784,6 +1784,50 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemParameterMonitorObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemParameterMonitorObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& changedParameter,
+    const CosemByteBuffer& captureTime,
+    const CosemByteBuffer& parameters,
+    AttributeAccessMode mutableAccess);
+  CosemParameterMonitorObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& changedParameter,
+    const CosemByteBuffer& captureTime,
+    const CosemByteBuffer& parameters,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& ChangedParameter() const;
+  const CosemByteBuffer& CaptureTime() const;
+  const CosemByteBuffer& Parameters() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer changedParameter_;
+  CosemByteBuffer captureTime_;
+  CosemByteBuffer parameters_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

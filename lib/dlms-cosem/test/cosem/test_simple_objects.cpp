@@ -7308,4 +7308,165 @@ TEST(CosemStatusMappingObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct ParameterMonitorBuffers
+{
+  dlms::cosem::CosemByteBuffer changedParameter;
+  dlms::cosem::CosemByteBuffer captureTime;
+  dlms::cosem::CosemByteBuffer parameters;
+};
+
+ParameterMonitorBuffers MakeSampleParameterMonitor()
+{
+  ParameterMonitorBuffers b;
+  // structure(4):
+  //   long-unsigned 3 (Register class id),
+  //   octet-string(6) 1.0.32.7.0.255,
+  //   integer 2 (value attribute),
+  //   double-long-unsigned 230 (changed value)
+  b.changedParameter = BytesFromList({
+    0x02u, 0x04u,
+      0x12u, 0x00u, 0x03u,
+      0x09u, 0x06u,
+        0x01u, 0x00u, 0x20u, 0x07u, 0x00u, 0xFFu,
+      0x0Fu, 0x02u,
+      0x06u, 0x00u, 0x00u, 0x00u, 0xE6u});
+  // octet-string(12) date-time 2026-06-15 12:00:00 (no deviation)
+  b.captureTime = BytesFromList({
+    0x09u, 0x0Cu,
+      0x07u, 0xEAu, 0x06u, 0x0Fu, 0x01u,
+      0x0Cu, 0x00u, 0x00u, 0x00u,
+      0x80u, 0x00u, 0x00u});
+  // array(1) of structure(3):
+  //   long-unsigned 3, octet-string(6) 1.0.32.7.0.255, integer 2
+  b.parameters = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x03u,
+        0x12u, 0x00u, 0x03u,
+        0x09u, 0x06u,
+          0x01u, 0x00u, 0x20u, 0x07u, 0x00u, 0xFFu,
+        0x0Fu, 0x02u});
+  return b;
+}
+
+dlms::cosem::CosemParameterMonitorObject MakeParameterMonitorObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const ParameterMonitorBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemParameterMonitorObject(
+    name, b.changedParameter, b.captureTime, b.parameters, access);
+}
+
+} // namespace
+
+TEST(CosemParameterMonitorObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 2u, 0u, 255u);
+  const ParameterMonitorBuffers b = MakeSampleParameterMonitor();
+  dlms::cosem::CosemParameterMonitorObject object =
+    MakeParameterMonitorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(65u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemParameterMonitorObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.changedParameter, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.captureTime, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.parameters, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+}
+
+TEST(CosemParameterMonitorObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 2u, 0u, 255u);
+  const ParameterMonitorBuffers b = MakeSampleParameterMonitor();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemParameterMonitorObject writable =
+    MakeParameterMonitorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.ChangedParameter());
+  EXPECT_EQ(replacement, writable.CaptureTime());
+  EXPECT_EQ(replacement, writable.Parameters());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemParameterMonitorObject readOnly =
+    MakeParameterMonitorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.changedParameter, readOnly.ChangedParameter());
+  EXPECT_EQ(b.captureTime, readOnly.CaptureTime());
+  EXPECT_EQ(b.parameters, readOnly.Parameters());
+}
+
+TEST(CosemParameterMonitorObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 2u, 0u, 255u);
+  const ParameterMonitorBuffers b = MakeSampleParameterMonitor();
+  dlms::cosem::CosemParameterMonitorObject object =
+    MakeParameterMonitorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {3u, 4u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemParameterMonitorObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 2u, 0u, 255u);
+  const ParameterMonitorBuffers b = MakeSampleParameterMonitor();
+  dlms::cosem::CosemParameterMonitorObject object(
+    name, b.changedParameter, b.captureTime, b.parameters,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemParameterMonitorObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

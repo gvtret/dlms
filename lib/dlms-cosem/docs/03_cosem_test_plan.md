@@ -710,6 +710,26 @@ Status Mapping tests:
   method ids and clears method output (IC defines no methods);
 - Status Mapping normalizes versions above `MaxSupportedVersion`.
 
+Parameter Monitor tests:
+
+- Parameter Monitor exposes attributes `1` logical_name,
+  `2` changed_parameter, `3` capture_time and `4` parameters as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Parameter Monitor mutable attributes (`2`-`4`) writes succeed
+  when the caller-selected access mode permits writes and replace
+  the stored buffer in-place; writes report `AccessDenied` when
+  the access mode is read-only, leaving the stored buffers
+  unchanged;
+- Parameter Monitor rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Parameter Monitor `InvokeMethod` reports `UnsupportedFeature` for
+  methods `1` `insert` and `2` `delete`, and `MethodNotFound` for
+  any other method id, always clearing method output;
+- Parameter Monitor normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.51.0 - 2026-06-15
+
+- Added Parameter Monitor IC `65` built-in object
+  (`CosemParameterMonitorObject`) with class version `0`, exposing
+  `changed_parameter` (structure {`class_id`: long-unsigned,
+  `logical_name`: octet-string(6), `attribute_index`: integer,
+  `value`: data}), `capture_time` (date-time octet-string(12)) and
+  `parameters` (array of structure {`class_id`, `logical_name`,
+  `attribute_index`}) as opaque encoded DLMS Data buffers prepared
+  by the caller.
+- Attributes `2`-`4` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish the most recent changed parameter, capture
+  time and monitored-parameters table after evaluating parameter
+  changes out-of-band); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `insert` and `2` `delete` return `UnsupportedFeature`
+  and clear method output (the built-in object does not manage the
+  monitored-parameters table); other method ids return
+  `MethodNotFound`.
+
 ## 0.50.0 - 2026-06-15
 
 - Added Status Mapping IC `63` built-in object

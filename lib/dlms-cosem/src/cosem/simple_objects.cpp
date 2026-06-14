@@ -7390,6 +7390,154 @@ const CosemByteBuffer& CosemStatusMappingObject::Mappings() const
   return mappings_;
 }
 
+namespace {
+constexpr std::uint16_t kParameterMonitorClassId = 65u;
+constexpr std::uint8_t
+  kParameterMonitorChangedParameterAttributeId = 2u;
+constexpr std::uint8_t
+  kParameterMonitorCaptureTimeAttributeId = 3u;
+constexpr std::uint8_t
+  kParameterMonitorParametersAttributeId = 4u;
+constexpr std::uint8_t kParameterMonitorInsertMethodId = 1u;
+constexpr std::uint8_t kParameterMonitorDeleteMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemParameterMonitorObject::MaxSupportedVersion;
+
+CosemParameterMonitorObject::CosemParameterMonitorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& changedParameter,
+  const CosemByteBuffer& captureTime,
+  const CosemByteBuffer& parameters,
+  AttributeAccessMode mutableAccess)
+  : CosemParameterMonitorObject(
+      logicalName, changedParameter, captureTime, parameters,
+      mutableAccess, kVersion0)
+{
+}
+
+CosemParameterMonitorObject::CosemParameterMonitorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& changedParameter,
+  const CosemByteBuffer& captureTime,
+  const CosemByteBuffer& parameters,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kParameterMonitorClassId,
+      NormalizeVersion(
+        version, CosemParameterMonitorObject::MaxSupportedVersion),
+      logicalName))
+  , changedParameter_(changedParameter)
+  , captureTime_(captureTime)
+  , parameters_(parameters)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kParameterMonitorChangedParameterAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kParameterMonitorCaptureTimeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kParameterMonitorParametersAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemParameterMonitorObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemParameterMonitorObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemParameterMonitorObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kParameterMonitorChangedParameterAttributeId:
+      output = changedParameter_;
+      return CosemStatus::Ok;
+    case kParameterMonitorCaptureTimeAttributeId:
+      output = captureTime_;
+      return CosemStatus::Ok;
+    case kParameterMonitorParametersAttributeId:
+      output = parameters_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemParameterMonitorObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kParameterMonitorChangedParameterAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      changedParameter_ = input;
+      return CosemStatus::Ok;
+    case kParameterMonitorCaptureTimeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      captureTime_ = input;
+      return CosemStatus::Ok;
+    case kParameterMonitorParametersAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      parameters_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemParameterMonitorObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kParameterMonitorInsertMethodId ||
+      methodId == kParameterMonitorDeleteMethodId) {
+    // Parameter Monitor insert / delete are not exposed by the
+    // built-in object; backend is expected to manage the
+    // monitored-parameters table out-of-band and republish the
+    // stored buffers.
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemParameterMonitorObject::ChangedParameter() const
+{
+  return changedParameter_;
+}
+
+const CosemByteBuffer&
+CosemParameterMonitorObject::CaptureTime() const
+{
+  return captureTime_;
+}
+
+const CosemByteBuffer&
+CosemParameterMonitorObject::Parameters() const
+{
+  return parameters_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

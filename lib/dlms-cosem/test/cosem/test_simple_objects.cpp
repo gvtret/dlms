@@ -9694,13 +9694,15 @@ namespace {
 
 dlms::cosem::CosemByteBuffer SampleSFskActiveInitiator()
 {
-  // structure { octet-string(8) system_title, octet-string(6) mac,
-  //             unsigned llc_sap_selector }
+  // structure { octet-string(8) system_title,
+  //             long-unsigned MAC_address,
+  //             unsigned L_SAP_selector }
+  // See IEC 62056-6-2 ED4 4.10.4.2.2 and DLMS UA Blue Book IC 51.
   return BytesFromList({
     0x02u, 0x03u,
     0x09u, 0x08u, 0x53u, 0x4Du, 0x54u, 0x01u,
       0x02u, 0x03u, 0x04u, 0x05u,
-    0x09u, 0x06u, 0xAAu, 0xBBu, 0xCCu, 0xDDu, 0xEEu, 0xFFu,
+    0x12u, 0x01u, 0xF4u,
     0x11u, 0x7Fu});
 }
 
@@ -9750,11 +9752,15 @@ TEST(CosemSFskActiveInitiatorObject, MutableAttributesHonorAccessMode)
     dlms::cosem::CosemLogicalName(0u, 0u, 26u, 1u, 0u, 255u);
   const dlms::cosem::CosemByteBuffer initiator =
     SampleSFskActiveInitiator();
+  // Default "not registered" descriptor per IEC 62056-6-2 ED4 4.10.4.2.2:
+  // system_title = octet-string of 0s, MAC_address = NO-BODY (0x0FFE
+  // is the IC 50 default; 0x0000 is the standard "no body" value),
+  // L_SAP_selector = 0.
   const dlms::cosem::CosemByteBuffer replacement = BytesFromList({
     0x02u, 0x03u,
     0x09u, 0x08u, 0x00u, 0x00u, 0x00u, 0x00u,
       0x00u, 0x00u, 0x00u, 0x00u,
-    0x09u, 0x06u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x12u, 0x00u, 0x00u,
     0x11u, 0x00u});
 
   dlms::cosem::CosemSFskActiveInitiatorObject writable =

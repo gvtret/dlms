@@ -1068,8 +1068,9 @@ method output.
 Initiator IC `51` (`CosemSFskActiveInitiatorObject`) with class
 version `0`. The constructors take the logical name, an
 encoded active_initiator buffer (structure `{system_title:
-octet-string(8), mac_address: octet-string, llc_sap_selector:
-unsigned}`) prepared by the caller, a caller-selected
+octet-string(8), MAC_address: long-unsigned, L_SAP_selector:
+unsigned}`, per IEC 62056-6-2 ED4 4.10.4.2.2 and DLMS UA Blue
+Book IC 51) prepared by the caller, a caller-selected
 `AttributeAccessMode` for the mutable attribute `2`, and an
 optional explicit version that is normalized to
 `MaxSupportedVersion` when out of range. Attribute `1`

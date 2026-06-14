@@ -5,8 +5,9 @@
 - Added S-FSK Active Initiator IC `51` built-in object
   (`CosemSFskActiveInitiatorObject`) with class version `0`,
   exposing `active_initiator` (structure {system_title:
-  octet-string(8), mac_address: octet-string,
-  llc_sap_selector: unsigned}) as an opaque encoded DLMS Data
+  octet-string(8), MAC_address: long-unsigned,
+  L_SAP_selector: unsigned}, per IEC 62056-6-2 ED4 4.10.4.2.2
+  and DLMS UA Blue Book IC 51) as an opaque encoded DLMS Data
   buffer prepared by the caller.
 - Attribute `2` honours a caller-selected
   `AttributeAccessMode` (writes replace the stored buffer

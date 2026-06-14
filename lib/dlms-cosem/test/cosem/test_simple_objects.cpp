@@ -2304,3 +2304,216 @@ TEST(CosemSecuritySetupObject, RegistryActivatesSecurityPolicy)
               MakeAttribute(object->Descriptor().key, 2u),
               bytes));
 }
+
+namespace {
+
+dlms::cosem::CertificateInfoEntry MakeEntry(
+  std::uint8_t entity,
+  std::uint8_t type,
+  const dlms::cosem::CertificateSystemTitle& systemTitle,
+  std::initializer_list<std::uint8_t> serial,
+  std::initializer_list<std::uint8_t> issuer,
+  std::initializer_list<std::uint8_t> subject,
+  std::initializer_list<std::uint8_t> raw)
+{
+  dlms::cosem::CertificateInfoEntry entry;
+  entry.entity = entity;
+  entry.type = type;
+  entry.systemTitle = systemTitle;
+  entry.serialNumber.assign(serial.begin(), serial.end());
+  entry.issuer.assign(issuer.begin(), issuer.end());
+  entry.subject.assign(subject.begin(), subject.end());
+  entry.rawCertificate.assign(raw.begin(), raw.end());
+  return entry;
+}
+
+dlms::cosem::CosemByteBuffer BytesFromList(
+  std::initializer_list<std::uint8_t> items)
+{
+  dlms::cosem::CosemByteBuffer bytes;
+  bytes.insert(bytes.end(), items.begin(), items.end());
+  return bytes;
+}
+
+} // namespace
+
+TEST(CosemSecuritySetupObject, ReadCertificatesEmptyWhenStoreAttached)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::InMemoryCosemCertificateStore store;
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x00u, 0x00u, client, server,
+    static_cast<dlms::security::IMutableKeyStore*>(0),
+    static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+    &store);
+
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, output));
+  // array tag (0x01) + length 0.
+  ASSERT_EQ(2u, output.size());
+  EXPECT_EQ(0x01u, output[0]);
+  EXPECT_EQ(0x00u, output[1]);
+}
+
+TEST(CosemSecuritySetupObject, ReadCertificatesEncodesStoreEntries)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CertificateSystemTitle st = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+
+  dlms::cosem::InMemoryCosemCertificateStore store;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok, store.Import(MakeEntry(
+    dlms::cosem::CertificateEntity_Server,
+    dlms::cosem::CertificateType_DigitalSignature,
+    st,
+    {0x12u, 0x34u},
+    {'C', 'A'},
+    {'M', 'E'},
+    {0xAAu, 0xBBu, 0xCCu})));
+
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x00u, 0x00u, client, server,
+    static_cast<dlms::security::IMutableKeyStore*>(0),
+    static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+    &store);
+
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, output));
+
+  // array tag, length 1, structure tag, length 6,
+  //   enum 0 (server), enum 0 (digital_signature),
+  //   octet-string serial(2), octet-string issuer(2),
+  //   octet-string subject(2), octet-string alt-name(0).
+  ASSERT_EQ(BytesFromList({
+    0x01u, 0x01u,
+    0x02u, 0x06u,
+    0x16u, 0x00u,
+    0x16u, 0x00u,
+    0x09u, 0x02u, 0x12u, 0x34u,
+    0x09u, 0x02u, 'C', 'A',
+    0x09u, 0x02u, 'M', 'E',
+    0x09u, 0x00u
+  }), output);
+}
+
+TEST(CosemSecuritySetupObject, ImportExportRemoveCertificateRoundTrip)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CertificateSystemTitle st = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+
+  dlms::cosem::InMemoryCosemCertificateStore store;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok, store.Import(MakeEntry(
+    dlms::cosem::CertificateEntity_Client,
+    dlms::cosem::CertificateType_KeyAgreement,
+    st,
+    {0xDEu, 0xADu},
+    {'C', 'A'}, {'M', 'E'},
+    {0x01u, 0x02u, 0x03u, 0x04u})));
+
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x00u, 0x00u, client, server,
+    static_cast<dlms::security::IMutableKeyStore*>(0),
+    static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+    &store);
+
+  // export by entity: structure{enum(0), structure{enum, enum, octet-string(8)}}
+  dlms::cosem::CosemByteBuffer exportByEntity = BytesFromList({
+    0x02u, 0x02u,
+    0x16u, 0x00u,
+    0x02u, 0x03u,
+    0x16u, dlms::cosem::CertificateEntity_Client,
+    0x16u, dlms::cosem::CertificateType_KeyAgreement,
+    0x09u, 0x08u,
+    'C', 'L', 'I', 'E', 'N', 'T', '0', '1'
+  });
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(7u, exportByEntity, output));
+  EXPECT_EQ(BytesFromList({0x09u, 0x04u, 0x01u, 0x02u, 0x03u, 0x04u}), output);
+
+  // export by serial: structure{enum(1), structure{octet-string serial, octet-string issuer}}
+  dlms::cosem::CosemByteBuffer exportBySerial = BytesFromList({
+    0x02u, 0x02u,
+    0x16u, 0x01u,
+    0x02u, 0x02u,
+    0x09u, 0x02u, 0xDEu, 0xADu,
+    0x09u, 0x02u, 'C', 'A'
+  });
+  output.clear();
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(7u, exportBySerial, output));
+  EXPECT_EQ(BytesFromList({0x09u, 0x04u, 0x01u, 0x02u, 0x03u, 0x04u}), output);
+
+  // remove by entity.
+  output.clear();
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(8u, exportByEntity, output));
+  EXPECT_EQ(0u, store.Size());
+
+  // subsequent export now fails with ObjectError.
+  output.clear();
+  EXPECT_EQ(dlms::cosem::CosemStatus::ObjectError,
+            object.InvokeMethod(7u, exportByEntity, output));
+}
+
+TEST(CosemSecuritySetupObject, ImportCertificateStoresRawBytes)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::InMemoryCosemCertificateStore store;
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x00u, 0x00u, client, server,
+    static_cast<dlms::security::IMutableKeyStore*>(0),
+    static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+    &store);
+
+  // method 6: data is octet-string with raw cert bytes.
+  dlms::cosem::CosemByteBuffer input = BytesFromList({
+    0x09u, 0x03u, 0x30u, 0x82u, 0x01u
+  });
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(6u, input, output));
+  ASSERT_EQ(1u, store.Size());
+
+  std::vector<dlms::cosem::CertificateInfoEntry> entries;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok, store.List(entries));
+  ASSERT_EQ(1u, entries.size());
+  EXPECT_EQ(3u, entries[0].rawCertificate.size());
+  EXPECT_EQ(0x30u, entries[0].rawCertificate[0]);
+}
+
+TEST(CosemSecuritySetupObject, CertificateMethodsUnsupportedWithoutStore)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject object(
+    dlms::cosem::SecuritySetupName(),
+    0x00u, 0x00u, client, server);
+
+  dlms::cosem::CosemByteBuffer input = BytesFromList({0x09u, 0x01u, 0x00u});
+  dlms::cosem::CosemByteBuffer output;
+  for (std::uint8_t methodId = 6u; methodId <= 8u; ++methodId) {
+    output.clear();
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(methodId, input, output));
+  }
+}

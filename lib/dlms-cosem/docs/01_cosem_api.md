@@ -470,13 +470,57 @@ attribute and method surface. The explicit version constructors can publish an
 older descriptor version when required; values above `MaxSupportedVersion` are
 normalized. Version `0` exposes attributes `1` through `5` and methods `1`
 and `2`; version `1` also exposes attribute `6`, `certificates`, as a DLMS
-Data array. Without a certificate store backend the built-in object returns an
-empty array for attribute `6`. Version `1` exposes methods `1` through `8`.
+Data array of `certificate_info` structures sourced from an attached
+`ICosemCertificateStore` (empty array when no entries exist or no store is
+attached). Version `1` exposes methods `1` through `8`.
 Implemented methods keep their existing runtime behavior: `security_activate`
 validates monotonic policy strengthening and `global_key_transfer` supports
-suite `0` key transfer through an installed mutable key store. Version `1`
-certificate and key agreement methods return `UnsupportedFeature` until
-implemented.
+suite `0` key transfer through an installed mutable key store. Methods `6`
+(`import_certificate`), `7` (`export_certificate`) and `8`
+(`remove_certificate`) parse Blue Book payloads (raw octet-string for import;
+`structure{enum, structure{...}}` selector for export/remove with `by_entity`
+and `by_serial` variants) and dispatch to the certificate store backend.
+Without a certificate store attached, methods `6`-`8` return
+`UnsupportedFeature` and clear method output. Methods `3` (key agreement),
+`4` (generate key pair) and `5` (generate certificate request) remain
+`UnsupportedFeature` until an ECDSA / X.509 stack is wired in.
+
+The certificate store contract is declared in
+`dlms/cosem/certificate_store.hpp`:
+
+```
+struct CertificateInfoEntry {
+  std::uint8_t entity;
+  std::uint8_t type;
+  CertificateSystemTitle systemTitle;
+  std::vector<std::uint8_t> serialNumber;
+  std::vector<std::uint8_t> issuer;
+  std::vector<std::uint8_t> subject;
+  std::vector<std::uint8_t> subjectAltName;
+  std::vector<std::uint8_t> rawCertificate;
+};
+
+class ICosemCertificateStore {
+ public:
+  virtual CosemStatus List(std::vector<CertificateInfoEntry>& out) const = 0;
+  virtual CosemStatus Import(const CertificateInfoEntry& entry) = 0;
+  virtual CosemStatus ExportByEntity(std::uint8_t entity,
+                                     std::uint8_t type,
+                                     const CertificateSystemTitle& systemTitle,
+                                     std::vector<std::uint8_t>& raw) const = 0;
+  virtual CosemStatus ExportBySerial(const std::vector<std::uint8_t>& serial,
+                                     const std::vector<std::uint8_t>& issuer,
+                                     std::vector<std::uint8_t>& raw) const = 0;
+  virtual CosemStatus RemoveByEntity(std::uint8_t entity,
+                                     std::uint8_t type,
+                                     const CertificateSystemTitle& systemTitle) = 0;
+  virtual CosemStatus RemoveBySerial(const std::vector<std::uint8_t>& serial,
+                                     const std::vector<std::uint8_t>& issuer) = 0;
+};
+```
+
+Lookups that miss return `CosemStatus::ObjectError`. An
+`InMemoryCosemCertificateStore` reference backend is provided.
 
 Attribute `8` is `association_status`, encoded as DLMS Data `enum`. Attribute
 `9` is encoded as an xDLMS Data octet-string logical name. Attribute `10` is an

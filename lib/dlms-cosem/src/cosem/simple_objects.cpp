@@ -2326,7 +2326,9 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
       securitySuite,
       clientSystemTitle,
       serverSystemTitle,
-      0,
+      static_cast<dlms::security::IMutableKeyStore*>(0),
+      static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+      static_cast<ICosemCertificateStore*>(0),
       kSecuritySetupVersion)
 {
 }
@@ -2344,7 +2346,9 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
       securitySuite,
       clientSystemTitle,
       serverSystemTitle,
-      0,
+      static_cast<dlms::security::IMutableKeyStore*>(0),
+      static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+      static_cast<ICosemCertificateStore*>(0),
       version)
 {
 }
@@ -2363,7 +2367,8 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
       clientSystemTitle,
       serverSystemTitle,
       keyStore,
-      0,
+      static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+      static_cast<ICosemCertificateStore*>(0),
       kSecuritySetupVersion)
 {
 }
@@ -2383,7 +2388,8 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
       clientSystemTitle,
       serverSystemTitle,
       keyStore,
-      0,
+      static_cast<dlms::security::IInvocationCounterResetPolicy*>(0),
+      static_cast<ICosemCertificateStore*>(0),
       version)
 {
 }
@@ -2404,6 +2410,7 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
       serverSystemTitle,
       keyStore,
       counterResetPolicy,
+      static_cast<ICosemCertificateStore*>(0),
       kSecuritySetupVersion)
 {
 }
@@ -2417,6 +2424,51 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
   dlms::security::IMutableKeyStore* keyStore,
   dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
   std::uint8_t version)
+  : CosemSecuritySetupObject(
+      logicalName,
+      securityPolicy,
+      securitySuite,
+      clientSystemTitle,
+      serverSystemTitle,
+      keyStore,
+      counterResetPolicy,
+      static_cast<ICosemCertificateStore*>(0),
+      version)
+{
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle,
+  dlms::security::IMutableKeyStore* keyStore,
+  dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
+  ICosemCertificateStore* certificateStore)
+  : CosemSecuritySetupObject(
+      logicalName,
+      securityPolicy,
+      securitySuite,
+      clientSystemTitle,
+      serverSystemTitle,
+      keyStore,
+      counterResetPolicy,
+      certificateStore,
+      kSecuritySetupVersion)
+{
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle,
+  dlms::security::IMutableKeyStore* keyStore,
+  dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
+  ICosemCertificateStore* certificateStore,
+  std::uint8_t version)
   : descriptor_(MakeDescriptor(
       kSecuritySetupClassId,
       NormalizeVersion(version, CosemSecuritySetupObject::MaxSupportedVersion),
@@ -2427,6 +2479,7 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
   , serverSystemTitle_(serverSystemTitle)
   , keyStore_(keyStore)
   , counterResetPolicy_(counterResetPolicy)
+  , certificateStore_(certificateStore)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
@@ -2503,7 +2556,37 @@ CosemStatus CosemSecuritySetupObject::ReadAttribute(
   if (attributeId == kSecurityCertificatesAttributeId &&
       descriptor_.key.version >= 1u) {
     output.clear();
-    AppendArrayHeader(output, 0u);
+    std::vector<CertificateInfoEntry> entries;
+    if (certificateStore_ != 0) {
+      CosemStatus listStatus = certificateStore_->List(entries);
+      if (listStatus != CosemStatus::Ok) {
+        return listStatus;
+      }
+    }
+    AppendArrayHeader(output, entries.size());
+    static const std::uint8_t kEmptyByte = 0u;
+    for (std::size_t i = 0u; i < entries.size(); ++i) {
+      const CertificateInfoEntry& entry = entries[i];
+      AppendStructureHeader(output, 6u);
+      AppendEnum(output, entry.entity);
+      AppendEnum(output, entry.type);
+      AppendOctetString(
+        output,
+        entry.serialNumber.empty() ? &kEmptyByte : &entry.serialNumber[0],
+        entry.serialNumber.size());
+      AppendOctetString(
+        output,
+        entry.issuer.empty() ? &kEmptyByte : &entry.issuer[0],
+        entry.issuer.size());
+      AppendOctetString(
+        output,
+        entry.subject.empty() ? &kEmptyByte : &entry.subject[0],
+        entry.subject.size());
+      AppendOctetString(
+        output,
+        entry.subjectAltName.empty() ? &kEmptyByte : &entry.subjectAltName[0],
+        entry.subjectAltName.size());
+    }
     return CosemStatus::Ok;
   }
   output.clear();
@@ -2651,8 +2734,132 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
     return CosemStatus::Ok;
   }
   if (descriptor_.key.version >= 1u &&
+      methodId >= 6u && methodId <= 8u) {
+    output.clear();
+    if (certificateStore_ == 0) {
+      return CosemStatus::UnsupportedFeature;
+    }
+
+    if (methodId == 6u) {
+      // import_certificate: data is octet-string with raw X.509.
+      std::size_t offset = 0u;
+      std::size_t length = 0u;
+      const std::uint8_t* data = 0;
+      if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+          !ReadAxdrLength(input, offset, length) ||
+          !ReadFixedBytes(input, offset, length, data) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      CertificateInfoEntry entry;
+      entry.entity = CertificateEntity_Other;
+      entry.type = CertificateType_Other;
+      entry.rawCertificate.assign(data, data + length);
+      // We do not parse X.509 here; subject/issuer/serial stay empty.
+      return certificateStore_->Import(entry);
+    }
+
+    // methods 7 (export) and 8 (remove) share the same selector structure:
+    //   structure(2) {
+    //     enum kind,                              // 0 = by-entity, 1 = by-serial
+    //     structure(N) { ... }                    // selector payload
+    //   }
+    std::size_t offset = 0u;
+    std::size_t outerFields = 0u;
+    std::uint8_t kind = 0u;
+    if (!ReadExpectedTag(input, offset, kStructureTag) ||
+        !ReadAxdrLength(input, offset, outerFields) ||
+        outerFields != 2u ||
+        !ReadEnumValue(input, offset, kind)) {
+      return CosemStatus::InvalidArgument;
+    }
+
+    std::size_t selectorFields = 0u;
+    if (!ReadExpectedTag(input, offset, kStructureTag) ||
+        !ReadAxdrLength(input, offset, selectorFields)) {
+      return CosemStatus::InvalidArgument;
+    }
+
+    if (kind == 0u) {
+      // by-entity: { entity:enum, type:enum, system_title:octet-string(8) }
+      std::uint8_t entity = 0u;
+      std::uint8_t type = 0u;
+      std::size_t stLength = 0u;
+      const std::uint8_t* stData = 0;
+      if (selectorFields != 3u ||
+          !ReadEnumValue(input, offset, entity) ||
+          !ReadEnumValue(input, offset, type) ||
+          !ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+          !ReadAxdrLength(input, offset, stLength) ||
+          stLength != kSystemTitleSize ||
+          !ReadFixedBytes(input, offset, stLength, stData) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      CertificateSystemTitle systemTitle;
+      for (std::size_t i = 0u; i < kSystemTitleSize; ++i) {
+        systemTitle[i] = stData[i];
+      }
+      if (methodId == 7u) {
+        std::vector<std::uint8_t> raw;
+        CosemStatus status = certificateStore_->ExportByEntity(
+          entity, type, systemTitle, raw);
+        if (status != CosemStatus::Ok) {
+          return status;
+        }
+        static const std::uint8_t kEmpty = 0u;
+        AppendOctetString(
+          output,
+          raw.empty() ? &kEmpty : &raw[0],
+          raw.size());
+        return CosemStatus::Ok;
+      }
+      return certificateStore_->RemoveByEntity(entity, type, systemTitle);
+    }
+
+    if (kind == 1u) {
+      // by-serial: { serial_number:octet-string, issuer:octet-string }
+      std::size_t snLength = 0u;
+      const std::uint8_t* snData = 0;
+      std::size_t issLength = 0u;
+      const std::uint8_t* issData = 0;
+      if (selectorFields != 2u ||
+          !ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+          !ReadAxdrLength(input, offset, snLength) ||
+          !ReadFixedBytes(input, offset, snLength, snData) ||
+          !ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+          !ReadAxdrLength(input, offset, issLength) ||
+          !ReadFixedBytes(input, offset, issLength, issData) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      std::vector<std::uint8_t> serial(snData, snData + snLength);
+      std::vector<std::uint8_t> issuer(issData, issData + issLength);
+      if (methodId == 7u) {
+        std::vector<std::uint8_t> raw;
+        CosemStatus status = certificateStore_->ExportBySerial(
+          serial, issuer, raw);
+        if (status != CosemStatus::Ok) {
+          return status;
+        }
+        static const std::uint8_t kEmpty = 0u;
+        AppendOctetString(
+          output,
+          raw.empty() ? &kEmpty : &raw[0],
+          raw.size());
+        return CosemStatus::Ok;
+      }
+      return certificateStore_->RemoveBySerial(serial, issuer);
+    }
+
+    return CosemStatus::InvalidArgument;
+  }
+  if (descriptor_.key.version >= 1u &&
       methodId > kGlobalKeyTransferMethodId &&
       methodId <= 8u) {
+    // methods 3 (key_agreement), 4 (generate_key_pair),
+    // 5 (generate_certificate_request) require an X.509 / ECDSA stack that is
+    // not provided by dlms-cosem.
     output.clear();
     return CosemStatus::UnsupportedFeature;
   }

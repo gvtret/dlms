@@ -141,7 +141,17 @@ Security Setup tests:
 - Security Setup `security_activate` enforces monotonic policy strengthening;
 - Security Setup suite `0` `global_key_transfer` unwraps and installs keys
   through a mutable key store;
-- unsupported Security Setup methods report `UnsupportedFeature`.
+- unsupported Security Setup methods report `UnsupportedFeature`;
+- Security Setup attribute `6` `certificates` encodes attached
+  `ICosemCertificateStore` entries as a DLMS Data array of `certificate_info`
+  structures (empty array when the store is empty or absent);
+- Security Setup method `6` `import_certificate` stores raw octet-string
+  payloads through the certificate store;
+- Security Setup methods `7` `export_certificate` and `8` `remove_certificate`
+  parse Blue Book `by_entity` and `by_serial` selector structures and dispatch
+  to the certificate store; lookup failures map to `ObjectError`;
+- Security Setup methods `6`-`8` report `UnsupportedFeature` when no
+  certificate store backend is attached.
 
 ## 2. Integration Tests
 

@@ -236,13 +236,17 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
      `MaxSupportedVersion` для Data, Register, Clock, Profile Generic,
      SAP Assignment и Security Setup, а Security Setup по умолчанию публикует
      версию `1`; Profile Generic v0 методы `3`/`4` и Security Setup v0/v1
-     методы gated по версии класса; Security Setup v1 attribute `6`
-     `certificates` возвращает пустой DLMS Data array без certificate-store
-     backend.
+     методы gated по версии класса; `0.18.0` добавляет pluggable
+     `ICosemCertificateStore` backend для Security Setup v1 attribute `6`
+     `certificates` (DLMS Data array of `certificate_info` structures) и
+     реализует методы `6` (`import_certificate`), `7` (`export_certificate`)
+     и `8` (`remove_certificate`) с парсингом Blue Book `by_entity`/
+     `by_serial` selector структур и in-memory reference backend.
    - Остаются `associated_partners_id`, application context name,
      xDLMS context info, authentication mechanism name, secret handling и
-     выполнение HLS/object add/remove methods и полноценный certificate-store
-     backend для Security Setup v1 attribute `certificates`.
+     выполнение HLS/object add/remove methods; X.509 парсинг для
+     автозаполнения subject/issuer/serial при `import_certificate` остаётся
+     TODO.
 7. Push setup and initiative messages.
    - Push Setup IC `40` version handling.
    - Notification payload structures required by СПОДЭС/СПОДУС.

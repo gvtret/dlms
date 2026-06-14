@@ -10,6 +10,7 @@ option(DLMS_BUILD_TESTS "Build GoogleTest tests" ON)
 option(DLMS_USE_SYSTEM_GTEST "Use system-installed GoogleTest" OFF)
 
 add_library(dlms_cosem
+  src/cosem/certificate_store.cpp
   src/cosem/cosem_access.cpp
   src/cosem/cosem_status.cpp
   src/cosem/cosem_types.cpp

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.18.0 - 2026-06-15
+
+- Added pluggable `ICosemCertificateStore` interface and
+  `InMemoryCosemCertificateStore` reference backend for Security Setup IC `64`
+  version `1`.
+- Changed Security Setup attribute `6` `certificates` to encode the attached
+  certificate store entries as a DLMS Data array of `certificate_info`
+  structures (entity enum, type enum, serial / issuer / subject /
+  subject-alt-name octet-strings).
+- Added Security Setup method `6` `import_certificate` (octet-string payload),
+  method `7` `export_certificate` and method `8` `remove_certificate` with
+  Blue Book `by_entity` / `by_serial` selector parsing dispatched to the
+  certificate store backend. Without an attached store these methods return
+  `UnsupportedFeature` and clear method output. Methods `3`/`4`/`5` (key
+  agreement, generate key pair, generate certificate request) remain
+  `UnsupportedFeature` until an ECDSA / X.509 stack is wired in.
+
 ## 0.17.0 - 2026-06-14
 
 - Added caller-selected descriptor version constructors and

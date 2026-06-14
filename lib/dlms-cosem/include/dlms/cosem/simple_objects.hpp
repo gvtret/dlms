@@ -1,5 +1,6 @@
 #pragma once
 
+#include "dlms/cosem/certificate_store.hpp"
 #include "dlms/cosem/logical_device.hpp"
 #include "dlms/security/invocation_counter_store.hpp"
 #include "dlms/security/key_store.hpp"
@@ -461,6 +462,26 @@ public:
     dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
     std::uint8_t version);
 
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle,
+    dlms::security::IMutableKeyStore* keyStore,
+    dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
+    ICosemCertificateStore* certificateStore);
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle,
+    dlms::security::IMutableKeyStore* keyStore,
+    dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
+    ICosemCertificateStore* certificateStore,
+    std::uint8_t version);
+
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
   CosemStatus ReadAttribute(
@@ -487,6 +508,7 @@ private:
   SystemTitle serverSystemTitle_;
   dlms::security::IMutableKeyStore* keyStore_;
   dlms::security::IInvocationCounterResetPolicy* counterResetPolicy_;
+  ICosemCertificateStore* certificateStore_;
   CosemAccessRights rights_;
 };
 

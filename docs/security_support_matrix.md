@@ -76,7 +76,7 @@ Status values:
 | `key_agreement` | Planned | Needs ECDH and general-ciphering APDU; currently returns `UnsupportedFeature` and clears method output. |
 | `generate_key_pair` | Planned | Needed for Suite 1/2 server key management; currently returns `UnsupportedFeature` and clears method output. |
 | `generate_certificate_request` | Planned | Needed for certificate lifecycle; currently returns `UnsupportedFeature` and clears method output. |
-| `import_certificate` / `export_certificate` / `remove_certificate` | Planned | Needed for Suite 1/2 certificate lifecycle; currently returns `UnsupportedFeature` and clears method output. |
+| `import_certificate` / `export_certificate` / `remove_certificate` | Partial | Methods `6`-`8` parse Blue Book payloads (raw octet-string for import; `structure{enum, structure{...}}` selector for export/remove with `by_entity` and `by_serial` variants) and dispatch to a pluggable `ICosemCertificateStore`. An `InMemoryCosemCertificateStore` reference backend is provided. Without a store attached, all three methods return `UnsupportedFeature` and clear method output. Raw X.509 parsing (filling subject/issuer/serial automatically from imported bytes) remains TODO. |
 
 ## Production Gate
 

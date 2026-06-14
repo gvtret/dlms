@@ -593,6 +593,27 @@ IEC twisted pair (1) Setup tests:
 - IEC twisted pair (1) Setup normalizes versions above
   `MaxSupportedVersion`.
 
+M-Bus slave port setup tests:
+
+- M-Bus slave port setup exposes attributes `1` logical_name,
+  `2` default_baud, `3` available_baud, `4` status and
+  `5` mbus_port_reference as the encoded DLMS Data buffers supplied
+  by the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- M-Bus slave port setup mutable attributes (`2`-`5`) writes
+  succeed when the caller-selected access mode permits writes and
+  replace the stored buffer in-place; writes report `AccessDenied`
+  when the access mode is read-only, leaving the stored buffers
+  unchanged;
+- M-Bus slave port setup rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- M-Bus slave port setup `InvokeMethod` reports `UnsupportedFeature`
+  for method `1` `reset` and `MethodNotFound` for any other method
+  id, always clearing method output;
+- M-Bus slave port setup normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

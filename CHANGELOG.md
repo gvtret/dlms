@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.45.0 - 2026-06-15
+
+- Added M-Bus slave port setup IC `25` built-in object
+  (`CosemMBusSlavePortSetupObject`) with class version `0`, exposing
+  `default_baud` (enum), `available_baud` (enum), `status` (enum)
+  and `mbus_port_reference` (octet-string referencing an IEC HDLC
+  Setup logical name) as opaque encoded DLMS Data buffers prepared
+  by the caller.
+- Attributes `2`-`5` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Method `1` `reset` returns `UnsupportedFeature` and clears method
+  output (the built-in object does not own slave-port reset
+  semantics); other method ids return `MethodNotFound`.
+
 ## 0.44.0 - 2026-06-15
 
 - Added IEC twisted pair (1) Setup IC `24` built-in object

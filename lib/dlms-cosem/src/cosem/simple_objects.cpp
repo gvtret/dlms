@@ -7918,6 +7918,265 @@ CosemDataProtectionObject::RequiredProtection() const
   return requiredProtection_;
 }
 
+namespace {
+constexpr std::uint16_t kIecLocalPortSetupClassId = 19u;
+constexpr std::uint8_t kIecLocalPortSetupDefaultModeAttributeId = 2u;
+constexpr std::uint8_t kIecLocalPortSetupDefaultBaudAttributeId = 3u;
+constexpr std::uint8_t kIecLocalPortSetupProposedBaudAttributeId = 4u;
+constexpr std::uint8_t kIecLocalPortSetupResponseTimeAttributeId = 5u;
+constexpr std::uint8_t kIecLocalPortSetupDeviceAddressAttributeId = 6u;
+constexpr std::uint8_t kIecLocalPortSetupPassword1AttributeId = 7u;
+constexpr std::uint8_t kIecLocalPortSetupPassword2AttributeId = 8u;
+constexpr std::uint8_t kIecLocalPortSetupPassword5AttributeId = 9u;
+constexpr std::uint8_t kIecLocalPortSetupPortSpeedAttributeId = 10u;
+constexpr std::uint8_t kVersion1 = 1u;
+} // namespace
+
+const std::uint8_t CosemIecLocalPortSetupObject::MaxSupportedVersion;
+
+CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& defaultMode,
+  const CosemByteBuffer& defaultBaud,
+  const CosemByteBuffer& proposedBaud,
+  const CosemByteBuffer& responseTime,
+  const CosemByteBuffer& deviceAddress,
+  const CosemByteBuffer& password1,
+  const CosemByteBuffer& password2,
+  const CosemByteBuffer& password5,
+  const CosemByteBuffer& portSpeed,
+  AttributeAccessMode mutableAccess)
+  : CosemIecLocalPortSetupObject(
+      logicalName, defaultMode, defaultBaud, proposedBaud,
+      responseTime, deviceAddress, password1, password2, password5,
+      portSpeed, mutableAccess, kVersion1)
+{
+}
+
+CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& defaultMode,
+  const CosemByteBuffer& defaultBaud,
+  const CosemByteBuffer& proposedBaud,
+  const CosemByteBuffer& responseTime,
+  const CosemByteBuffer& deviceAddress,
+  const CosemByteBuffer& password1,
+  const CosemByteBuffer& password2,
+  const CosemByteBuffer& password5,
+  const CosemByteBuffer& portSpeed,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIecLocalPortSetupClassId,
+      NormalizeVersion(
+        version,
+        CosemIecLocalPortSetupObject::MaxSupportedVersion),
+      logicalName))
+  , defaultMode_(defaultMode)
+  , defaultBaud_(defaultBaud)
+  , proposedBaud_(proposedBaud)
+  , responseTime_(responseTime)
+  , deviceAddress_(deviceAddress)
+  , password1_(password1)
+  , password2_(password2)
+  , password5_(password5)
+  , portSpeed_(portSpeed)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupDefaultModeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupDefaultBaudAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupProposedBaudAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupResponseTimeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupDeviceAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupPassword1AttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupPassword2AttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupPassword5AttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupPortSpeedAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIecLocalPortSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIecLocalPortSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIecLocalPortSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupDefaultModeAttributeId:
+      output = defaultMode_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupDefaultBaudAttributeId:
+      output = defaultBaud_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupProposedBaudAttributeId:
+      output = proposedBaud_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupResponseTimeAttributeId:
+      output = responseTime_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupDeviceAddressAttributeId:
+      output = deviceAddress_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPassword1AttributeId:
+      output = password1_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPassword2AttributeId:
+      output = password2_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPassword5AttributeId:
+      output = password5_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPortSpeedAttributeId:
+      output = portSpeed_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIecLocalPortSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kIecLocalPortSetupDefaultModeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      defaultMode_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupDefaultBaudAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      defaultBaud_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupProposedBaudAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      proposedBaud_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupResponseTimeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      responseTime_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupDeviceAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      deviceAddress_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPassword1AttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      password1_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPassword2AttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      password2_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPassword5AttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      password5_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPortSpeedAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      portSpeed_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIecLocalPortSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::DefaultMode() const
+{
+  return defaultMode_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::DefaultBaud() const
+{
+  return defaultBaud_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::ProposedBaud() const
+{
+  return proposedBaud_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::ResponseTime() const
+{
+  return responseTime_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::DeviceAddress() const
+{
+  return deviceAddress_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::Password1() const
+{
+  return password1_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::Password2() const
+{
+  return password2_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::Password5() const
+{
+  return password5_;
+}
+
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::PortSpeed() const
+{
+  return portSpeed_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

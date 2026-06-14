@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.54.0 - 2026-06-15
+
+- Added IEC Local Port Setup IC `19` built-in object
+  (`CosemIecLocalPortSetupObject`) with class version `1`,
+  exposing `default_mode` (enum), `default_baud` (enum),
+  `proposed_baud` (enum), `response_time` (enum),
+  `device_address` (octet-string with the device-address logical
+  name), `password_1` / `password_2` / `password_5` (octet-strings
+  carrying the level-1, level-2 and level-5 passwords) and
+  `port_speed` (enum, v1 only) as opaque encoded DLMS Data buffers
+  prepared by the caller.
+- Attributes `2`-`10` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish refreshed mode, baud, response time, device
+  address and passwords after configuration changes out-of-band);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IC defines no methods; `InvokeMethod` reports `MethodNotFound`
+  for all method ids and clears method output.
+
 ## 0.53.0 - 2026-06-15
 
 - Added Data Protection IC `30` built-in object

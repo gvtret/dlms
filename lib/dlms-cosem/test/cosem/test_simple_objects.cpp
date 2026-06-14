@@ -7807,4 +7807,186 @@ TEST(CosemDataProtectionObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct IecLocalPortSetupBuffers
+{
+  dlms::cosem::CosemByteBuffer defaultMode;
+  dlms::cosem::CosemByteBuffer defaultBaud;
+  dlms::cosem::CosemByteBuffer proposedBaud;
+  dlms::cosem::CosemByteBuffer responseTime;
+  dlms::cosem::CosemByteBuffer deviceAddress;
+  dlms::cosem::CosemByteBuffer password1;
+  dlms::cosem::CosemByteBuffer password2;
+  dlms::cosem::CosemByteBuffer password5;
+  dlms::cosem::CosemByteBuffer portSpeed;
+};
+
+IecLocalPortSetupBuffers MakeSampleIecLocalPortSetup()
+{
+  IecLocalPortSetupBuffers b;
+  // enum 0 (mode HDLC)
+  b.defaultMode = BytesFromList({0x16u, 0x00u});
+  // enum 5 (9600)
+  b.defaultBaud = BytesFromList({0x16u, 0x05u});
+  // enum 5 (9600)
+  b.proposedBaud = BytesFromList({0x16u, 0x05u});
+  // enum 0 (20 ms)
+  b.responseTime = BytesFromList({0x16u, 0x00u});
+  // octet-string(6) device address 0.0.96.1.0.255
+  b.deviceAddress = BytesFromList({
+    0x09u, 0x06u, 0x00u, 0x00u, 0x60u, 0x01u, 0x00u, 0xFFu});
+  // octet-string(8) password 1
+  b.password1 = BytesFromList({
+    0x09u, 0x08u, 0x31u, 0x31u, 0x31u, 0x31u, 0x31u, 0x31u, 0x31u, 0x31u});
+  // octet-string(8) password 2
+  b.password2 = BytesFromList({
+    0x09u, 0x08u, 0x32u, 0x32u, 0x32u, 0x32u, 0x32u, 0x32u, 0x32u, 0x32u});
+  // octet-string(8) password 5
+  b.password5 = BytesFromList({
+    0x09u, 0x08u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u});
+  // enum 5 (9600) — port speed (v1)
+  b.portSpeed = BytesFromList({0x16u, 0x05u});
+  return b;
+}
+
+dlms::cosem::CosemIecLocalPortSetupObject MakeIecLocalPortSetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const IecLocalPortSetupBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemIecLocalPortSetupObject(
+    name, b.defaultMode, b.defaultBaud, b.proposedBaud,
+    b.responseTime, b.deviceAddress, b.password1, b.password2,
+    b.password5, b.portSpeed, access);
+}
+
+} // namespace
+
+TEST(CosemIecLocalPortSetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 20u, 0u, 0u, 255u);
+  const IecLocalPortSetupBuffers b = MakeSampleIecLocalPortSetup();
+  dlms::cosem::CosemIecLocalPortSetupObject object =
+    MakeIecLocalPortSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(19u, object.Descriptor().key.classId);
+  EXPECT_EQ(1u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemIecLocalPortSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.defaultMode, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.defaultBaud, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.proposedBaud, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.responseTime, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.deviceAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.password1, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.password2, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
+  EXPECT_EQ(b.password5, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.portSpeed, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(11u, out));
+}
+
+TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 20u, 0u, 0u, 255u);
+  const IecLocalPortSetupBuffers b = MakeSampleIecLocalPortSetup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemIecLocalPortSetupObject writable =
+    MakeIecLocalPortSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.DefaultMode());
+  EXPECT_EQ(replacement, writable.DefaultBaud());
+  EXPECT_EQ(replacement, writable.ProposedBaud());
+  EXPECT_EQ(replacement, writable.ResponseTime());
+  EXPECT_EQ(replacement, writable.DeviceAddress());
+  EXPECT_EQ(replacement, writable.Password1());
+  EXPECT_EQ(replacement, writable.Password2());
+  EXPECT_EQ(replacement, writable.Password5());
+  EXPECT_EQ(replacement, writable.PortSpeed());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemIecLocalPortSetupObject readOnly =
+    MakeIecLocalPortSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.defaultMode, readOnly.DefaultMode());
+  EXPECT_EQ(b.defaultBaud, readOnly.DefaultBaud());
+  EXPECT_EQ(b.proposedBaud, readOnly.ProposedBaud());
+  EXPECT_EQ(b.responseTime, readOnly.ResponseTime());
+  EXPECT_EQ(b.deviceAddress, readOnly.DeviceAddress());
+  EXPECT_EQ(b.password1, readOnly.Password1());
+  EXPECT_EQ(b.password2, readOnly.Password2());
+  EXPECT_EQ(b.password5, readOnly.Password5());
+  EXPECT_EQ(b.portSpeed, readOnly.PortSpeed());
+}
+
+TEST(CosemIecLocalPortSetupObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 20u, 0u, 0u, 255u);
+  const IecLocalPortSetupBuffers b = MakeSampleIecLocalPortSetup();
+  dlms::cosem::CosemIecLocalPortSetupObject object =
+    MakeIecLocalPortSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemIecLocalPortSetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 20u, 0u, 0u, 255u);
+  const IecLocalPortSetupBuffers b = MakeSampleIecLocalPortSetup();
+  dlms::cosem::CosemIecLocalPortSetupObject object(
+    name, b.defaultMode, b.defaultBaud, b.proposedBaud,
+    b.responseTime, b.deviceAddress, b.password1, b.password2,
+    b.password5, b.portSpeed,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemIecLocalPortSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

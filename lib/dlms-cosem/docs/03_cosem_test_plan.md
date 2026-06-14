@@ -771,6 +771,27 @@ Data Protection tests:
   method output;
 - Data Protection normalizes versions above `MaxSupportedVersion`.
 
+IEC Local Port Setup tests:
+
+- IEC Local Port Setup exposes attributes `1` logical_name,
+  `2` default_mode, `3` default_baud, `4` proposed_baud,
+  `5` response_time, `6` device_address, `7` password_1,
+  `8` password_2, `9` password_5 and `10` port_speed as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- IEC Local Port Setup mutable attributes (`2`-`10`) writes
+  succeed when the caller-selected access mode permits writes and
+  replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving the
+  stored buffers unchanged;
+- IEC Local Port Setup rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- IEC Local Port Setup `InvokeMethod` reports `MethodNotFound` for
+  all method ids and clears method output (IC defines no methods);
+- IEC Local Port Setup normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

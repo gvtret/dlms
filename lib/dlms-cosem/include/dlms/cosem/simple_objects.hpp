@@ -1932,6 +1932,74 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIecLocalPortSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  CosemIecLocalPortSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& defaultMode,
+    const CosemByteBuffer& defaultBaud,
+    const CosemByteBuffer& proposedBaud,
+    const CosemByteBuffer& responseTime,
+    const CosemByteBuffer& deviceAddress,
+    const CosemByteBuffer& password1,
+    const CosemByteBuffer& password2,
+    const CosemByteBuffer& password5,
+    const CosemByteBuffer& portSpeed,
+    AttributeAccessMode mutableAccess);
+  CosemIecLocalPortSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& defaultMode,
+    const CosemByteBuffer& defaultBaud,
+    const CosemByteBuffer& proposedBaud,
+    const CosemByteBuffer& responseTime,
+    const CosemByteBuffer& deviceAddress,
+    const CosemByteBuffer& password1,
+    const CosemByteBuffer& password2,
+    const CosemByteBuffer& password5,
+    const CosemByteBuffer& portSpeed,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& DefaultMode() const;
+  const CosemByteBuffer& DefaultBaud() const;
+  const CosemByteBuffer& ProposedBaud() const;
+  const CosemByteBuffer& ResponseTime() const;
+  const CosemByteBuffer& DeviceAddress() const;
+  const CosemByteBuffer& Password1() const;
+  const CosemByteBuffer& Password2() const;
+  const CosemByteBuffer& Password5() const;
+  const CosemByteBuffer& PortSpeed() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer defaultMode_;
+  CosemByteBuffer defaultBaud_;
+  CosemByteBuffer proposedBaud_;
+  CosemByteBuffer responseTime_;
+  CosemByteBuffer deviceAddress_;
+  CosemByteBuffer password1_;
+  CosemByteBuffer password2_;
+  CosemByteBuffer password5_;
+  CosemByteBuffer portSpeed_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

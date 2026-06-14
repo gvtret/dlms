@@ -838,6 +838,26 @@ return `UnsupportedFeature` and clear method output (the built-in
 object does not perform protected operations); other method ids
 return `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial IEC Local Port Setup
+IC `19` (`CosemIecLocalPortSetupObject`) with class version `1`.
+The constructors take the `default_mode` (enum), `default_baud`
+(enum), `proposed_baud` (enum), `response_time` (enum),
+`device_address` (octet-string with the device-address logical
+name), `password_1` / `password_2` / `password_5` (octet-strings
+carrying the level-1, level-2 and level-5 passwords) and
+`port_speed` (enum, v1 only) payloads as encoded DLMS Data
+buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` shared by the mutable
+attributes (`2`-`10`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute
+`1` (logical_name) is read-only; the mutable attributes honor the
+caller access mode and replace the stored buffer in-place when
+writable, so the backend can republish refreshed mode, baud,
+response time, device address and passwords after configuration
+changes out-of-band. IC defines no methods; `InvokeMethod`
+reports `MethodNotFound` for all method ids and clears method
+output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

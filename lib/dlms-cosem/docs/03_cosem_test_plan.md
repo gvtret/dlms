@@ -784,10 +784,10 @@ IEC Local Port Setup tests:
 - IEC Local Port Setup exposes attributes `1` logical_name,
   `2` default_mode, `3` default_baud, `4` proposed_baud,
   `5` response_time, `6` device_address, `7` password_1,
-  `8` password_2, `9` password_5 and `10` port_speed as the
+  `8` password_2 and `9` password_5 as the
   encoded DLMS Data buffers supplied by the caller, and reports
   `AttributeNotFound` for undefined attribute ids;
-- IEC Local Port Setup mutable attributes (`2`-`10`) writes
+- IEC Local Port Setup mutable attributes (`2`-`9`) writes
   succeed when the caller-selected access mode permits writes and
   replace the stored buffer in-place; writes report
   `AccessDenied` when the access mode is read-only, leaving the

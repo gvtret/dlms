@@ -7890,7 +7890,6 @@ struct IecLocalPortSetupBuffers
   dlms::cosem::CosemByteBuffer password1;
   dlms::cosem::CosemByteBuffer password2;
   dlms::cosem::CosemByteBuffer password5;
-  dlms::cosem::CosemByteBuffer portSpeed;
 };
 
 IecLocalPortSetupBuffers MakeSampleIecLocalPortSetup()
@@ -7916,8 +7915,6 @@ IecLocalPortSetupBuffers MakeSampleIecLocalPortSetup()
   // octet-string(8) password 5
   b.password5 = BytesFromList({
     0x09u, 0x08u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u});
-  // enum 5 (9600) — port speed (v1)
-  b.portSpeed = BytesFromList({0x16u, 0x05u});
   return b;
 }
 
@@ -7929,7 +7926,7 @@ dlms::cosem::CosemIecLocalPortSetupObject MakeIecLocalPortSetupObject(
   return dlms::cosem::CosemIecLocalPortSetupObject(
     name, b.defaultMode, b.defaultBaud, b.proposedBaud,
     b.responseTime, b.deviceAddress, b.password1, b.password2,
-    b.password5, b.portSpeed, access);
+    b.password5, access);
 }
 
 } // namespace
@@ -7968,10 +7965,8 @@ TEST(CosemIecLocalPortSetupObject, ExposesAllAttributes)
   EXPECT_EQ(b.password2, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
   EXPECT_EQ(b.password5, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
-  EXPECT_EQ(b.portSpeed, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(11u, out));
+            object.ReadAttribute(10u, out));
 }
 
 TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
@@ -7985,7 +7980,7 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemIecLocalPortSetupObject writable =
     MakeIecLocalPortSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
@@ -7999,7 +7994,6 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(replacement, writable.Password1());
   EXPECT_EQ(replacement, writable.Password2());
   EXPECT_EQ(replacement, writable.Password5());
-  EXPECT_EQ(replacement, writable.PortSpeed());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
@@ -8008,7 +8002,7 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemIecLocalPortSetupObject readOnly =
     MakeIecLocalPortSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
               readOnly.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
@@ -8022,7 +8016,6 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(b.password1, readOnly.Password1());
   EXPECT_EQ(b.password2, readOnly.Password2());
   EXPECT_EQ(b.password5, readOnly.Password5());
-  EXPECT_EQ(b.portSpeed, readOnly.PortSpeed());
 }
 
 TEST(CosemIecLocalPortSetupObject, NoMethodsDefined)
@@ -8053,7 +8046,7 @@ TEST(CosemIecLocalPortSetupObject, NormalizesVersionAboveMax)
   dlms::cosem::CosemIecLocalPortSetupObject object(
     name, b.defaultMode, b.defaultBaud, b.proposedBaud,
     b.responseTime, b.deviceAddress, b.password1, b.password2,
-    b.password5, b.portSpeed,
+    b.password5,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemIecLocalPortSetupObject::MaxSupportedVersion,

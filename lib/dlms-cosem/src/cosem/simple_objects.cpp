@@ -7945,7 +7945,6 @@ constexpr std::uint8_t kIecLocalPortSetupDeviceAddressAttributeId = 6u;
 constexpr std::uint8_t kIecLocalPortSetupPassword1AttributeId = 7u;
 constexpr std::uint8_t kIecLocalPortSetupPassword2AttributeId = 8u;
 constexpr std::uint8_t kIecLocalPortSetupPassword5AttributeId = 9u;
-constexpr std::uint8_t kIecLocalPortSetupPortSpeedAttributeId = 10u;
 constexpr std::uint8_t kVersion1 = 1u;
 } // namespace
 
@@ -7961,12 +7960,11 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
   const CosemByteBuffer& password1,
   const CosemByteBuffer& password2,
   const CosemByteBuffer& password5,
-  const CosemByteBuffer& portSpeed,
   AttributeAccessMode mutableAccess)
   : CosemIecLocalPortSetupObject(
       logicalName, defaultMode, defaultBaud, proposedBaud,
       responseTime, deviceAddress, password1, password2, password5,
-      portSpeed, mutableAccess, kVersion1)
+      mutableAccess, kVersion1)
 {
 }
 
@@ -7980,7 +7978,6 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
   const CosemByteBuffer& password1,
   const CosemByteBuffer& password2,
   const CosemByteBuffer& password5,
-  const CosemByteBuffer& portSpeed,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -7997,7 +7994,6 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
   , password1_(password1)
   , password2_(password2)
   , password5_(password5)
-  , portSpeed_(portSpeed)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
@@ -8017,8 +8013,6 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
     kIecLocalPortSetupPassword2AttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kIecLocalPortSetupPassword5AttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kIecLocalPortSetupPortSpeedAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemIecLocalPortSetupObject::Descriptor() const
@@ -8062,9 +8056,6 @@ CosemStatus CosemIecLocalPortSetupObject::ReadAttribute(
       return CosemStatus::Ok;
     case kIecLocalPortSetupPassword5AttributeId:
       output = password5_;
-      return CosemStatus::Ok;
-    case kIecLocalPortSetupPortSpeedAttributeId:
-      output = portSpeed_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -8116,11 +8107,6 @@ CosemStatus CosemIecLocalPortSetupObject::WriteAttribute(
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       password5_ = input;
-      return CosemStatus::Ok;
-    case kIecLocalPortSetupPortSpeedAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      portSpeed_ = input;
       return CosemStatus::Ok;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
@@ -8186,12 +8172,6 @@ const CosemByteBuffer&
 CosemIecLocalPortSetupObject::Password5() const
 {
   return password5_;
-}
-
-const CosemByteBuffer&
-CosemIecLocalPortSetupObject::PortSpeed() const
-{
-  return portSpeed_;
 }
 
 namespace {

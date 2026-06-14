@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.68.0 - 2026-06-15
+
+- Removed phantom `port_speed` attribute (`10`) from the IEC Local
+  Port Setup IC `19` built-in object (`CosemIecLocalPortSetupObject`).
+  IEC 62056-6-2 ED4 (2021) clauses 4.7.1 and 5.6.1, and DLMS UA
+  Blue Book Ed. 12.1 clause 4.7.1, define IC 19 with exactly nine
+  attributes (`1`-`9`) in both versions `0` and `1` and no specific
+  methods. The previous implementation surfaced an extra `port_speed`
+  enum at attribute id `10`, gated to v1, which is not part of the
+  standard.
+- **Breaking change**: both `CosemIecLocalPortSetupObject` constructors
+  drop the `portSpeed` parameter, and the `PortSpeed()` getter is
+  removed. Callers must drop the `port_speed` buffer from construction
+  sites. Reads of attribute `10` now report `AttributeNotFound`;
+  attributes `2`-`9` continue to honor the caller-selected
+  `AttributeAccessMode`. `MaxSupportedVersion` stays at `1`, and
+  `InvokeMethod` still reports `MethodNotFound` for all method ids.
+
 ## 0.67.0 - 2026-06-15
 
 - Bumped Push Setup IC `40` built-in object
@@ -258,11 +276,10 @@
   exposing `default_mode` (enum), `default_baud` (enum),
   `proposed_baud` (enum), `response_time` (enum),
   `device_address` (octet-string with the device-address logical
-  name), `password_1` / `password_2` / `password_5` (octet-strings
-  carrying the level-1, level-2 and level-5 passwords) and
-  `port_speed` (enum, v1 only) as opaque encoded DLMS Data buffers
-  prepared by the caller.
-- Attributes `2`-`10` share a caller-selected `AttributeAccessMode`
+  name) and `password_1` / `password_2` / `password_5` (octet-strings
+  carrying the level-1, level-2 and level-5 passwords) as opaque
+  encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`9` share a caller-selected `AttributeAccessMode`
   (writes replace the stored buffer in-place when permitted, so the
   backend can republish refreshed mode, baud, response time, device
   address and passwords after configuration changes out-of-band);

@@ -1967,7 +1967,6 @@ public:
     const CosemByteBuffer& password1,
     const CosemByteBuffer& password2,
     const CosemByteBuffer& password5,
-    const CosemByteBuffer& portSpeed,
     AttributeAccessMode mutableAccess);
   CosemIecLocalPortSetupObject(
     const CosemLogicalName& logicalName,
@@ -1979,7 +1978,6 @@ public:
     const CosemByteBuffer& password1,
     const CosemByteBuffer& password2,
     const CosemByteBuffer& password5,
-    const CosemByteBuffer& portSpeed,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -2004,7 +2002,6 @@ public:
   const CosemByteBuffer& Password1() const;
   const CosemByteBuffer& Password2() const;
   const CosemByteBuffer& Password5() const;
-  const CosemByteBuffer& PortSpeed() const;
 
 private:
   CosemObjectDescriptor descriptor_;
@@ -2016,7 +2013,6 @@ private:
   CosemByteBuffer password1_;
   CosemByteBuffer password2_;
   CosemByteBuffer password5_;
-  CosemByteBuffer portSpeed_;
   CosemAccessRights rights_;
 };
 

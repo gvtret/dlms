@@ -8183,13 +8183,15 @@ constexpr std::uint8_t
 constexpr std::uint8_t kAssociationSnUserListAttributeId = 5u;
 constexpr std::uint8_t kAssociationSnCurrentUserAttributeId = 6u;
 constexpr std::uint8_t
-  kAssociationSnReplyToHlsAuthenticationMethodId = 1u;
-constexpr std::uint8_t kAssociationSnChangeHlsSecretMethodId = 2u;
-constexpr std::uint8_t kAssociationSnAddObjectMethodId = 3u;
-constexpr std::uint8_t kAssociationSnRemoveObjectMethodId = 4u;
-constexpr std::uint8_t kAssociationSnAddUserMethodId = 5u;
-constexpr std::uint8_t kAssociationSnRemoveUserMethodId = 6u;
+  kAssociationSnReadByLogicalNameMethodId = 3u;
+constexpr std::uint8_t kAssociationSnChangeSecretMethodId = 5u;
+constexpr std::uint8_t
+  kAssociationSnReplyToHlsAuthenticationMethodId = 8u;
+constexpr std::uint8_t kAssociationSnAddUserMethodId = 9u;
+constexpr std::uint8_t kAssociationSnRemoveUserMethodId = 10u;
+constexpr std::uint8_t kVersion2 = 2u;
 constexpr std::uint8_t kVersion3 = 3u;
+constexpr std::uint8_t kVersion4 = 4u;
 } // namespace
 
 const std::uint8_t CosemAssociationSnObject::MaxSupportedVersion;
@@ -8205,7 +8207,7 @@ CosemAssociationSnObject::CosemAssociationSnObject(
   : CosemAssociationSnObject(
       logicalName, objectList, accessRightsList,
       securitySetupReference, userList, currentUser,
-      mutableAccess, kVersion3)
+      mutableAccess, kVersion4)
 {
 }
 
@@ -8236,12 +8238,22 @@ CosemAssociationSnObject::CosemAssociationSnObject(
     kAssociationSnObjectListAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kAssociationSnAccessRightsListAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kAssociationSnSecuritySetupReferenceAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kAssociationSnUserListAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kAssociationSnCurrentUserAttributeId, mutableAccess);
+  if (descriptor_.key.version >= kVersion2) {
+    rights_.SetAttributeAccess(
+      kAssociationSnSecuritySetupReferenceAttributeId, mutableAccess);
+  }
+  if (descriptor_.key.version >= kVersion3) {
+    rights_.SetAttributeAccess(
+      kAssociationSnUserListAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kAssociationSnCurrentUserAttributeId, mutableAccess);
+  } else {
+    userList_.clear();
+    currentUser_.clear();
+  }
+  if (descriptor_.key.version < kVersion2) {
+    securitySetupReference_.clear();
+  }
 }
 
 CosemObjectDescriptor CosemAssociationSnObject::Descriptor() const
@@ -8269,12 +8281,24 @@ CosemStatus CosemAssociationSnObject::ReadAttribute(
       output = accessRightsList_;
       return CosemStatus::Ok;
     case kAssociationSnSecuritySetupReferenceAttributeId:
+      if (descriptor_.key.version < kVersion2) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
       output = securitySetupReference_;
       return CosemStatus::Ok;
     case kAssociationSnUserListAttributeId:
+      if (descriptor_.key.version < kVersion3) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
       output = userList_;
       return CosemStatus::Ok;
     case kAssociationSnCurrentUserAttributeId:
+      if (descriptor_.key.version < kVersion3) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
       output = currentUser_;
       return CosemStatus::Ok;
     default:
@@ -8299,16 +8323,22 @@ CosemStatus CosemAssociationSnObject::WriteAttribute(
       accessRightsList_ = input;
       return CosemStatus::Ok;
     case kAssociationSnSecuritySetupReferenceAttributeId:
+      if (descriptor_.key.version < kVersion2)
+        return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       securitySetupReference_ = input;
       return CosemStatus::Ok;
     case kAssociationSnUserListAttributeId:
+      if (descriptor_.key.version < kVersion3)
+        return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       userList_ = input;
       return CosemStatus::Ok;
     case kAssociationSnCurrentUserAttributeId:
+      if (descriptor_.key.version < kVersion3)
+        return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       currentUser_ = input;
@@ -8327,16 +8357,21 @@ CosemStatus CosemAssociationSnObject::InvokeMethod(
 {
   (void)input;
   output.clear();
-  if (methodId == kAssociationSnReplyToHlsAuthenticationMethodId ||
-      methodId == kAssociationSnChangeHlsSecretMethodId ||
-      methodId == kAssociationSnAddObjectMethodId ||
-      methodId == kAssociationSnRemoveObjectMethodId ||
-      methodId == kAssociationSnAddUserMethodId ||
-      methodId == kAssociationSnRemoveUserMethodId) {
-    // Association SN HLS authentication, HLS secret rotation and
-    // object/user list mutations are not exposed by the built-in
-    // object; backend is expected to perform those operations
-    // out-of-band and republish the stored buffers.
+  if (methodId == kAssociationSnReadByLogicalNameMethodId ||
+      methodId == kAssociationSnChangeSecretMethodId ||
+      methodId == kAssociationSnReplyToHlsAuthenticationMethodId) {
+    // IEC 62056-6-2 ED4 4.4.3 / Blue Book 5.4 define methods
+    // read_by_logicalname (3), change_secret (5) and
+    // reply_to_HLS_authentication (8) on every Association SN
+    // version. The built-in object does not execute SN-mode
+    // authentication or secret rotation; backend handles them
+    // out-of-band and republishes the stored buffers.
+    return CosemStatus::UnsupportedFeature;
+  }
+  if (descriptor_.key.version >= kVersion3 &&
+      (methodId == kAssociationSnAddUserMethodId ||
+       methodId == kAssociationSnRemoveUserMethodId)) {
+    // add_user (9) and remove_user (10) appear in v3 and later.
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;

@@ -2019,7 +2019,7 @@ private:
 class CosemAssociationSnObject : public ICosemObject
 {
 public:
-  static const std::uint8_t MaxSupportedVersion = 3u;
+  static const std::uint8_t MaxSupportedVersion = 4u;
 
   CosemAssociationSnObject(
     const CosemLogicalName& logicalName,

@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.70.0 - 2026-06-15
+
+- Re-aligned the Association SN IC `12` built-in object
+  (`CosemAssociationSnObject`) with IEC 62056-6-2 ED4 (2021) clause
+  4.4.3 and DLMS UA Blue Book Ed. 12.1 clause 5.4.5. The specific
+  method ids were renumbered to match the standard: `3`
+  `read_by_logicalname`, `5` `change_secret`, `8`
+  `reply_to_HLS_authentication`, `9` `add_user` (v3+) and `10`
+  `remove_user` (v3+); ids `1`, `2`, `4`, `6`, `7` and `11+` are
+  reserved or undefined and now report `MethodNotFound` instead of
+  responding to the previously fabricated `add_object` /
+  `remove_object` / `change_HLS_secret` mapping. `MaxSupportedVersion`
+  was raised from `3` to `4` to match the current ED4 ceiling.
+- Gated the version-dependent surface: `security_setup_reference`
+  (attribute `4`) is exposed for v>=2, and `user_list` (attribute
+  `5`) plus `current_user` (attribute `6`) for v>=3. Constructing a
+  lower-version instance clears the gated buffers, reports
+  `NoAccess` for them in the access-rights list and returns
+  `AttributeNotFound` on reads or writes; `add_user` / `remove_user`
+  return `MethodNotFound` outside v3+.
+- Added regression tests
+  `CosemAssociationSnObject.Version0DoesNotExposeSecuritySetupOrUserAttributes`
+  and `CosemAssociationSnObject.Version2ExposesSecuritySetupButNotUserAttributes`
+  that lock the new per-version gating, and updated the existing
+  `MethodsReturnUnsupportedFeature` test to exercise the corrected
+  method ids.
+
 ## 0.69.0 - 2026-06-15
 
 - Tightened the per-version surface of the Association LN IC `15`

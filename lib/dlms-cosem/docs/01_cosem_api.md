@@ -866,30 +866,35 @@ configuration changes out-of-band. IC defines no methods;
 clears method output.
 
 `simple_objects.hpp` also exposes a partial Association SN IC
-`12` (`CosemAssociationSnObject`) with class version `3`. The
+`12` (`CosemAssociationSnObject`) with class version `4`. The
 constructors take the `object_list` (array of structure
 {`base_name`: long-int, `class_id`: long-unsigned, `version`:
 unsigned, `logical_name`: octet-string(6), `access_rights`:
 structure}), `access_rights_list` (array of structure),
-`security_setup_reference` (octet-string(6) LN to Security Setup),
-`user_list` (array of structure {`user_id`: unsigned,
-`user_name`: visible-string}) and `current_user` (structure
-{`user_id`: unsigned, `user_name`: visible-string}) payloads as
-encoded DLMS Data buffers prepared by the caller, the logical
+`security_setup_reference` (octet-string(6) LN to Security Setup,
+v2+), `user_list` (array of structure {`user_id`: unsigned,
+`user_name`: visible-string}, v3+) and `current_user` (structure
+{`user_id`: unsigned, `user_name`: visible-string}, v3+) payloads
+as encoded DLMS Data buffers prepared by the caller, the logical
 name, a caller-selected `AttributeAccessMode` shared by the
-mutable attributes (`2`-`6`), and an optional explicit version
-that is normalized to `MaxSupportedVersion` when out of range.
-Attribute `1` (logical_name) is read-only; the mutable attributes
-honor the caller access mode and replace the stored buffer
-in-place when writable, so the backend can republish refreshed
-object list, access rights list, security setup reference and
-user lists after HLS authentication, HLS secret rotation or list
-mutations performed out-of-band. Methods `1`
-`reply_to_HLS_authentication`, `2` `change_HLS_secret`, `3`
-`add_object`, `4` `remove_object`, `5` `add_user` and `6`
-`remove_user` return `UnsupportedFeature` and clear method output
-(the built-in object does not perform authentication or list
-mutations); other method ids return `MethodNotFound`.
+mutable attributes (`2`-`3` always, `4` when v>=2, `5`-`6` when
+v>=3), and an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Constructing with a
+lower version clears caller-supplied buffers for attributes that
+do not exist in that version, reports `NoAccess` for them in the
+access-rights list and returns `AttributeNotFound` on reads or
+writes. Attribute `1` (logical_name) is read-only; the mutable
+attributes honor the caller access mode and replace the stored
+buffer in-place when writable, so the backend can republish
+refreshed object list, access rights list, security setup
+reference and user lists after HLS authentication, secret
+rotation or list mutations performed out-of-band. Specific
+methods `3` `read_by_logicalname`, `5` `change_secret` and `8`
+`reply_to_HLS_authentication` return `UnsupportedFeature` on
+every version; `9` `add_user` and `10` `remove_user` return
+`UnsupportedFeature` when v>=3 and `MethodNotFound` otherwise.
+Method ids `1`, `2`, `4`, `6`, `7` and `11+` are reserved or not
+defined and return `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial M-Bus Client IC `72`
 (`CosemMBusClientObject`) with class version `1`. The constructors

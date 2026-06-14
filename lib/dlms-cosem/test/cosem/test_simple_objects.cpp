@@ -8177,7 +8177,7 @@ TEST(CosemAssociationSnObject, ExposesAllAttributes)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   EXPECT_EQ(12u, object.Descriptor().key.classId);
-  EXPECT_EQ(3u, object.Descriptor().key.version);
+  EXPECT_EQ(4u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemAssociationSnObject::MaxSupportedVersion,
     object.Descriptor().key.version);
@@ -8253,7 +8253,11 @@ TEST(CosemAssociationSnObject, MethodsReturnUnsupportedFeature)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  for (std::uint8_t method : {1u, 2u, 3u, 4u, 5u, 6u}) {
+  // IEC 62056-6-2 ED4 4.4.3 / Blue Book Ed. 12.1 5.4.5 specific
+  // methods: 3 read_by_logicalname, 5 change_secret,
+  // 8 reply_to_HLS_authentication, 9 add_user (v3+),
+  // 10 remove_user (v3+). Method ids 1, 2, 4, 6, 7 are reserved.
+  for (std::uint8_t method : {3u, 5u, 8u, 9u, 10u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
               object.InvokeMethod(
@@ -8261,7 +8265,7 @@ TEST(CosemAssociationSnObject, MethodsReturnUnsupportedFeature)
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());
   }
-  for (std::uint8_t method : {7u, 8u, 99u}) {
+  for (std::uint8_t method : {1u, 2u, 4u, 6u, 7u, 11u, 99u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(
@@ -8269,6 +8273,79 @@ TEST(CosemAssociationSnObject, MethodsReturnUnsupportedFeature)
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());
   }
+}
+
+TEST(CosemAssociationSnObject, Version0DoesNotExposeSecuritySetupOrUserAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
+  const AssociationSnBuffers b = MakeSampleAssociationSn();
+  dlms::cosem::CosemAssociationSnObject object(
+    name, b.objectList, b.accessRightsList,
+    b.securitySetupReference, b.userList, b.currentUser,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 0u);
+
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+
+  // attrs 4, 5, 6 unavailable in v0
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(6u, out));
+
+  // add_user / remove_user (9, 10) only in v3+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(9u, in, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(10u, in, out));
+
+  // read_by_logicalname (3), change_secret (5),
+  // reply_to_HLS_authentication (8) still apply in v0
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(3u, in, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(5u, in, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(8u, in, out));
+
+  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
+            rights.AttributeAccess(4u));
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
+            rights.AttributeAccess(5u));
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
+            rights.AttributeAccess(6u));
+}
+
+TEST(CosemAssociationSnObject, Version2ExposesSecuritySetupButNotUserAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
+  const AssociationSnBuffers b = MakeSampleAssociationSn();
+  dlms::cosem::CosemAssociationSnObject object(
+    name, b.objectList, b.accessRightsList,
+    b.securitySetupReference, b.userList, b.currentUser,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 2u);
+
+  EXPECT_EQ(2u, object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.securitySetupReference, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(6u, out));
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(9u, in, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(10u, in, out));
 }
 
 TEST(CosemAssociationSnObject, NormalizesVersionAboveMax)

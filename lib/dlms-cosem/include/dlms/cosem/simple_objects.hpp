@@ -2557,15 +2557,33 @@ class CosemSFskPlcPhyMacSetupObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 1u;
 
+  // Attribute layout per IEC 62056-6-2 ED4 4.10.3 / DLMS UA Blue Book
+  // IC 50 class_id=50, version=1:
+  //   2  initiator_electrical_phase  enum
+  //   3  delta_electrical_phase      enum
+  //   4  max_receiving_gain          unsigned
+  //   5  max_transmitting_gain       unsigned
+  //   6  search_initiator_threshold  unsigned (default 98)
+  //   7  frequencies                 structure { mark_frequency:
+  //                                              double-long-unsigned,
+  //                                              space_frequency:
+  //                                              double-long-unsigned }
+  //   8  mac_address                 long-unsigned (default FFE)
+  //   9  mac_group_addresses         array of long-unsigned
+  //  10  repeater                    enum
+  //  11  repeater_status             boolean
+  //  12  min_delta_credit            unsigned
+  //  13  initiator_mac_address       long-unsigned
+  //  14  synchronization_locked      boolean
+  //  15  transmission_speed          enum (v1 only, default 3)
   struct Attributes
   {
     CosemByteBuffer initiatorElectricalPhase;
     CosemByteBuffer deltaElectricalPhase;
-    CosemByteBuffer maxReceivedGain;
-    CosemByteBuffer maxTransmitGain;
-    CosemByteBuffer searchInitiatorTimeout;
-    CosemByteBuffer markFrequency;
-    CosemByteBuffer spaceFrequency;
+    CosemByteBuffer maxReceivingGain;
+    CosemByteBuffer maxTransmittingGain;
+    CosemByteBuffer searchInitiatorThreshold;
+    CosemByteBuffer frequencies;
     CosemByteBuffer macAddress;
     CosemByteBuffer macGroupAddresses;
     CosemByteBuffer repeater;

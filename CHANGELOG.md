@@ -22,12 +22,14 @@
 - Added S-FSK PLC PHY & MAC Setup IC `50` built-in object
   (`CosemSFskPlcPhyMacSetupObject`) with class version `1`,
   exposing initiator/delta electrical phase, max
-  received/transmit gain, search initiator timeout, mark/space
-  frequency, mac_address, mac_group_addresses, repeater,
-  repeater_status, min_deltacredit, initiator_mac_address,
+  receiving/transmitting gain, search_initiator_threshold,
+  frequencies (structure { mark_frequency: double-long-unsigned,
+  space_frequency: double-long-unsigned }), mac_address,
+  mac_group_addresses, repeater, repeater_status,
+  min_delta_credit, initiator_mac_address,
   synchronization_locked and transmission_speed as opaque
   encoded DLMS Data buffers prepared by the caller.
-- Attributes `2`-`16` share a caller-selected
+- Attributes `2`-`15` share a caller-selected
   `AttributeAccessMode` (writes replace the stored buffer
   in-place when permitted); logical_name (`1`) is read-only.
 - Constructors normalize versions above `MaxSupportedVersion`.

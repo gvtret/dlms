@@ -1048,14 +1048,16 @@ all method ids and clears method output.
 `simple_objects.hpp` also exposes a partial S-FSK PLC PHY & MAC
 Setup IC `50` (`CosemSFskPlcPhyMacSetupObject`) with class
 version `1`. The constructors take an `Attributes` aggregate
-carrying initiator/delta electrical phase, max received/transmit
-gain, search initiator timeout, mark/space frequency,
-mac_address, mac_group_addresses, repeater, repeater_status,
-min_deltacredit, initiator_mac_address, synchronization_locked
+carrying initiator/delta electrical phase, max
+receiving/transmitting gain, search_initiator_threshold,
+frequencies (structure `{mark_frequency: double-long-unsigned,
+space_frequency: double-long-unsigned}`), mac_address,
+mac_group_addresses, repeater, repeater_status,
+min_delta_credit, initiator_mac_address, synchronization_locked
 and transmission_speed as encoded DLMS Data buffers prepared by
 the caller, the logical name, a caller-selected
 `AttributeAccessMode` shared by the mutable attributes
-(`2`-`16`), and an optional explicit version that is normalized
+(`2`-`15`), and an optional explicit version that is normalized
 to `MaxSupportedVersion` when out of range. Attribute `1`
 (logical_name) is read-only; the mutable attributes honor the
 caller access mode and replace the stored buffer in-place when

@@ -9547,13 +9547,18 @@ MakeSampleSFskPlcPhyMacSetup()
   // enum 0x01
   a.initiatorElectricalPhase = BytesFromList({0x16u, 0x01u});
   a.deltaElectricalPhase = BytesFromList({0x16u, 0x02u});
-  // unsigned 0x10
-  a.maxReceivedGain = BytesFromList({0x11u, 0x10u});
-  a.maxTransmitGain = BytesFromList({0x11u, 0x20u});
-  a.searchInitiatorTimeout = BytesFromList({0x11u, 0x30u});
-  // double-long-unsigned
-  a.markFrequency = BytesFromList({0x06u, 0x00u, 0x00u, 0x12u, 0xC0u});
-  a.spaceFrequency = BytesFromList({0x06u, 0x00u, 0x00u, 0x18u, 0x00u});
+  // unsigned
+  a.maxReceivingGain = BytesFromList({0x11u, 0x10u});
+  a.maxTransmittingGain = BytesFromList({0x11u, 0x20u});
+  // unsigned 0x62 (98, the Blue Book default for v1)
+  a.searchInitiatorThreshold = BytesFromList({0x11u, 0x62u});
+  // frequencies = structure { double-long-unsigned mark_frequency,
+  //                           double-long-unsigned space_frequency }
+  // mark = 0x000012C0 (4800 Hz), space = 0x00001800 (6144 Hz).
+  a.frequencies = BytesFromList({
+    0x02u, 0x02u,
+    0x06u, 0x00u, 0x00u, 0x12u, 0xC0u,
+    0x06u, 0x00u, 0x00u, 0x18u, 0x00u});
   // long-unsigned 0x1234
   a.macAddress = BytesFromList({0x12u, 0x12u, 0x34u});
   // empty array of long-unsigned
@@ -9565,8 +9570,8 @@ MakeSampleSFskPlcPhyMacSetup()
   a.minDeltaCredit = BytesFromList({0x11u, 0x05u});
   a.initiatorMacAddress = BytesFromList({0x12u, 0x56u, 0x78u});
   a.synchronizationLocked = BytesFromList({0x03u, 0xFFu});
-  // enum 0x02 (4800)
-  a.transmissionSpeed = BytesFromList({0x16u, 0x02u});
+  // enum 0x03 (default per Blue Book v1)
+  a.transmissionSpeed = BytesFromList({0x16u, 0x03u});
   return a;
 }
 
@@ -9602,13 +9607,12 @@ TEST(CosemSFskPlcPhyMacSetupObject, ExposesAllAttributes)
   EXPECT_EQ(EncodedLogicalName(name), out);
   const dlms::cosem::CosemByteBuffer* expected[] = {
     &attrs.initiatorElectricalPhase, &attrs.deltaElectricalPhase,
-    &attrs.maxReceivedGain, &attrs.maxTransmitGain,
-    &attrs.searchInitiatorTimeout, &attrs.markFrequency,
-    &attrs.spaceFrequency, &attrs.macAddress,
-    &attrs.macGroupAddresses, &attrs.repeater,
-    &attrs.repeaterStatus, &attrs.minDeltaCredit,
-    &attrs.initiatorMacAddress, &attrs.synchronizationLocked,
-    &attrs.transmissionSpeed};
+    &attrs.maxReceivingGain, &attrs.maxTransmittingGain,
+    &attrs.searchInitiatorThreshold, &attrs.frequencies,
+    &attrs.macAddress, &attrs.macGroupAddresses,
+    &attrs.repeater, &attrs.repeaterStatus,
+    &attrs.minDeltaCredit, &attrs.initiatorMacAddress,
+    &attrs.synchronizationLocked, &attrs.transmissionSpeed};
   std::uint8_t attrId = 2u;
   for (const auto* exp : expected) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
@@ -9619,7 +9623,7 @@ TEST(CosemSFskPlcPhyMacSetupObject, ExposesAllAttributes)
     ++attrId;
   }
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(17u, out));
+            object.ReadAttribute(16u, out));
 }
 
 TEST(CosemSFskPlcPhyMacSetupObject, MutableAttributesHonorAccessMode)
@@ -9633,7 +9637,7 @@ TEST(CosemSFskPlcPhyMacSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemSFskPlcPhyMacSetupObject writable =
     MakeSFskPlcPhyMacSetupObject(
       name, attrs, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t attr = 2u; attr <= 16u; ++attr) {
+  for (std::uint8_t attr = 2u; attr <= 15u; ++attr) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(attr, replacement))
       << "attr " << static_cast<unsigned>(attr);
@@ -9650,8 +9654,8 @@ TEST(CosemSFskPlcPhyMacSetupObject, MutableAttributesHonorAccessMode)
       name, attrs, dlms::cosem::AttributeAccessMode::ReadOnly);
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             readOnly.WriteAttribute(7u, replacement));
-  EXPECT_EQ(attrs.markFrequency,
-            readOnly.AttributeData().markFrequency);
+  EXPECT_EQ(attrs.frequencies,
+            readOnly.AttributeData().frequencies);
 }
 
 TEST(CosemSFskPlcPhyMacSetupObject, MethodsReturnUnsupportedFeature)

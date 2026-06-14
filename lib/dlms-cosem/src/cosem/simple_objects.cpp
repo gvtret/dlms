@@ -6683,6 +6683,139 @@ CosemIpv6SetupObject::NeighborDiscoverySetup() const
   return neighborDiscoverySetup_;
 }
 
+namespace {
+constexpr std::uint16_t kUtilityTablesClassId = 26u;
+constexpr std::uint8_t kUtilityTablesTableIdAttributeId = 2u;
+constexpr std::uint8_t kUtilityTablesLengthAttributeId = 3u;
+constexpr std::uint8_t kUtilityTablesBufferAttributeId = 4u;
+} // namespace
+
+const std::uint8_t CosemUtilityTablesObject::MaxSupportedVersion;
+
+CosemUtilityTablesObject::CosemUtilityTablesObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& tableId,
+  const CosemByteBuffer& length,
+  const CosemByteBuffer& buffer,
+  AttributeAccessMode mutableAccess)
+  : CosemUtilityTablesObject(
+      logicalName, tableId, length, buffer, mutableAccess, kVersion0)
+{
+}
+
+CosemUtilityTablesObject::CosemUtilityTablesObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& tableId,
+  const CosemByteBuffer& length,
+  const CosemByteBuffer& buffer,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kUtilityTablesClassId,
+      NormalizeVersion(
+        version, CosemUtilityTablesObject::MaxSupportedVersion),
+      logicalName))
+  , tableId_(tableId)
+  , length_(length)
+  , buffer_(buffer)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kUtilityTablesTableIdAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kUtilityTablesLengthAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kUtilityTablesBufferAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemUtilityTablesObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemUtilityTablesObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemUtilityTablesObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kUtilityTablesTableIdAttributeId:
+      output = tableId_;
+      return CosemStatus::Ok;
+    case kUtilityTablesLengthAttributeId:
+      output = length_;
+      return CosemStatus::Ok;
+    case kUtilityTablesBufferAttributeId:
+      output = buffer_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemUtilityTablesObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kUtilityTablesTableIdAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      tableId_ = input;
+      return CosemStatus::Ok;
+    case kUtilityTablesLengthAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      length_ = input;
+      return CosemStatus::Ok;
+    case kUtilityTablesBufferAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      buffer_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemUtilityTablesObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Utility Tables IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemUtilityTablesObject::TableId() const
+{
+  return tableId_;
+}
+
+const CosemByteBuffer& CosemUtilityTablesObject::Length() const
+{
+  return length_;
+}
+
+const CosemByteBuffer& CosemUtilityTablesObject::Buffer() const
+{
+  return buffer_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

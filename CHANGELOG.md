@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.47.0 - 2026-06-15
+
+- Added Utility Tables IC `26` built-in object
+  (`CosemUtilityTablesObject`) with class version `0`, exposing
+  `table_id` (long-unsigned), `length` (double-long-unsigned) and
+  `buffer` (octet-string carrying the raw table payload) as opaque
+  encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`4` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Utility Tables IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.46.0 - 2026-06-15
 
 - Added IPv6 Setup IC `48` built-in object (`CosemIpv6SetupObject`)

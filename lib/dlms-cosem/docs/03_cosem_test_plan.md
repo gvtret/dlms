@@ -637,6 +637,23 @@ IPv6 Setup tests:
   output;
 - IPv6 Setup normalizes versions above `MaxSupportedVersion`.
 
+Utility Tables tests:
+
+- Utility Tables exposes attributes `1` logical_name, `2` table_id,
+  `3` length and `4` buffer as the encoded DLMS Data buffers
+  supplied by the caller, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- Utility Tables mutable attributes (`2`-`4`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Utility Tables rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Utility Tables `InvokeMethod` reports `MethodNotFound` for all
+  method ids and clears method output (IC defines no methods);
+- Utility Tables normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

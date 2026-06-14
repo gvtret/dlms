@@ -7989,4 +7989,177 @@ TEST(CosemIecLocalPortSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct AssociationSnBuffers
+{
+  dlms::cosem::CosemByteBuffer objectList;
+  dlms::cosem::CosemByteBuffer accessRightsList;
+  dlms::cosem::CosemByteBuffer securitySetupReference;
+  dlms::cosem::CosemByteBuffer userList;
+  dlms::cosem::CosemByteBuffer currentUser;
+};
+
+AssociationSnBuffers MakeSampleAssociationSn()
+{
+  AssociationSnBuffers b;
+  // array(1) of structure(5): {long-int 0xFA00, long-unsigned 8,
+  // unsigned 0, octet-string(6) 0.0.1.0.0.255, structure(0) {}}
+  b.objectList = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x05u,
+        0x10u, 0xFAu, 0x00u,
+        0x12u, 0x00u, 0x08u,
+        0x11u, 0x00u,
+        0x09u, 0x06u, 0x00u, 0x00u, 0x01u, 0x00u, 0x00u, 0xFFu,
+        0x02u, 0x00u});
+  // array(0)
+  b.accessRightsList = BytesFromList({0x01u, 0x00u});
+  // octet-string(6) security setup LN 0.0.43.0.0.255
+  b.securitySetupReference = BytesFromList({
+    0x09u, 0x06u, 0x00u, 0x00u, 0x2Bu, 0x00u, 0x00u, 0xFFu});
+  // array(1) of structure(2): {unsigned 1, visible-string "PUBLIC"}
+  b.userList = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x11u, 0x01u,
+        0x0Au, 0x06u, 0x50u, 0x55u, 0x42u, 0x4Cu, 0x49u, 0x43u});
+  // structure(2): {unsigned 1, visible-string "PUBLIC"}
+  b.currentUser = BytesFromList({
+    0x02u, 0x02u,
+      0x11u, 0x01u,
+      0x0Au, 0x06u, 0x50u, 0x55u, 0x42u, 0x4Cu, 0x49u, 0x43u});
+  return b;
+}
+
+dlms::cosem::CosemAssociationSnObject MakeAssociationSnObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const AssociationSnBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemAssociationSnObject(
+    name, b.objectList, b.accessRightsList,
+    b.securitySetupReference, b.userList, b.currentUser, access);
+}
+
+} // namespace
+
+TEST(CosemAssociationSnObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
+  const AssociationSnBuffers b = MakeSampleAssociationSn();
+  dlms::cosem::CosemAssociationSnObject object =
+    MakeAssociationSnObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(12u, object.Descriptor().key.classId);
+  EXPECT_EQ(3u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemAssociationSnObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.objectList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.accessRightsList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.securitySetupReference, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.userList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.currentUser, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(7u, out));
+}
+
+TEST(CosemAssociationSnObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
+  const AssociationSnBuffers b = MakeSampleAssociationSn();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemAssociationSnObject writable =
+    MakeAssociationSnObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.ObjectList());
+  EXPECT_EQ(replacement, writable.AccessRightsList());
+  EXPECT_EQ(replacement, writable.SecuritySetupReference());
+  EXPECT_EQ(replacement, writable.UserList());
+  EXPECT_EQ(replacement, writable.CurrentUser());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemAssociationSnObject readOnly =
+    MakeAssociationSnObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.objectList, readOnly.ObjectList());
+  EXPECT_EQ(b.accessRightsList, readOnly.AccessRightsList());
+  EXPECT_EQ(b.securitySetupReference,
+            readOnly.SecuritySetupReference());
+  EXPECT_EQ(b.userList, readOnly.UserList());
+  EXPECT_EQ(b.currentUser, readOnly.CurrentUser());
+}
+
+TEST(CosemAssociationSnObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
+  const AssociationSnBuffers b = MakeSampleAssociationSn();
+  dlms::cosem::CosemAssociationSnObject object =
+    MakeAssociationSnObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u, 4u, 5u, 6u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {7u, 8u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemAssociationSnObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
+  const AssociationSnBuffers b = MakeSampleAssociationSn();
+  dlms::cosem::CosemAssociationSnObject object(
+    name, b.objectList, b.accessRightsList,
+    b.securitySetupReference, b.userList, b.currentUser,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemAssociationSnObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

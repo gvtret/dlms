@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.55.0 - 2026-06-15
+
+- Added Association SN IC `12` built-in object
+  (`CosemAssociationSnObject`) with class version `3`, exposing
+  `object_list` (array of structure {`base_name`: long-int,
+  `class_id`: long-unsigned, `version`: unsigned, `logical_name`:
+  octet-string(6), `access_rights`: structure}),
+  `access_rights_list` (array of structure),
+  `security_setup_reference` (octet-string(6) LN to Security
+  Setup), `user_list` (array of structure {`user_id`: unsigned,
+  `user_name`: visible-string}) and `current_user` (structure
+  {`user_id`: unsigned, `user_name`: visible-string}) as opaque
+  encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`6` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish refreshed object list, access rights list,
+  security setup reference and user lists after HLS authentication,
+  HLS secret rotation or list mutations performed out-of-band);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `reply_to_HLS_authentication`, `2`
+  `change_HLS_secret`, `3` `add_object`, `4` `remove_object`,
+  `5` `add_user` and `6` `remove_user` return `UnsupportedFeature`
+  and clear method output (the built-in object does not perform
+  authentication or list mutations); other method ids return
+  `MethodNotFound`.
+
 ## 0.54.0 - 2026-06-15
 
 - Added IEC Local Port Setup IC `19` built-in object

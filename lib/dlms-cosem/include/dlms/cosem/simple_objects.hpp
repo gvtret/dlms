@@ -2000,6 +2000,58 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemAssociationSnObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 3u;
+
+  CosemAssociationSnObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& objectList,
+    const CosemByteBuffer& accessRightsList,
+    const CosemByteBuffer& securitySetupReference,
+    const CosemByteBuffer& userList,
+    const CosemByteBuffer& currentUser,
+    AttributeAccessMode mutableAccess);
+  CosemAssociationSnObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& objectList,
+    const CosemByteBuffer& accessRightsList,
+    const CosemByteBuffer& securitySetupReference,
+    const CosemByteBuffer& userList,
+    const CosemByteBuffer& currentUser,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& ObjectList() const;
+  const CosemByteBuffer& AccessRightsList() const;
+  const CosemByteBuffer& SecuritySetupReference() const;
+  const CosemByteBuffer& UserList() const;
+  const CosemByteBuffer& CurrentUser() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer objectList_;
+  CosemByteBuffer accessRightsList_;
+  CosemByteBuffer securitySetupReference_;
+  CosemByteBuffer userList_;
+  CosemByteBuffer currentUser_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

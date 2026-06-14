@@ -8177,6 +8177,201 @@ CosemIecLocalPortSetupObject::PortSpeed() const
   return portSpeed_;
 }
 
+namespace {
+constexpr std::uint16_t kAssociationSnClassId = 12u;
+constexpr std::uint8_t kAssociationSnObjectListAttributeId = 2u;
+constexpr std::uint8_t kAssociationSnAccessRightsListAttributeId = 3u;
+constexpr std::uint8_t
+  kAssociationSnSecuritySetupReferenceAttributeId = 4u;
+constexpr std::uint8_t kAssociationSnUserListAttributeId = 5u;
+constexpr std::uint8_t kAssociationSnCurrentUserAttributeId = 6u;
+constexpr std::uint8_t
+  kAssociationSnReplyToHlsAuthenticationMethodId = 1u;
+constexpr std::uint8_t kAssociationSnChangeHlsSecretMethodId = 2u;
+constexpr std::uint8_t kAssociationSnAddObjectMethodId = 3u;
+constexpr std::uint8_t kAssociationSnRemoveObjectMethodId = 4u;
+constexpr std::uint8_t kAssociationSnAddUserMethodId = 5u;
+constexpr std::uint8_t kAssociationSnRemoveUserMethodId = 6u;
+constexpr std::uint8_t kVersion3 = 3u;
+} // namespace
+
+const std::uint8_t CosemAssociationSnObject::MaxSupportedVersion;
+
+CosemAssociationSnObject::CosemAssociationSnObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& objectList,
+  const CosemByteBuffer& accessRightsList,
+  const CosemByteBuffer& securitySetupReference,
+  const CosemByteBuffer& userList,
+  const CosemByteBuffer& currentUser,
+  AttributeAccessMode mutableAccess)
+  : CosemAssociationSnObject(
+      logicalName, objectList, accessRightsList,
+      securitySetupReference, userList, currentUser,
+      mutableAccess, kVersion3)
+{
+}
+
+CosemAssociationSnObject::CosemAssociationSnObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& objectList,
+  const CosemByteBuffer& accessRightsList,
+  const CosemByteBuffer& securitySetupReference,
+  const CosemByteBuffer& userList,
+  const CosemByteBuffer& currentUser,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kAssociationSnClassId,
+      NormalizeVersion(
+        version,
+        CosemAssociationSnObject::MaxSupportedVersion),
+      logicalName))
+  , objectList_(objectList)
+  , accessRightsList_(accessRightsList)
+  , securitySetupReference_(securitySetupReference)
+  , userList_(userList)
+  , currentUser_(currentUser)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kAssociationSnObjectListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAssociationSnAccessRightsListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAssociationSnSecuritySetupReferenceAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAssociationSnUserListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAssociationSnCurrentUserAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemAssociationSnObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemAssociationSnObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemAssociationSnObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kAssociationSnObjectListAttributeId:
+      output = objectList_;
+      return CosemStatus::Ok;
+    case kAssociationSnAccessRightsListAttributeId:
+      output = accessRightsList_;
+      return CosemStatus::Ok;
+    case kAssociationSnSecuritySetupReferenceAttributeId:
+      output = securitySetupReference_;
+      return CosemStatus::Ok;
+    case kAssociationSnUserListAttributeId:
+      output = userList_;
+      return CosemStatus::Ok;
+    case kAssociationSnCurrentUserAttributeId:
+      output = currentUser_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemAssociationSnObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kAssociationSnObjectListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      objectList_ = input;
+      return CosemStatus::Ok;
+    case kAssociationSnAccessRightsListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      accessRightsList_ = input;
+      return CosemStatus::Ok;
+    case kAssociationSnSecuritySetupReferenceAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      securitySetupReference_ = input;
+      return CosemStatus::Ok;
+    case kAssociationSnUserListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      userList_ = input;
+      return CosemStatus::Ok;
+    case kAssociationSnCurrentUserAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      currentUser_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemAssociationSnObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kAssociationSnReplyToHlsAuthenticationMethodId ||
+      methodId == kAssociationSnChangeHlsSecretMethodId ||
+      methodId == kAssociationSnAddObjectMethodId ||
+      methodId == kAssociationSnRemoveObjectMethodId ||
+      methodId == kAssociationSnAddUserMethodId ||
+      methodId == kAssociationSnRemoveUserMethodId) {
+    // Association SN HLS authentication, HLS secret rotation and
+    // object/user list mutations are not exposed by the built-in
+    // object; backend is expected to perform those operations
+    // out-of-band and republish the stored buffers.
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemAssociationSnObject::ObjectList() const
+{
+  return objectList_;
+}
+
+const CosemByteBuffer&
+CosemAssociationSnObject::AccessRightsList() const
+{
+  return accessRightsList_;
+}
+
+const CosemByteBuffer&
+CosemAssociationSnObject::SecuritySetupReference() const
+{
+  return securitySetupReference_;
+}
+
+const CosemByteBuffer& CosemAssociationSnObject::UserList() const
+{
+  return userList_;
+}
+
+const CosemByteBuffer& CosemAssociationSnObject::CurrentUser() const
+{
+  return currentUser_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

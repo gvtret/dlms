@@ -792,6 +792,29 @@ IEC Local Port Setup tests:
 - IEC Local Port Setup normalizes versions above
   `MaxSupportedVersion`.
 
+Association SN tests:
+
+- Association SN exposes attributes `1` logical_name,
+  `2` object_list, `3` access_rights_list,
+  `4` security_setup_reference, `5` user_list and
+  `6` current_user as the encoded DLMS Data buffers supplied by
+  the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Association SN mutable attributes (`2`-`6`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Association SN rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Association SN `InvokeMethod` reports `UnsupportedFeature` for
+  methods `1` `reply_to_HLS_authentication`, `2`
+  `change_HLS_secret`, `3` `add_object`, `4` `remove_object`,
+  `5` `add_user` and `6` `remove_user`, and `MethodNotFound` for
+  any other method id, always clearing method output;
+- Association SN normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

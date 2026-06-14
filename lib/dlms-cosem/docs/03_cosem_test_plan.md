@@ -182,6 +182,22 @@ Register Monitor tests:
   method output;
 - Register Monitor normalizes versions above `MaxSupportedVersion`.
 
+Script Table tests:
+
+- Script Table exposes attributes `1` logical_name and `2` scripts as the
+  encoded DLMS Data buffer supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Script Table `scripts` writes succeed when the caller-selected access
+  mode permits writes and replace the stored buffer in-place;
+- Script Table `scripts` writes report `AccessDenied` when the
+  caller-selected access mode is read-only, leaving the stored buffer
+  unchanged;
+- Script Table rejects writes to `logical_name` with `AccessDenied` and
+  reports `AttributeNotFound` for undefined attribute ids;
+- Script Table method `1` `execute` reports `UnsupportedFeature` and
+  clears method output; other method ids report `MethodNotFound`;
+- Script Table normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

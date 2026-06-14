@@ -308,6 +308,43 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemScriptTableObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemScriptTableObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& scripts,
+    AttributeAccessMode scriptsAccess);
+  CosemScriptTableObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& scripts,
+    AttributeAccessMode scriptsAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Scripts() const;
+  void SetScripts(const CosemByteBuffer& scripts);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer scripts_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

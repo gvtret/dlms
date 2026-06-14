@@ -2971,4 +2971,98 @@ TEST(CosemRegisterMonitorObject, NormalizesVersionAboveMax)
             object.Descriptor().key.version);
 }
 
+TEST(CosemScriptTableObject, ExposesScriptsAttribute)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u);
+  const dlms::cosem::CosemByteBuffer scripts = BytesFromList({
+    0x01u, 0x01u,
+    0x02u, 0x02u,
+      0x12u, 0x00u, 0x01u,
+      0x01u, 0x01u,
+        0x02u, 0x05u,
+          0x16u, 0x01u,
+          0x12u, 0x00u, 0x08u,
+          0x09u, 0x06u, 0x00u, 0x00u, 0x01u, 0x00u, 0x00u, 0xFFu,
+          0x0Fu, 0x01u,
+          0x09u, 0x00u});
+
+  dlms::cosem::CosemScriptTableObject object(
+    name, scripts, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(9u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(dlms::cosem::CosemScriptTableObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(scripts, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(3u, out));
+}
+
+TEST(CosemScriptTableObject, ScriptsHonorCallerAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u);
+  const dlms::cosem::CosemByteBuffer initial =
+    BytesFromList({0x01u, 0x00u});
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x01u, 0x01u, 0x02u, 0x01u, 0x12u, 0x00u, 0x07u});
+
+  dlms::cosem::CosemScriptTableObject writable(
+    name, initial, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, replacement));
+  EXPECT_EQ(replacement, writable.Scripts());
+
+  dlms::cosem::CosemScriptTableObject readOnly(
+    name, initial, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(initial, readOnly.Scripts());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+}
+
+TEST(CosemScriptTableObject, ExecuteIsUnsupportedAndOthersNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u);
+  dlms::cosem::CosemScriptTableObject object(
+    name,
+    BytesFromList({0x01u, 0x00u}),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  dlms::cosem::CosemByteBuffer in =
+    BytesFromList({0x12u, 0x00u, 0x01u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu, 0xBBu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  out = BytesFromList({0xCCu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(2u, in, out));
+  EXPECT_TRUE(out.empty());
+}
+
+TEST(CosemScriptTableObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u);
+  dlms::cosem::CosemScriptTableObject object(
+    name,
+    BytesFromList({0x01u, 0x00u}),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(dlms::cosem::CosemScriptTableObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
+}
+
 

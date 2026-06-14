@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.23.0 - 2026-06-15
+
+- Added Script Table IC `9` built-in object
+  (`CosemScriptTableObject`) with class version `0`, exposing attributes
+  `1` logical_name and `2` scripts as an opaque encoded DLMS Data buffer
+  prepared by the caller. `scripts` access mode is caller-selected.
+- Added explicit `MaxSupportedVersion` constant and version-taking
+  constructor for Script Table; constructors normalize versions above the
+  maximum.
+- Added Script Table method `1` `execute` as explicit `UnsupportedFeature`
+  (application-defined script semantics); other method ids report
+  `MethodNotFound`.
+
 ## 0.22.0 - 2026-06-15
 
 - Added Register Monitor IC `21` built-in object

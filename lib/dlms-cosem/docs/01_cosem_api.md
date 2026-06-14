@@ -328,6 +328,17 @@ attribute `3` `monitored_value` and attribute `4` `actions` are read-only.
 Register Monitor v0 defines no methods, so `InvokeMethod` reports
 `MethodNotFound` for every method id.
 
+`simple_objects.hpp` also exposes a partial Script Table IC `9`
+(`CosemScriptTableObject`) with class version `0`. The constructors take
+the scripts payload as an encoded DLMS Data buffer prepared by the caller,
+the logical name, a caller-selected `AttributeAccessMode` for `scripts`,
+and an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1` is read-only logical
+name; attribute `2` `scripts` honors the caller access mode and replaces
+the stored buffer in-place when writable. Method `1` `execute` dispatches
+application-defined script semantics and is surfaced as
+`UnsupportedFeature`; other method ids report `MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

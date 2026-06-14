@@ -2282,6 +2282,122 @@ void CosemRegisterMonitorObject::SetActions(
   actions_ = actions;
 }
 
+namespace {
+constexpr std::uint16_t kScriptTableClassId = 9u;
+constexpr std::uint8_t kScriptTableScriptsAttributeId = 2u;
+constexpr std::uint8_t kScriptTableExecuteMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemScriptTableObject::MaxSupportedVersion;
+
+CosemScriptTableObject::CosemScriptTableObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& scripts,
+  AttributeAccessMode scriptsAccess)
+  : CosemScriptTableObject(
+      logicalName,
+      scripts,
+      scriptsAccess,
+      kVersion0)
+{
+}
+
+CosemScriptTableObject::CosemScriptTableObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& scripts,
+  AttributeAccessMode scriptsAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kScriptTableClassId,
+      NormalizeVersion(
+        version,
+        CosemScriptTableObject::MaxSupportedVersion),
+      logicalName))
+  , scripts_(scripts)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kScriptTableScriptsAttributeId,
+    scriptsAccess);
+}
+
+CosemObjectDescriptor CosemScriptTableObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemScriptTableObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemScriptTableObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kScriptTableScriptsAttributeId) {
+    output = scripts_;
+    return CosemStatus::Ok;
+  }
+  output.clear();
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemScriptTableObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kScriptTableScriptsAttributeId) {
+    const AttributeAccessMode mode = rights_.AttributeAccess(
+      kScriptTableScriptsAttributeId);
+    if (mode == AttributeAccessMode::WriteOnly
+        || mode == AttributeAccessMode::ReadAndWrite
+        || mode == AttributeAccessMode::AuthenticatedWriteOnly
+        || mode == AttributeAccessMode::AuthenticatedReadAndWrite) {
+      scripts_ = input;
+      return CosemStatus::Ok;
+    }
+    return CosemStatus::AccessDenied;
+  }
+  if (attributeId == kLogicalNameAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemScriptTableObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // method 1 (execute) dispatches application-defined script semantics; the
+  // built-in object surfaces it explicitly as UnsupportedFeature so that a
+  // future backend can attach script execution without changing the object
+  // surface.
+  if (methodId == kScriptTableExecuteMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemScriptTableObject::Scripts() const
+{
+  return scripts_;
+}
+
+void CosemScriptTableObject::SetScripts(const CosemByteBuffer& scripts)
+{
+  scripts_ = scripts;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

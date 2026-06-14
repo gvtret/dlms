@@ -1412,6 +1412,65 @@ TEST(CosemAssociationLnObject, VersionControlsUserAttributesAndMethods)
             object.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
 }
 
+TEST(CosemAssociationLnObject, Version2DoesNotExposeUserAttributesOrMethods)
+{
+  dlms::cosem::AssociationView view;
+  dlms::cosem::CosemAssociationLnConfig config;
+  config.version = 2u;
+  config.associationStatus = dlms::cosem::CosemAssociationStatus::Associated;
+  config.hasSecuritySetupReference = true;
+  config.securitySetupReference = dlms::cosem::SecuritySetupName();
+  dlms::cosem::CosemAssociationUser operatorUser;
+  operatorUser.userId = 7u;
+  operatorUser.userName = "operator";
+  config.users.push_back(operatorUser);
+  config.currentUser = operatorUser;
+
+  dlms::cosem::CosemAssociationLnObject object(
+    dlms::cosem::CurrentAssociationLnName(),
+    view,
+    config);
+
+  const dlms::cosem::CosemObjectDescriptor descriptor =
+    object.Descriptor();
+  EXPECT_EQ(2u, descriptor.key.version);
+  EXPECT_TRUE(object.Users().empty());
+  EXPECT_EQ(0u, object.CurrentUser().userId);
+  EXPECT_TRUE(object.CurrentUser().userName.empty());
+
+  // security_setup_reference (attr 9) is exposed since v1.
+  EXPECT_TRUE(object.HasSecuritySetupReference());
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(9u, output));
+
+  // user_list (10) and current_user (11) appear only in v3.
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(10u, output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(11u, output));
+
+  // add_user (5) and remove_user (6) appear only in v3.
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(6u, dlms::cosem::CosemByteBuffer(), output));
+
+  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::NoAccess,
+    rights.AttributeAccess(10u));
+  EXPECT_EQ(
+    dlms::cosem::AttributeAccessMode::NoAccess,
+    rights.AttributeAccess(11u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::NoAccess,
+    rights.MethodAccess(5u));
+  EXPECT_EQ(
+    dlms::cosem::MethodAccessMode::NoAccess,
+    rights.MethodAccess(6u));
+}
+
 TEST(CosemAssociationLnObject, NormalizesUnsupportedVersionToMaximum)
 {
   dlms::cosem::AssociationView view;

@@ -1244,7 +1244,7 @@ Association LN supports caller-selected class versions up to
 `CosemAssociationLnObject::MaxSupportedVersion`, currently `3`. Attribute and
 method access rights are derived from the selected version: version `0`
 exposes attributes `1`, `2`, `8` and methods `1`-`4`; version `1+` may expose
-attribute `9`, `security_setup_reference`, when configured; version `2+`
+attribute `9`, `security_setup_reference`, when configured; version `3+`
 exposes attributes `10`, `11` and methods `5`, `6` for user-list handling.
 Unimplemented Association LN methods return `UnsupportedFeature`.
 

@@ -10919,7 +10919,7 @@ CosemAssociationLnObject::CosemAssociationLnObject(
       kAssociationSecuritySetupReferenceAttributeId,
       AttributeAccessMode::ReadOnly);
   }
-  if (descriptor_.key.version >= 2u) {
+  if (descriptor_.key.version >= 3u) {
     rights_.SetAttributeAccess(
       kAssociationUserListAttributeId,
       AttributeAccessMode::ReadOnly);
@@ -10937,7 +10937,7 @@ CosemAssociationLnObject::CosemAssociationLnObject(
     hasSecuritySetupReference_ = false;
     securitySetupReference_ = CosemLogicalName();
   }
-  if (descriptor_.key.version < 2u) {
+  if (descriptor_.key.version < 3u) {
     users_.clear();
     currentUser_ = DefaultAssociationUser();
   }
@@ -10977,13 +10977,13 @@ CosemStatus CosemAssociationLnObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kAssociationUserListAttributeId &&
-      descriptor_.key.version >= 2u) {
+      descriptor_.key.version >= 3u) {
     output.clear();
     AppendAssociationUserList(output, users_);
     return CosemStatus::Ok;
   }
   if (attributeId == kAssociationCurrentUserAttributeId &&
-      descriptor_.key.version >= 2u) {
+      descriptor_.key.version >= 3u) {
     output.clear();
     AppendAssociationUser(output, currentUser_);
     return CosemStatus::Ok;
@@ -11012,7 +11012,7 @@ CosemStatus CosemAssociationLnObject::InvokeMethod(
       methodId <= kAssociationRemoveObjectMethodId) {
     return CosemStatus::UnsupportedFeature;
   }
-  if (descriptor_.key.version >= 2u &&
+  if (descriptor_.key.version >= 3u &&
       methodId >= kAssociationAddUserMethodId &&
       methodId <= kAssociationRemoveUserMethodId) {
     return CosemStatus::UnsupportedFeature;

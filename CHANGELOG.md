@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.69.0 - 2026-06-15
+
+- Tightened the per-version surface of the Association LN IC `15`
+  built-in object (`CosemAssociationLnObject`) to match IEC 62056-6-2
+  ED4 (2021) clause 4.4.4 and DLMS UA Blue Book Ed. 12.1 clause 4.4.4:
+  the `user_list` (attribute `10`), `current_user` (attribute `11`),
+  `add_user` (method `5`) and `remove_user` (method `6`) elements are
+  defined for class version `3` and were previously surfaced on
+  version `2` instances as well. Construction of a v2 instance now
+  clears any caller-supplied `users`/`currentUser` payload, reports
+  `NoAccess` for attributes `10`-`11` and methods `5`-`6` in the
+  access-rights list, returns `AttributeNotFound` for reads of `10`
+  or `11`, and returns `MethodNotFound` for invocations of `5` or
+  `6`. The v0, v1 and v3 surfaces and the access-rights/object-list
+  encoders are unchanged. `MaxSupportedVersion` stays at `3`.
+- Added regression test
+  `CosemAssociationLnObject.Version2DoesNotExposeUserAttributesOrMethods`
+  that locks the v2 surface.
+
 ## 0.68.0 - 2026-06-15
 
 - Removed phantom `port_speed` attribute (`10`) from the IEC Local

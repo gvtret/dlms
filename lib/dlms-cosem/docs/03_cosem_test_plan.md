@@ -243,6 +243,30 @@ Image Transfer tests:
   ids report `MethodNotFound`;
 - Image Transfer normalizes versions above `MaxSupportedVersion`.
 
+Push Setup tests:
+
+- Push Setup v1 exposes attributes `1` logical_name and `2`-`13`
+  (push_object_list, send_destination_and_method,
+  communication_window, randomisation_start_interval,
+  number_of_retries, repetition_delay, port_reference,
+  push_client_SAP, push_protection_parameters, push_operation_method,
+  confirmation_parameters, last_confirmation_date_time) as the encoded
+  DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Push Setup v0 reports `AttributeNotFound` on both read and write for
+  the v1-only attributes (`8`-`13`), and still exposes `1`-`7` from the
+  caller-supplied buffers;
+- Push Setup mutable attributes (`2`-`12` on v1) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the access
+  mode is read-only, leaving the stored buffers unchanged;
+- Push Setup rejects writes to `logical_name` and to
+  `last_confirmation_date_time` (`13`) with `AccessDenied`, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Push Setup method `1` `push` reports `UnsupportedFeature` and clears
+  method output; other method ids report `MethodNotFound`;
+- Push Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

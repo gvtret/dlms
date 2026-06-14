@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.26.0 - 2026-06-15
+
+- Added Push Setup IC `40` built-in object (`CosemPushSetupObject`) with
+  `MaxSupportedVersion = 1`, exposing the v0 surface
+  (`push_object_list`, `send_destination_and_method`,
+  `communication_window`, `randomisation_start_interval`,
+  `number_of_retries`, `repetition_delay`) and the v1 surface
+  (`port_reference`, `push_client_SAP`, `push_protection_parameters`,
+  `push_operation_method`, `confirmation_parameters`,
+  `last_confirmation_date_time`) as opaque encoded DLMS Data buffers
+  prepared by the caller.
+- v0 objects hide attributes 8-13 (`AttributeNotFound` on read and
+  write). v1 objects expose attributes 2-12 with a caller-selected
+  `AttributeAccessMode`; logical_name and `last_confirmation_date_time`
+  (`13`) are read-only, and a setter exposes backend-driven refresh of
+  the last-confirmation timestamp.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Added Push Setup method `1` `push` as explicit `UnsupportedFeature`
+  (application-defined scheduling, transport selection and
+  confirmation tracking); other method ids report `MethodNotFound`.
+
 ## 0.25.0 - 2026-06-15
 
 - Added Image Transfer IC `18` built-in object

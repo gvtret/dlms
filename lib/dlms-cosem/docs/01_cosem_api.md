@@ -378,6 +378,28 @@ dispatch application-defined firmware transfer and activation semantics
 and are surfaced as `UnsupportedFeature`; other method ids report
 `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Push Setup IC `40`
+(`CosemPushSetupObject`) with `MaxSupportedVersion = 1`. The single
+constructor takes the full v1 attribute payload
+(`push_object_list`, `send_destination_and_method`,
+`communication_window`, `randomisation_start_interval`,
+`number_of_retries`, `repetition_delay`, `port_reference`,
+`push_client_SAP`, `push_protection_parameters`,
+`push_operation_method`, `confirmation_parameters`,
+`last_confirmation_date_time`) as encoded DLMS Data buffers prepared by
+the caller, the logical name, a caller-selected `AttributeAccessMode`
+shared by the mutable attributes, and an explicit version that is
+normalized to `MaxSupportedVersion` when out of range. On a v0 object
+the v1-only attributes (`8`-`13`) are hidden: reads and writes report
+`AttributeNotFound`. On a v1 object the mutable attributes (`2`-`12`)
+honor the caller access mode and replace the stored buffer in-place
+when writable; logical_name and `last_confirmation_date_time` (`13`)
+are read-only, and a setter exposes backend-driven refresh of the
+last-confirmation timestamp. Method `1` `push` dispatches
+application-defined scheduling, transport selection and confirmation
+tracking and is surfaced as `UnsupportedFeature`; other method ids
+report `MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

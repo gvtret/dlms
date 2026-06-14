@@ -483,6 +483,73 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPushSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  CosemPushSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& pushObjectList,
+    const CosemByteBuffer& sendDestinationAndMethod,
+    const CosemByteBuffer& communicationWindow,
+    const CosemByteBuffer& randomisationStartInterval,
+    const CosemByteBuffer& numberOfRetries,
+    const CosemByteBuffer& repetitionDelay,
+    const CosemByteBuffer& portReference,
+    const CosemByteBuffer& pushClientSap,
+    const CosemByteBuffer& pushProtectionParameters,
+    const CosemByteBuffer& pushOperationMethod,
+    const CosemByteBuffer& confirmationParameters,
+    const CosemByteBuffer& lastConfirmationDateTime,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& PushObjectList() const;
+  const CosemByteBuffer& SendDestinationAndMethod() const;
+  const CosemByteBuffer& CommunicationWindow() const;
+  const CosemByteBuffer& RandomisationStartInterval() const;
+  const CosemByteBuffer& NumberOfRetries() const;
+  const CosemByteBuffer& RepetitionDelay() const;
+  const CosemByteBuffer& PortReference() const;
+  const CosemByteBuffer& PushClientSap() const;
+  const CosemByteBuffer& PushProtectionParameters() const;
+  const CosemByteBuffer& PushOperationMethod() const;
+  const CosemByteBuffer& ConfirmationParameters() const;
+  const CosemByteBuffer& LastConfirmationDateTime() const;
+
+  void SetLastConfirmationDateTime(const CosemByteBuffer& value);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer pushObjectList_;
+  CosemByteBuffer sendDestinationAndMethod_;
+  CosemByteBuffer communicationWindow_;
+  CosemByteBuffer randomisationStartInterval_;
+  CosemByteBuffer numberOfRetries_;
+  CosemByteBuffer repetitionDelay_;
+  CosemByteBuffer portReference_;
+  CosemByteBuffer pushClientSap_;
+  CosemByteBuffer pushProtectionParameters_;
+  CosemByteBuffer pushOperationMethod_;
+  CosemByteBuffer confirmationParameters_;
+  CosemByteBuffer lastConfirmationDateTime_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

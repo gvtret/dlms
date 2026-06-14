@@ -58,7 +58,7 @@ Status values:
 | `28` | Auto Answer | Application-provided | No built-in implementation. |
 | `29` | Auto Connect | Application-provided | No built-in implementation. |
 | `30` | Data Protection | Planned | Needed for complete protected data model. |
-| `40` | Push Setup | Planned | Required for initiative messages and protected push. |
+| `40` | Push Setup | Partial | `CosemPushSetupObject` exposes push_object_list, send_destination_and_method, communication_window, randomisation_start_interval, number_of_retries and repetition_delay (v0 surface) plus port_reference, push_client_SAP, push_protection_parameters, push_operation_method, confirmation_parameters and last_confirmation_date_time (v1 surface) as opaque encoded DLMS Data buffers prepared by the caller, with `MaxSupportedVersion = 1` and constructor normalization. The mutable attributes (2-12 on v1) share a caller-selected `AttributeAccessMode`; logical_name and last_confirmation_date_time (13) are read-only (a setter exposes backend-driven refresh of attribute 13). V0 objects report `AttributeNotFound` for attributes 8-13 on both read and write. Method `1` `push` is surfaced as `UnsupportedFeature` (application-defined push backend); other method ids report `MethodNotFound`. |
 | `41` | TCP-UDP Setup | Planned | Needed for network setup model. |
 | `42` | IPv4 Setup | Application-provided | No built-in implementation. |
 | `43` | MAC Address Setup | Application-provided | No built-in implementation. |

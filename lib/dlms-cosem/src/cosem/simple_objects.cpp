@@ -2958,6 +2958,319 @@ void CosemImageTransferObject::SetImageToActivateInfo(
   imageToActivateInfo_ = value;
 }
 
+namespace {
+constexpr std::uint16_t kPushSetupClassId = 40u;
+constexpr std::uint8_t kPushSetupObjectListAttributeId = 2u;
+constexpr std::uint8_t kPushSetupSendDestinationAndMethodAttributeId = 3u;
+constexpr std::uint8_t kPushSetupCommunicationWindowAttributeId = 4u;
+constexpr std::uint8_t kPushSetupRandomisationStartIntervalAttributeId = 5u;
+constexpr std::uint8_t kPushSetupNumberOfRetriesAttributeId = 6u;
+constexpr std::uint8_t kPushSetupRepetitionDelayAttributeId = 7u;
+constexpr std::uint8_t kPushSetupPortReferenceAttributeId = 8u;
+constexpr std::uint8_t kPushSetupPushClientSapAttributeId = 9u;
+constexpr std::uint8_t kPushSetupPushProtectionParametersAttributeId = 10u;
+constexpr std::uint8_t kPushSetupPushOperationMethodAttributeId = 11u;
+constexpr std::uint8_t kPushSetupConfirmationParametersAttributeId = 12u;
+constexpr std::uint8_t kPushSetupLastConfirmationDateTimeAttributeId = 13u;
+constexpr std::uint8_t kPushSetupPushMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemPushSetupObject::MaxSupportedVersion;
+
+CosemPushSetupObject::CosemPushSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& pushObjectList,
+  const CosemByteBuffer& sendDestinationAndMethod,
+  const CosemByteBuffer& communicationWindow,
+  const CosemByteBuffer& randomisationStartInterval,
+  const CosemByteBuffer& numberOfRetries,
+  const CosemByteBuffer& repetitionDelay,
+  const CosemByteBuffer& portReference,
+  const CosemByteBuffer& pushClientSap,
+  const CosemByteBuffer& pushProtectionParameters,
+  const CosemByteBuffer& pushOperationMethod,
+  const CosemByteBuffer& confirmationParameters,
+  const CosemByteBuffer& lastConfirmationDateTime,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPushSetupClassId,
+      NormalizeVersion(version, CosemPushSetupObject::MaxSupportedVersion),
+      logicalName))
+  , pushObjectList_(pushObjectList)
+  , sendDestinationAndMethod_(sendDestinationAndMethod)
+  , communicationWindow_(communicationWindow)
+  , randomisationStartInterval_(randomisationStartInterval)
+  , numberOfRetries_(numberOfRetries)
+  , repetitionDelay_(repetitionDelay)
+  , portReference_(portReference)
+  , pushClientSap_(pushClientSap)
+  , pushProtectionParameters_(pushProtectionParameters)
+  , pushOperationMethod_(pushOperationMethod)
+  , confirmationParameters_(confirmationParameters)
+  , lastConfirmationDateTime_(lastConfirmationDateTime)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kPushSetupObjectListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPushSetupSendDestinationAndMethodAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPushSetupCommunicationWindowAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPushSetupRandomisationStartIntervalAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPushSetupNumberOfRetriesAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPushSetupRepetitionDelayAttributeId, mutableAccess);
+  if (descriptor_.key.version >= 1u) {
+    rights_.SetAttributeAccess(
+      kPushSetupPortReferenceAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kPushSetupPushClientSapAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kPushSetupPushProtectionParametersAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kPushSetupPushOperationMethodAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kPushSetupConfirmationParametersAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kPushSetupLastConfirmationDateTimeAttributeId,
+      AttributeAccessMode::ReadOnly);
+  }
+}
+
+CosemObjectDescriptor CosemPushSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemPushSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemPushSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  const bool v1 = descriptor_.key.version >= 1u;
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPushSetupObjectListAttributeId:
+      output = pushObjectList_;
+      return CosemStatus::Ok;
+    case kPushSetupSendDestinationAndMethodAttributeId:
+      output = sendDestinationAndMethod_;
+      return CosemStatus::Ok;
+    case kPushSetupCommunicationWindowAttributeId:
+      output = communicationWindow_;
+      return CosemStatus::Ok;
+    case kPushSetupRandomisationStartIntervalAttributeId:
+      output = randomisationStartInterval_;
+      return CosemStatus::Ok;
+    case kPushSetupNumberOfRetriesAttributeId:
+      output = numberOfRetries_;
+      return CosemStatus::Ok;
+    case kPushSetupRepetitionDelayAttributeId:
+      output = repetitionDelay_;
+      return CosemStatus::Ok;
+    case kPushSetupPortReferenceAttributeId:
+      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      output = portReference_;
+      return CosemStatus::Ok;
+    case kPushSetupPushClientSapAttributeId:
+      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      output = pushClientSap_;
+      return CosemStatus::Ok;
+    case kPushSetupPushProtectionParametersAttributeId:
+      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      output = pushProtectionParameters_;
+      return CosemStatus::Ok;
+    case kPushSetupPushOperationMethodAttributeId:
+      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      output = pushOperationMethod_;
+      return CosemStatus::Ok;
+    case kPushSetupConfirmationParametersAttributeId:
+      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      output = confirmationParameters_;
+      return CosemStatus::Ok;
+    case kPushSetupLastConfirmationDateTimeAttributeId:
+      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      output = lastConfirmationDateTime_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPushSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  const bool v1 = descriptor_.key.version >= 1u;
+  switch (attributeId) {
+    case kPushSetupObjectListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      pushObjectList_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupSendDestinationAndMethodAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      sendDestinationAndMethod_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupCommunicationWindowAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      communicationWindow_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupRandomisationStartIntervalAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      randomisationStartInterval_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupNumberOfRetriesAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      numberOfRetries_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupRepetitionDelayAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      repetitionDelay_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupPortReferenceAttributeId:
+      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      portReference_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupPushClientSapAttributeId:
+      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      pushClientSap_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupPushProtectionParametersAttributeId:
+      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      pushProtectionParameters_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupPushOperationMethodAttributeId:
+      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      pushOperationMethod_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupConfirmationParametersAttributeId:
+      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      confirmationParameters_ = input;
+      return CosemStatus::Ok;
+    case kPushSetupLastConfirmationDateTimeAttributeId:
+      if (!v1) return CosemStatus::AttributeNotFound;
+      return CosemStatus::AccessDenied;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPushSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // Method 1 (push) triggers the server to emit a DataNotification to
+  // the configured destination. The built-in object surfaces it as
+  // UnsupportedFeature; a future push backend will own scheduling,
+  // transport selection and confirmation tracking.
+  if (methodId == kPushSetupPushMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::PushObjectList() const
+{
+  return pushObjectList_;
+}
+
+const CosemByteBuffer&
+CosemPushSetupObject::SendDestinationAndMethod() const
+{
+  return sendDestinationAndMethod_;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::CommunicationWindow() const
+{
+  return communicationWindow_;
+}
+
+const CosemByteBuffer&
+CosemPushSetupObject::RandomisationStartInterval() const
+{
+  return randomisationStartInterval_;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::NumberOfRetries() const
+{
+  return numberOfRetries_;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::RepetitionDelay() const
+{
+  return repetitionDelay_;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::PortReference() const
+{
+  return portReference_;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::PushClientSap() const
+{
+  return pushClientSap_;
+}
+
+const CosemByteBuffer&
+CosemPushSetupObject::PushProtectionParameters() const
+{
+  return pushProtectionParameters_;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::PushOperationMethod() const
+{
+  return pushOperationMethod_;
+}
+
+const CosemByteBuffer& CosemPushSetupObject::ConfirmationParameters() const
+{
+  return confirmationParameters_;
+}
+
+const CosemByteBuffer&
+CosemPushSetupObject::LastConfirmationDateTime() const
+{
+  return lastConfirmationDateTime_;
+}
+
+void CosemPushSetupObject::SetLastConfirmationDateTime(
+  const CosemByteBuffer& value)
+{
+  lastConfirmationDateTime_ = value;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

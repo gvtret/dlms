@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.35.0 - 2026-06-15
+
+- Added Modem Configuration IC `27` built-in object
+  (`CosemModemConfigurationObject`) with class version `1`, exposing
+  `communication_speed`, `initialisation_strings` and `modem_profile`
+  as opaque encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`4` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Modem Configuration IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.34.0 - 2026-06-15
 
 - Added Single Action Schedule IC `22` built-in object

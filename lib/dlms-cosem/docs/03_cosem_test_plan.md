@@ -413,6 +413,24 @@ Single Action Schedule tests:
 - Single Action Schedule normalizes versions above
   `MaxSupportedVersion`.
 
+Modem Configuration tests:
+
+- Modem Configuration exposes attributes `1` logical_name, `2`
+  communication_speed, `3` initialisation_strings and `4`
+  modem_profile as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute ids;
+- Modem Configuration mutable attributes (`2`-`4`) writes succeed
+  when the caller-selected access mode permits writes and replace
+  the stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Modem Configuration rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Modem Configuration `InvokeMethod` reports `MethodNotFound` for
+  all method ids and clears method output (IC defines no methods);
+- Modem Configuration normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

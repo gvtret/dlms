@@ -958,6 +958,50 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemModemConfigurationObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  CosemModemConfigurationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& communicationSpeed,
+    const CosemByteBuffer& initialisationStrings,
+    const CosemByteBuffer& modemProfile,
+    AttributeAccessMode mutableAccess);
+  CosemModemConfigurationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& communicationSpeed,
+    const CosemByteBuffer& initialisationStrings,
+    const CosemByteBuffer& modemProfile,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& CommunicationSpeed() const;
+  const CosemByteBuffer& InitialisationStrings() const;
+  const CosemByteBuffer& ModemProfile() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer communicationSpeed_;
+  CosemByteBuffer initialisationStrings_;
+  CosemByteBuffer modemProfile_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

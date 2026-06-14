@@ -4623,6 +4623,142 @@ const CosemByteBuffer& CosemSingleActionScheduleObject::ExecutionTime() const
   return executionTime_;
 }
 
+namespace {
+constexpr std::uint16_t kModemConfigurationClassId = 27u;
+constexpr std::uint8_t kModemConfigurationCommunicationSpeedAttributeId = 2u;
+constexpr std::uint8_t kModemConfigurationInitialisationStringsAttributeId = 3u;
+constexpr std::uint8_t kModemConfigurationModemProfileAttributeId = 4u;
+} // namespace
+
+const std::uint8_t CosemModemConfigurationObject::MaxSupportedVersion;
+
+CosemModemConfigurationObject::CosemModemConfigurationObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& communicationSpeed,
+  const CosemByteBuffer& initialisationStrings,
+  const CosemByteBuffer& modemProfile,
+  AttributeAccessMode mutableAccess)
+  : CosemModemConfigurationObject(
+      logicalName, communicationSpeed, initialisationStrings,
+      modemProfile, mutableAccess,
+      CosemModemConfigurationObject::MaxSupportedVersion)
+{
+}
+
+CosemModemConfigurationObject::CosemModemConfigurationObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& communicationSpeed,
+  const CosemByteBuffer& initialisationStrings,
+  const CosemByteBuffer& modemProfile,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kModemConfigurationClassId,
+      NormalizeVersion(
+        version, CosemModemConfigurationObject::MaxSupportedVersion),
+      logicalName))
+  , communicationSpeed_(communicationSpeed)
+  , initialisationStrings_(initialisationStrings)
+  , modemProfile_(modemProfile)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kModemConfigurationCommunicationSpeedAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kModemConfigurationInitialisationStringsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kModemConfigurationModemProfileAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemModemConfigurationObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemModemConfigurationObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemModemConfigurationObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kModemConfigurationCommunicationSpeedAttributeId:
+      output = communicationSpeed_;
+      return CosemStatus::Ok;
+    case kModemConfigurationInitialisationStringsAttributeId:
+      output = initialisationStrings_;
+      return CosemStatus::Ok;
+    case kModemConfigurationModemProfileAttributeId:
+      output = modemProfile_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemModemConfigurationObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kModemConfigurationCommunicationSpeedAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      communicationSpeed_ = input;
+      return CosemStatus::Ok;
+    case kModemConfigurationInitialisationStringsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      initialisationStrings_ = input;
+      return CosemStatus::Ok;
+    case kModemConfigurationModemProfileAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      modemProfile_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemModemConfigurationObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Modem Configuration IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemModemConfigurationObject::CommunicationSpeed() const
+{
+  return communicationSpeed_;
+}
+
+const CosemByteBuffer&
+CosemModemConfigurationObject::InitialisationStrings() const
+{
+  return initialisationStrings_;
+}
+
+const CosemByteBuffer& CosemModemConfigurationObject::ModemProfile() const
+{
+  return modemProfile_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

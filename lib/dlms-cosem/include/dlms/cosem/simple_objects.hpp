@@ -91,6 +91,58 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemExtendedRegisterObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemExtendedRegisterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& value,
+    const CosemByteBuffer& scalerUnit,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& captureTime,
+    AttributeAccessMode valueAccess);
+  CosemExtendedRegisterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& value,
+    const CosemByteBuffer& scalerUnit,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& captureTime,
+    AttributeAccessMode valueAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Value() const;
+  const CosemByteBuffer& ScalerUnit() const;
+  const CosemByteBuffer& Status() const;
+  const CosemByteBuffer& CaptureTime() const;
+  void SetValue(const CosemByteBuffer& value);
+  void SetScalerUnit(const CosemByteBuffer& scalerUnit);
+  void SetStatus(const CosemByteBuffer& status);
+  void SetCaptureTime(const CosemByteBuffer& captureTime);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer value_;
+  CosemByteBuffer scalerUnit_;
+  CosemByteBuffer status_;
+  CosemByteBuffer captureTime_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

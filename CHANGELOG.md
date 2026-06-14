@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.0 - 2026-06-15
+
+- Added Extended Register IC `4` built-in object
+  (`CosemExtendedRegisterObject`) with class version `0`, exposing attributes
+  `1` logical_name (read-only), `2` value (caller-selected access mode),
+  `3` scaler_unit (read-only), `4` status (read-only) and `5` capture_time
+  (read-only DLMS date-time octet-string).
+- Added explicit `MaxSupportedVersion` constant and version-taking constructor
+  for Extended Register; constructors normalize versions above the maximum.
+- Added Extended Register method `1` `reset` as explicit `UnsupportedFeature`
+  (application-defined semantics); other method ids report `MethodNotFound`.
+
 ## 0.18.0 - 2026-06-15
 
 - Added pluggable `ICosemCertificateStore` interface and

@@ -1523,6 +1523,178 @@ void CosemRegisterObject::SetScalerUnit(
   scalerUnit_ = scalerUnit;
 }
 
+namespace {
+constexpr std::uint16_t kExtendedRegisterClassId = 4u;
+constexpr std::uint8_t kExtendedRegisterStatusAttributeId = 4u;
+constexpr std::uint8_t kExtendedRegisterCaptureTimeAttributeId = 5u;
+constexpr std::uint8_t kExtendedRegisterResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemExtendedRegisterObject::MaxSupportedVersion;
+
+CosemExtendedRegisterObject::CosemExtendedRegisterObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& value,
+  const CosemByteBuffer& scalerUnit,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& captureTime,
+  AttributeAccessMode valueAccess)
+  : CosemExtendedRegisterObject(
+      logicalName,
+      value,
+      scalerUnit,
+      status,
+      captureTime,
+      valueAccess,
+      kVersion0)
+{
+}
+
+CosemExtendedRegisterObject::CosemExtendedRegisterObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& value,
+  const CosemByteBuffer& scalerUnit,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& captureTime,
+  AttributeAccessMode valueAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kExtendedRegisterClassId,
+      NormalizeVersion(version, CosemExtendedRegisterObject::MaxSupportedVersion),
+      logicalName))
+  , value_(value)
+  , scalerUnit_(scalerUnit)
+  , status_(status)
+  , captureTime_(captureTime)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(kValueAttributeId, valueAccess);
+  rights_.SetAttributeAccess(
+    kScalerUnitAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kExtendedRegisterStatusAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kExtendedRegisterCaptureTimeAttributeId,
+    AttributeAccessMode::ReadOnly);
+}
+
+CosemObjectDescriptor CosemExtendedRegisterObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemExtendedRegisterObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemExtendedRegisterObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kValueAttributeId) {
+    output = value_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kScalerUnitAttributeId) {
+    output = scalerUnit_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kExtendedRegisterStatusAttributeId) {
+    output = status_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kExtendedRegisterCaptureTimeAttributeId) {
+    output = captureTime_;
+    return CosemStatus::Ok;
+  }
+  output.clear();
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemExtendedRegisterObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kLogicalNameAttributeId
+      || attributeId == kScalerUnitAttributeId
+      || attributeId == kExtendedRegisterStatusAttributeId
+      || attributeId == kExtendedRegisterCaptureTimeAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  if (attributeId == kValueAttributeId) {
+    value_ = input;
+    return CosemStatus::Ok;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemExtendedRegisterObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // method 1 = reset. Built-in object exposes it explicitly as
+  // UnsupportedFeature: application-defined semantics decide what reset means
+  // for an extended register, and the COSEM object does not own that policy.
+  if (methodId == kExtendedRegisterResetMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemExtendedRegisterObject::Value() const
+{
+  return value_;
+}
+
+const CosemByteBuffer& CosemExtendedRegisterObject::ScalerUnit() const
+{
+  return scalerUnit_;
+}
+
+const CosemByteBuffer& CosemExtendedRegisterObject::Status() const
+{
+  return status_;
+}
+
+const CosemByteBuffer& CosemExtendedRegisterObject::CaptureTime() const
+{
+  return captureTime_;
+}
+
+void CosemExtendedRegisterObject::SetValue(const CosemByteBuffer& value)
+{
+  value_ = value;
+}
+
+void CosemExtendedRegisterObject::SetScalerUnit(
+  const CosemByteBuffer& scalerUnit)
+{
+  scalerUnit_ = scalerUnit;
+}
+
+void CosemExtendedRegisterObject::SetStatus(const CosemByteBuffer& status)
+{
+  status_ = status;
+}
+
+void CosemExtendedRegisterObject::SetCaptureTime(
+  const CosemByteBuffer& captureTime)
+{
+  captureTime_ = captureTime;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

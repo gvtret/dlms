@@ -280,6 +280,16 @@ Attribute `1` is read-only logical name. Attribute `2` is the value. Register
 attribute `3` is read-only scaler-unit. Methods are not supported in this
 increment.
 
+`simple_objects.hpp` also exposes a partial Extended Register IC `4`
+(`CosemExtendedRegisterObject`) with class version `0`. The constructors take
+the value, scaler-unit, status and capture_time payloads as encoded DLMS Data
+octet buffers and accept a caller-selected value access mode. Attribute `1` is
+read-only logical name; attribute `2` is the value; attribute `3` is read-only
+scaler-unit; attribute `4` is read-only status; attribute `5` is read-only
+capture_time (DLMS date-time octet-string). Method `1` `reset` returns
+`UnsupportedFeature` (application-defined semantics); other method ids report
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

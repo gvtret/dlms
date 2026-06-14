@@ -127,6 +127,16 @@ Profile Generic composite attribute tests:
   `UnsupportedFeature`;
 - Profile Generic version `1` does not expose legacy methods `3` and `4`;
 
+Extended Register tests:
+
+- Extended Register exposes attribute `1` logical name, attribute `2` value,
+  attribute `3` scaler_unit, attribute `4` status, attribute `5` capture_time;
+- Extended Register accepts caller-selected access mode for attribute `2`
+  and rejects writes to attributes `1`, `3`, `4`, `5` with `AccessDenied`;
+- Extended Register method `1` `reset` reports `UnsupportedFeature` and
+  clears method output; other method ids report `MethodNotFound`;
+- Extended Register normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

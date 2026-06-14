@@ -570,6 +570,26 @@ setter exposes backend-driven refresh of status regardless of access
 mode. IC defines no methods; `InvokeMethod` reports `MethodNotFound`
 for all method ids.
 
+`simple_objects.hpp` also exposes a partial IPv4 Setup IC `42`
+(`CosemIpv4SetupObject`) with class version `0`. The constructors
+take the `DL_reference` (octet-string), `IP_address`
+(double-long-unsigned), `multicast_IP_address` (array of
+double-long-unsigned), `IP_options` (array of structure),
+`subnet_mask` (double-long-unsigned), `gateway_IP_address`
+(double-long-unsigned), `use_DHCP_flag` (boolean),
+`primary_DNS_address` (double-long-unsigned) and
+`secondary_DNS_address` (double-long-unsigned) payloads as encoded
+DLMS Data buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` shared by the mutable
+attributes (`2`-`10`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name) is read-only; the mutable attributes honor the caller
+access mode and replace the stored buffer in-place when writable.
+Methods `1` `add_mc_IP_address` and `2` `delete_mc_IP_address`
+return `UnsupportedFeature` and clear method output (built-in object
+does not own multicast subscription policy); other method ids return
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

@@ -5237,6 +5237,262 @@ void CosemAutoAnswerObject::SetStatus(const CosemByteBuffer& status)
   status_ = status;
 }
 
+namespace {
+constexpr std::uint16_t kIpv4SetupClassId = 42u;
+constexpr std::uint8_t kIpv4SetupDlReferenceAttributeId = 2u;
+constexpr std::uint8_t kIpv4SetupIpAddressAttributeId = 3u;
+constexpr std::uint8_t kIpv4SetupMulticastIpAddressAttributeId = 4u;
+constexpr std::uint8_t kIpv4SetupIpOptionsAttributeId = 5u;
+constexpr std::uint8_t kIpv4SetupSubnetMaskAttributeId = 6u;
+constexpr std::uint8_t kIpv4SetupGatewayIpAddressAttributeId = 7u;
+constexpr std::uint8_t kIpv4SetupUseDhcpFlagAttributeId = 8u;
+constexpr std::uint8_t kIpv4SetupPrimaryDnsAddressAttributeId = 9u;
+constexpr std::uint8_t kIpv4SetupSecondaryDnsAddressAttributeId = 10u;
+constexpr std::uint8_t kIpv4SetupAddMcIpAddressMethodId = 1u;
+constexpr std::uint8_t kIpv4SetupDeleteMcIpAddressMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemIpv4SetupObject::MaxSupportedVersion;
+
+CosemIpv4SetupObject::CosemIpv4SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& dlReference,
+  const CosemByteBuffer& ipAddress,
+  const CosemByteBuffer& multicastIpAddress,
+  const CosemByteBuffer& ipOptions,
+  const CosemByteBuffer& subnetMask,
+  const CosemByteBuffer& gatewayIpAddress,
+  const CosemByteBuffer& useDhcpFlag,
+  const CosemByteBuffer& primaryDnsAddress,
+  const CosemByteBuffer& secondaryDnsAddress,
+  AttributeAccessMode mutableAccess)
+  : CosemIpv4SetupObject(
+      logicalName, dlReference, ipAddress, multicastIpAddress,
+      ipOptions, subnetMask, gatewayIpAddress, useDhcpFlag,
+      primaryDnsAddress, secondaryDnsAddress, mutableAccess, kVersion0)
+{
+}
+
+CosemIpv4SetupObject::CosemIpv4SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& dlReference,
+  const CosemByteBuffer& ipAddress,
+  const CosemByteBuffer& multicastIpAddress,
+  const CosemByteBuffer& ipOptions,
+  const CosemByteBuffer& subnetMask,
+  const CosemByteBuffer& gatewayIpAddress,
+  const CosemByteBuffer& useDhcpFlag,
+  const CosemByteBuffer& primaryDnsAddress,
+  const CosemByteBuffer& secondaryDnsAddress,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIpv4SetupClassId,
+      NormalizeVersion(
+        version, CosemIpv4SetupObject::MaxSupportedVersion),
+      logicalName))
+  , dlReference_(dlReference)
+  , ipAddress_(ipAddress)
+  , multicastIpAddress_(multicastIpAddress)
+  , ipOptions_(ipOptions)
+  , subnetMask_(subnetMask)
+  , gatewayIpAddress_(gatewayIpAddress)
+  , useDhcpFlag_(useDhcpFlag)
+  , primaryDnsAddress_(primaryDnsAddress)
+  , secondaryDnsAddress_(secondaryDnsAddress)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kIpv4SetupDlReferenceAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupIpAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupMulticastIpAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupIpOptionsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupSubnetMaskAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupGatewayIpAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupUseDhcpFlagAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupPrimaryDnsAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv4SetupSecondaryDnsAddressAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIpv4SetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIpv4SetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIpv4SetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kIpv4SetupDlReferenceAttributeId:
+      output = dlReference_;
+      return CosemStatus::Ok;
+    case kIpv4SetupIpAddressAttributeId:
+      output = ipAddress_;
+      return CosemStatus::Ok;
+    case kIpv4SetupMulticastIpAddressAttributeId:
+      output = multicastIpAddress_;
+      return CosemStatus::Ok;
+    case kIpv4SetupIpOptionsAttributeId:
+      output = ipOptions_;
+      return CosemStatus::Ok;
+    case kIpv4SetupSubnetMaskAttributeId:
+      output = subnetMask_;
+      return CosemStatus::Ok;
+    case kIpv4SetupGatewayIpAddressAttributeId:
+      output = gatewayIpAddress_;
+      return CosemStatus::Ok;
+    case kIpv4SetupUseDhcpFlagAttributeId:
+      output = useDhcpFlag_;
+      return CosemStatus::Ok;
+    case kIpv4SetupPrimaryDnsAddressAttributeId:
+      output = primaryDnsAddress_;
+      return CosemStatus::Ok;
+    case kIpv4SetupSecondaryDnsAddressAttributeId:
+      output = secondaryDnsAddress_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIpv4SetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kIpv4SetupDlReferenceAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      dlReference_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupIpAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      ipAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupMulticastIpAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      multicastIpAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupIpOptionsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      ipOptions_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupSubnetMaskAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      subnetMask_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupGatewayIpAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      gatewayIpAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupUseDhcpFlagAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      useDhcpFlag_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupPrimaryDnsAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      primaryDnsAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv4SetupSecondaryDnsAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      secondaryDnsAddress_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIpv4SetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  switch (methodId) {
+    case kIpv4SetupAddMcIpAddressMethodId:
+    case kIpv4SetupDeleteMcIpAddressMethodId:
+      // Built-in object does not own the multicast subscription policy.
+      return CosemStatus::UnsupportedFeature;
+    default:
+      return CosemStatus::MethodNotFound;
+  }
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::DlReference() const
+{
+  return dlReference_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::IpAddress() const
+{
+  return ipAddress_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::MulticastIpAddress() const
+{
+  return multicastIpAddress_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::IpOptions() const
+{
+  return ipOptions_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::SubnetMask() const
+{
+  return subnetMask_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::GatewayIpAddress() const
+{
+  return gatewayIpAddress_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::UseDhcpFlag() const
+{
+  return useDhcpFlag_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::PrimaryDnsAddress() const
+{
+  return primaryDnsAddress_;
+}
+
+const CosemByteBuffer& CosemIpv4SetupObject::SecondaryDnsAddress() const
+{
+  return secondaryDnsAddress_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

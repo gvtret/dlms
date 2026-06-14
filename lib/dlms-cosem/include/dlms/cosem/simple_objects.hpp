@@ -1152,6 +1152,74 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIpv4SetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemIpv4SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& dlReference,
+    const CosemByteBuffer& ipAddress,
+    const CosemByteBuffer& multicastIpAddress,
+    const CosemByteBuffer& ipOptions,
+    const CosemByteBuffer& subnetMask,
+    const CosemByteBuffer& gatewayIpAddress,
+    const CosemByteBuffer& useDhcpFlag,
+    const CosemByteBuffer& primaryDnsAddress,
+    const CosemByteBuffer& secondaryDnsAddress,
+    AttributeAccessMode mutableAccess);
+  CosemIpv4SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& dlReference,
+    const CosemByteBuffer& ipAddress,
+    const CosemByteBuffer& multicastIpAddress,
+    const CosemByteBuffer& ipOptions,
+    const CosemByteBuffer& subnetMask,
+    const CosemByteBuffer& gatewayIpAddress,
+    const CosemByteBuffer& useDhcpFlag,
+    const CosemByteBuffer& primaryDnsAddress,
+    const CosemByteBuffer& secondaryDnsAddress,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& DlReference() const;
+  const CosemByteBuffer& IpAddress() const;
+  const CosemByteBuffer& MulticastIpAddress() const;
+  const CosemByteBuffer& IpOptions() const;
+  const CosemByteBuffer& SubnetMask() const;
+  const CosemByteBuffer& GatewayIpAddress() const;
+  const CosemByteBuffer& UseDhcpFlag() const;
+  const CosemByteBuffer& PrimaryDnsAddress() const;
+  const CosemByteBuffer& SecondaryDnsAddress() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer dlReference_;
+  CosemByteBuffer ipAddress_;
+  CosemByteBuffer multicastIpAddress_;
+  CosemByteBuffer ipOptions_;
+  CosemByteBuffer subnetMask_;
+  CosemByteBuffer gatewayIpAddress_;
+  CosemByteBuffer useDhcpFlag_;
+  CosemByteBuffer primaryDnsAddress_;
+  CosemByteBuffer secondaryDnsAddress_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

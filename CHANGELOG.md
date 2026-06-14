@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.39.0 - 2026-06-15
+
+- Added IPv4 Setup IC `42` built-in object (`CosemIpv4SetupObject`)
+  with class version `0`, exposing `DL_reference`, `IP_address`,
+  `multicast_IP_address`, `IP_options`, `subnet_mask`,
+  `gateway_IP_address`, `use_DHCP_flag`, `primary_DNS_address` and
+  `secondary_DNS_address` as opaque encoded DLMS Data buffers prepared
+  by the caller.
+- Attributes `2`-`10` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `add_mc_IP_address` and `2` `delete_mc_IP_address`
+  return `UnsupportedFeature` with cleared output (built-in object
+  does not own multicast subscription policy); other method ids return
+  `MethodNotFound` with cleared output.
+
 ## 0.38.0 - 2026-06-15
 
 - Added Auto Answer IC `28` built-in object (`CosemAutoAnswerObject`)

@@ -5397,4 +5397,199 @@ TEST(CosemAutoAnswerObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct Ipv4SetupBuffers
+{
+  dlms::cosem::CosemByteBuffer dlReference;
+  dlms::cosem::CosemByteBuffer ipAddress;
+  dlms::cosem::CosemByteBuffer multicastIpAddress;
+  dlms::cosem::CosemByteBuffer ipOptions;
+  dlms::cosem::CosemByteBuffer subnetMask;
+  dlms::cosem::CosemByteBuffer gatewayIpAddress;
+  dlms::cosem::CosemByteBuffer useDhcpFlag;
+  dlms::cosem::CosemByteBuffer primaryDnsAddress;
+  dlms::cosem::CosemByteBuffer secondaryDnsAddress;
+};
+
+Ipv4SetupBuffers MakeSampleIpv4Setup()
+{
+  Ipv4SetupBuffers b;
+  // octet-string "0.0.27.0.0.255" (placeholder LN reference)
+  b.dlReference = BytesFromList({
+    0x09u, 0x06u, 0x00u, 0x00u, 0x1Bu, 0x00u, 0x00u, 0xFFu});
+  // double-long-unsigned 192.168.1.100 -> 0xC0A80164
+  b.ipAddress = BytesFromList({
+    0x06u, 0xC0u, 0xA8u, 0x01u, 0x64u});
+  // array(1) of double-long-unsigned 239.0.0.1
+  b.multicastIpAddress = BytesFromList({
+    0x01u, 0x01u,
+      0x06u, 0xEFu, 0x00u, 0x00u, 0x01u});
+  // array(0) - empty IP options
+  b.ipOptions = BytesFromList({0x01u, 0x00u});
+  // double-long-unsigned 255.255.255.0 -> 0xFFFFFF00
+  b.subnetMask = BytesFromList({
+    0x06u, 0xFFu, 0xFFu, 0xFFu, 0x00u});
+  // double-long-unsigned 192.168.1.1 -> 0xC0A80101
+  b.gatewayIpAddress = BytesFromList({
+    0x06u, 0xC0u, 0xA8u, 0x01u, 0x01u});
+  // boolean true
+  b.useDhcpFlag = BytesFromList({0x03u, 0x01u});
+  // double-long-unsigned 8.8.8.8
+  b.primaryDnsAddress = BytesFromList({
+    0x06u, 0x08u, 0x08u, 0x08u, 0x08u});
+  // double-long-unsigned 8.8.4.4
+  b.secondaryDnsAddress = BytesFromList({
+    0x06u, 0x08u, 0x08u, 0x04u, 0x04u});
+  return b;
+}
+
+dlms::cosem::CosemIpv4SetupObject MakeIpv4SetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const Ipv4SetupBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemIpv4SetupObject(
+    name, b.dlReference, b.ipAddress, b.multicastIpAddress,
+    b.ipOptions, b.subnetMask, b.gatewayIpAddress, b.useDhcpFlag,
+    b.primaryDnsAddress, b.secondaryDnsAddress, access);
+}
+
+} // namespace
+
+TEST(CosemIpv4SetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 1u, 0u, 255u);
+  const Ipv4SetupBuffers b = MakeSampleIpv4Setup();
+  dlms::cosem::CosemIpv4SetupObject object =
+    MakeIpv4SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(42u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemIpv4SetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.dlReference, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.ipAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.multicastIpAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.ipOptions, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.subnetMask, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.gatewayIpAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.useDhcpFlag, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
+  EXPECT_EQ(b.primaryDnsAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.secondaryDnsAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(11u, out));
+}
+
+TEST(CosemIpv4SetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 1u, 0u, 255u);
+  const Ipv4SetupBuffers b = MakeSampleIpv4Setup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x06u, 0x0Au, 0x00u, 0x00u, 0x01u});
+
+  dlms::cosem::CosemIpv4SetupObject writable =
+    MakeIpv4SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.DlReference());
+  EXPECT_EQ(replacement, writable.IpAddress());
+  EXPECT_EQ(replacement, writable.MulticastIpAddress());
+  EXPECT_EQ(replacement, writable.IpOptions());
+  EXPECT_EQ(replacement, writable.SubnetMask());
+  EXPECT_EQ(replacement, writable.GatewayIpAddress());
+  EXPECT_EQ(replacement, writable.UseDhcpFlag());
+  EXPECT_EQ(replacement, writable.PrimaryDnsAddress());
+  EXPECT_EQ(replacement, writable.SecondaryDnsAddress());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemIpv4SetupObject readOnly =
+    MakeIpv4SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.dlReference, readOnly.DlReference());
+  EXPECT_EQ(b.ipAddress, readOnly.IpAddress());
+  EXPECT_EQ(b.multicastIpAddress, readOnly.MulticastIpAddress());
+  EXPECT_EQ(b.ipOptions, readOnly.IpOptions());
+  EXPECT_EQ(b.subnetMask, readOnly.SubnetMask());
+  EXPECT_EQ(b.gatewayIpAddress, readOnly.GatewayIpAddress());
+  EXPECT_EQ(b.useDhcpFlag, readOnly.UseDhcpFlag());
+  EXPECT_EQ(b.primaryDnsAddress, readOnly.PrimaryDnsAddress());
+  EXPECT_EQ(b.secondaryDnsAddress, readOnly.SecondaryDnsAddress());
+}
+
+TEST(CosemIpv4SetupObject, MulticastMethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 1u, 0u, 255u);
+  const Ipv4SetupBuffers b = MakeSampleIpv4Setup();
+  dlms::cosem::CosemIpv4SetupObject object =
+    MakeIpv4SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer addr =
+    BytesFromList({0x06u, 0xEFu, 0x01u, 0x02u, 0x03u});
+  for (std::uint8_t method : {1u, 2u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), addr, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {3u, 4u, 5u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), addr, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemIpv4SetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 1u, 0u, 255u);
+  const Ipv4SetupBuffers b = MakeSampleIpv4Setup();
+  dlms::cosem::CosemIpv4SetupObject object(
+    name, b.dlReference, b.ipAddress, b.multicastIpAddress,
+    b.ipOptions, b.subnetMask, b.gatewayIpAddress, b.useDhcpFlag,
+    b.primaryDnsAddress, b.secondaryDnsAddress,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemIpv4SetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

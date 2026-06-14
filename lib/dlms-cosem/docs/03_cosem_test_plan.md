@@ -484,6 +484,26 @@ Auto Answer tests:
   ids and clears method output (IC defines no methods);
 - Auto Answer normalizes versions above `MaxSupportedVersion`.
 
+IPv4 Setup tests:
+
+- IPv4 Setup exposes attributes `1` logical_name, `2` DL_reference,
+  `3` IP_address, `4` multicast_IP_address, `5` IP_options, `6`
+  subnet_mask, `7` gateway_IP_address, `8` use_DHCP_flag, `9`
+  primary_DNS_address and `10` secondary_DNS_address as the encoded
+  DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- IPv4 Setup mutable attributes (`2`-`10`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode
+  is read-only, leaving the stored buffers unchanged;
+- IPv4 Setup rejects writes to logical_name (`1`) with `AccessDenied`,
+  and reports `AttributeNotFound` for undefined attribute ids;
+- IPv4 Setup methods `1` `add_mc_IP_address` and `2`
+  `delete_mc_IP_address` return `UnsupportedFeature` with cleared
+  method output; other method ids return `MethodNotFound` with
+  cleared output;
+- IPv4 Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

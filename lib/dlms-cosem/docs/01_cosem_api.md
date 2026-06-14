@@ -554,6 +554,22 @@ is read-only; attributes `2`-`4` honor the caller access mode and
 replace the stored buffer in-place when writable. IC defines no
 methods; `InvokeMethod` reports `MethodNotFound` for all method ids.
 
+`simple_objects.hpp` also exposes a partial Auto Answer IC `28`
+(`CosemAutoAnswerObject`) with class version `0`. The constructors
+take the `mode` (enum), `listening_window` (array of structure of
+start/end time), `status` (enum), `number_of_calls` (unsigned) and
+`number_of_rings` (structure of in/out-of-window ring counts)
+payloads as encoded DLMS Data buffers prepared by the caller, the
+logical name, a caller-selected `AttributeAccessMode` shared by the
+mutable attributes (`2`, `3`, `5`, `6`), and an optional explicit
+version that is normalized to `MaxSupportedVersion` when out of
+range. Attribute `1` (logical_name) and attribute `4` (status) are
+read-only; the mutable attributes honor the caller access mode and
+replace the stored buffer in-place when writable. A `SetStatus`
+setter exposes backend-driven refresh of status regardless of access
+mode. IC defines no methods; `InvokeMethod` reports `MethodNotFound`
+for all method ids.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

@@ -5064,6 +5064,179 @@ const CosemByteBuffer& CosemGprsModemSetupObject::QualityOfService() const
   return qualityOfService_;
 }
 
+namespace {
+constexpr std::uint16_t kAutoAnswerClassId = 28u;
+constexpr std::uint8_t kAutoAnswerModeAttributeId = 2u;
+constexpr std::uint8_t kAutoAnswerListeningWindowAttributeId = 3u;
+constexpr std::uint8_t kAutoAnswerStatusAttributeId = 4u;
+constexpr std::uint8_t kAutoAnswerNumberOfCallsAttributeId = 5u;
+constexpr std::uint8_t kAutoAnswerNumberOfRingsAttributeId = 6u;
+} // namespace
+
+const std::uint8_t CosemAutoAnswerObject::MaxSupportedVersion;
+
+CosemAutoAnswerObject::CosemAutoAnswerObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& mode,
+  const CosemByteBuffer& listeningWindow,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& numberOfCalls,
+  const CosemByteBuffer& numberOfRings,
+  AttributeAccessMode mutableAccess)
+  : CosemAutoAnswerObject(
+      logicalName, mode, listeningWindow, status, numberOfCalls,
+      numberOfRings, mutableAccess, kVersion0)
+{
+}
+
+CosemAutoAnswerObject::CosemAutoAnswerObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& mode,
+  const CosemByteBuffer& listeningWindow,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& numberOfCalls,
+  const CosemByteBuffer& numberOfRings,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kAutoAnswerClassId,
+      NormalizeVersion(
+        version, CosemAutoAnswerObject::MaxSupportedVersion),
+      logicalName))
+  , mode_(mode)
+  , listeningWindow_(listeningWindow)
+  , status_(status)
+  , numberOfCalls_(numberOfCalls)
+  , numberOfRings_(numberOfRings)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kAutoAnswerModeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAutoAnswerListeningWindowAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAutoAnswerStatusAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kAutoAnswerNumberOfCallsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAutoAnswerNumberOfRingsAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemAutoAnswerObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemAutoAnswerObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemAutoAnswerObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kAutoAnswerModeAttributeId:
+      output = mode_;
+      return CosemStatus::Ok;
+    case kAutoAnswerListeningWindowAttributeId:
+      output = listeningWindow_;
+      return CosemStatus::Ok;
+    case kAutoAnswerStatusAttributeId:
+      output = status_;
+      return CosemStatus::Ok;
+    case kAutoAnswerNumberOfCallsAttributeId:
+      output = numberOfCalls_;
+      return CosemStatus::Ok;
+    case kAutoAnswerNumberOfRingsAttributeId:
+      output = numberOfRings_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemAutoAnswerObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kAutoAnswerModeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      mode_ = input;
+      return CosemStatus::Ok;
+    case kAutoAnswerListeningWindowAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      listeningWindow_ = input;
+      return CosemStatus::Ok;
+    case kAutoAnswerNumberOfCallsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      numberOfCalls_ = input;
+      return CosemStatus::Ok;
+    case kAutoAnswerNumberOfRingsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      numberOfRings_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+    case kAutoAnswerStatusAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemAutoAnswerObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Auto Answer IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemAutoAnswerObject::Mode() const
+{
+  return mode_;
+}
+
+const CosemByteBuffer& CosemAutoAnswerObject::ListeningWindow() const
+{
+  return listeningWindow_;
+}
+
+const CosemByteBuffer& CosemAutoAnswerObject::Status() const
+{
+  return status_;
+}
+
+const CosemByteBuffer& CosemAutoAnswerObject::NumberOfCalls() const
+{
+  return numberOfCalls_;
+}
+
+const CosemByteBuffer& CosemAutoAnswerObject::NumberOfRings() const
+{
+  return numberOfRings_;
+}
+
+void CosemAutoAnswerObject::SetStatus(const CosemByteBuffer& status)
+{
+  status_ = status;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

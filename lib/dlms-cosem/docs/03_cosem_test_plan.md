@@ -465,6 +465,25 @@ GPRS Modem Setup tests:
   method ids and clears method output (IC defines no methods);
 - GPRS Modem Setup normalizes versions above `MaxSupportedVersion`.
 
+Auto Answer tests:
+
+- Auto Answer exposes attributes `1` logical_name, `2` mode, `3`
+  listening_window, `4` status, `5` number_of_calls and `6`
+  number_of_rings as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute ids;
+- Auto Answer mutable attributes (`2`, `3`, `5`, `6`) writes succeed
+  when the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Auto Answer rejects writes to logical_name (`1`) and status (`4`)
+  with `AccessDenied`; the `SetStatus` setter refreshes status
+  regardless of the access mode used for the mutable attributes;
+- Auto Answer reports `AttributeNotFound` for undefined attribute
+  ids on writes;
+- Auto Answer `InvokeMethod` reports `MethodNotFound` for all method
+  ids and clears method output (IC defines no methods);
+- Auto Answer normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

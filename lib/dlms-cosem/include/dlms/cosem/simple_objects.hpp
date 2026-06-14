@@ -1098,6 +1098,60 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemAutoAnswerObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemAutoAnswerObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& mode,
+    const CosemByteBuffer& listeningWindow,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& numberOfCalls,
+    const CosemByteBuffer& numberOfRings,
+    AttributeAccessMode mutableAccess);
+  CosemAutoAnswerObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& mode,
+    const CosemByteBuffer& listeningWindow,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& numberOfCalls,
+    const CosemByteBuffer& numberOfRings,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Mode() const;
+  const CosemByteBuffer& ListeningWindow() const;
+  const CosemByteBuffer& Status() const;
+  const CosemByteBuffer& NumberOfCalls() const;
+  const CosemByteBuffer& NumberOfRings() const;
+
+  void SetStatus(const CosemByteBuffer& status);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer mode_;
+  CosemByteBuffer listeningWindow_;
+  CosemByteBuffer status_;
+  CosemByteBuffer numberOfCalls_;
+  CosemByteBuffer numberOfRings_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

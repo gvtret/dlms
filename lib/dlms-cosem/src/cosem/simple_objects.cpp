@@ -5493,6 +5493,101 @@ const CosemByteBuffer& CosemIpv4SetupObject::SecondaryDnsAddress() const
   return secondaryDnsAddress_;
 }
 
+namespace {
+constexpr std::uint16_t kMacAddressSetupClassId = 43u;
+constexpr std::uint8_t kMacAddressSetupMacAddressAttributeId = 2u;
+} // namespace
+
+const std::uint8_t CosemMacAddressSetupObject::MaxSupportedVersion;
+
+CosemMacAddressSetupObject::CosemMacAddressSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& macAddress,
+  AttributeAccessMode mutableAccess)
+  : CosemMacAddressSetupObject(
+      logicalName, macAddress, mutableAccess, kVersion0)
+{
+}
+
+CosemMacAddressSetupObject::CosemMacAddressSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& macAddress,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kMacAddressSetupClassId,
+      NormalizeVersion(
+        version, CosemMacAddressSetupObject::MaxSupportedVersion),
+      logicalName))
+  , macAddress_(macAddress)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kMacAddressSetupMacAddressAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemMacAddressSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemMacAddressSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemMacAddressSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kMacAddressSetupMacAddressAttributeId:
+      output = macAddress_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemMacAddressSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kMacAddressSetupMacAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      macAddress_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemMacAddressSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // MAC Address Setup IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemMacAddressSetupObject::MacAddress() const
+{
+  return macAddress_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

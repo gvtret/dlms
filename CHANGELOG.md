@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.40.0 - 2026-06-15
+
+- Added MAC Address Setup IC `43` built-in object
+  (`CosemMacAddressSetupObject`) with class version `0`, exposing
+  `mac_address` (octet-string(6)) as an opaque encoded DLMS Data
+  buffer prepared by the caller.
+- Attribute `2` honors a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- MAC Address Setup IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.39.0 - 2026-06-15
 
 - Added IPv4 Setup IC `42` built-in object (`CosemIpv4SetupObject`)

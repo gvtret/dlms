@@ -590,6 +590,18 @@ return `UnsupportedFeature` and clear method output (built-in object
 does not own multicast subscription policy); other method ids return
 `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial MAC Address Setup IC
+`43` (`CosemMacAddressSetupObject`) with class version `0`. The
+constructors take the `mac_address` (octet-string(6)) payload as an
+encoded DLMS Data buffer prepared by the caller, the logical name,
+a caller-selected `AttributeAccessMode` applied to the mutable
+attribute (`2`), and an optional explicit version that is normalized
+to `MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name) is read-only; mac_address honors the caller access
+mode and replaces the stored buffer in-place when writable. IC
+defines no methods; `InvokeMethod` reports `MethodNotFound` for all
+method ids.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

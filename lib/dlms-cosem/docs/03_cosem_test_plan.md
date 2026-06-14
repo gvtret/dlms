@@ -504,6 +504,23 @@ IPv4 Setup tests:
   cleared output;
 - IPv4 Setup normalizes versions above `MaxSupportedVersion`.
 
+MAC Address Setup tests:
+
+- MAC Address Setup exposes attributes `1` logical_name and `2`
+  mac_address as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute
+  ids;
+- MAC Address Setup mac_address (`2`) write succeeds when the
+  caller-selected access mode permits writes and replaces the stored
+  buffer in-place; reports `AccessDenied` when the access mode is
+  read-only, leaving the stored buffer unchanged;
+- MAC Address Setup rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- MAC Address Setup `InvokeMethod` reports `MethodNotFound` for all
+  method ids and clears method output (IC defines no methods);
+- MAC Address Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

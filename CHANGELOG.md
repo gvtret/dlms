@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.52.0 - 2026-06-15
+
+- Added Compact Data IC `62` built-in object
+  (`CosemCompactDataObject`) with class version `0`, exposing
+  `buffer` (octet-string carrying the compact-encoded data),
+  `capture_objects` (array of structure {`class_id`: long-unsigned,
+  `logical_name`: octet-string(6), `attribute_index`: integer,
+  `data_index`: long-unsigned}), `template_id` (unsigned),
+  `template_description` (octet-string with the A-XDR template)
+  and `capture_method` (enum, `1` invoke / `2` implicit) as opaque
+  encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`6` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can refresh the compact buffer, template metadata and
+  capture method after acquiring fresh capture data out-of-band);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `reset` and `2` `capture` return
+  `UnsupportedFeature` and clear method output (the built-in object
+  does not manage capture); other method ids return
+  `MethodNotFound`.
+
 ## 0.51.0 - 2026-06-15
 
 - Added Parameter Monitor IC `65` built-in object

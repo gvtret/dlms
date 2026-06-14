@@ -789,6 +789,28 @@ clear method output (the built-in object does not manage the
 monitored-parameters table); other method ids return
 `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Compact Data IC `62`
+(`CosemCompactDataObject`) with class version `0`. The
+constructors take the `buffer` (octet-string carrying the
+compact-encoded data), `capture_objects` (array of structure
+{`class_id`: long-unsigned, `logical_name`: octet-string(6),
+`attribute_index`: integer, `data_index`: long-unsigned}),
+`template_id` (unsigned), `template_description` (octet-string
+with the A-XDR template) and `capture_method` (enum, `1` invoke /
+`2` implicit) payloads as encoded DLMS Data buffers prepared by
+the caller, the logical name, a caller-selected
+`AttributeAccessMode` shared by the mutable attributes (`2`-`6`),
+and an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name) is read-only; the mutable attributes honor the
+caller access mode and replace the stored buffer in-place when
+writable, so the backend can refresh the compact buffer, template
+metadata and capture method after acquiring fresh capture data
+out-of-band. Methods `1` `reset` and `2` `capture` return
+`UnsupportedFeature` and clear method output (the built-in object
+does not manage capture); other method ids return
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

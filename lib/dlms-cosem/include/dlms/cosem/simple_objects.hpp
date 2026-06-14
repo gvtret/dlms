@@ -1828,6 +1828,58 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemCompactDataObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemCompactDataObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& buffer,
+    const CosemByteBuffer& captureObjects,
+    const CosemByteBuffer& templateId,
+    const CosemByteBuffer& templateDescription,
+    const CosemByteBuffer& captureMethod,
+    AttributeAccessMode mutableAccess);
+  CosemCompactDataObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& buffer,
+    const CosemByteBuffer& captureObjects,
+    const CosemByteBuffer& templateId,
+    const CosemByteBuffer& templateDescription,
+    const CosemByteBuffer& captureMethod,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Buffer() const;
+  const CosemByteBuffer& CaptureObjects() const;
+  const CosemByteBuffer& TemplateId() const;
+  const CosemByteBuffer& TemplateDescription() const;
+  const CosemByteBuffer& CaptureMethod() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer buffer_;
+  CosemByteBuffer captureObjects_;
+  CosemByteBuffer templateId_;
+  CosemByteBuffer templateDescription_;
+  CosemByteBuffer captureMethod_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

@@ -7538,6 +7538,188 @@ CosemParameterMonitorObject::Parameters() const
   return parameters_;
 }
 
+namespace {
+constexpr std::uint16_t kCompactDataClassId = 62u;
+constexpr std::uint8_t kCompactDataBufferAttributeId = 2u;
+constexpr std::uint8_t kCompactDataCaptureObjectsAttributeId = 3u;
+constexpr std::uint8_t kCompactDataTemplateIdAttributeId = 4u;
+constexpr std::uint8_t
+  kCompactDataTemplateDescriptionAttributeId = 5u;
+constexpr std::uint8_t kCompactDataCaptureMethodAttributeId = 6u;
+constexpr std::uint8_t kCompactDataResetMethodId = 1u;
+constexpr std::uint8_t kCompactDataCaptureMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemCompactDataObject::MaxSupportedVersion;
+
+CosemCompactDataObject::CosemCompactDataObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& buffer,
+  const CosemByteBuffer& captureObjects,
+  const CosemByteBuffer& templateId,
+  const CosemByteBuffer& templateDescription,
+  const CosemByteBuffer& captureMethod,
+  AttributeAccessMode mutableAccess)
+  : CosemCompactDataObject(
+      logicalName, buffer, captureObjects, templateId,
+      templateDescription, captureMethod, mutableAccess, kVersion0)
+{
+}
+
+CosemCompactDataObject::CosemCompactDataObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& buffer,
+  const CosemByteBuffer& captureObjects,
+  const CosemByteBuffer& templateId,
+  const CosemByteBuffer& templateDescription,
+  const CosemByteBuffer& captureMethod,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kCompactDataClassId,
+      NormalizeVersion(
+        version, CosemCompactDataObject::MaxSupportedVersion),
+      logicalName))
+  , buffer_(buffer)
+  , captureObjects_(captureObjects)
+  , templateId_(templateId)
+  , templateDescription_(templateDescription)
+  , captureMethod_(captureMethod)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kCompactDataBufferAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kCompactDataCaptureObjectsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kCompactDataTemplateIdAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kCompactDataTemplateDescriptionAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kCompactDataCaptureMethodAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemCompactDataObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemCompactDataObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemCompactDataObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kCompactDataBufferAttributeId:
+      output = buffer_;
+      return CosemStatus::Ok;
+    case kCompactDataCaptureObjectsAttributeId:
+      output = captureObjects_;
+      return CosemStatus::Ok;
+    case kCompactDataTemplateIdAttributeId:
+      output = templateId_;
+      return CosemStatus::Ok;
+    case kCompactDataTemplateDescriptionAttributeId:
+      output = templateDescription_;
+      return CosemStatus::Ok;
+    case kCompactDataCaptureMethodAttributeId:
+      output = captureMethod_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemCompactDataObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kCompactDataBufferAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      buffer_ = input;
+      return CosemStatus::Ok;
+    case kCompactDataCaptureObjectsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      captureObjects_ = input;
+      return CosemStatus::Ok;
+    case kCompactDataTemplateIdAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      templateId_ = input;
+      return CosemStatus::Ok;
+    case kCompactDataTemplateDescriptionAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      templateDescription_ = input;
+      return CosemStatus::Ok;
+    case kCompactDataCaptureMethodAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      captureMethod_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemCompactDataObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kCompactDataResetMethodId ||
+      methodId == kCompactDataCaptureMethodId) {
+    // Compact Data reset / capture are not exposed by the
+    // built-in object; backend is expected to refresh the buffer
+    // and capture metadata out-of-band and republish the stored
+    // buffers.
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemCompactDataObject::Buffer() const
+{
+  return buffer_;
+}
+
+const CosemByteBuffer& CosemCompactDataObject::CaptureObjects() const
+{
+  return captureObjects_;
+}
+
+const CosemByteBuffer& CosemCompactDataObject::TemplateId() const
+{
+  return templateId_;
+}
+
+const CosemByteBuffer&
+CosemCompactDataObject::TemplateDescription() const
+{
+  return templateDescription_;
+}
+
+const CosemByteBuffer& CosemCompactDataObject::CaptureMethod() const
+{
+  return captureMethod_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

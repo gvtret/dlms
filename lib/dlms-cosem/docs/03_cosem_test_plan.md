@@ -730,6 +730,25 @@ Parameter Monitor tests:
 - Parameter Monitor normalizes versions above
   `MaxSupportedVersion`.
 
+Compact Data tests:
+
+- Compact Data exposes attributes `1` logical_name, `2` buffer,
+  `3` capture_objects, `4` template_id, `5` template_description
+  and `6` capture_method as the encoded DLMS Data buffers supplied
+  by the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Compact Data mutable attributes (`2`-`6`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Compact Data rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Compact Data `InvokeMethod` reports `UnsupportedFeature` for
+  methods `1` `reset` and `2` `capture`, and `MethodNotFound` for
+  any other method id, always clearing method output;
+- Compact Data normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -433,6 +433,22 @@ buffer in-place when writable. Setters expose backend-driven refresh of
 backend. IC v0 defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids.
 
+`simple_objects.hpp` also exposes a partial IEC HDLC Setup IC `23`
+(`CosemIecHdlcSetupObject`) with `MaxSupportedVersion = 1`. The
+constructors take the `comm_speed`, `window_size_transmit`,
+`window_size_receive`, `max_info_field_length_transmit`,
+`max_info_field_length_receive`, `inter_octet_time_out`,
+`inactivity_time_out` and `device_address` payloads as encoded DLMS
+Data buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` shared by the mutable attributes
+(`2`-`8`), and an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1` (logical_name)
+and attribute `9` (device_address) are read-only; attributes `2`-`8`
+honor the caller access mode and replace the stored buffer in-place
+when writable. A setter exposes backend-driven refresh of the assigned
+HDLC `device_address`. IC defines no methods; `InvokeMethod` reports
+`MethodNotFound` for all method ids.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

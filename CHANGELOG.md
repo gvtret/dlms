@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.29.0 - 2026-06-15
+
+- Added IEC HDLC Setup IC `23` built-in object
+  (`CosemIecHdlcSetupObject`) with `MaxSupportedVersion = 1`, exposing
+  `comm_speed`, `window_size_transmit`, `window_size_receive`,
+  `max_info_field_length_transmit`, `max_info_field_length_receive`,
+  `inter_octet_time_out`, `inactivity_time_out` and `device_address`
+  as opaque encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`8` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name and device_address (`1`, `9`) are read-only with a
+  setter that exposes backend-driven refresh of the assigned HDLC
+  address.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IEC HDLC Setup IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.28.0 - 2026-06-15
 
 - Added Limiter IC `71` built-in object (`CosemLimiterObject`) with

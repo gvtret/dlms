@@ -305,6 +305,25 @@ Limiter tests:
   and clears method output (IC v0 defines no methods);
 - Limiter normalizes versions above `MaxSupportedVersion`.
 
+IEC HDLC Setup tests:
+
+- IEC HDLC Setup exposes attributes `1` logical_name and `2`-`9`
+  (comm_speed, window_size_transmit, window_size_receive,
+  max_info_field_length_transmit, max_info_field_length_receive,
+  inter_octet_time_out, inactivity_time_out, device_address) as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- IEC HDLC Setup mutable attributes (`2`-`8`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode is
+  read-only, leaving the stored buffers unchanged;
+- IEC HDLC Setup rejects writes to logical_name and device_address
+  (`1`, `9`) with `AccessDenied`, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- IEC HDLC Setup `InvokeMethod` reports `MethodNotFound` for all method
+  ids and clears method output (IC defines no methods);
+- IEC HDLC Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -672,6 +672,72 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIecHdlcSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  CosemIecHdlcSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& commSpeed,
+    const CosemByteBuffer& windowSizeTransmit,
+    const CosemByteBuffer& windowSizeReceive,
+    const CosemByteBuffer& maxInfoFieldLengthTransmit,
+    const CosemByteBuffer& maxInfoFieldLengthReceive,
+    const CosemByteBuffer& interOctetTimeOut,
+    const CosemByteBuffer& inactivityTimeOut,
+    const CosemByteBuffer& deviceAddress,
+    AttributeAccessMode mutableAccess);
+  CosemIecHdlcSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& commSpeed,
+    const CosemByteBuffer& windowSizeTransmit,
+    const CosemByteBuffer& windowSizeReceive,
+    const CosemByteBuffer& maxInfoFieldLengthTransmit,
+    const CosemByteBuffer& maxInfoFieldLengthReceive,
+    const CosemByteBuffer& interOctetTimeOut,
+    const CosemByteBuffer& inactivityTimeOut,
+    const CosemByteBuffer& deviceAddress,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& CommSpeed() const;
+  const CosemByteBuffer& WindowSizeTransmit() const;
+  const CosemByteBuffer& WindowSizeReceive() const;
+  const CosemByteBuffer& MaxInfoFieldLengthTransmit() const;
+  const CosemByteBuffer& MaxInfoFieldLengthReceive() const;
+  const CosemByteBuffer& InterOctetTimeOut() const;
+  const CosemByteBuffer& InactivityTimeOut() const;
+  const CosemByteBuffer& DeviceAddress() const;
+
+  void SetDeviceAddress(const CosemByteBuffer& value);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer commSpeed_;
+  CosemByteBuffer windowSizeTransmit_;
+  CosemByteBuffer windowSizeReceive_;
+  CosemByteBuffer maxInfoFieldLengthTransmit_;
+  CosemByteBuffer maxInfoFieldLengthReceive_;
+  CosemByteBuffer interOctetTimeOut_;
+  CosemByteBuffer inactivityTimeOut_;
+  CosemByteBuffer deviceAddress_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

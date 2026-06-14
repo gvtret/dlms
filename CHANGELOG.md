@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.27.0 - 2026-06-15
+
+- Added Disconnect Control IC `70` built-in object
+  (`CosemDisconnectControlObject`) with class version `0`, exposing
+  `output_state`, `control_state` and `control_mode` as opaque encoded
+  DLMS Data buffers prepared by the caller.
+- `control_mode` (attribute 4) shares a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer in-place when
+  permitted); logical_name, `output_state` and `control_state` are
+  read-only with setters that expose backend-driven refresh of the
+  output/control state from a future relay backend.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Added Disconnect Control methods `1` `remote_disconnect` and `2`
+  `remote_reconnect` as explicit `UnsupportedFeature`
+  (application-defined relay switching and state transitions); other
+  method ids report `MethodNotFound`.
+
 ## 0.26.0 - 2026-06-15
 
 - Added Push Setup IC `40` built-in object (`CosemPushSetupObject`) with

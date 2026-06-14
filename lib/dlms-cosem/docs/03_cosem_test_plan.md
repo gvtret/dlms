@@ -267,6 +267,24 @@ Push Setup tests:
   method output; other method ids report `MethodNotFound`;
 - Push Setup normalizes versions above `MaxSupportedVersion`.
 
+Disconnect Control tests:
+
+- Disconnect Control exposes attributes `1` logical_name, `2`
+  output_state, `3` control_state and `4` control_mode as the encoded
+  DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Disconnect Control `control_mode` writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode is
+  read-only, leaving the stored buffer unchanged;
+- Disconnect Control rejects writes to logical_name, output_state and
+  control_state (`1`, `2`, `3`) with `AccessDenied`, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Disconnect Control methods `1` `remote_disconnect` and `2`
+  `remote_reconnect` report `UnsupportedFeature` and clear method
+  output; other method ids report `MethodNotFound`;
+- Disconnect Control normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

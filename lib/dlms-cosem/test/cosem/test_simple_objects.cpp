@@ -3660,4 +3660,125 @@ TEST(CosemPushSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct DisconnectControlBuffers
+{
+  dlms::cosem::CosemByteBuffer outputState;
+  dlms::cosem::CosemByteBuffer controlState;
+  dlms::cosem::CosemByteBuffer controlMode;
+};
+
+DisconnectControlBuffers MakeSampleDisconnectControl()
+{
+  DisconnectControlBuffers b;
+  // boolean true (connected)
+  b.outputState = BytesFromList({0x03u, 0x01u});
+  // enum 1 (connected)
+  b.controlState = BytesFromList({0x16u, 0x01u});
+  // enum 2 (configured control mode)
+  b.controlMode = BytesFromList({0x16u, 0x02u});
+  return b;
+}
+
+} // namespace
+
+TEST(CosemDisconnectControlObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 3u, 10u, 255u);
+  const DisconnectControlBuffers b = MakeSampleDisconnectControl();
+  dlms::cosem::CosemDisconnectControlObject object(
+    name, b.outputState, b.controlState, b.controlMode,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(70u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemDisconnectControlObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.outputState, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.controlState, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.controlMode, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+}
+
+TEST(CosemDisconnectControlObject, ControlModeHonorsCallerAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 3u, 10u, 255u);
+  const DisconnectControlBuffers b = MakeSampleDisconnectControl();
+  const dlms::cosem::CosemByteBuffer newMode =
+    BytesFromList({0x16u, 0x05u});
+
+  dlms::cosem::CosemDisconnectControlObject writable(
+    name, b.outputState, b.controlState, b.controlMode,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(4u, newMode));
+  EXPECT_EQ(newMode, writable.ControlMode());
+
+  dlms::cosem::CosemDisconnectControlObject readOnly(
+    name, b.outputState, b.controlState, b.controlMode,
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(4u, newMode));
+  EXPECT_EQ(b.controlMode, readOnly.ControlMode());
+
+  for (std::uint8_t id : {1u, 2u, 3u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), newMode))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, newMode));
+}
+
+TEST(CosemDisconnectControlObject, MethodsUnsupportedAndOthersNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 3u, 10u, 255u);
+  const DisconnectControlBuffers b = MakeSampleDisconnectControl();
+  dlms::cosem::CosemDisconnectControlObject object(
+    name, b.outputState, b.controlState, b.controlMode,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xBBu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(3u, in, out));
+  EXPECT_TRUE(out.empty());
+}
+
+TEST(CosemDisconnectControlObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 3u, 10u, 255u);
+  const DisconnectControlBuffers b = MakeSampleDisconnectControl();
+  dlms::cosem::CosemDisconnectControlObject object(
+    name, b.outputState, b.controlState, b.controlMode,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemDisconnectControlObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

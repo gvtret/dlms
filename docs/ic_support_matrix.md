@@ -75,7 +75,7 @@ Status values:
 | `65` | Parameter Monitor | Planned | Needed for parameter monitoring. |
 | `67` | Sensor Manager | Application-provided | No built-in implementation. |
 | `68` | Arbitrator | Application-provided | No built-in implementation. |
-| `70` | Disconnect Control | Planned | Needed for remote disconnect/reconnect. |
+| `70` | Disconnect Control | Partial | `CosemDisconnectControlObject` exposes output_state (boolean) and control_state (enum) as opaque encoded DLMS Data buffers prepared by the caller (read-only with setters for backend-driven refresh), and control_mode (enum) honoring a caller-selected `AttributeAccessMode`. Class version `0`, constructor normalization to `MaxSupportedVersion`. Methods `1` `remote_disconnect` and `2` `remote_reconnect` dispatch application-defined relay switching and state transitions and are surfaced as `UnsupportedFeature`; other method ids report `MethodNotFound`. |
 | `71` | Limiter | Planned | Needed for active power/current/voltage limiting parameters. |
 | `72`-`77` | M-Bus classes | Application-provided | No built-in implementation. |
 | `80`-`85` | PRIME PLC classes | Application-provided | No built-in implementation. |

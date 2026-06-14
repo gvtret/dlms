@@ -550,6 +550,53 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemDisconnectControlObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemDisconnectControlObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& outputState,
+    const CosemByteBuffer& controlState,
+    const CosemByteBuffer& controlMode,
+    AttributeAccessMode controlModeAccess);
+  CosemDisconnectControlObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& outputState,
+    const CosemByteBuffer& controlState,
+    const CosemByteBuffer& controlMode,
+    AttributeAccessMode controlModeAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& OutputState() const;
+  const CosemByteBuffer& ControlState() const;
+  const CosemByteBuffer& ControlMode() const;
+
+  void SetOutputState(const CosemByteBuffer& value);
+  void SetControlState(const CosemByteBuffer& value);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer outputState_;
+  CosemByteBuffer controlState_;
+  CosemByteBuffer controlMode_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

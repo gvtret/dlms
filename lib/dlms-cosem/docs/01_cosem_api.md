@@ -400,6 +400,22 @@ application-defined scheduling, transport selection and confirmation
 tracking and is surfaced as `UnsupportedFeature`; other method ids
 report `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Disconnect Control IC `70`
+(`CosemDisconnectControlObject`) with class version `0`. The
+constructors take the `output_state`, `control_state` and
+`control_mode` payloads as encoded DLMS Data buffers prepared by the
+caller, the logical name, a caller-selected `AttributeAccessMode` for
+`control_mode` (attr `4`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name), `2` (output_state) and `3` (control_state) are
+read-only; attribute `4` honors the caller access mode and replaces the
+stored buffer in-place when writable. Setters expose backend-driven
+refresh of `output_state` and `control_state` from a future relay
+backend. Methods `1` `remote_disconnect` and `2` `remote_reconnect`
+dispatch application-defined relay switching and state transitions and
+are surfaced as `UnsupportedFeature`; other method ids report
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

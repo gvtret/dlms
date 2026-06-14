@@ -3271,6 +3271,156 @@ void CosemPushSetupObject::SetLastConfirmationDateTime(
   lastConfirmationDateTime_ = value;
 }
 
+namespace {
+constexpr std::uint16_t kDisconnectControlClassId = 70u;
+constexpr std::uint8_t kDisconnectControlOutputStateAttributeId = 2u;
+constexpr std::uint8_t kDisconnectControlControlStateAttributeId = 3u;
+constexpr std::uint8_t kDisconnectControlControlModeAttributeId = 4u;
+constexpr std::uint8_t kDisconnectControlRemoteDisconnectMethodId = 1u;
+constexpr std::uint8_t kDisconnectControlRemoteReconnectMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemDisconnectControlObject::MaxSupportedVersion;
+
+CosemDisconnectControlObject::CosemDisconnectControlObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& outputState,
+  const CosemByteBuffer& controlState,
+  const CosemByteBuffer& controlMode,
+  AttributeAccessMode controlModeAccess)
+  : CosemDisconnectControlObject(
+      logicalName, outputState, controlState, controlMode,
+      controlModeAccess, kVersion0)
+{
+}
+
+CosemDisconnectControlObject::CosemDisconnectControlObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& outputState,
+  const CosemByteBuffer& controlState,
+  const CosemByteBuffer& controlMode,
+  AttributeAccessMode controlModeAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kDisconnectControlClassId,
+      NormalizeVersion(
+        version,
+        CosemDisconnectControlObject::MaxSupportedVersion),
+      logicalName))
+  , outputState_(outputState)
+  , controlState_(controlState)
+  , controlMode_(controlMode)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDisconnectControlOutputStateAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDisconnectControlControlStateAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDisconnectControlControlModeAttributeId, controlModeAccess);
+}
+
+CosemObjectDescriptor CosemDisconnectControlObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemDisconnectControlObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemDisconnectControlObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kDisconnectControlOutputStateAttributeId:
+      output = outputState_;
+      return CosemStatus::Ok;
+    case kDisconnectControlControlStateAttributeId:
+      output = controlState_;
+      return CosemStatus::Ok;
+    case kDisconnectControlControlModeAttributeId:
+      output = controlMode_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemDisconnectControlObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kDisconnectControlControlModeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      controlMode_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+    case kDisconnectControlOutputStateAttributeId:
+    case kDisconnectControlControlStateAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemDisconnectControlObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // Methods 1 (remote_disconnect) and 2 (remote_reconnect) drive the
+  // load relay and update output_state / control_state per the
+  // configured control_mode state machine. The built-in object surfaces
+  // them as UnsupportedFeature; a future relay backend will own the
+  // electrical switching and state transitions.
+  if (methodId == kDisconnectControlRemoteDisconnectMethodId ||
+      methodId == kDisconnectControlRemoteReconnectMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemDisconnectControlObject::OutputState() const
+{
+  return outputState_;
+}
+
+const CosemByteBuffer& CosemDisconnectControlObject::ControlState() const
+{
+  return controlState_;
+}
+
+const CosemByteBuffer& CosemDisconnectControlObject::ControlMode() const
+{
+  return controlMode_;
+}
+
+void CosemDisconnectControlObject::SetOutputState(
+  const CosemByteBuffer& value)
+{
+  outputState_ = value;
+}
+
+void CosemDisconnectControlObject::SetControlState(
+  const CosemByteBuffer& value)
+{
+  controlState_ = value;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

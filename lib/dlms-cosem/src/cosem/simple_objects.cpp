@@ -4759,6 +4759,178 @@ const CosemByteBuffer& CosemModemConfigurationObject::ModemProfile() const
   return modemProfile_;
 }
 
+namespace {
+constexpr std::uint16_t kAutoConnectClassId = 29u;
+constexpr std::uint8_t kAutoConnectModeAttributeId = 2u;
+constexpr std::uint8_t kAutoConnectRepetitionsAttributeId = 3u;
+constexpr std::uint8_t kAutoConnectRepetitionDelayAttributeId = 4u;
+constexpr std::uint8_t kAutoConnectCallingWindowAttributeId = 5u;
+constexpr std::uint8_t kAutoConnectDestinationListAttributeId = 6u;
+} // namespace
+
+const std::uint8_t CosemAutoConnectObject::MaxSupportedVersion;
+
+CosemAutoConnectObject::CosemAutoConnectObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& mode,
+  const CosemByteBuffer& repetitions,
+  const CosemByteBuffer& repetitionDelay,
+  const CosemByteBuffer& callingWindow,
+  const CosemByteBuffer& destinationList,
+  AttributeAccessMode mutableAccess)
+  : CosemAutoConnectObject(
+      logicalName, mode, repetitions, repetitionDelay,
+      callingWindow, destinationList, mutableAccess, kVersion0)
+{
+}
+
+CosemAutoConnectObject::CosemAutoConnectObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& mode,
+  const CosemByteBuffer& repetitions,
+  const CosemByteBuffer& repetitionDelay,
+  const CosemByteBuffer& callingWindow,
+  const CosemByteBuffer& destinationList,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kAutoConnectClassId,
+      NormalizeVersion(
+        version, CosemAutoConnectObject::MaxSupportedVersion),
+      logicalName))
+  , mode_(mode)
+  , repetitions_(repetitions)
+  , repetitionDelay_(repetitionDelay)
+  , callingWindow_(callingWindow)
+  , destinationList_(destinationList)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kAutoConnectModeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAutoConnectRepetitionsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAutoConnectRepetitionDelayAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAutoConnectCallingWindowAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAutoConnectDestinationListAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemAutoConnectObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemAutoConnectObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemAutoConnectObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kAutoConnectModeAttributeId:
+      output = mode_;
+      return CosemStatus::Ok;
+    case kAutoConnectRepetitionsAttributeId:
+      output = repetitions_;
+      return CosemStatus::Ok;
+    case kAutoConnectRepetitionDelayAttributeId:
+      output = repetitionDelay_;
+      return CosemStatus::Ok;
+    case kAutoConnectCallingWindowAttributeId:
+      output = callingWindow_;
+      return CosemStatus::Ok;
+    case kAutoConnectDestinationListAttributeId:
+      output = destinationList_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemAutoConnectObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kAutoConnectModeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      mode_ = input;
+      return CosemStatus::Ok;
+    case kAutoConnectRepetitionsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      repetitions_ = input;
+      return CosemStatus::Ok;
+    case kAutoConnectRepetitionDelayAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      repetitionDelay_ = input;
+      return CosemStatus::Ok;
+    case kAutoConnectCallingWindowAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      callingWindow_ = input;
+      return CosemStatus::Ok;
+    case kAutoConnectDestinationListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      destinationList_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemAutoConnectObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Auto Connect IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemAutoConnectObject::Mode() const
+{
+  return mode_;
+}
+
+const CosemByteBuffer& CosemAutoConnectObject::Repetitions() const
+{
+  return repetitions_;
+}
+
+const CosemByteBuffer& CosemAutoConnectObject::RepetitionDelay() const
+{
+  return repetitionDelay_;
+}
+
+const CosemByteBuffer& CosemAutoConnectObject::CallingWindow() const
+{
+  return callingWindow_;
+}
+
+const CosemByteBuffer& CosemAutoConnectObject::DestinationList() const
+{
+  return destinationList_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

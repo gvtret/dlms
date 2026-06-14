@@ -431,6 +431,23 @@ Modem Configuration tests:
 - Modem Configuration normalizes versions above
   `MaxSupportedVersion`.
 
+Auto Connect tests:
+
+- Auto Connect exposes attributes `1` logical_name, `2` mode, `3`
+  repetitions, `4` repetition_delay, `5` calling_window and `6`
+  destination_list as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute ids;
+- Auto Connect mutable attributes (`2`-`6`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode
+  is read-only, leaving the stored buffers unchanged;
+- Auto Connect rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Auto Connect `InvokeMethod` reports `MethodNotFound` for all method
+  ids and clears method output (IC defines no methods);
+- Auto Connect normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

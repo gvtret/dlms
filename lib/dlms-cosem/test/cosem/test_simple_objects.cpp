@@ -4940,4 +4940,158 @@ TEST(CosemModemConfigurationObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct AutoConnectBuffers
+{
+  dlms::cosem::CosemByteBuffer mode;
+  dlms::cosem::CosemByteBuffer repetitions;
+  dlms::cosem::CosemByteBuffer repetitionDelay;
+  dlms::cosem::CosemByteBuffer callingWindow;
+  dlms::cosem::CosemByteBuffer destinationList;
+};
+
+AutoConnectBuffers MakeSampleAutoConnect()
+{
+  AutoConnectBuffers b;
+  // enum 1 (auto dialling allowed in calling window)
+  b.mode = BytesFromList({0x16u, 0x01u});
+  // unsigned 3 retries
+  b.repetitions = BytesFromList({0x11u, 0x03u});
+  // long-unsigned 60 seconds
+  b.repetitionDelay = BytesFromList({0x12u, 0x00u, 0x3Cu});
+  // array(1) of structure(2): start/end time
+  b.callingWindow = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x09u, 0x04u, 0x00u, 0x00u, 0x00u, 0x00u,        // start 00:00
+        0x09u, 0x04u, 0x06u, 0x00u, 0x00u, 0x00u});      // end 06:00
+  // array(1) of octet-string "+7"
+  b.destinationList = BytesFromList({
+    0x01u, 0x01u,
+      0x09u, 0x02u, '+', '7'});
+  return b;
+}
+
+dlms::cosem::CosemAutoConnectObject MakeAutoConnectObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const AutoConnectBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemAutoConnectObject(
+    name, b.mode, b.repetitions, b.repetitionDelay,
+    b.callingWindow, b.destinationList, access);
+}
+
+} // namespace
+
+TEST(CosemAutoConnectObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 1u, 0u, 255u);
+  const AutoConnectBuffers b = MakeSampleAutoConnect();
+  dlms::cosem::CosemAutoConnectObject object =
+    MakeAutoConnectObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(29u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemAutoConnectObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.mode, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.repetitions, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.repetitionDelay, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.callingWindow, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.destinationList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(7u, out));
+}
+
+TEST(CosemAutoConnectObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 1u, 0u, 255u);
+  const AutoConnectBuffers b = MakeSampleAutoConnect();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x16u, 0x02u});
+
+  dlms::cosem::CosemAutoConnectObject writable =
+    MakeAutoConnectObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.Mode());
+  EXPECT_EQ(replacement, writable.Repetitions());
+  EXPECT_EQ(replacement, writable.RepetitionDelay());
+  EXPECT_EQ(replacement, writable.CallingWindow());
+  EXPECT_EQ(replacement, writable.DestinationList());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemAutoConnectObject readOnly =
+    MakeAutoConnectObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.mode, readOnly.Mode());
+  EXPECT_EQ(b.repetitions, readOnly.Repetitions());
+  EXPECT_EQ(b.repetitionDelay, readOnly.RepetitionDelay());
+  EXPECT_EQ(b.callingWindow, readOnly.CallingWindow());
+  EXPECT_EQ(b.destinationList, readOnly.DestinationList());
+}
+
+TEST(CosemAutoConnectObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 1u, 0u, 255u);
+  const AutoConnectBuffers b = MakeSampleAutoConnect();
+  dlms::cosem::CosemAutoConnectObject object =
+    MakeAutoConnectObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemAutoConnectObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 1u, 0u, 255u);
+  const AutoConnectBuffers b = MakeSampleAutoConnect();
+  dlms::cosem::CosemAutoConnectObject object(
+    name, b.mode, b.repetitions, b.repetitionDelay,
+    b.callingWindow, b.destinationList,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemAutoConnectObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

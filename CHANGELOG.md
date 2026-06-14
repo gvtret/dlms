@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.36.0 - 2026-06-15
+
+- Added Auto Connect IC `29` built-in object (`CosemAutoConnectObject`)
+  with class version `0`, exposing `mode`, `repetitions`,
+  `repetition_delay`, `calling_window` and `destination_list` as
+  opaque encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`6` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Auto Connect IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.35.0 - 2026-06-15
 
 - Added Modem Configuration IC `27` built-in object

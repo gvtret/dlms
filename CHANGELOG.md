@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.25.0 - 2026-06-15
+
+- Added Image Transfer IC `18` built-in object
+  (`CosemImageTransferObject`) with class version `0`, exposing
+  attributes `1` logical_name, `2` image_block_size, `3`
+  image_transferred_blocks_status, `4`
+  image_first_not_transferred_block_number, `5`
+  image_transfer_enabled, `6` image_transfer_status and `7`
+  image_to_activate_info as opaque encoded DLMS Data buffers prepared
+  by the caller.
+- `image_transfer_enabled` (attribute 5) shares a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer in-place when
+  permitted); logical_name and all other attributes (2-4, 6-7) are
+  read-only.
+- Added explicit `MaxSupportedVersion` constant and version-taking
+  constructor for Image Transfer; constructors normalize versions
+  above the maximum. Setters expose dynamic refresh of
+  transferred-blocks status, first-not-transferred counter,
+  image-transfer status and image-to-activate info.
+- Added Image Transfer methods `1` `image_transfer_initiate`, `2`
+  `image_block_transfer`, `3` `image_verify` and `4` `image_activate`
+  as explicit `UnsupportedFeature` (application-defined firmware
+  transfer/storage semantics); other method ids report
+  `MethodNotFound`.
+
 ## 0.24.0 - 2026-06-15
 
 - Added Activity Calendar IC `20` built-in object

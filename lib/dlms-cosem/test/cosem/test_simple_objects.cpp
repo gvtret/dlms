@@ -3280,4 +3280,165 @@ TEST(CosemActivityCalendarObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct ImageTransferBuffers
+{
+  dlms::cosem::CosemByteBuffer imageBlockSize;
+  dlms::cosem::CosemByteBuffer imageTransferredBlocksStatus;
+  dlms::cosem::CosemByteBuffer imageFirstNotTransferredBlockNumber;
+  dlms::cosem::CosemByteBuffer imageTransferEnabled;
+  dlms::cosem::CosemByteBuffer imageTransferStatus;
+  dlms::cosem::CosemByteBuffer imageToActivateInfo;
+};
+
+ImageTransferBuffers MakeSampleImageTransfer()
+{
+  ImageTransferBuffers b;
+  // double-long-unsigned 256
+  b.imageBlockSize = BytesFromList({0x06u, 0x00u, 0x00u, 0x01u, 0x00u});
+  // bit-string length 8 = 0xAA
+  b.imageTransferredBlocksStatus =
+    BytesFromList({0x04u, 0x08u, 0xAAu});
+  // double-long-unsigned 7
+  b.imageFirstNotTransferredBlockNumber =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x07u});
+  // boolean true
+  b.imageTransferEnabled = BytesFromList({0x03u, 0x01u});
+  // enum 0 (image_transfer_not_initiated)
+  b.imageTransferStatus = BytesFromList({0x16u, 0x00u});
+  // array of structure { size, identification, signature }
+  b.imageToActivateInfo = BytesFromList({
+    0x01u, 0x01u,
+    0x02u, 0x03u,
+      0x06u, 0x00u, 0x00u, 0x10u, 0x00u,
+      0x09u, 0x04u, 'F', 'W', '0', '1',
+      0x09u, 0x08u, 0x01u, 0x02u, 0x03u, 0x04u,
+                    0x05u, 0x06u, 0x07u, 0x08u});
+  return b;
+}
+
+} // namespace
+
+TEST(CosemImageTransferObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 44u, 0u, 0u, 255u);
+  const ImageTransferBuffers b = MakeSampleImageTransfer();
+  dlms::cosem::CosemImageTransferObject object(
+    name,
+    b.imageBlockSize,
+    b.imageTransferredBlocksStatus,
+    b.imageFirstNotTransferredBlockNumber,
+    b.imageTransferEnabled,
+    b.imageTransferStatus,
+    b.imageToActivateInfo,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(18u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemImageTransferObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.imageBlockSize, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.imageTransferredBlocksStatus, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.imageFirstNotTransferredBlockNumber, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.imageTransferEnabled, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.imageTransferStatus, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.imageToActivateInfo, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(8u, out));
+}
+
+TEST(CosemImageTransferObject, TransferEnabledHonorsCallerAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 44u, 0u, 0u, 255u);
+  const ImageTransferBuffers b = MakeSampleImageTransfer();
+  const dlms::cosem::CosemByteBuffer disabled =
+    BytesFromList({0x03u, 0x00u});
+
+  dlms::cosem::CosemImageTransferObject writable(
+    name,
+    b.imageBlockSize, b.imageTransferredBlocksStatus,
+    b.imageFirstNotTransferredBlockNumber, b.imageTransferEnabled,
+    b.imageTransferStatus, b.imageToActivateInfo,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(5u, disabled));
+  EXPECT_EQ(disabled, writable.ImageTransferEnabled());
+
+  dlms::cosem::CosemImageTransferObject readOnly(
+    name,
+    b.imageBlockSize, b.imageTransferredBlocksStatus,
+    b.imageFirstNotTransferredBlockNumber, b.imageTransferEnabled,
+    b.imageTransferStatus, b.imageToActivateInfo,
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(5u, disabled));
+  EXPECT_EQ(b.imageTransferEnabled, readOnly.ImageTransferEnabled());
+
+  for (std::uint8_t id : {1u, 2u, 3u, 4u, 6u, 7u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), disabled))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, disabled));
+}
+
+TEST(CosemImageTransferObject, MethodsAreUnsupportedAndOthersNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 44u, 0u, 0u, 255u);
+  const ImageTransferBuffers b = MakeSampleImageTransfer();
+  dlms::cosem::CosemImageTransferObject object(
+    name,
+    b.imageBlockSize, b.imageTransferredBlocksStatus,
+    b.imageFirstNotTransferredBlockNumber, b.imageTransferEnabled,
+    b.imageTransferStatus, b.imageToActivateInfo,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x00u});
+  for (std::uint8_t method = 1u; method <= 4u; ++method) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu, 0xBBu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(method, in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xCCu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(5u, in, out));
+  EXPECT_TRUE(out.empty());
+}
+
+TEST(CosemImageTransferObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 44u, 0u, 0u, 255u);
+  const ImageTransferBuffers b = MakeSampleImageTransfer();
+  dlms::cosem::CosemImageTransferObject object(
+    name,
+    b.imageBlockSize, b.imageTransferredBlocksStatus,
+    b.imageFirstNotTransferredBlockNumber, b.imageTransferEnabled,
+    b.imageTransferStatus, b.imageToActivateInfo,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemImageTransferObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

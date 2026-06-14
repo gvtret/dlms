@@ -222,6 +222,27 @@ Activity Calendar tests:
   `MethodNotFound`;
 - Activity Calendar normalizes versions above `MaxSupportedVersion`.
 
+Image Transfer tests:
+
+- Image Transfer exposes attributes `1` logical_name, `2`
+  image_block_size, `3` image_transferred_blocks_status, `4`
+  image_first_not_transferred_block_number, `5` image_transfer_enabled,
+  `6` image_transfer_status and `7` image_to_activate_info as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Image Transfer `image_transfer_enabled` writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode is
+  read-only, leaving the stored buffer unchanged;
+- Image Transfer rejects writes to logical_name and to the dynamic
+  read-only attributes (`2`, `3`, `4`, `6`, `7`) with `AccessDenied`,
+  and reports `AttributeNotFound` for undefined attribute ids;
+- Image Transfer methods `1` `image_transfer_initiate`, `2`
+  `image_block_transfer`, `3` `image_verify` and `4` `image_activate`
+  report `UnsupportedFeature` and clear method output; other method
+  ids report `MethodNotFound`;
+- Image Transfer normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -2716,6 +2716,248 @@ void CosemActivityCalendarObject::SetActivatePassiveCalendarTime(
   activatePassiveCalendarTime_ = value;
 }
 
+namespace {
+constexpr std::uint16_t kImageTransferClassId = 18u;
+constexpr std::uint8_t kImageTransferBlockSizeAttributeId = 2u;
+constexpr std::uint8_t kImageTransferTransferredBlocksStatusAttributeId = 3u;
+constexpr std::uint8_t kImageTransferFirstNotTransferredBlockAttributeId =
+  4u;
+constexpr std::uint8_t kImageTransferEnabledAttributeId = 5u;
+constexpr std::uint8_t kImageTransferStatusAttributeId = 6u;
+constexpr std::uint8_t kImageTransferToActivateInfoAttributeId = 7u;
+constexpr std::uint8_t kImageTransferInitiateMethodId = 1u;
+constexpr std::uint8_t kImageTransferBlockTransferMethodId = 2u;
+constexpr std::uint8_t kImageTransferVerifyMethodId = 3u;
+constexpr std::uint8_t kImageTransferActivateMethodId = 4u;
+} // namespace
+
+const std::uint8_t CosemImageTransferObject::MaxSupportedVersion;
+
+CosemImageTransferObject::CosemImageTransferObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& imageBlockSize,
+  const CosemByteBuffer& imageTransferredBlocksStatus,
+  const CosemByteBuffer& imageFirstNotTransferredBlockNumber,
+  const CosemByteBuffer& imageTransferEnabled,
+  const CosemByteBuffer& imageTransferStatus,
+  const CosemByteBuffer& imageToActivateInfo,
+  AttributeAccessMode transferEnabledAccess)
+  : CosemImageTransferObject(
+      logicalName,
+      imageBlockSize,
+      imageTransferredBlocksStatus,
+      imageFirstNotTransferredBlockNumber,
+      imageTransferEnabled,
+      imageTransferStatus,
+      imageToActivateInfo,
+      transferEnabledAccess,
+      kVersion0)
+{
+}
+
+CosemImageTransferObject::CosemImageTransferObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& imageBlockSize,
+  const CosemByteBuffer& imageTransferredBlocksStatus,
+  const CosemByteBuffer& imageFirstNotTransferredBlockNumber,
+  const CosemByteBuffer& imageTransferEnabled,
+  const CosemByteBuffer& imageTransferStatus,
+  const CosemByteBuffer& imageToActivateInfo,
+  AttributeAccessMode transferEnabledAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kImageTransferClassId,
+      NormalizeVersion(
+        version,
+        CosemImageTransferObject::MaxSupportedVersion),
+      logicalName))
+  , imageBlockSize_(imageBlockSize)
+  , imageTransferredBlocksStatus_(imageTransferredBlocksStatus)
+  , imageFirstNotTransferredBlockNumber_(imageFirstNotTransferredBlockNumber)
+  , imageTransferEnabled_(imageTransferEnabled)
+  , imageTransferStatus_(imageTransferStatus)
+  , imageToActivateInfo_(imageToActivateInfo)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kImageTransferBlockSizeAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kImageTransferTransferredBlocksStatusAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kImageTransferFirstNotTransferredBlockAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kImageTransferEnabledAttributeId, transferEnabledAccess);
+  rights_.SetAttributeAccess(
+    kImageTransferStatusAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kImageTransferToActivateInfoAttributeId,
+    AttributeAccessMode::ReadOnly);
+}
+
+CosemObjectDescriptor CosemImageTransferObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemImageTransferObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemImageTransferObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kImageTransferBlockSizeAttributeId:
+      output = imageBlockSize_;
+      return CosemStatus::Ok;
+    case kImageTransferTransferredBlocksStatusAttributeId:
+      output = imageTransferredBlocksStatus_;
+      return CosemStatus::Ok;
+    case kImageTransferFirstNotTransferredBlockAttributeId:
+      output = imageFirstNotTransferredBlockNumber_;
+      return CosemStatus::Ok;
+    case kImageTransferEnabledAttributeId:
+      output = imageTransferEnabled_;
+      return CosemStatus::Ok;
+    case kImageTransferStatusAttributeId:
+      output = imageTransferStatus_;
+      return CosemStatus::Ok;
+    case kImageTransferToActivateInfoAttributeId:
+      output = imageToActivateInfo_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemImageTransferObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kImageTransferEnabledAttributeId: {
+      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        imageTransferEnabled_ = input;
+        return CosemStatus::Ok;
+      }
+      return CosemStatus::AccessDenied;
+    }
+    case kLogicalNameAttributeId:
+    case kImageTransferBlockSizeAttributeId:
+    case kImageTransferTransferredBlocksStatusAttributeId:
+    case kImageTransferFirstNotTransferredBlockAttributeId:
+    case kImageTransferStatusAttributeId:
+    case kImageTransferToActivateInfoAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemImageTransferObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // methods 1..4 (image_transfer_initiate, image_block_transfer,
+  // image_verify, image_activate) dispatch application-defined firmware
+  // transfer/storage semantics. The built-in object surfaces them
+  // explicitly as UnsupportedFeature so that a future backend can attach
+  // image storage and activation without changing the object surface.
+  switch (methodId) {
+    case kImageTransferInitiateMethodId:
+    case kImageTransferBlockTransferMethodId:
+    case kImageTransferVerifyMethodId:
+    case kImageTransferActivateMethodId:
+      return CosemStatus::UnsupportedFeature;
+    default:
+      return CosemStatus::MethodNotFound;
+  }
+}
+
+const CosemByteBuffer& CosemImageTransferObject::ImageBlockSize() const
+{
+  return imageBlockSize_;
+}
+
+const CosemByteBuffer&
+CosemImageTransferObject::ImageTransferredBlocksStatus() const
+{
+  return imageTransferredBlocksStatus_;
+}
+
+const CosemByteBuffer&
+CosemImageTransferObject::ImageFirstNotTransferredBlockNumber() const
+{
+  return imageFirstNotTransferredBlockNumber_;
+}
+
+const CosemByteBuffer&
+CosemImageTransferObject::ImageTransferEnabled() const
+{
+  return imageTransferEnabled_;
+}
+
+const CosemByteBuffer&
+CosemImageTransferObject::ImageTransferStatus() const
+{
+  return imageTransferStatus_;
+}
+
+const CosemByteBuffer&
+CosemImageTransferObject::ImageToActivateInfo() const
+{
+  return imageToActivateInfo_;
+}
+
+void CosemImageTransferObject::SetImageBlockSize(
+  const CosemByteBuffer& value)
+{
+  imageBlockSize_ = value;
+}
+
+void CosemImageTransferObject::SetImageTransferredBlocksStatus(
+  const CosemByteBuffer& value)
+{
+  imageTransferredBlocksStatus_ = value;
+}
+
+void CosemImageTransferObject::SetImageFirstNotTransferredBlockNumber(
+  const CosemByteBuffer& value)
+{
+  imageFirstNotTransferredBlockNumber_ = value;
+}
+
+void CosemImageTransferObject::SetImageTransferEnabled(
+  const CosemByteBuffer& value)
+{
+  imageTransferEnabled_ = value;
+}
+
+void CosemImageTransferObject::SetImageTransferStatus(
+  const CosemByteBuffer& value)
+{
+  imageTransferStatus_ = value;
+}
+
+void CosemImageTransferObject::SetImageToActivateInfo(
+  const CosemByteBuffer& value)
+{
+  imageToActivateInfo_ = value;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

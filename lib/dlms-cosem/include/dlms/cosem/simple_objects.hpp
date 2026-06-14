@@ -419,6 +419,70 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemImageTransferObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemImageTransferObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& imageBlockSize,
+    const CosemByteBuffer& imageTransferredBlocksStatus,
+    const CosemByteBuffer& imageFirstNotTransferredBlockNumber,
+    const CosemByteBuffer& imageTransferEnabled,
+    const CosemByteBuffer& imageTransferStatus,
+    const CosemByteBuffer& imageToActivateInfo,
+    AttributeAccessMode transferEnabledAccess);
+  CosemImageTransferObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& imageBlockSize,
+    const CosemByteBuffer& imageTransferredBlocksStatus,
+    const CosemByteBuffer& imageFirstNotTransferredBlockNumber,
+    const CosemByteBuffer& imageTransferEnabled,
+    const CosemByteBuffer& imageTransferStatus,
+    const CosemByteBuffer& imageToActivateInfo,
+    AttributeAccessMode transferEnabledAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& ImageBlockSize() const;
+  const CosemByteBuffer& ImageTransferredBlocksStatus() const;
+  const CosemByteBuffer& ImageFirstNotTransferredBlockNumber() const;
+  const CosemByteBuffer& ImageTransferEnabled() const;
+  const CosemByteBuffer& ImageTransferStatus() const;
+  const CosemByteBuffer& ImageToActivateInfo() const;
+
+  void SetImageBlockSize(const CosemByteBuffer& value);
+  void SetImageTransferredBlocksStatus(const CosemByteBuffer& value);
+  void SetImageFirstNotTransferredBlockNumber(
+    const CosemByteBuffer& value);
+  void SetImageTransferEnabled(const CosemByteBuffer& value);
+  void SetImageTransferStatus(const CosemByteBuffer& value);
+  void SetImageToActivateInfo(const CosemByteBuffer& value);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer imageBlockSize_;
+  CosemByteBuffer imageTransferredBlocksStatus_;
+  CosemByteBuffer imageFirstNotTransferredBlockNumber_;
+  CosemByteBuffer imageTransferEnabled_;
+  CosemByteBuffer imageTransferStatus_;
+  CosemByteBuffer imageToActivateInfo_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

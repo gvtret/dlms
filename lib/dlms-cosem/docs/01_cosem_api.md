@@ -358,6 +358,26 @@ stored buffer in-place when writable. Method `1`
 policy (copying passive into active at meter time) and is surfaced as
 `UnsupportedFeature`; other method ids report `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Image Transfer IC `18`
+(`CosemImageTransferObject`) with class version `0`. The constructors
+take the image_block_size, image_transferred_blocks_status,
+image_first_not_transferred_block_number, image_transfer_enabled,
+image_transfer_status and image_to_activate_info payloads as encoded
+DLMS Data buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` for `image_transfer_enabled`
+(attr 5), and an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1` (logical_name)
+and attributes `2`, `3`, `4`, `6` and `7` are read-only; attribute `5`
+honors the caller access mode and replaces the stored buffer in-place
+when writable. Setters are provided so a backend can refresh the
+dynamic attributes (transferred-blocks bitmap, first-not-transferred
+block counter, transfer status, image-to-activate info) without
+changing the object surface. Methods `1` `image_transfer_initiate`,
+`2` `image_block_transfer`, `3` `image_verify` and `4` `image_activate`
+dispatch application-defined firmware transfer and activation semantics
+and are surfaced as `UnsupportedFeature`; other method ids report
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

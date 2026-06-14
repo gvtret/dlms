@@ -630,6 +630,25 @@ attributes honor the caller access mode and replace the stored
 buffer in-place when writable. IC defines no methods; `InvokeMethod`
 reports `MethodNotFound` for all method ids.
 
+`simple_objects.hpp` also exposes a partial GSM Diagnostic IC `47`
+(`CosemGsmDiagnosticObject`) with class version `0`. The
+constructors take the `operator` (octet-string), `status` (enum),
+`circuit_switched_status` (enum), `packet_switched_status` (enum),
+`cell_info` (structure of cell_id/location_id/signal_quality/ber/
+mcc/mnc/channel_number), `adjacent_cells` (array of cell_id/
+signal_quality structures) and `capture_time` (date_time
+octet-string) payloads as encoded DLMS Data buffers prepared by the
+caller, the logical name, a caller-selected `AttributeAccessMode`
+shared by the mutable attributes (`2`-`8`), and an optional explicit
+version that is normalized to `MaxSupportedVersion` when out of
+range. Attribute `1` (logical_name) is read-only; the mutable
+attributes honor the caller access mode and replace the stored
+buffer in-place when writable, so the backend can publish refreshed
+diagnostic snapshots over the wire when read-write is granted.
+Method `1` `reset` returns `UnsupportedFeature` and clears method
+output (the built-in object does not own modem reset semantics);
+other method ids return `MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

@@ -554,6 +554,25 @@ SMTP Setup tests:
   ids and clears method output (IC defines no methods);
 - SMTP Setup normalizes versions above `MaxSupportedVersion`.
 
+GSM Diagnostic tests:
+
+- GSM Diagnostic exposes attributes `1` logical_name, `2` operator,
+  `3` status, `4` circuit_switched_status, `5` packet_switched_status,
+  `6` cell_info, `7` adjacent_cells and `8` capture_time as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- GSM Diagnostic mutable attributes (`2`-`8`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- GSM Diagnostic rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- GSM Diagnostic `InvokeMethod` reports `UnsupportedFeature` for
+  method `1` `reset` and `MethodNotFound` for any other method id,
+  always clearing method output;
+- GSM Diagnostic normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

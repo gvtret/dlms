@@ -1360,6 +1360,66 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemGsmDiagnosticObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemGsmDiagnosticObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& operatorName,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& circuitSwitchedStatus,
+    const CosemByteBuffer& packetSwitchedStatus,
+    const CosemByteBuffer& cellInfo,
+    const CosemByteBuffer& adjacentCells,
+    const CosemByteBuffer& captureTime,
+    AttributeAccessMode mutableAccess);
+  CosemGsmDiagnosticObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& operatorName,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& circuitSwitchedStatus,
+    const CosemByteBuffer& packetSwitchedStatus,
+    const CosemByteBuffer& cellInfo,
+    const CosemByteBuffer& adjacentCells,
+    const CosemByteBuffer& captureTime,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& OperatorName() const;
+  const CosemByteBuffer& Status() const;
+  const CosemByteBuffer& CircuitSwitchedStatus() const;
+  const CosemByteBuffer& PacketSwitchedStatus() const;
+  const CosemByteBuffer& CellInfo() const;
+  const CosemByteBuffer& AdjacentCells() const;
+  const CosemByteBuffer& CaptureTime() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer operatorName_;
+  CosemByteBuffer status_;
+  CosemByteBuffer circuitSwitchedStatus_;
+  CosemByteBuffer packetSwitchedStatus_;
+  CosemByteBuffer cellInfo_;
+  CosemByteBuffer adjacentCells_;
+  CosemByteBuffer captureTime_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

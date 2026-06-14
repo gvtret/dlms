@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.43.0 - 2026-06-15
+
+- Added GSM Diagnostic IC `47` built-in object
+  (`CosemGsmDiagnosticObject`) with class version `0`, exposing
+  `operator` (octet-string), `status` (enum),
+  `circuit_switched_status` (enum), `packet_switched_status` (enum),
+  `cell_info` (structure of cell_id/location_id/signal_quality/ber/
+  mcc/mnc/channel_number), `adjacent_cells` (array of cell_id/
+  signal_quality structures) and `capture_time` (date_time
+  octet-string) as opaque encoded DLMS Data buffers prepared by the
+  caller.
+- Attributes `2`-`8` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can publish refreshed diagnostic snapshots when read-write
+  is granted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Method `1` `reset` returns `UnsupportedFeature` and clears method
+  output (the built-in object does not own modem reset semantics);
+  other method ids return `MethodNotFound`.
+
 ## 0.42.0 - 2026-06-15
 
 - Added SMTP Setup IC `46` built-in object (`CosemSmtpSetupObject`)

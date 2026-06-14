@@ -5932,6 +5932,223 @@ const CosemByteBuffer& CosemSmtpSetupObject::Receivers() const
   return receivers_;
 }
 
+namespace {
+constexpr std::uint16_t kGsmDiagnosticClassId = 47u;
+constexpr std::uint8_t kGsmDiagnosticOperatorAttributeId = 2u;
+constexpr std::uint8_t kGsmDiagnosticStatusAttributeId = 3u;
+constexpr std::uint8_t kGsmDiagnosticCsStatusAttributeId = 4u;
+constexpr std::uint8_t kGsmDiagnosticPsStatusAttributeId = 5u;
+constexpr std::uint8_t kGsmDiagnosticCellInfoAttributeId = 6u;
+constexpr std::uint8_t kGsmDiagnosticAdjacentCellsAttributeId = 7u;
+constexpr std::uint8_t kGsmDiagnosticCaptureTimeAttributeId = 8u;
+constexpr std::uint8_t kGsmDiagnosticResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemGsmDiagnosticObject::MaxSupportedVersion;
+
+CosemGsmDiagnosticObject::CosemGsmDiagnosticObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& operatorName,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& circuitSwitchedStatus,
+  const CosemByteBuffer& packetSwitchedStatus,
+  const CosemByteBuffer& cellInfo,
+  const CosemByteBuffer& adjacentCells,
+  const CosemByteBuffer& captureTime,
+  AttributeAccessMode mutableAccess)
+  : CosemGsmDiagnosticObject(
+      logicalName, operatorName, status, circuitSwitchedStatus,
+      packetSwitchedStatus, cellInfo, adjacentCells, captureTime,
+      mutableAccess, kVersion0)
+{
+}
+
+CosemGsmDiagnosticObject::CosemGsmDiagnosticObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& operatorName,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& circuitSwitchedStatus,
+  const CosemByteBuffer& packetSwitchedStatus,
+  const CosemByteBuffer& cellInfo,
+  const CosemByteBuffer& adjacentCells,
+  const CosemByteBuffer& captureTime,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kGsmDiagnosticClassId,
+      NormalizeVersion(
+        version, CosemGsmDiagnosticObject::MaxSupportedVersion),
+      logicalName))
+  , operatorName_(operatorName)
+  , status_(status)
+  , circuitSwitchedStatus_(circuitSwitchedStatus)
+  , packetSwitchedStatus_(packetSwitchedStatus)
+  , cellInfo_(cellInfo)
+  , adjacentCells_(adjacentCells)
+  , captureTime_(captureTime)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kGsmDiagnosticOperatorAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGsmDiagnosticStatusAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGsmDiagnosticCsStatusAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGsmDiagnosticPsStatusAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGsmDiagnosticCellInfoAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGsmDiagnosticAdjacentCellsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGsmDiagnosticCaptureTimeAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemGsmDiagnosticObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemGsmDiagnosticObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemGsmDiagnosticObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kGsmDiagnosticOperatorAttributeId:
+      output = operatorName_;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticStatusAttributeId:
+      output = status_;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticCsStatusAttributeId:
+      output = circuitSwitchedStatus_;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticPsStatusAttributeId:
+      output = packetSwitchedStatus_;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticCellInfoAttributeId:
+      output = cellInfo_;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticAdjacentCellsAttributeId:
+      output = adjacentCells_;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticCaptureTimeAttributeId:
+      output = captureTime_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemGsmDiagnosticObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kGsmDiagnosticOperatorAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      operatorName_ = input;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticStatusAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      status_ = input;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticCsStatusAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      circuitSwitchedStatus_ = input;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticPsStatusAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      packetSwitchedStatus_ = input;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticCellInfoAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      cellInfo_ = input;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticAdjacentCellsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      adjacentCells_ = input;
+      return CosemStatus::Ok;
+    case kGsmDiagnosticCaptureTimeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      captureTime_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemGsmDiagnosticObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kGsmDiagnosticResetMethodId) {
+    // GSM Diagnostic reset is not exposed by the built-in object;
+    // backend is expected to refresh status fields out-of-band.
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemGsmDiagnosticObject::OperatorName() const
+{
+  return operatorName_;
+}
+
+const CosemByteBuffer& CosemGsmDiagnosticObject::Status() const
+{
+  return status_;
+}
+
+const CosemByteBuffer&
+CosemGsmDiagnosticObject::CircuitSwitchedStatus() const
+{
+  return circuitSwitchedStatus_;
+}
+
+const CosemByteBuffer&
+CosemGsmDiagnosticObject::PacketSwitchedStatus() const
+{
+  return packetSwitchedStatus_;
+}
+
+const CosemByteBuffer& CosemGsmDiagnosticObject::CellInfo() const
+{
+  return cellInfo_;
+}
+
+const CosemByteBuffer& CosemGsmDiagnosticObject::AdjacentCells() const
+{
+  return adjacentCells_;
+}
+
+const CosemByteBuffer& CosemGsmDiagnosticObject::CaptureTime() const
+{
+  return captureTime_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

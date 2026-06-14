@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.2 - 2026-06-13
+
+- Fixed HDLC session teardown so owned HDLC/TCP clients perform the mandatory
+  DISC/UA data-link disconnect after application association release and before
+  closing the underlying transport.
+- Fixed confirmed release against meters that return `RLRE` with
+  `user-information` and non-canonical BER length fields around the embedded
+  xDLMS `InitiateResponse`.
+
 ## 0.16.1 - 2026-06-13
 
 - Fixed HDLC session-mode APDU exchange so a final client I-frame no longer

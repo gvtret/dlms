@@ -239,6 +239,22 @@ ClientStatus MapXdlmsStatus(dlms::xdlms::XdlmsStatus status)
   return ClientStatus::InternalError;
 }
 
+ClientStatus MapDataLinkDisconnectStatus(
+  dlms::profile::ProfileStatus status)
+{
+  switch (status) {
+  case dlms::profile::ProfileStatus::Ok:
+  case dlms::profile::ProfileStatus::NotOpen:
+    return ClientStatus::Ok;
+  case dlms::profile::ProfileStatus::InvalidArgument:
+    return ClientStatus::InvalidArgument;
+  case dlms::profile::ProfileStatus::UnsupportedFeature:
+    return ClientStatus::UnsupportedFeature;
+  default:
+    return ClientStatus::InternalError;
+  }
+}
+
 dlms::transport::TcpStreamTransportOptions MakeTcpOptions(
   const DlmsClientOptions& options)
 {
@@ -1078,13 +1094,28 @@ ClientStatus DlmsClient::ReleaseAssociation()
     return ClientStatus::Ok;
   }
 
-  const ClientStatus status = MapAssociationStatus(association_.Release());
-  if (status != ClientStatus::Ok) {
-    return status;
+  ClientStatus result = MapAssociationStatus(association_.Release());
+  if (result != ClientStatus::Ok) {
+    return result;
   }
 
-  state_ = ClientState::Disconnected;
-  return ClientStatus::Ok;
+  if (ownsHdlcDataLinkSession_) {
+    dlms::profile::HdlcProfileChannel* hdlc =
+      dynamic_cast<dlms::profile::HdlcProfileChannel*>(&channel_);
+    if (hdlc != 0) {
+      result = MapDataLinkDisconnectStatus(hdlc->DisconnectDataLink());
+    }
+  }
+
+  const ClientStatus closeStatus = MapAssociationStatus(association_.Close());
+  if (result == ClientStatus::Ok && closeStatus != ClientStatus::Ok) {
+    result = closeStatus;
+  }
+
+  if (result == ClientStatus::Ok) {
+    state_ = ClientState::Disconnected;
+  }
+  return result;
 }
 
 ClientStatus DlmsClient::Close()
@@ -1093,13 +1124,24 @@ ClientStatus DlmsClient::Close()
     return ClientStatus::Ok;
   }
 
-  const ClientStatus status = MapAssociationStatus(association_.Close());
-  if (status != ClientStatus::Ok) {
-    return status;
+  ClientStatus result = ClientStatus::Ok;
+  if (ownsHdlcDataLinkSession_) {
+    dlms::profile::HdlcProfileChannel* hdlc =
+      dynamic_cast<dlms::profile::HdlcProfileChannel*>(&channel_);
+    if (hdlc != 0) {
+      result = MapDataLinkDisconnectStatus(hdlc->DisconnectDataLink());
+    }
   }
 
-  state_ = ClientState::Disconnected;
-  return ClientStatus::Ok;
+  const ClientStatus closeStatus = MapAssociationStatus(association_.Close());
+  if (result == ClientStatus::Ok && closeStatus != ClientStatus::Ok) {
+    result = closeStatus;
+  }
+
+  if (result == ClientStatus::Ok) {
+    state_ = ClientState::Disconnected;
+  }
+  return result;
 }
 
 ClientState DlmsClient::State() const

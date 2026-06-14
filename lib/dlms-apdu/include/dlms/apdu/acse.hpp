@@ -39,6 +39,7 @@ struct RlrqApdu
   std::vector<AcseRawField> fields;
   bool hasReason;
   std::int32_t reason;
+  InitiateRequest initiateRequest;
 };
 
 struct RlreApdu
@@ -46,6 +47,7 @@ struct RlreApdu
   std::vector<AcseRawField> fields;
   bool hasReason;
   std::int32_t reason;
+  InitiateResponse initiateResponse;
 };
 
 struct XdlmsApdu;

@@ -41,6 +41,11 @@ constexpr std::array<std::uint8_t, 80> kSpodesAare = {
   0x46, 0x7C, 0xBE, 0x10, 0x04, 0x0E, 0x08, 0x00, 0x06, 0x5F, 0x1F, 0x04,
   0x00, 0x40, 0x18, 0x1D, 0x02, 0x00, 0x00, 0x07};
 
+constexpr std::array<std::uint8_t, 23> kLiveRlreWithUserInformation = {
+  0x63, 0x11, 0x80, 0x01, 0x00, 0xBE, 0x0F, 0x04, 0x0E, 0x08,
+  0x00, 0x06, 0x5F, 0x1F, 0x04, 0x00, 0x00, 0x10, 0x10, 0x02,
+  0x00, 0x00, 0x07};
+
 } // namespace
 
 TEST(AcseTest, DecodeSpodesAarqFromHdlcTrace)
@@ -161,6 +166,27 @@ TEST(AcseTest, DecodeRlreWithReason)
   EXPECT_EQ(rlre.reason, 0);
   ASSERT_EQ(rlre.fields.size(), 1U);
   EXPECT_EQ(rlre.fields[0].tag, 0x80);
+}
+
+TEST(AcseTest, DecodeRlreWithUserInformationFromLiveTrace)
+{
+  dlms::apdu::RlreApdu rlre = {};
+
+  EXPECT_EQ(DecodeRlre(kLiveRlreWithUserInformation.data(),
+                       kLiveRlreWithUserInformation.size(),
+                       rlre),
+            ApduStatus::Ok);
+  EXPECT_TRUE(rlre.hasReason);
+  EXPECT_EQ(rlre.reason, 0);
+  ASSERT_EQ(rlre.fields.size(), 2U);
+  EXPECT_EQ(rlre.fields[0].tag, 0x80);
+  EXPECT_EQ(rlre.fields[1].tag, 0xBE);
+  EXPECT_EQ(rlre.initiateResponse.negotiatedDlmsVersionNumber, 6U);
+  EXPECT_EQ(rlre.initiateResponse.negotiatedConformance.bytes[0], 0x00);
+  EXPECT_EQ(rlre.initiateResponse.negotiatedConformance.bytes[1], 0x10);
+  EXPECT_EQ(rlre.initiateResponse.negotiatedConformance.bytes[2], 0x10);
+  EXPECT_EQ(rlre.initiateResponse.serverMaxReceivePduSize, 0x0200U);
+  EXPECT_EQ(rlre.initiateResponse.vaaName, 0x0007U);
 }
 
 TEST(AcseTest, EncodeRlreWithReason)

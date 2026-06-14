@@ -34,6 +34,7 @@ public:
   ProfileStatus ConnectDataLink();
   ProfileStatus AcceptDataLink();
   ProfileStatus DisconnectDataLink();
+  ProfileStatus AcceptDisconnectDataLink();
 
   ProfileStatus SendApdu(ProfileByteView apdu);
   ProfileStatus ReceiveApdu(std::vector<std::uint8_t>& apdu);

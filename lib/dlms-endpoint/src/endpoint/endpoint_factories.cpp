@@ -70,6 +70,15 @@ dlms::endpoint::EndpointSecurityBundle EmptyEndpointSecurityBundle()
   return bundle;
 }
 
+bool IsOptionalDisconnectReceiveStatus(dlms::profile::ProfileStatus status)
+{
+  return status == dlms::profile::ProfileStatus::WouldBlock ||
+    status == dlms::profile::ProfileStatus::Timeout ||
+    status == dlms::profile::ProfileStatus::NeedMoreData ||
+    status == dlms::profile::ProfileStatus::ConnectionClosed ||
+    status == dlms::profile::ProfileStatus::ReadFailed;
+}
+
 dlms::endpoint::EndpointStatus MapTransportStatus(
   dlms::transport::TransportStatus status)
 {
@@ -221,11 +230,19 @@ public:
 
   dlms::profile::ProfileStatus Close()
   {
+    dlms::profile::ProfileStatus result = dlms::profile::ProfileStatus::Ok;
+    if (dataLinkAccepted_ && channel_->IsOpen()) {
+      result = channel_->AcceptDisconnectDataLink();
+      if (IsOptionalDisconnectReceiveStatus(result)) {
+        result = dlms::profile::ProfileStatus::Ok;
+      }
+    }
+
     const dlms::profile::ProfileStatus status = channel_->Close();
     if (status == dlms::profile::ProfileStatus::Ok) {
       dataLinkAccepted_ = false;
     }
-    return status;
+    return result == dlms::profile::ProfileStatus::Ok ? status : result;
   }
 
   bool IsOpen() const

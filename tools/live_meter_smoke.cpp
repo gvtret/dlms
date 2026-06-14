@@ -3,6 +3,8 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <chrono>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <sstream>
@@ -297,6 +299,33 @@ const char* WrapperTraceDirectionName(
   return "unknown";
 }
 
+const char* HdlcTraceKindName(dlms::profile::HdlcProfileTraceKind kind)
+{
+  switch (kind) {
+  case dlms::profile::HdlcProfileTraceKind::WireWrite:
+    return "wire-write";
+  case dlms::profile::HdlcProfileTraceKind::WireRead:
+    return "wire-read";
+  case dlms::profile::HdlcProfileTraceKind::ReadStatus:
+    return "read-status";
+  case dlms::profile::HdlcProfileTraceKind::DecodeStatus:
+    return "decode-status";
+  }
+  return "unknown";
+}
+
+const char* HdlcTraceDirectionName(
+  dlms::profile::HdlcProfileTraceDirection direction)
+{
+  switch (direction) {
+  case dlms::profile::HdlcProfileTraceDirection::Outbound:
+    return "out";
+  case dlms::profile::HdlcProfileTraceDirection::Inbound:
+    return "in";
+  }
+  return "unknown";
+}
+
 const char* AssociationTraceKindName(
   dlms::association::AssociationTraceKind kind)
 {
@@ -401,6 +430,43 @@ void PrintObis(const dlms::xdlms::CosemLogicalName& name)
     std::cout << static_cast<unsigned>(name[i]);
   }
 }
+
+void PrintHexBytes(const std::uint8_t* bytes, std::size_t size)
+{
+  if (bytes == 0 || size == 0u) {
+    return;
+  }
+
+  std::ios::fmtflags flags = std::cout.flags();
+  const char fill = std::cout.fill();
+  std::cout << std::hex << std::setfill('0');
+  for (std::size_t i = 0u; i < size; ++i) {
+    if (i != 0u) {
+      std::cout << ' ';
+    }
+    std::cout << std::setw(2) << static_cast<unsigned>(bytes[i]);
+  }
+  std::cout.flags(flags);
+  std::cout.fill(fill);
+}
+
+class TraceClock
+{
+public:
+  TraceClock()
+    : start_(std::chrono::steady_clock::now())
+  {
+  }
+
+  long long ElapsedMs() const
+  {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now() - start_).count();
+  }
+
+private:
+  std::chrono::steady_clock::time_point start_;
+};
 
 bool ParseObis(const char* text, dlms::xdlms::CosemLogicalName& output)
 {
@@ -601,10 +667,16 @@ class ConsoleWrapperTcpTraceSink
   : public dlms::profile::IWrapperTcpTraceSink
 {
 public:
+  explicit ConsoleWrapperTcpTraceSink(const TraceClock& clock)
+    : clock_(clock)
+  {
+  }
+
   void OnWrapperTcpTrace(
     const dlms::profile::WrapperTcpTraceEvent& event)
   {
-    std::cout << "trace: wrapper-frame kind="
+    std::cout << "trace: t=+" << clock_.ElapsedMs()
+              << "ms wrapper-frame kind="
               << WrapperTraceKindName(event.kind)
               << " direction="
               << WrapperTraceDirectionName(event.direction)
@@ -614,19 +686,69 @@ public:
               << " destWPort=" << event.destinationPort
               << " encodedSize=" << event.encodedSize
               << " apduSize=" << event.apduSize
-              << " byteSize=" << event.byteSize
-              << "\n";
+              << " byteSize=" << event.byteSize;
+    if ((event.kind == dlms::profile::WrapperTcpTraceKind::WireWrite ||
+         event.kind == dlms::profile::WrapperTcpTraceKind::WireRead) &&
+        event.bytes != 0 && event.byteSize != 0u) {
+      std::cout << " bytes=";
+      PrintHexBytes(event.bytes, event.byteSize);
+    }
+    std::cout << "\n";
   }
+
+private:
+  const TraceClock& clock_;
+};
+
+class ConsoleHdlcProfileTraceSink
+  : public dlms::profile::IHdlcProfileTraceSink
+{
+public:
+  explicit ConsoleHdlcProfileTraceSink(const TraceClock& clock)
+    : clock_(clock)
+  {
+  }
+
+  void OnHdlcProfileTrace(
+    const dlms::profile::HdlcProfileTraceEvent& event)
+  {
+    std::cout << "trace: t=+" << clock_.ElapsedMs()
+              << "ms hdlc-frame kind="
+              << HdlcTraceKindName(event.kind)
+              << " direction="
+              << HdlcTraceDirectionName(event.direction)
+              << " status="
+              << ProfileStatusName(event.status)
+              << " encodedSize=" << event.encodedSize
+              << " apduSize=" << event.apduSize
+              << " byteSize=" << event.byteSize;
+    if ((event.kind == dlms::profile::HdlcProfileTraceKind::WireWrite ||
+         event.kind == dlms::profile::HdlcProfileTraceKind::WireRead) &&
+        event.bytes != 0 && event.byteSize != 0u) {
+      std::cout << " bytes=";
+      PrintHexBytes(event.bytes, event.byteSize);
+    }
+    std::cout << "\n";
+  }
+
+private:
+  const TraceClock& clock_;
 };
 
 class ConsoleAssociationTraceSink
   : public dlms::association::IAssociationTraceSink
 {
 public:
+  explicit ConsoleAssociationTraceSink(const TraceClock& clock)
+    : clock_(clock)
+  {
+  }
+
   void OnAssociationTrace(
     const dlms::association::AssociationTraceEvent& event)
   {
-    std::cout << "trace: association kind="
+    std::cout << "trace: t=+" << clock_.ElapsedMs()
+              << "ms association kind="
               << AssociationTraceKindName(event.kind)
               << " status="
               << AssociationTraceStatusName(event.status)
@@ -665,6 +787,9 @@ public:
     }
     std::cout << "\n";
   }
+
+private:
+  const TraceClock& clock_;
 };
 
 int Fail(const char* step, dlms::client::ClientStatus status)
@@ -696,11 +821,17 @@ int main()
     PrintTrace(options, descriptor);
   }
 
-  ConsoleWrapperTcpTraceSink wrapperTrace;
-  ConsoleAssociationTraceSink associationTrace;
+  TraceClock traceClock;
+  ConsoleWrapperTcpTraceSink wrapperTrace(traceClock);
+  ConsoleHdlcProfileTraceSink hdlcTrace(traceClock);
+  ConsoleAssociationTraceSink associationTrace(traceClock);
   if (EnvTraceEnabled() &&
       options.profile == dlms::client::ClientProfile::WrapperTcp) {
     options.wrapperTcpTraceSink = &wrapperTrace;
+  }
+  if (EnvTraceEnabled() &&
+      options.profile == dlms::client::ClientProfile::HdlcTcp) {
+    options.hdlcProfileTraceSink = &hdlcTrace;
   }
   if (EnvTraceEnabled()) {
     options.associationTraceSink = &associationTrace;

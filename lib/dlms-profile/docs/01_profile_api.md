@@ -77,6 +77,10 @@ also orchestrates the lower-layer `HdlcSession` state machine:
   decodes LLC, returns only APDU bytes, and emits RR after APDU-bearing
   I-frames;
 - `DisconnectDataLink()` sends DISC and consumes UA.
+- concrete server-side `HdlcProfileChannel::AcceptDisconnectDataLink()`
+  consumes DISC and sends UA. It is used by accepted endpoint channels during
+  close. It is intentionally not part of `IHdlcDataLinkSession`, so existing
+  custom data-link implementations do not need a new virtual method.
 
 `ConnectDataLink()`, `DisconnectDataLink()`, and session `SendApdu()` retry
 the last outbound HDLC frame when waiting for the matching control frame returns

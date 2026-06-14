@@ -437,13 +437,8 @@ AssociationStatus AssociationClient::Release()
     return decodeStatus;
   }
 
-  const dlms::profile::ProfileStatus closeStatus = channel_.Close();
-  if (closeStatus != dlms::profile::ProfileStatus::Ok) {
-    return AssociationStatus::ChannelCloseFailed;
-  }
-
   result_ = EmptyAssociationResult();
-  state_ = AssociationState::Closed;
+  state_ = AssociationState::Open;
   return AssociationStatus::Ok;
 }
 

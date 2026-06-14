@@ -53,7 +53,36 @@ ApduStatus ReadSingleTlv(
   return ApduStatus::Ok;
 }
 
-ApduStatus ReadUserInformation(BerTlv userInformation, BerTlv& octetString)
+ApduStatus ReadReleaseTlv(
+  const std::uint8_t* input,
+  std::size_t inputSize,
+  std::uint8_t expectedTag,
+  BerTlv& tlv)
+{
+  if (input == nullptr && inputSize != 0) {
+    return ApduStatus::InvalidArgument;
+  }
+
+  ApduReader reader(input, inputSize);
+  ApduStatus status = ReadBerTlv(reader, tlv);
+  if (status != ApduStatus::Ok) {
+    return status;
+  }
+  if (tlv.tag != expectedTag) {
+    return ApduStatus::InvalidTag;
+  }
+  if (reader.Empty()) {
+    return ApduStatus::Ok;
+  }
+
+  tlv.valueSize = inputSize - tlv.headerSize;
+  return ApduStatus::Ok;
+}
+
+ApduStatus ReadUserInformation(
+  BerTlv userInformation,
+  bool allowTrailingBytes,
+  BerTlv& octetString)
 {
   if (userInformation.tag != kUserInformationTag) {
     return ApduStatus::InvalidTag;
@@ -64,10 +93,14 @@ ApduStatus ReadUserInformation(BerTlv userInformation, BerTlv& octetString)
   if (status != ApduStatus::Ok) {
     return status;
   }
+  if (allowTrailingBytes && octetString.headerSize + octetString.valueSize <
+      userInformation.valueSize) {
+    octetString.valueSize = userInformation.valueSize - octetString.headerSize;
+  }
   if (octetString.tag != kOctetStringTag) {
     return ApduStatus::InvalidTag;
   }
-  if (!reader.Empty()) {
+  if (!allowTrailingBytes && !reader.Empty()) {
     return ApduStatus::InvalidLength;
   }
   return ApduStatus::Ok;
@@ -207,6 +240,36 @@ ApduStatus WriteReleaseReason(std::int32_t reason, ApduWriter& writer)
   return WriteBerTlv(writer, kReleaseReasonTag, &value, 1);
 }
 
+ApduStatus DecodeReleaseUserInformation(
+  const BerTlv& userInformation,
+  RlrqApdu& output)
+{
+  BerTlv octetString = {};
+  ApduStatus status = ReadUserInformation(userInformation, true, octetString);
+  if (status != ApduStatus::Ok) {
+    return status;
+  }
+  return DecodeInitiateRequest(
+    octetString.value,
+    octetString.valueSize,
+    output.initiateRequest);
+}
+
+ApduStatus DecodeReleaseUserInformation(
+  const BerTlv& userInformation,
+  RlreApdu& output)
+{
+  BerTlv octetString = {};
+  ApduStatus status = ReadUserInformation(userInformation, true, octetString);
+  if (status != ApduStatus::Ok) {
+    return status;
+  }
+  return DecodeInitiateResponse(
+    octetString.value,
+    octetString.valueSize,
+    output.initiateResponse);
+}
+
 template <typename T>
 ApduStatus DecodeRelease(
   const std::uint8_t* input,
@@ -217,18 +280,36 @@ ApduStatus DecodeRelease(
   output = {};
 
   BerTlv release = {};
-  ApduStatus status = ReadSingleTlv(input, inputSize, expectedTag, release);
+  ApduStatus status = ReadReleaseTlv(input, inputSize, expectedTag, release);
   if (status != ApduStatus::Ok) {
     return status;
   }
 
   ApduReader reader(release.value, release.valueSize);
+  std::size_t lastFieldIndex = 0u;
+  std::size_t lastFieldStart = 0u;
+  bool hasLastField = false;
   while (!reader.Empty()) {
     const std::size_t elementStart = reader.Position();
     BerTlv child = {};
     status = ReadBerTlv(reader, child);
     if (status != ApduStatus::Ok) {
+      if (status == ApduStatus::NeedMoreData &&
+          hasLastField &&
+          output.fields[lastFieldIndex].tag == kUserInformationTag) {
+        output.fields[lastFieldIndex].encoded =
+          MakeView(release.value + lastFieldStart,
+                   release.valueSize - lastFieldStart);
+        return ApduStatus::Ok;
+      }
       return status;
+    }
+    if (child.tag == kUserInformationTag && !reader.Empty()) {
+      child.valueSize += reader.Remaining();
+      status = reader.Skip(reader.Remaining());
+      if (status != ApduStatus::Ok) {
+        return status;
+      }
     }
     const std::size_t elementSize = reader.Position() - elementStart;
 
@@ -238,10 +319,18 @@ ApduStatus DecodeRelease(
         return status;
       }
       output.hasReason = true;
+    } else if (child.tag == kUserInformationTag) {
+      status = DecodeReleaseUserInformation(child, output);
+      if (status != ApduStatus::Ok) {
+        return status;
+      }
     }
 
     output.fields.push_back(
       AcseRawField{child.tag, MakeView(release.value + elementStart, elementSize)});
+    lastFieldIndex = output.fields.size() - 1u;
+    lastFieldStart = elementStart;
+    hasLastField = true;
   }
 
   return ApduStatus::Ok;
@@ -307,7 +396,7 @@ ApduStatus DecodeAarq(
     }
 
     BerTlv octetString = {};
-    status = ReadUserInformation(child, octetString);
+    status = ReadUserInformation(child, false, octetString);
     if (status != ApduStatus::Ok) {
       return status;
     }
@@ -386,7 +475,7 @@ ApduStatus DecodeAare(
     }
 
     BerTlv octetString = {};
-    status = ReadUserInformation(child, octetString);
+    status = ReadUserInformation(child, false, octetString);
     if (status != ApduStatus::Ok) {
       return status;
     }

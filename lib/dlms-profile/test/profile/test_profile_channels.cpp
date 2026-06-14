@@ -181,7 +181,17 @@ public:
       }
       std::vector<std::uint8_t> response;
       if (kind == dlms::hdlc::HdlcFrameKind::Unnumbered) {
-        if (server_.BuildConnectResponse(response) == dlms::hdlc::HdlcStatus::Ok) {
+        dlms::hdlc::HdlcUnnumberedKind unnumberedKind;
+        if (frames[i].control.UnnumberedKind(unnumberedKind) !=
+            dlms::hdlc::HdlcStatus::Ok) {
+          continue;
+        }
+        if (unnumberedKind == dlms::hdlc::HdlcUnnumberedKind::Snrm &&
+            server_.BuildConnectResponse(response) == dlms::hdlc::HdlcStatus::Ok) {
+          reads_.push_back(response);
+        } else if (
+          unnumberedKind == dlms::hdlc::HdlcUnnumberedKind::Disc &&
+          server_.BuildDisconnectResponse(response) == dlms::hdlc::HdlcStatus::Ok) {
           reads_.push_back(response);
         }
       } else if (kind == dlms::hdlc::HdlcFrameKind::Information) {
@@ -684,6 +694,72 @@ TEST(HdlcProfileChannelTest, ConnectDataLinkPerformsSnrmUaHandshake)
                                     frame));
   EXPECT_EQ(dlms::hdlc::HdlcFrameKind::Unnumbered,
             frame.control.FrameKind());
+}
+
+TEST(HdlcProfileChannelTest, DisconnectDataLinkPerformsDiscUaHandshake)
+{
+  HdlcAutoPeerStream stream(128u);
+  ApduChannelOptions options = DefaultApduChannelOptions();
+  options.hdlcUseSession = true;
+  options.hdlcRole = HdlcProfileRole::Client;
+  HdlcProfileChannel channel(stream, options);
+
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  ASSERT_EQ(ProfileStatus::Ok, channel.ConnectDataLink());
+  ASSERT_EQ(ProfileStatus::Ok, channel.DisconnectDataLink());
+  ASSERT_EQ(2u, stream.Writes().size());
+
+  dlms::hdlc::HdlcFrameBuffer frame;
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok,
+            dlms::hdlc::DecodeFrame(&stream.Writes()[1][0],
+                                    stream.Writes()[1].size(),
+                                    dlms::hdlc::DefaultHdlcCodecLimits(),
+                                    frame));
+  dlms::hdlc::HdlcUnnumberedKind kind;
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok, frame.control.UnnumberedKind(kind));
+  EXPECT_EQ(dlms::hdlc::HdlcUnnumberedKind::Disc, kind);
+}
+
+TEST(HdlcProfileChannelTest, AcceptDisconnectDataLinkConsumesDiscAndSendsUa)
+{
+  FakeByteStream stream;
+  ApduChannelOptions options = DefaultApduChannelOptions();
+  options.hdlcUseSession = true;
+  options.hdlcRole = HdlcProfileRole::Server;
+  HdlcProfileChannel channel(stream, options);
+  dlms::hdlc::HdlcSession client(
+    MakeSessionOptions(dlms::hdlc::HdlcSessionRole::Client, 128u));
+
+  std::vector<std::uint8_t> bytes;
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok, client.BuildConnectRequest(bytes));
+  ASSERT_EQ(ProfileStatus::Ok, channel.Open());
+  stream.ScriptRead(bytes);
+  ASSERT_EQ(ProfileStatus::Ok, channel.AcceptDataLink());
+  ASSERT_EQ(1u, stream.Writes().size());
+
+  dlms::hdlc::HdlcFrameBuffer ua;
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok,
+            dlms::hdlc::DecodeFrame(&stream.Writes()[0][0],
+                                    stream.Writes()[0].size(),
+                                    dlms::hdlc::DefaultHdlcCodecLimits(),
+                                    ua));
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok, client.ReceiveFrame(ua));
+
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok, client.BuildDisconnectRequest(bytes));
+  stream.ScriptRead(bytes);
+  ASSERT_EQ(ProfileStatus::Ok, channel.AcceptDisconnectDataLink());
+  ASSERT_EQ(2u, stream.Writes().size());
+
+  dlms::hdlc::HdlcFrameBuffer disconnectResponse;
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok,
+            dlms::hdlc::DecodeFrame(&stream.Writes()[1][0],
+                                    stream.Writes()[1].size(),
+                                    dlms::hdlc::DefaultHdlcCodecLimits(),
+                                    disconnectResponse));
+  dlms::hdlc::HdlcUnnumberedKind kind;
+  ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok,
+            disconnectResponse.control.UnnumberedKind(kind));
+  EXPECT_EQ(dlms::hdlc::HdlcUnnumberedKind::Ua, kind);
 }
 
 TEST(HdlcProfileChannelTest, SessionModeSendsIFrameAndConsumesRr)

@@ -234,6 +234,31 @@ ProfileStatus HdlcProfileChannel::DisconnectDataLink()
   return ReceiveSessionControlFrameWithRetry(frameBytes);
 }
 
+ProfileStatus HdlcProfileChannel::AcceptDisconnectDataLink()
+{
+  if (!options_.hdlcUseSession) {
+    return ProfileStatus::UnsupportedFeature;
+  }
+  if (!IsOpen()) {
+    return ProfileStatus::NotOpen;
+  }
+  if (options_.hdlcRole != HdlcProfileRole::Server) {
+    return ProfileStatus::UnsupportedFeature;
+  }
+
+  ProfileStatus status = ReceiveSessionControlFrame();
+  if (status != ProfileStatus::Ok) {
+    return status;
+  }
+
+  std::vector<std::uint8_t> frameBytes;
+  status = MapHdlcStatus(session_.BuildDisconnectResponse(frameBytes));
+  if (status != ProfileStatus::Ok) {
+    return status;
+  }
+  return WriteFrameBytes(frameBytes);
+}
+
 ProfileStatus HdlcProfileChannel::SendApdu(ProfileByteView apdu)
 {
   if (!IsValidByteView(apdu)) {

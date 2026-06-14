@@ -314,10 +314,10 @@ TEST(AssociationCApi, CallbackClientLifecycle)
   EXPECT_EQ(0x0007u, result.vaa_name);
 
   EXPECT_EQ(DLMS_ASSOCIATION_STATUS_OK, dlms_association_release(client));
-  EXPECT_EQ(DLMS_ASSOCIATION_STATE_CLOSED,
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_OPEN,
             dlms_association_get_state(client));
   EXPECT_EQ(0, dlms_association_is_associated(client));
-  EXPECT_FALSE(channel.open);
+  EXPECT_TRUE(channel.open);
   ASSERT_EQ(2u, channel.sends.size());
 
   dlms::apdu::AcseApdu sent = {};
@@ -327,6 +327,11 @@ TEST(AssociationCApi, CallbackClientLifecycle)
               channel.sends[1].size(),
               sent));
   EXPECT_EQ(dlms::apdu::AcseApduKind::Rlrq, sent.kind);
+
+  EXPECT_EQ(DLMS_ASSOCIATION_STATUS_OK, dlms_association_close(client));
+  EXPECT_EQ(DLMS_ASSOCIATION_STATE_CLOSED,
+            dlms_association_get_state(client));
+  EXPECT_FALSE(channel.open);
 
   dlms_association_destroy_client(client);
 }

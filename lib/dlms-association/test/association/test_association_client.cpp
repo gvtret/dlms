@@ -875,7 +875,7 @@ TEST(AssociationClient, ReleaseRequiresAssociatedState)
             client.Release());
 }
 
-TEST(AssociationClient, SuccessfulReleaseSendsRlrqReceivesRlreAndCloses)
+TEST(AssociationClient, SuccessfulReleaseSendsRlrqReceivesRlreAndKeepsChannelOpen)
 {
   FakeApduChannel channel;
   channel.nextReceive = MakeAareBytes(0);
@@ -890,12 +890,12 @@ TEST(AssociationClient, SuccessfulReleaseSendsRlrqReceivesRlreAndCloses)
   channel.nextReceive = MakeRlreBytes();
   ASSERT_EQ(dlms::association::AssociationStatus::Ok, client.Release());
 
-  EXPECT_EQ(dlms::association::AssociationState::Closed, client.State());
+  EXPECT_EQ(dlms::association::AssociationState::Open, client.State());
   EXPECT_FALSE(client.IsAssociated());
   EXPECT_EQ(2, channel.sendCalls);
   EXPECT_EQ(2, channel.receiveCalls);
-  EXPECT_EQ(1, channel.closeCalls);
-  EXPECT_FALSE(channel.open);
+  EXPECT_EQ(0, channel.closeCalls);
+  EXPECT_TRUE(channel.open);
   EXPECT_EQ(0u, client.Result().serverMaxReceivePduSize);
 
   dlms::apdu::AcseApdu sent = {};

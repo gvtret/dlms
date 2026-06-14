@@ -477,6 +477,20 @@ is read-only; attributes `2`-`6` honor the caller access mode and
 replace the stored buffer in-place when writable. IC defines no
 methods; `InvokeMethod` reports `MethodNotFound` for all method ids.
 
+`simple_objects.hpp` also exposes a partial Schedule IC `10`
+(`CosemScheduleObject`) with class version `0`. The constructors take
+the `entries` payload (array of Schedule_table_entry) as an encoded
+DLMS Data buffer prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` for `entries`, and an optional
+explicit version that is normalized to `MaxSupportedVersion` when out
+of range. Attribute `1` (logical_name) is read-only; attribute `2`
+(entries) honors the caller access mode and replaces the stored buffer
+in-place when writable. A setter exposes backend-driven refresh of
+entries regardless of access mode. Methods `1` `insert` and `2`
+`delete` dispatch application-defined schedule-entry mutation and are
+surfaced as `UnsupportedFeature`; other method ids report
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

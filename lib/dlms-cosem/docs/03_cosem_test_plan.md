@@ -360,6 +360,23 @@ TCP-UDP Setup tests:
   ids and clears method output (IC defines no methods);
 - TCP-UDP Setup normalizes versions above `MaxSupportedVersion`.
 
+Schedule tests:
+
+- Schedule exposes attributes `1` logical_name and `2` entries as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Schedule entries (`2`) writes succeed when the caller-selected
+  access mode permits writes and replace the stored buffer in-place;
+  writes report `AccessDenied` when the access mode is read-only,
+  leaving the stored buffer unchanged; the `SetEntries` setter exposes
+  backend-driven refresh regardless of access mode;
+- Schedule rejects writes to logical_name (`1`) with `AccessDenied`,
+  and reports `AttributeNotFound` for undefined attribute ids;
+- Schedule methods `1` `insert` and `2` `delete` report
+  `UnsupportedFeature` and clear method output; other method ids
+  report `MethodNotFound`;
+- Schedule normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

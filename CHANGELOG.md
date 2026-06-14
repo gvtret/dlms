@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.32.0 - 2026-06-15
+
+- Added Schedule IC `10` built-in object (`CosemScheduleObject`) with
+  class version `0`, exposing `entries` (array of
+  Schedule_table_entry) as an opaque encoded DLMS Data buffer prepared
+  by the caller.
+- Attribute `2` (entries) honors a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer in-place
+  when permitted); logical_name (`1`) is read-only. A setter exposes
+  backend-driven refresh of entries regardless of access mode.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Added Schedule methods `1` `insert` and `2` `delete` as explicit
+  `UnsupportedFeature` (application-defined schedule-entry mutation);
+  other method ids report `MethodNotFound`.
+
 ## 0.31.0 - 2026-06-15
 
 - Added TCP-UDP Setup IC `41` built-in object

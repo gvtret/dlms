@@ -4276,6 +4276,112 @@ const CosemByteBuffer& CosemTcpUdpSetupObject::InactivityTimeOut() const
   return inactivityTimeOut_;
 }
 
+namespace {
+constexpr std::uint16_t kScheduleClassId = 10u;
+constexpr std::uint8_t kScheduleEntriesAttributeId = 2u;
+constexpr std::uint8_t kScheduleInsertMethodId = 1u;
+constexpr std::uint8_t kScheduleDeleteMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemScheduleObject::MaxSupportedVersion;
+
+CosemScheduleObject::CosemScheduleObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& entries,
+  AttributeAccessMode entriesAccess)
+  : CosemScheduleObject(logicalName, entries, entriesAccess, kVersion0)
+{
+}
+
+CosemScheduleObject::CosemScheduleObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& entries,
+  AttributeAccessMode entriesAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kScheduleClassId,
+      NormalizeVersion(
+        version, CosemScheduleObject::MaxSupportedVersion),
+      logicalName))
+  , entries_(entries)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kScheduleEntriesAttributeId, entriesAccess);
+}
+
+CosemObjectDescriptor CosemScheduleObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemScheduleObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemScheduleObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kScheduleEntriesAttributeId:
+      output = entries_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemScheduleObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kScheduleEntriesAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      entries_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemScheduleObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  switch (methodId) {
+    case kScheduleInsertMethodId:
+    case kScheduleDeleteMethodId:
+      // Application-defined schedule entry mutation.
+      return CosemStatus::UnsupportedFeature;
+    default:
+      return CosemStatus::MethodNotFound;
+  }
+}
+
+const CosemByteBuffer& CosemScheduleObject::Entries() const
+{
+  return entries_;
+}
+
+void CosemScheduleObject::SetEntries(const CosemByteBuffer& value)
+{
+  entries_ = value;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

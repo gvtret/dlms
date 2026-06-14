@@ -205,10 +205,17 @@ concrete COSEM interface classes:
 class CosemDataObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemDataObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
     AttributeAccessMode valueAccess);
+  CosemDataObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& value,
+    AttributeAccessMode valueAccess,
+    std::uint8_t version);
 
   const CosemByteBuffer& Value() const;
   void SetValue(const CosemByteBuffer& value);
@@ -217,11 +224,19 @@ public:
 class CosemRegisterObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemRegisterObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
     const CosemByteBuffer& scalerUnit,
     AttributeAccessMode valueAccess);
+  CosemRegisterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& value,
+    const CosemByteBuffer& scalerUnit,
+    AttributeAccessMode valueAccess,
+    std::uint8_t version);
 
   const CosemByteBuffer& Value() const;
   const CosemByteBuffer& ScalerUnit() const;
@@ -232,6 +247,8 @@ public:
 class CosemClockObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemClockObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& time,
@@ -242,10 +259,23 @@ public:
     std::int8_t daylightSavingsDeviation,
     bool daylightSavingsEnabled,
     CosemClockBase clockBase);
+  CosemClockObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& time,
+    std::int16_t timeZone,
+    std::uint8_t status,
+    const CosemByteBuffer& daylightSavingsBegin,
+    const CosemByteBuffer& daylightSavingsEnd,
+    std::int8_t daylightSavingsDeviation,
+    bool daylightSavingsEnabled,
+    CosemClockBase clockBase,
+    std::uint8_t version);
 };
 ```
 
 The constructors create descriptors with class ids `1`, `3`, and `8`, version `0`.
+Each class exposes `MaxSupportedVersion`; constructors that accept `version`
+normalize values above the maximum to `MaxSupportedVersion`.
 Attribute `1` is read-only logical name. Attribute `2` is the value. Register
 attribute `3` is read-only scaler-unit. Methods are not supported in this
 increment.
@@ -262,6 +292,26 @@ is added.
 class-level helpers for its current composite attributes:
 
 ```cpp
+class CosemProfileGenericObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries);
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries,
+    std::uint8_t version);
+};
+
 CosemByteBuffer EncodeProfileGenericCaptureObject(
   const CosemCaptureObject& object);
 CosemStatus DecodeProfileGenericCaptureObject(
@@ -310,6 +360,13 @@ Range descriptor boundary values are stored as encoded simple DLMS Data bytes.
 The decoder validates the allowed simple data tags, including `date-time`,
 `date`, and `time`, but keeps the exact encoded value for the caller.
 
+Profile Generic descriptors use class version `1` by default. The explicit
+version constructor can publish version `0` when required by a specific meter
+model; values above `MaxSupportedVersion` are normalized. Version `0` exposes
+legacy methods `3` and `4`, `get_buffer_by_range` and `get_buffer_by_index`,
+as `UnsupportedFeature`. Version `1` keeps those method ids unavailable because
+the same behavior is represented by selective access.
+
 The same header also adds minimal discovery objects:
 
 ```cpp
@@ -324,9 +381,15 @@ public:
 class CosemSapAssignmentObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemSapAssignmentObject(
     const CosemLogicalName& logicalName,
     const std::vector<SapAssignment>& assignments);
+  CosemSapAssignmentObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<SapAssignment>& assignments,
+    std::uint8_t version);
 };
 
 CosemLogicalName CurrentAssociationLnName();
@@ -374,6 +437,46 @@ exposes attributes `1`, `2`, `8` and methods `1`-`4`; version `1+` may expose
 attribute `9`, `security_setup_reference`, when configured; version `2+`
 exposes attributes `10`, `11` and methods `5`, `6` for user-list handling.
 Unimplemented Association LN methods return `UnsupportedFeature`.
+
+SAP Assignment uses class version `0`; its explicit version constructor
+normalizes values above `MaxSupportedVersion`.
+
+Security setup is exposed by `CosemSecuritySetupObject`:
+
+```cpp
+class CosemSecuritySetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle);
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle,
+    std::uint8_t version);
+};
+```
+
+The default constructor publishes class version `1`, matching the implemented
+attribute and method surface. The explicit version constructors can publish an
+older descriptor version when required; values above `MaxSupportedVersion` are
+normalized. Version `0` exposes attributes `1` through `5` and methods `1`
+and `2`; version `1` also exposes attribute `6`, `certificates`, as a DLMS
+Data array. Without a certificate store backend the built-in object returns an
+empty array for attribute `6`. Version `1` exposes methods `1` through `8`.
+Implemented methods keep their existing runtime behavior: `security_activate`
+validates monotonic policy strengthening and `global_key_transfer` supports
+suite `0` key transfer through an installed mutable key store. Version `1`
+certificate and key agreement methods return `UnsupportedFeature` until
+implemented.
 
 Attribute `8` is `association_status`, encoded as DLMS Data `enum`. Attribute
 `9` is encoded as an xDLMS Data octet-string logical name. Attribute `10` is an

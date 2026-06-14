@@ -32,19 +32,19 @@ Status values:
 
 | IC | Name | Status | Notes |
 | --- | --- | --- | --- |
-| `1` | Data | Supported | `CosemDataObject` exposes logical name and value; built-in helpers cover logical device name and public invocation counter objects. |
-| `3` | Register | Supported | `CosemRegisterObject` exposes value and scaler/unit. |
+| `1` | Data | Supported | `CosemDataObject` exposes logical name and value, class version `0`, and a version-taking constructor normalized to `MaxSupportedVersion`; built-in helpers cover logical device name and public invocation counter objects. |
+| `3` | Register | Supported | `CosemRegisterObject` exposes value and scaler/unit, class version `0`, and a version-taking constructor normalized to `MaxSupportedVersion`. |
 | `4` | Extended Register | Planned | Needed for СПОДЭС/СПОДУС meter model coverage. |
 | `5` | Demand Register | Planned | Needed for demand and load-profile related parameters. |
 | `6` | Register Activation | Planned | Needed for tariff/register activation scenarios. |
-| `7` | Profile Generic | Partial | `CosemProfileGenericObject` exposes read-only profile attributes and class-level helpers for `buffer`, `capture_objects`, `sort_object`, range descriptor and entry descriptor composite encoding/decoding. Capture execution and journal schemas remain planned. |
-| `8` | Clock | Partial | `CosemClockObject` exposes documented clock attributes with read/write support where implemented; adjust/preset/shift methods are explicit unsupported features. |
+| `7` | Profile Generic | Partial | `CosemProfileGenericObject` defaults to class version `1`, allows explicit descriptor version selection up to `MaxSupportedVersion`, exposes version `0` legacy buffer methods `3`/`4` as unsupported features, and exposes read-only profile attributes plus class-level helpers for `buffer`, `capture_objects`, `sort_object`, range descriptor and entry descriptor composite encoding/decoding. Capture execution and journal schemas remain planned. |
+| `8` | Clock | Partial | `CosemClockObject` exposes class version `0` documented clock attributes with read/write support where implemented; adjust/preset/shift methods are explicit unsupported features. |
 | `9` | Script Table | Planned | Needed for control actions and scripts. |
 | `10` | Schedule | Planned | Needed for scheduled operations. |
 | `11` | Special Days Table | Planned | Needed for tariff calendars. |
 | `12` | Association SN | Application-provided | Framework currently focuses on LN referencing. |
 | `15` | Association LN | Partial | Built-in object supports caller-selected versions up to `3` with version-gated object list, association status, optional security setup reference, user-list/current-user attributes, explicit unsupported methods `1`-`6`, and class-level encode/decode helpers for `object_list` and access-right structures. Full HLS method execution and association-specific policy rebinding are incomplete. |
-| `17` | SAP Assignment | Supported | `CosemSapAssignmentObject` exists. |
+| `17` | SAP Assignment | Supported | `CosemSapAssignmentObject` exposes class version `0` and a version-taking constructor normalized to `MaxSupportedVersion`. |
 | `18` | Image Transfer | Planned | Needed for firmware/image update flows. |
 | `19` | IEC Local Port Setup | Planned | Needed for local optical-port setup. |
 | `20` | Activity Calendar | Planned | Needed for tariff and activity calendars. |
@@ -71,7 +71,7 @@ Status values:
 | `61` | Register Table | Planned | Needed for broader meter data tables. |
 | `62` | Compact Data | Planned | Needed for compact transfer support. |
 | `63` | Status Mapping | Planned | Needed for status word mapping. |
-| `64` | Security Setup | Partial | `CosemSecuritySetupObject` exposes logical name, encoded security policy, security suite and client/server system titles. `security_activate` enforces monotonic policy strengthening; key, certificate and key agreement methods return explicit unsupported status until implemented. |
+| `64` | Security Setup | Partial | `CosemSecuritySetupObject` defaults to class version `1`, allows explicit descriptor version selection up to `MaxSupportedVersion`, gates attribute `6` and methods `3`-`8` to version `1`, and exposes logical name, encoded security policy, security suite, client/server system titles and an empty `certificates` array when no certificate store is configured. `security_activate` enforces monotonic policy strengthening; suite `0` `global_key_transfer` is implemented through a mutable key store, while certificate/key agreement methods return explicit unsupported status until implemented. |
 | `65` | Parameter Monitor | Planned | Needed for parameter monitoring. |
 | `67` | Sensor Manager | Application-provided | No built-in implementation. |
 | `68` | Arbitrator | Application-provided | No built-in implementation. |

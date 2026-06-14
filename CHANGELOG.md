@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.17.0 - 2026-06-14
+
+- Added caller-selected descriptor version constructors and
+  `MaxSupportedVersion` constants for built-in Data, Register, Clock,
+  Profile Generic, SAP Assignment, and Security Setup COSEM objects.
+- Changed built-in Security Setup to publish class version `1` by default,
+  matching the implemented security attributes and key-transfer method surface.
+- Added version-gated method exposure for Profile Generic version `0` legacy
+  buffer methods and Security Setup version `0`/`1` method surfaces.
+- Added version-gated Security Setup version `1` certificates attribute support
+  as an encoded empty DLMS Data array when no certificate store is configured.
+- Fixed HDLC session-mode segmented inbound APDU handling so RR frames
+  acknowledge each accepted I-frame segment with the updated `N(R)` value.
+
 ## 0.16.2 - 2026-06-13
 
 - Fixed HDLC session teardown so owned HDLC/TCP clients perform the mandatory

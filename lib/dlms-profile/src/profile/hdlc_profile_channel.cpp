@@ -713,6 +713,11 @@ ProfileStatus HdlcProfileChannel::DecodeFrameToPendingApdu(
   ProfileStatus status =
     MapHdlcStatus(reassembler_.PushFrame(frame, completed, hasCompleted));
   if (status == ProfileStatus::NeedMoreData) {
+    status = MapHdlcStatus(session_.ReceiveFrame(frame));
+    if (status != ProfileStatus::Ok) {
+      reassembler_.Reset();
+      return status;
+    }
     const ProfileStatus rrStatus = SendSessionReceiveReady(true);
     return rrStatus == ProfileStatus::Ok ? ProfileStatus::NeedMoreData : rrStatus;
   }
@@ -721,8 +726,9 @@ ProfileStatus HdlcProfileChannel::DecodeFrameToPendingApdu(
     return status;
   }
 
-  status = MapHdlcStatus(session_.ReceiveFrame(completed));
+  status = MapHdlcStatus(session_.ReceiveFrame(frame));
   if (status != ProfileStatus::Ok) {
+    reassembler_.Reset();
     return status;
   }
 

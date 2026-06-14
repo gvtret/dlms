@@ -294,6 +294,18 @@ TEST(CosemDataObject, WritesValueAndRejectsUnsupportedMembers)
   EXPECT_TRUE(output.empty());
 }
 
+TEST(CosemDataObject, NormalizesRequestedVersion)
+{
+  dlms::cosem::CosemDataObject object(
+    MakeName(1u),
+    Bytes(0x12u, 0x34u),
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    7u);
+
+  EXPECT_EQ(dlms::cosem::CosemDataObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
+}
+
 TEST(CosemRegisterObject, ExposesDescriptorValueAndScalerUnit)
 {
   const dlms::cosem::CosemLogicalName name = MakeName(3u);
@@ -355,6 +367,19 @@ TEST(CosemRegisterObject, WritesValueAndRejectsUnsupportedMembers)
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(1u, updated, output));
   EXPECT_TRUE(output.empty());
+}
+
+TEST(CosemRegisterObject, NormalizesRequestedVersion)
+{
+  dlms::cosem::CosemRegisterObject object(
+    MakeName(3u),
+    Bytes(0x12u, 0x34u),
+    Bytes(0x02u, 0x03u),
+    dlms::cosem::AttributeAccessMode::ReadOnly,
+    7u);
+
+  EXPECT_EQ(dlms::cosem::CosemRegisterObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
 }
 
 TEST(CosemClockObject, ExposesClockAttributes)
@@ -503,6 +528,25 @@ TEST(CosemClockObject, RejectsInvalidWritesAndUnsupportedMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
             object.InvokeMethod(99u, Bytes(0x0Fu, 0x00u), output));
   EXPECT_TRUE(output.empty());
+}
+
+TEST(CosemClockObject, NormalizesRequestedVersion)
+{
+  dlms::cosem::CosemByteBuffer value(12u, 0x11u);
+  dlms::cosem::CosemClockObject object(
+    MakeName(8u),
+    value,
+    0,
+    0u,
+    value,
+    value,
+    0,
+    false,
+    dlms::cosem::CosemClockBase::NotDefined,
+    7u);
+
+  EXPECT_EQ(dlms::cosem::CosemClockObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
 }
 
 TEST(CosemProfileGenericObject, ExposesReadOnlyProfileAttributes)
@@ -922,6 +966,44 @@ TEST(CosemProfileGenericObject, RejectsWritesAndReportsUnsupportedMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(99u, output));
   EXPECT_TRUE(output.empty());
+}
+
+TEST(CosemProfileGenericObject, AcceptsExplicitVersion)
+{
+  std::vector<dlms::cosem::CosemByteBuffer> rows;
+  std::vector<dlms::cosem::CosemCaptureObject> captures;
+
+  dlms::cosem::CosemProfileGenericObject version0(
+    MakeName(7u),
+    rows,
+    captures,
+    60u,
+    100u,
+    0u);
+  dlms::cosem::CosemProfileGenericObject capped(
+    MakeName(7u),
+    rows,
+    captures,
+    60u,
+    100u,
+    7u);
+
+  EXPECT_EQ(0u, version0.Descriptor().key.version);
+  EXPECT_EQ(dlms::cosem::CosemProfileGenericObject::MaxSupportedVersion,
+            capped.Descriptor().key.version);
+
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+            version0.AccessRights().MethodAccess(3u));
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+            version0.AccessRights().MethodAccess(4u));
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::NoAccess,
+            capped.AccessRights().MethodAccess(3u));
+
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            version0.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            capped.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
 }
 
 TEST(SimpleObjects, WorkThroughObjectRegistryAccessChecks)
@@ -1428,6 +1510,18 @@ TEST(CosemSapAssignmentObject, ExposesDescriptorAndAssignments)
   EXPECT_EQ(expected, output);
 }
 
+TEST(CosemSapAssignmentObject, NormalizesRequestedVersion)
+{
+  std::vector<dlms::cosem::SapAssignment> assignments;
+  dlms::cosem::CosemSapAssignmentObject object(
+    dlms::cosem::SapAssignmentName(),
+    assignments,
+    7u);
+
+  EXPECT_EQ(dlms::cosem::CosemSapAssignmentObject::MaxSupportedVersion,
+            object.Descriptor().key.version);
+}
+
 TEST(DiscoveryObjects, RejectUnsupportedAttributesWritesAndMethods)
 {
   dlms::cosem::AssociationView view;
@@ -1529,7 +1623,8 @@ TEST(CosemSecuritySetupObject, ExposesDescriptorAndSecurityAttributes)
   const dlms::cosem::CosemObjectDescriptor descriptor =
     object.Descriptor();
   EXPECT_EQ(64u, descriptor.key.classId);
-  EXPECT_EQ(0u, descriptor.key.version);
+  EXPECT_EQ(dlms::cosem::CosemSecuritySetupObject::MaxSupportedVersion,
+            descriptor.key.version);
   EXPECT_EQ(dlms::cosem::SecuritySetupName(), descriptor.key.logicalName);
   EXPECT_EQ(0x30u, object.SecurityPolicy());
   EXPECT_EQ(0x01u, object.SecuritySuite());
@@ -1557,10 +1652,61 @@ TEST(CosemSecuritySetupObject, ExposesDescriptorAndSecurityAttributes)
             object.ReadAttribute(5u, output));
   EXPECT_EQ(EncodedOctetString(server), output);
 
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, output));
+  EXPECT_EQ(Bytes(0x01u, 0x00u), output);
+
   output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(99u, output));
   EXPECT_TRUE(output.empty());
+}
+
+TEST(CosemSecuritySetupObject, AcceptsExplicitVersion)
+{
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle client = {
+    {'C', 'L', 'I', 'E', 'N', 'T', '0', '1'}};
+  dlms::cosem::CosemSecuritySetupObject::SystemTitle server = {
+    {'S', 'E', 'R', 'V', 'E', 'R', '0', '1'}};
+
+  dlms::cosem::CosemSecuritySetupObject version0(
+    dlms::cosem::SecuritySetupName(),
+    0x30u,
+    0x01u,
+    client,
+    server,
+    static_cast<std::uint8_t>(0u));
+  dlms::cosem::CosemSecuritySetupObject capped(
+    dlms::cosem::SecuritySetupName(),
+    0x30u,
+    0x01u,
+    client,
+    server,
+    static_cast<std::uint8_t>(7u));
+
+  EXPECT_EQ(0u, version0.Descriptor().key.version);
+  EXPECT_EQ(dlms::cosem::CosemSecuritySetupObject::MaxSupportedVersion,
+            capped.Descriptor().key.version);
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+            version0.AccessRights().MethodAccess(1u));
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+            version0.AccessRights().MethodAccess(2u));
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::NoAccess,
+            version0.AccessRights().MethodAccess(3u));
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
+            version0.AccessRights().AttributeAccess(6u));
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::ReadOnly,
+            capped.AccessRights().AttributeAccess(6u));
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+            capped.AccessRights().MethodAccess(3u));
+
+  dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            version0.ReadAttribute(6u, output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            version0.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            capped.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
 }
 
 TEST(CosemSecuritySetupObject, ActivatesOnlyMonotonicSecurityPolicy)

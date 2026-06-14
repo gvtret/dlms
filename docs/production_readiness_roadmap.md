@@ -231,10 +231,18 @@ Data/Register/Association LN/SAP Assignment behavior, но не является
      unsupported statuses для методов `reply_to_HLS_authentication`,
      `change_HLS_secret`, `add_object`, `remove_object`; `0.15.0` переводит
      Association LN на caller-selected version-gated модель до версии `3` и
-     добавляет user-list/current-user surface для версии `2+`.
+     добавляет user-list/current-user surface для версии `2+`; `0.17.0`
+     добавляет caller-selected descriptor version constructors и
+     `MaxSupportedVersion` для Data, Register, Clock, Profile Generic,
+     SAP Assignment и Security Setup, а Security Setup по умолчанию публикует
+     версию `1`; Profile Generic v0 методы `3`/`4` и Security Setup v0/v1
+     методы gated по версии класса; Security Setup v1 attribute `6`
+     `certificates` возвращает пустой DLMS Data array без certificate-store
+     backend.
    - Остаются `associated_partners_id`, application context name,
      xDLMS context info, authentication mechanism name, secret handling и
-     выполнение HLS/object add/remove methods.
+     выполнение HLS/object add/remove methods и полноценный certificate-store
+     backend для Security Setup v1 attribute `certificates`.
 7. Push setup and initiative messages.
    - Push Setup IC `40` version handling.
    - Notification payload structures required by СПОДЭС/СПОДУС.

@@ -35,11 +35,15 @@ Phase 5 simple interface object tests:
 
 - Data object descriptor uses class id `1`, version `0`, and the configured
   logical name;
+- Data explicit version constructor normalizes values above
+  `MaxSupportedVersion`;
 - Data attribute `1` returns encoded logical-name bytes;
 - Data attribute `2` returns and writes the stored encoded value according to
   access rights;
 - Register object descriptor uses class id `3`, version `0`, and the
   configured logical name;
+- Register explicit version constructor normalizes values above
+  `MaxSupportedVersion`;
 - Register attribute `2` returns and writes the stored encoded value;
 - Register attribute `3` returns the stored scaler-unit bytes;
 - unsupported attributes return `AttributeNotFound`;
@@ -71,6 +75,8 @@ Phase 7 association and SAP object tests:
   not publish partial decoded output;
 - SAP Assignment descriptor uses class id `17`, version `0`, and OBIS
   `0.0.41.0.0.255` for the helper default;
+- SAP Assignment explicit version constructor normalizes values above
+  `MaxSupportedVersion`;
 - SAP Assignment attribute `2` returns an encoded array of SAP/name pairs;
 - logical-device name helper returns OBIS `0.0.42.0.0.255`;
 - writes are denied by registry access checks;
@@ -80,6 +86,8 @@ Clock object tests:
 
 - Clock descriptor uses class id `8`, version `0`, and the configured logical
   name;
+- Clock explicit version constructor normalizes values above
+  `MaxSupportedVersion`;
 - Clock attribute `1` returns encoded logical-name bytes;
 - Clock attributes `2`, `5`, and `6` return 12-byte date-time values wrapped as
   DLMS Data octet-strings;
@@ -112,6 +120,28 @@ Profile Generic composite attribute tests:
 - entry descriptor helpers encode/decode entry and selected-value ranges;
 - malformed range descriptors return `InvalidArgument` and do not publish
   partial decoded output.
+- Profile Generic default descriptor version is `1`;
+- Profile Generic explicit version constructor can publish version `0` and
+  normalizes values above `MaxSupportedVersion`;
+- Profile Generic version `0` exposes legacy methods `3` and `4` as
+  `UnsupportedFeature`;
+- Profile Generic version `1` does not expose legacy methods `3` and `4`;
+
+Security Setup tests:
+
+- Security Setup default descriptor version is
+  `CosemSecuritySetupObject::MaxSupportedVersion`;
+- Security Setup explicit version constructor can publish version `0` and
+  normalizes values above `MaxSupportedVersion`;
+- Security Setup version `1` exposes attribute `6`, `certificates`, as an
+  encoded DLMS Data array;
+- Security Setup version `0` does not expose attribute `6`;
+- Security Setup version `0` exposes methods `1` and `2` only;
+- Security Setup version `1` exposes methods `1` through `8`;
+- Security Setup `security_activate` enforces monotonic policy strengthening;
+- Security Setup suite `0` `global_key_transfer` unwraps and installs keys
+  through a mutable key store;
+- unsupported Security Setup methods report `UnsupportedFeature`.
 
 ## 2. Integration Tests
 

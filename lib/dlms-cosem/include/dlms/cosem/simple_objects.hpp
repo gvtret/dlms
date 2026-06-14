@@ -14,10 +14,17 @@ namespace cosem {
 class CosemDataObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemDataObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
     AttributeAccessMode valueAccess);
+  CosemDataObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& value,
+    AttributeAccessMode valueAccess,
+    std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
@@ -44,11 +51,19 @@ private:
 class CosemRegisterObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemRegisterObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
     const CosemByteBuffer& scalerUnit,
     AttributeAccessMode valueAccess);
+  CosemRegisterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& value,
+    const CosemByteBuffer& scalerUnit,
+    AttributeAccessMode valueAccess,
+    std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
@@ -88,6 +103,8 @@ enum class CosemClockBase
 class CosemClockObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemClockObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& time,
@@ -98,6 +115,17 @@ public:
     std::int8_t daylightSavingsDeviation,
     bool daylightSavingsEnabled,
     CosemClockBase clockBase);
+  CosemClockObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& time,
+    std::int16_t timeZone,
+    std::uint8_t status,
+    const CosemByteBuffer& daylightSavingsBegin,
+    const CosemByteBuffer& daylightSavingsEnd,
+    std::int8_t daylightSavingsDeviation,
+    bool daylightSavingsEnabled,
+    CosemClockBase clockBase,
+    std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
@@ -198,12 +226,21 @@ CosemStatus DecodeProfileGenericEntryDescriptor(
 class CosemProfileGenericObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
   CosemProfileGenericObject(
     const CosemLogicalName& logicalName,
     const std::vector<CosemByteBuffer>& bufferRows,
     const std::vector<CosemCaptureObject>& captureObjects,
     std::uint32_t capturePeriod,
     std::uint32_t profileEntries);
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries,
+    std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
@@ -338,9 +375,15 @@ private:
 class CosemSapAssignmentObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
   CosemSapAssignmentObject(
     const CosemLogicalName& logicalName,
     const std::vector<SapAssignment>& assignments);
+  CosemSapAssignmentObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<SapAssignment>& assignments,
+    std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
@@ -366,6 +409,8 @@ private:
 class CosemSecuritySetupObject : public ICosemObject
 {
 public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
   typedef std::array<std::uint8_t, 8u> SystemTitle;
 
   CosemSecuritySetupObject(
@@ -374,6 +419,13 @@ public:
     std::uint8_t securitySuite,
     const SystemTitle& clientSystemTitle,
     const SystemTitle& serverSystemTitle);
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle,
+    std::uint8_t version);
 
   CosemSecuritySetupObject(
     const CosemLogicalName& logicalName,
@@ -382,6 +434,14 @@ public:
     const SystemTitle& clientSystemTitle,
     const SystemTitle& serverSystemTitle,
     dlms::security::IMutableKeyStore* keyStore);
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle,
+    dlms::security::IMutableKeyStore* keyStore,
+    std::uint8_t version);
 
   CosemSecuritySetupObject(
     const CosemLogicalName& logicalName,
@@ -391,6 +451,15 @@ public:
     const SystemTitle& serverSystemTitle,
     dlms::security::IMutableKeyStore* keyStore,
     dlms::security::IInvocationCounterResetPolicy* counterResetPolicy);
+  CosemSecuritySetupObject(
+    const CosemLogicalName& logicalName,
+    std::uint8_t securityPolicy,
+    std::uint8_t securitySuite,
+    const SystemTitle& clientSystemTitle,
+    const SystemTitle& serverSystemTitle,
+    dlms::security::IMutableKeyStore* keyStore,
+    dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
+    std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;

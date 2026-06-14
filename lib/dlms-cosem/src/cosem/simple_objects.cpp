@@ -38,6 +38,8 @@ constexpr std::uint8_t kProfileEntriesInUseAttributeId = 7u;
 constexpr std::uint8_t kProfileProfileEntriesAttributeId = 8u;
 constexpr std::uint8_t kProfileResetMethodId = 1u;
 constexpr std::uint8_t kProfileCaptureMethodId = 2u;
+constexpr std::uint8_t kProfileGetBufferByRangeMethodId = 3u;
+constexpr std::uint8_t kProfileGetBufferByIndexMethodId = 4u;
 constexpr std::uint8_t kAssociationStatusAttributeId = 8u;
 constexpr std::uint8_t kAssociationSecuritySetupReferenceAttributeId = 9u;
 constexpr std::uint8_t kAssociationUserListAttributeId = 10u;
@@ -52,11 +54,13 @@ constexpr std::uint8_t kSecurityPolicyAttributeId = 2u;
 constexpr std::uint8_t kSecuritySuiteAttributeId = 3u;
 constexpr std::uint8_t kClientSystemTitleAttributeId = 4u;
 constexpr std::uint8_t kServerSystemTitleAttributeId = 5u;
+constexpr std::uint8_t kSecurityCertificatesAttributeId = 6u;
 constexpr std::uint8_t kSecurityActivateMethodId = 1u;
 constexpr std::uint8_t kGlobalKeyTransferMethodId = 2u;
 constexpr std::uint8_t kVersion0 = 0u;
 constexpr std::uint8_t kAssociationLnMaxVersion = 3u;
 constexpr std::uint8_t kProfileGenericVersion = 1u;
+constexpr std::uint8_t kSecuritySetupVersion = 1u;
 constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
 constexpr std::uint8_t kNullDataTag = 0x00u;
@@ -675,6 +679,16 @@ std::uint8_t NormalizeAssociationLnVersion(std::uint8_t version)
 {
   if (version > kAssociationLnMaxVersion) {
     return kAssociationLnMaxVersion;
+  }
+  return version;
+}
+
+std::uint8_t NormalizeVersion(
+  std::uint8_t version,
+  std::uint8_t maxSupportedVersion)
+{
+  if (version > maxSupportedVersion) {
+    return maxSupportedVersion;
   }
   return version;
 }
@@ -1306,11 +1320,25 @@ CosemStatus DecodeAssociationObjectList(
   return CosemStatus::Ok;
 }
 
+const std::uint8_t CosemDataObject::MaxSupportedVersion;
+
 CosemDataObject::CosemDataObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& value,
   AttributeAccessMode valueAccess)
-  : descriptor_(MakeDescriptor(kDataClassId, logicalName))
+  : CosemDataObject(logicalName, value, valueAccess, kVersion0)
+{
+}
+
+CosemDataObject::CosemDataObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& value,
+  AttributeAccessMode valueAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kDataClassId,
+      NormalizeVersion(version, CosemDataObject::MaxSupportedVersion),
+      logicalName))
   , value_(value)
 {
   rights_.SetAttributeAccess(
@@ -1380,12 +1408,32 @@ void CosemDataObject::SetValue(const CosemByteBuffer& value)
   value_ = value;
 }
 
+const std::uint8_t CosemRegisterObject::MaxSupportedVersion;
+
 CosemRegisterObject::CosemRegisterObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& value,
   const CosemByteBuffer& scalerUnit,
   AttributeAccessMode valueAccess)
-  : descriptor_(MakeDescriptor(kRegisterClassId, logicalName))
+  : CosemRegisterObject(
+      logicalName,
+      value,
+      scalerUnit,
+      valueAccess,
+      kVersion0)
+{
+}
+
+CosemRegisterObject::CosemRegisterObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& value,
+  const CosemByteBuffer& scalerUnit,
+  AttributeAccessMode valueAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kRegisterClassId,
+      NormalizeVersion(version, CosemRegisterObject::MaxSupportedVersion),
+      logicalName))
   , value_(value)
   , scalerUnit_(scalerUnit)
 {
@@ -1475,6 +1523,8 @@ void CosemRegisterObject::SetScalerUnit(
   scalerUnit_ = scalerUnit;
 }
 
+const std::uint8_t CosemClockObject::MaxSupportedVersion;
+
 CosemClockObject::CosemClockObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& time,
@@ -1485,7 +1535,35 @@ CosemClockObject::CosemClockObject(
   std::int8_t daylightSavingsDeviation,
   bool daylightSavingsEnabled,
   CosemClockBase clockBase)
-  : descriptor_(MakeDescriptor(kClockClassId, logicalName))
+  : CosemClockObject(
+      logicalName,
+      time,
+      timeZone,
+      status,
+      daylightSavingsBegin,
+      daylightSavingsEnd,
+      daylightSavingsDeviation,
+      daylightSavingsEnabled,
+      clockBase,
+      kVersion0)
+{
+}
+
+CosemClockObject::CosemClockObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& time,
+  std::int16_t timeZone,
+  std::uint8_t status,
+  const CosemByteBuffer& daylightSavingsBegin,
+  const CosemByteBuffer& daylightSavingsEnd,
+  std::int8_t daylightSavingsDeviation,
+  bool daylightSavingsEnabled,
+  CosemClockBase clockBase,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kClockClassId,
+      NormalizeVersion(version, CosemClockObject::MaxSupportedVersion),
+      logicalName))
   , time_(time)
   , timeZone_(timeZone)
   , status_(status)
@@ -1725,15 +1803,34 @@ CosemClockBase CosemClockObject::ClockBase() const
   return clockBase_;
 }
 
+const std::uint8_t CosemProfileGenericObject::MaxSupportedVersion;
+
 CosemProfileGenericObject::CosemProfileGenericObject(
   const CosemLogicalName& logicalName,
   const std::vector<CosemByteBuffer>& bufferRows,
   const std::vector<CosemCaptureObject>& captureObjects,
   std::uint32_t capturePeriod,
   std::uint32_t profileEntries)
+  : CosemProfileGenericObject(
+      logicalName,
+      bufferRows,
+      captureObjects,
+      capturePeriod,
+      profileEntries,
+      kProfileGenericVersion)
+{
+}
+
+CosemProfileGenericObject::CosemProfileGenericObject(
+  const CosemLogicalName& logicalName,
+  const std::vector<CosemByteBuffer>& bufferRows,
+  const std::vector<CosemCaptureObject>& captureObjects,
+  std::uint32_t capturePeriod,
+  std::uint32_t profileEntries,
+  std::uint8_t version)
   : descriptor_(MakeDescriptor(
       kProfileGenericClassId,
-      kProfileGenericVersion,
+      NormalizeVersion(version, CosemProfileGenericObject::MaxSupportedVersion),
       logicalName))
   , bufferRows_(bufferRows)
   , captureObjects_(captureObjects)
@@ -1766,6 +1863,14 @@ CosemProfileGenericObject::CosemProfileGenericObject(
     AttributeAccessMode::ReadOnly);
   rights_.SetMethodAccess(kProfileResetMethodId, MethodAccessMode::Access);
   rights_.SetMethodAccess(kProfileCaptureMethodId, MethodAccessMode::Access);
+  if (descriptor_.key.version == 0u) {
+    rights_.SetMethodAccess(
+      kProfileGetBufferByRangeMethodId,
+      MethodAccessMode::Access);
+    rights_.SetMethodAccess(
+      kProfileGetBufferByIndexMethodId,
+      MethodAccessMode::Access);
+  }
 }
 
 CosemObjectDescriptor CosemProfileGenericObject::Descriptor() const
@@ -1859,6 +1964,11 @@ CosemStatus CosemProfileGenericObject::InvokeMethod(
   output.clear();
   if (methodId == kProfileResetMethodId ||
       methodId == kProfileCaptureMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  if (descriptor_.key.version == 0u &&
+      methodId >= kProfileGetBufferByRangeMethodId &&
+      methodId <= kProfileGetBufferByIndexMethodId) {
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;
@@ -2120,10 +2230,23 @@ CosemAssociationUser CosemAssociationLnObject::CurrentUser() const
   return currentUser_;
 }
 
+const std::uint8_t CosemSapAssignmentObject::MaxSupportedVersion;
+
 CosemSapAssignmentObject::CosemSapAssignmentObject(
   const CosemLogicalName& logicalName,
   const std::vector<SapAssignment>& assignments)
-  : descriptor_(MakeDescriptor(kSapAssignmentClassId, logicalName))
+  : CosemSapAssignmentObject(logicalName, assignments, kVersion0)
+{
+}
+
+CosemSapAssignmentObject::CosemSapAssignmentObject(
+  const CosemLogicalName& logicalName,
+  const std::vector<SapAssignment>& assignments,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSapAssignmentClassId,
+      NormalizeVersion(version, CosemSapAssignmentObject::MaxSupportedVersion),
+      logicalName))
   , assignments_(assignments)
 {
   rights_.SetAttributeAccess(
@@ -2189,6 +2312,8 @@ std::vector<SapAssignment> CosemSapAssignmentObject::Assignments() const
   return assignments_;
 }
 
+const std::uint8_t CosemSecuritySetupObject::MaxSupportedVersion;
+
 CosemSecuritySetupObject::CosemSecuritySetupObject(
   const CosemLogicalName& logicalName,
   std::uint8_t securityPolicy,
@@ -2201,7 +2326,26 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
       securitySuite,
       clientSystemTitle,
       serverSystemTitle,
-      0)
+      0,
+      kSecuritySetupVersion)
+{
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle,
+  std::uint8_t version)
+  : CosemSecuritySetupObject(
+      logicalName,
+      securityPolicy,
+      securitySuite,
+      clientSystemTitle,
+      serverSystemTitle,
+      0,
+      version)
 {
 }
 
@@ -2219,7 +2363,28 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
       clientSystemTitle,
       serverSystemTitle,
       keyStore,
-      0)
+      0,
+      kSecuritySetupVersion)
+{
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle,
+  dlms::security::IMutableKeyStore* keyStore,
+  std::uint8_t version)
+  : CosemSecuritySetupObject(
+      logicalName,
+      securityPolicy,
+      securitySuite,
+      clientSystemTitle,
+      serverSystemTitle,
+      keyStore,
+      0,
+      version)
 {
 }
 
@@ -2231,7 +2396,31 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
   const SystemTitle& serverSystemTitle,
   dlms::security::IMutableKeyStore* keyStore,
   dlms::security::IInvocationCounterResetPolicy* counterResetPolicy)
-  : descriptor_(MakeDescriptor(kSecuritySetupClassId, logicalName))
+  : CosemSecuritySetupObject(
+      logicalName,
+      securityPolicy,
+      securitySuite,
+      clientSystemTitle,
+      serverSystemTitle,
+      keyStore,
+      counterResetPolicy,
+      kSecuritySetupVersion)
+{
+}
+
+CosemSecuritySetupObject::CosemSecuritySetupObject(
+  const CosemLogicalName& logicalName,
+  std::uint8_t securityPolicy,
+  std::uint8_t securitySuite,
+  const SystemTitle& clientSystemTitle,
+  const SystemTitle& serverSystemTitle,
+  dlms::security::IMutableKeyStore* keyStore,
+  dlms::security::IInvocationCounterResetPolicy* counterResetPolicy,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSecuritySetupClassId,
+      NormalizeVersion(version, CosemSecuritySetupObject::MaxSupportedVersion),
+      logicalName))
   , securityPolicy_(securityPolicy)
   , securitySuite_(securitySuite)
   , clientSystemTitle_(clientSystemTitle)
@@ -2254,8 +2443,15 @@ CosemSecuritySetupObject::CosemSecuritySetupObject(
   rights_.SetAttributeAccess(
     kServerSystemTitleAttributeId,
     AttributeAccessMode::ReadOnly);
+  if (descriptor_.key.version >= 1u) {
+    rights_.SetAttributeAccess(
+      kSecurityCertificatesAttributeId,
+      AttributeAccessMode::ReadOnly);
+  }
 
-  for (std::uint8_t methodId = 1u; methodId <= 8u; ++methodId) {
+  const std::uint8_t lastMethodId =
+    descriptor_.key.version == 0u ? kGlobalKeyTransferMethodId : 8u;
+  for (std::uint8_t methodId = 1u; methodId <= lastMethodId; ++methodId) {
     rights_.SetMethodAccess(methodId, MethodAccessMode::Access);
   }
 }
@@ -2304,6 +2500,12 @@ CosemStatus CosemSecuritySetupObject::ReadAttribute(
       kSystemTitleSize);
     return CosemStatus::Ok;
   }
+  if (attributeId == kSecurityCertificatesAttributeId &&
+      descriptor_.key.version >= 1u) {
+    output.clear();
+    AppendArrayHeader(output, 0u);
+    return CosemStatus::Ok;
+  }
   output.clear();
   return CosemStatus::AttributeNotFound;
 }
@@ -2317,7 +2519,9 @@ CosemStatus CosemSecuritySetupObject::WriteAttribute(
       || attributeId == kSecurityPolicyAttributeId
       || attributeId == kSecuritySuiteAttributeId
       || attributeId == kClientSystemTitleAttributeId
-      || attributeId == kServerSystemTitleAttributeId) {
+      || attributeId == kServerSystemTitleAttributeId
+      || (descriptor_.key.version >= 1u &&
+          attributeId == kSecurityCertificatesAttributeId)) {
     return CosemStatus::AccessDenied;
   }
   return CosemStatus::AttributeNotFound;
@@ -2446,7 +2650,9 @@ CosemStatus CosemSecuritySetupObject::InvokeMethod(
     }
     return CosemStatus::Ok;
   }
-  if (methodId > kSecurityActivateMethodId && methodId <= 8u) {
+  if (descriptor_.key.version >= 1u &&
+      methodId > kGlobalKeyTransferMethodId &&
+      methodId <= 8u) {
     output.clear();
     return CosemStatus::UnsupportedFeature;
   }

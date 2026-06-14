@@ -121,6 +121,7 @@ for mandatory server model discovery:
 
 - Association LN, class id `15`, maximum supported version `3`;
 - SAP Assignment, class id `17`, version `0`;
+- Security Setup, class id `64`, maximum supported version `1`;
 - Logical Device Name as a Data object at OBIS `0.0.42.0.0.255`.
 
 Rules:
@@ -156,6 +157,13 @@ Rules:
   name as an octet-string;
 - the objects are read-only in this increment;
 - SAP `connect_logical_device` remains out of scope.
+- Security Setup publishes version `1` by default, allows caller-selected
+  descriptor version up to `MaxSupportedVersion`, exposes attributes `1`
+  through `5` for all supported versions, exposes version `1` attribute `6`
+  as an encoded certificates array, implements `security_activate` and suite `0`
+  `global_key_transfer`, exposes only methods `1` and `2` for version `0`,
+  exposes methods `1` through `8` for version `1`, and returns explicit
+  unsupported status for unimplemented version `1` security methods.
 
 The encoded byte layout is intentionally produced inside `dlms-cosem` without
 depending on `dlms-apdu`; it follows the same xDLMS Data tag values used by the

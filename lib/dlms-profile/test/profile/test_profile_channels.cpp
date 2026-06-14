@@ -93,6 +93,17 @@ dlms::hdlc::HdlcSessionOptions MakeSessionOptions(
   return options;
 }
 
+std::uint8_t MakeInformationControl(
+  std::uint8_t sendSequence,
+  std::uint8_t receiveSequence,
+  bool pollFinal)
+{
+  return static_cast<std::uint8_t>(
+    ((sendSequence & 0x07u) << 1u) |
+    (pollFinal ? 0x10u : 0x00u) |
+    ((receiveSequence & 0x07u) << 5u));
+}
+
 dlms::hdlc::HdlcStreamDecoderOptions MakeStreamDecoderOptions()
 {
   dlms::hdlc::HdlcStreamDecoderOptions options;
@@ -927,7 +938,11 @@ TEST(HdlcProfileChannelTest, SessionModeReassemblesSegmentedInformation)
     frame.segmented = frames[i].segmented;
     frame.destination = frames[i].destination;
     frame.source = frames[i].source;
-    frame.control = frames[i].control;
+    ASSERT_EQ(
+      dlms::hdlc::HdlcStatus::Ok,
+      dlms::hdlc::HdlcControl::Decode(
+        MakeInformationControl(static_cast<std::uint8_t>(i), 0u, true),
+        frame.control));
     frame.informationData = &frames[i].information[0];
     frame.informationSize = frames[i].information.size();
     std::vector<std::uint8_t> encoded;
@@ -941,7 +956,24 @@ TEST(HdlcProfileChannelTest, SessionModeReassemblesSegmentedInformation)
   std::vector<std::uint8_t> received;
   ASSERT_EQ(ProfileStatus::Ok, channel.ReceiveApdu(received));
   EXPECT_EQ(apdu, received);
-  ASSERT_EQ(2u, stream.Writes().size());
+  ASSERT_EQ(frames.size(), stream.Writes().size());
+  for (std::size_t i = 1u; i < stream.Writes().size(); ++i) {
+    dlms::hdlc::HdlcFrameBuffer rr;
+    ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok,
+              dlms::hdlc::DecodeFrame(&stream.Writes()[i][0],
+                                      stream.Writes()[i].size(),
+                                      dlms::hdlc::DefaultHdlcCodecLimits(),
+                                      rr));
+    dlms::hdlc::HdlcSupervisoryKind kind =
+      dlms::hdlc::HdlcSupervisoryKind::Reject;
+    ASSERT_EQ(dlms::hdlc::HdlcFrameKind::Supervisory,
+              rr.control.FrameKind());
+    ASSERT_EQ(dlms::hdlc::HdlcStatus::Ok,
+              rr.control.SupervisoryKind(kind));
+    EXPECT_EQ(dlms::hdlc::HdlcSupervisoryKind::ReceiveReady, kind);
+    EXPECT_EQ(static_cast<std::uint8_t>(i & 0x07u),
+              rr.control.ReceiveSequence());
+  }
 }
 
 TEST(ProfileChannels, InvalidArgumentsAreRejected)

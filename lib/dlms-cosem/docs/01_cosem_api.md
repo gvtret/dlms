@@ -505,6 +505,18 @@ backend-driven refresh of entries regardless of access mode. Methods
 special-day entry mutation and are surfaced as `UnsupportedFeature`;
 other method ids report `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Single Action Schedule IC
+`22` (`CosemSingleActionScheduleObject`) with class version `0`. The
+constructors take the `executed_script`, `type` and `execution_time`
+payloads as encoded DLMS Data buffers prepared by the caller, the
+logical name, a caller-selected `AttributeAccessMode` shared by the
+mutable attributes (`2`-`4`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name) is read-only; attributes `2`-`4` honor the caller
+access mode and replace the stored buffer in-place when writable. IC
+defines no methods; `InvokeMethod` reports `MethodNotFound` for all
+method ids.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

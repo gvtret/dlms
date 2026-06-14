@@ -988,6 +988,26 @@ PRIME PLC MAC Address Setup tests:
 - PRIME PLC MAC Address Setup normalizes versions above
   `MaxSupportedVersion`.
 
+PRIME PLC Application Identification tests:
+
+- PRIME PLC Application Identification exposes attributes `1`
+  logical_name and `2` application_identifier as the encoded
+  DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- PRIME PLC Application Identification mutable attribute (`2`)
+  writes succeed when the caller-selected access mode permits
+  writes and replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving
+  the stored buffer unchanged;
+- PRIME PLC Application Identification rejects writes to
+  logical_name (`1`) with `AccessDenied`, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- PRIME PLC Application Identification `InvokeMethod` reports
+  `MethodNotFound` for every method id and clears method
+  output;
+- PRIME PLC Application Identification normalizes versions
+  above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

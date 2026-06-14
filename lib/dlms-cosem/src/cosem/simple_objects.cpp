@@ -10010,6 +10010,115 @@ CosemPrimePlcMacAddressSetupObject::MacAddress() const
   return macAddress_;
 }
 
+namespace {
+constexpr std::uint16_t kPrimePlcApplicationIdentificationClassId = 85u;
+constexpr std::uint8_t kPrimePlcApplicationIdentificationAppIdId = 2u;
+} // namespace
+
+const std::uint8_t
+  CosemPrimePlcApplicationIdentificationObject::MaxSupportedVersion;
+
+CosemPrimePlcApplicationIdentificationObject::
+  CosemPrimePlcApplicationIdentificationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& applicationIdentifier,
+    AttributeAccessMode mutableAccess)
+  : CosemPrimePlcApplicationIdentificationObject(
+      logicalName, applicationIdentifier, mutableAccess,
+      CosemPrimePlcApplicationIdentificationObject::
+        MaxSupportedVersion)
+{
+}
+
+CosemPrimePlcApplicationIdentificationObject::
+  CosemPrimePlcApplicationIdentificationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& applicationIdentifier,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPrimePlcApplicationIdentificationClassId,
+      NormalizeVersion(
+        version,
+        CosemPrimePlcApplicationIdentificationObject::
+          MaxSupportedVersion),
+      logicalName))
+  , applicationIdentifier_(applicationIdentifier)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kPrimePlcApplicationIdentificationAppIdId, mutableAccess);
+}
+
+CosemObjectDescriptor
+CosemPrimePlcApplicationIdentificationObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemPrimePlcApplicationIdentificationObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus
+CosemPrimePlcApplicationIdentificationObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPrimePlcApplicationIdentificationAppIdId:
+      output = applicationIdentifier_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus
+CosemPrimePlcApplicationIdentificationObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kPrimePlcApplicationIdentificationAppIdId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      applicationIdentifier_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus
+CosemPrimePlcApplicationIdentificationObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IC v0 defines no methods.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcApplicationIdentificationObject::ApplicationIdentifier()
+  const
+{
+  return applicationIdentifier_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

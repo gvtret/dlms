@@ -2516,6 +2516,42 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPrimePlcApplicationIdentificationObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemPrimePlcApplicationIdentificationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& applicationIdentifier,
+    AttributeAccessMode mutableAccess);
+  CosemPrimePlcApplicationIdentificationObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& applicationIdentifier,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& ApplicationIdentifier() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer applicationIdentifier_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

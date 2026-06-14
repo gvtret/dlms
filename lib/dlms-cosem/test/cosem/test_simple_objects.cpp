@@ -9426,4 +9426,116 @@ TEST(CosemPrimePlcMacAddressSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+dlms::cosem::CosemByteBuffer SamplePrimePlcApplicationIdentifier()
+{
+  // octet-string of length 8 (PRIME application identifier)
+  return BytesFromList({0x09u, 0x08u, 0x01u, 0x02u, 0x03u, 0x04u,
+                        0x05u, 0x06u, 0x07u, 0x08u});
+}
+
+dlms::cosem::CosemPrimePlcApplicationIdentificationObject
+MakePrimePlcApplicationIdentificationObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const dlms::cosem::CosemByteBuffer& appId,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemPrimePlcApplicationIdentificationObject(
+    name, appId, access);
+}
+
+} // namespace
+
+TEST(CosemPrimePlcApplicationIdentificationObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer appId =
+    SamplePrimePlcApplicationIdentifier();
+  dlms::cosem::CosemPrimePlcApplicationIdentificationObject object =
+    MakePrimePlcApplicationIdentificationObject(
+      name, appId, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(85u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcApplicationIdentificationObject::
+      MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(appId, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(3u, out));
+}
+
+TEST(CosemPrimePlcApplicationIdentificationObject,
+     MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer appId =
+    SamplePrimePlcApplicationIdentifier();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x09u, 0x04u, 0xDEu, 0xADu, 0xBEu, 0xEFu});
+
+  dlms::cosem::CosemPrimePlcApplicationIdentificationObject writable =
+    MakePrimePlcApplicationIdentificationObject(
+      name, appId, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, replacement));
+  EXPECT_EQ(replacement, writable.ApplicationIdentifier());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemPrimePlcApplicationIdentificationObject readOnly =
+    MakePrimePlcApplicationIdentificationObject(
+      name, appId, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(appId, readOnly.ApplicationIdentifier());
+}
+
+TEST(CosemPrimePlcApplicationIdentificationObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcApplicationIdentificationObject object =
+    MakePrimePlcApplicationIdentificationObject(
+      name, SamplePrimePlcApplicationIdentifier(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemPrimePlcApplicationIdentificationObject,
+     NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcApplicationIdentificationObject object(
+    name, SamplePrimePlcApplicationIdentifier(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcApplicationIdentificationObject::
+      MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

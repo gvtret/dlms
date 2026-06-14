@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.64.0 - 2026-06-15
+
+- Added PRIME PLC Application Identification IC `85` built-in
+  object (`CosemPrimePlcApplicationIdentificationObject`) with
+  class version `0`, exposing `application_identifier`
+  (octet-string) as an opaque encoded DLMS Data buffer prepared
+  by the caller.
+- Attribute `2` uses a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IC v0 defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for every method id and clears method output.
+- With Application Identification the PRIME PLC family is now
+  fully covered (ICs `81`-`85` all have built-in opaque-buffer
+  objects).
+
 ## 0.63.0 - 2026-06-15
 
 - Added PRIME PLC MAC Address Setup IC `84` built-in object

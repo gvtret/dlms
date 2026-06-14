@@ -137,6 +137,20 @@ Extended Register tests:
   clears method output; other method ids report `MethodNotFound`;
 - Extended Register normalizes versions above `MaxSupportedVersion`.
 
+Demand Register tests:
+
+- Demand Register exposes attributes `1` logical_name, `2` current_average_value,
+  `3` last_average_value, `4` scaler_unit, `5` status, `6` capture_time,
+  `7` start_time_current, `8` period (encoded as DLMS Data
+  `double-long-unsigned`) and `9` number_of_periods (encoded as DLMS Data
+  `long-unsigned`);
+- Demand Register rejects writes to every defined attribute with
+  `AccessDenied` and returns `AttributeNotFound` for undefined attribute ids;
+- Demand Register methods `1` `reset` and `2` `next_period` report
+  `UnsupportedFeature` and clear method output; other method ids report
+  `MethodNotFound`;
+- Demand Register normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.20.0 - 2026-06-15
+
+- Added Demand Register IC `5` built-in object
+  (`CosemDemandRegisterObject`) with class version `0`, exposing attributes
+  `1` logical_name, `2` current_average_value, `3` last_average_value,
+  `4` scaler_unit, `5` status, `6` capture_time, `7` start_time_current,
+  `8` period (encoded as DLMS Data `double-long-unsigned`) and
+  `9` number_of_periods (encoded as DLMS Data `long-unsigned`). All
+  attributes are read-only.
+- Added explicit `MaxSupportedVersion` constant and version-taking constructor
+  for Demand Register; constructors normalize versions above the maximum.
+- Added Demand Register methods `1` `reset` and `2` `next_period` as explicit
+  `UnsupportedFeature` (application-defined semantics); other method ids
+  report `MethodNotFound`.
+
 ## 0.19.0 - 2026-06-15
 
 - Added Extended Register IC `4` built-in object

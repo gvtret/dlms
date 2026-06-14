@@ -290,6 +290,21 @@ capture_time (DLMS date-time octet-string). Method `1` `reset` returns
 `UnsupportedFeature` (application-defined semantics); other method ids report
 `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Demand Register IC `5`
+(`CosemDemandRegisterObject`) with class version `0`. The constructors take
+the current_average_value, last_average_value, scaler_unit, status,
+capture_time and start_time_current payloads as encoded DLMS Data buffers and
+accept the `period` (seconds, encoded as DLMS Data `double-long-unsigned`)
+and `number_of_periods` (encoded as DLMS Data `long-unsigned`) numeric values.
+Attribute `1` is read-only logical name; attributes `2` and `3` are read-only
+current/last average values; attribute `4` is read-only scaler-unit;
+attribute `5` is read-only status; attribute `6` is read-only capture_time;
+attribute `7` is read-only start_time_current; attribute `8` is read-only
+period (encoded on read); attribute `9` is read-only number_of_periods
+(encoded on read). Methods `1` `reset` and `2` `next_period` return explicit
+`UnsupportedFeature` (application-defined semantics); other method ids report
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

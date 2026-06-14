@@ -1695,6 +1695,277 @@ void CosemExtendedRegisterObject::SetCaptureTime(
   captureTime_ = captureTime;
 }
 
+namespace {
+constexpr std::uint16_t kDemandRegisterClassId = 5u;
+constexpr std::uint8_t kDemandRegisterCurrentAvgAttributeId = 2u;
+constexpr std::uint8_t kDemandRegisterLastAvgAttributeId = 3u;
+constexpr std::uint8_t kDemandRegisterScalerUnitAttributeId = 4u;
+constexpr std::uint8_t kDemandRegisterStatusAttributeId = 5u;
+constexpr std::uint8_t kDemandRegisterCaptureTimeAttributeId = 6u;
+constexpr std::uint8_t kDemandRegisterStartTimeCurrentAttributeId = 7u;
+constexpr std::uint8_t kDemandRegisterPeriodAttributeId = 8u;
+constexpr std::uint8_t kDemandRegisterNumberOfPeriodsAttributeId = 9u;
+constexpr std::uint8_t kDemandRegisterResetMethodId = 1u;
+constexpr std::uint8_t kDemandRegisterNextPeriodMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemDemandRegisterObject::MaxSupportedVersion;
+
+CosemDemandRegisterObject::CosemDemandRegisterObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& currentAverageValue,
+  const CosemByteBuffer& lastAverageValue,
+  const CosemByteBuffer& scalerUnit,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& captureTime,
+  const CosemByteBuffer& startTimeCurrent,
+  std::uint32_t period,
+  std::uint16_t numberOfPeriods)
+  : CosemDemandRegisterObject(
+      logicalName,
+      currentAverageValue,
+      lastAverageValue,
+      scalerUnit,
+      status,
+      captureTime,
+      startTimeCurrent,
+      period,
+      numberOfPeriods,
+      kVersion0)
+{
+}
+
+CosemDemandRegisterObject::CosemDemandRegisterObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& currentAverageValue,
+  const CosemByteBuffer& lastAverageValue,
+  const CosemByteBuffer& scalerUnit,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& captureTime,
+  const CosemByteBuffer& startTimeCurrent,
+  std::uint32_t period,
+  std::uint16_t numberOfPeriods,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kDemandRegisterClassId,
+      NormalizeVersion(version, CosemDemandRegisterObject::MaxSupportedVersion),
+      logicalName))
+  , currentAverageValue_(currentAverageValue)
+  , lastAverageValue_(lastAverageValue)
+  , scalerUnit_(scalerUnit)
+  , status_(status)
+  , captureTime_(captureTime)
+  , startTimeCurrent_(startTimeCurrent)
+  , period_(period)
+  , numberOfPeriods_(numberOfPeriods)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterCurrentAvgAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterLastAvgAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterScalerUnitAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterStatusAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterCaptureTimeAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterStartTimeCurrentAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterPeriodAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDemandRegisterNumberOfPeriodsAttributeId,
+    AttributeAccessMode::ReadOnly);
+}
+
+CosemObjectDescriptor CosemDemandRegisterObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemDemandRegisterObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemDemandRegisterObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterCurrentAvgAttributeId) {
+    output = currentAverageValue_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterLastAvgAttributeId) {
+    output = lastAverageValue_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterScalerUnitAttributeId) {
+    output = scalerUnit_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterStatusAttributeId) {
+    output = status_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterCaptureTimeAttributeId) {
+    output = captureTime_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterStartTimeCurrentAttributeId) {
+    output = startTimeCurrent_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterPeriodAttributeId) {
+    output.clear();
+    AppendDoubleLongUnsigned(output, period_);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kDemandRegisterNumberOfPeriodsAttributeId) {
+    output.clear();
+    AppendLongUnsigned(output, numberOfPeriods_);
+    return CosemStatus::Ok;
+  }
+  output.clear();
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemDemandRegisterObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  (void)input;
+  if (attributeId == kLogicalNameAttributeId
+      || attributeId == kDemandRegisterCurrentAvgAttributeId
+      || attributeId == kDemandRegisterLastAvgAttributeId
+      || attributeId == kDemandRegisterScalerUnitAttributeId
+      || attributeId == kDemandRegisterStatusAttributeId
+      || attributeId == kDemandRegisterCaptureTimeAttributeId
+      || attributeId == kDemandRegisterStartTimeCurrentAttributeId
+      || attributeId == kDemandRegisterPeriodAttributeId
+      || attributeId == kDemandRegisterNumberOfPeriodsAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemDemandRegisterObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // methods 1 (reset) and 2 (next_period) are application-defined; the
+  // built-in object exposes them explicitly as UnsupportedFeature instead of
+  // silently ignoring them.
+  if (methodId == kDemandRegisterResetMethodId
+      || methodId == kDemandRegisterNextPeriodMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemDemandRegisterObject::CurrentAverageValue() const
+{
+  return currentAverageValue_;
+}
+
+const CosemByteBuffer& CosemDemandRegisterObject::LastAverageValue() const
+{
+  return lastAverageValue_;
+}
+
+const CosemByteBuffer& CosemDemandRegisterObject::ScalerUnit() const
+{
+  return scalerUnit_;
+}
+
+const CosemByteBuffer& CosemDemandRegisterObject::Status() const
+{
+  return status_;
+}
+
+const CosemByteBuffer& CosemDemandRegisterObject::CaptureTime() const
+{
+  return captureTime_;
+}
+
+const CosemByteBuffer& CosemDemandRegisterObject::StartTimeCurrent() const
+{
+  return startTimeCurrent_;
+}
+
+std::uint32_t CosemDemandRegisterObject::Period() const
+{
+  return period_;
+}
+
+std::uint16_t CosemDemandRegisterObject::NumberOfPeriods() const
+{
+  return numberOfPeriods_;
+}
+
+void CosemDemandRegisterObject::SetCurrentAverageValue(
+  const CosemByteBuffer& value)
+{
+  currentAverageValue_ = value;
+}
+
+void CosemDemandRegisterObject::SetLastAverageValue(
+  const CosemByteBuffer& value)
+{
+  lastAverageValue_ = value;
+}
+
+void CosemDemandRegisterObject::SetScalerUnit(
+  const CosemByteBuffer& scalerUnit)
+{
+  scalerUnit_ = scalerUnit;
+}
+
+void CosemDemandRegisterObject::SetStatus(const CosemByteBuffer& status)
+{
+  status_ = status;
+}
+
+void CosemDemandRegisterObject::SetCaptureTime(
+  const CosemByteBuffer& captureTime)
+{
+  captureTime_ = captureTime;
+}
+
+void CosemDemandRegisterObject::SetStartTimeCurrent(
+  const CosemByteBuffer& startTime)
+{
+  startTimeCurrent_ = startTime;
+}
+
+void CosemDemandRegisterObject::SetPeriod(std::uint32_t period)
+{
+  period_ = period;
+}
+
+void CosemDemandRegisterObject::SetNumberOfPeriods(
+  std::uint16_t numberOfPeriods)
+{
+  numberOfPeriods_ = numberOfPeriods;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

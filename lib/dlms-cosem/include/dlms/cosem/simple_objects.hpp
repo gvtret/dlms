@@ -143,6 +143,77 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemDemandRegisterObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemDemandRegisterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& currentAverageValue,
+    const CosemByteBuffer& lastAverageValue,
+    const CosemByteBuffer& scalerUnit,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& captureTime,
+    const CosemByteBuffer& startTimeCurrent,
+    std::uint32_t period,
+    std::uint16_t numberOfPeriods);
+  CosemDemandRegisterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& currentAverageValue,
+    const CosemByteBuffer& lastAverageValue,
+    const CosemByteBuffer& scalerUnit,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& captureTime,
+    const CosemByteBuffer& startTimeCurrent,
+    std::uint32_t period,
+    std::uint16_t numberOfPeriods,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& CurrentAverageValue() const;
+  const CosemByteBuffer& LastAverageValue() const;
+  const CosemByteBuffer& ScalerUnit() const;
+  const CosemByteBuffer& Status() const;
+  const CosemByteBuffer& CaptureTime() const;
+  const CosemByteBuffer& StartTimeCurrent() const;
+  std::uint32_t Period() const;
+  std::uint16_t NumberOfPeriods() const;
+
+  void SetCurrentAverageValue(const CosemByteBuffer& value);
+  void SetLastAverageValue(const CosemByteBuffer& value);
+  void SetScalerUnit(const CosemByteBuffer& scalerUnit);
+  void SetStatus(const CosemByteBuffer& status);
+  void SetCaptureTime(const CosemByteBuffer& captureTime);
+  void SetStartTimeCurrent(const CosemByteBuffer& startTime);
+  void SetPeriod(std::uint32_t period);
+  void SetNumberOfPeriods(std::uint16_t numberOfPeriods);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer currentAverageValue_;
+  CosemByteBuffer lastAverageValue_;
+  CosemByteBuffer scalerUnit_;
+  CosemByteBuffer status_;
+  CosemByteBuffer captureTime_;
+  CosemByteBuffer startTimeCurrent_;
+  std::uint32_t period_;
+  std::uint16_t numberOfPeriods_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

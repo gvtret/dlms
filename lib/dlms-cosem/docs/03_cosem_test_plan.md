@@ -840,6 +840,24 @@ M-Bus Client tests:
   id, always clearing method output;
 - M-Bus Client normalizes versions above `MaxSupportedVersion`.
 
+M-Bus Master Port Setup tests:
+
+- M-Bus Master Port Setup exposes attributes `1` logical_name and
+  `2` comm_speed as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute
+  ids;
+- M-Bus Master Port Setup comm_speed write succeeds when the
+  caller-selected access mode permits writes and replaces the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffer unchanged;
+- M-Bus Master Port Setup rejects writes to logical_name (`1`)
+  with `AccessDenied`, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- M-Bus Master Port Setup `InvokeMethod` reports `MethodNotFound`
+  for every method id and clears method output;
+- M-Bus Master Port Setup normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

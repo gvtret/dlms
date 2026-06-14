@@ -912,6 +912,18 @@ the M-Bus slave out-of-band. Methods `1` `slave_install`,
 does not drive the M-Bus slave); other method ids return
 `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial M-Bus Master Port
+Setup IC `73` (`CosemMBusMasterPortSetupObject`) with class
+version `0`. The constructors take the `comm_speed` (enum)
+payload as an encoded DLMS Data buffer prepared by the caller,
+the logical name, a caller-selected `AttributeAccessMode` for the
+single mutable attribute (`2`), and an optional explicit version
+that is normalized to `MaxSupportedVersion` when out of range.
+Attribute `1` (logical_name) is read-only; comm_speed honors the
+caller access mode and replaces the stored buffer in-place when
+writable. IC v0 defines no methods; `InvokeMethod` reports
+`MethodNotFound` for all method ids and clears method output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

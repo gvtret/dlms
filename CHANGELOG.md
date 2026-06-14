@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.57.0 - 2026-06-15
+
+- Added M-Bus Master Port Setup IC `73` built-in object
+  (`CosemMBusMasterPortSetupObject`) with class version `0`,
+  exposing `comm_speed` (enum) as an opaque encoded DLMS Data
+  buffer prepared by the caller.
+- Attribute `2` `comm_speed` honors a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer in-place
+  when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IC v0 defines no methods; `InvokeMethod` reports `MethodNotFound`
+  for every method id and clears method output.
+
 ## 0.56.0 - 2026-06-15
 
 - Added M-Bus Client IC `72` built-in object

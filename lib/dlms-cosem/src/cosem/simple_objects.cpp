@@ -8703,6 +8703,103 @@ CosemMBusClientObject::EncryptionKeyStatus() const
   return encryptionKeyStatus_;
 }
 
+namespace {
+constexpr std::uint16_t kMBusMasterPortSetupClassId = 73u;
+constexpr std::uint8_t kMBusMasterPortSetupCommSpeedAttributeId = 2u;
+} // namespace
+
+const std::uint8_t CosemMBusMasterPortSetupObject::MaxSupportedVersion;
+
+CosemMBusMasterPortSetupObject::CosemMBusMasterPortSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& commSpeed,
+  AttributeAccessMode mutableAccess)
+  : CosemMBusMasterPortSetupObject(
+      logicalName, commSpeed, mutableAccess,
+      CosemMBusMasterPortSetupObject::MaxSupportedVersion)
+{
+}
+
+CosemMBusMasterPortSetupObject::CosemMBusMasterPortSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& commSpeed,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kMBusMasterPortSetupClassId,
+      NormalizeVersion(
+        version,
+        CosemMBusMasterPortSetupObject::MaxSupportedVersion),
+      logicalName))
+  , commSpeed_(commSpeed)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kMBusMasterPortSetupCommSpeedAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor
+CosemMBusMasterPortSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemMBusMasterPortSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemMBusMasterPortSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kMBusMasterPortSetupCommSpeedAttributeId:
+      output = commSpeed_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemMBusMasterPortSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kLogicalNameAttributeId)
+    return CosemStatus::AccessDenied;
+  if (attributeId != kMBusMasterPortSetupCommSpeedAttributeId)
+    return CosemStatus::AttributeNotFound;
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  commSpeed_ = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemMBusMasterPortSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IC v0 defines no methods.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemMBusMasterPortSetupObject::CommSpeed() const
+{
+  return commSpeed_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

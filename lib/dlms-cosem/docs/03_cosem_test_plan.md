@@ -164,6 +164,24 @@ Register Activation tests:
   other method ids report `MethodNotFound`;
 - Register Activation normalizes versions above `MaxSupportedVersion`.
 
+Register Monitor tests:
+
+- Register Monitor exposes attributes `1` logical_name, `2` thresholds,
+  `3` monitored_value and `4` actions as the encoded DLMS Data buffers
+  supplied by the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Register Monitor `thresholds` writes succeed when the caller-selected
+  access mode permits writes and replace the stored buffer in-place;
+- Register Monitor `thresholds` writes report `AccessDenied` when the
+  caller-selected access mode is read-only, leaving the stored buffer
+  unchanged;
+- Register Monitor rejects writes to `logical_name`, `monitored_value` and
+  `actions` with `AccessDenied`, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- Register Monitor reports `MethodNotFound` for every method id and clears
+  method output;
+- Register Monitor normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

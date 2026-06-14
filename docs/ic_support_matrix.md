@@ -48,7 +48,7 @@ Status values:
 | `18` | Image Transfer | Planned | Needed for firmware/image update flows. |
 | `19` | IEC Local Port Setup | Planned | Needed for local optical-port setup. |
 | `20` | Activity Calendar | Planned | Needed for tariff and activity calendars. |
-| `21` | Register Monitor | Planned | Needed for monitoring/control scenarios. |
+| `21` | Register Monitor | Partial | `CosemRegisterMonitorObject` exposes thresholds, monitored_value and actions attributes as opaque encoded DLMS Data buffers, class version `0`, and a version-taking constructor normalized to `MaxSupportedVersion`. `thresholds` access mode is caller-selected; `monitored_value` and `actions` are read-only. Register Monitor v0 defines no methods, so every method id returns `MethodNotFound`. |
 | `22` | Single Action Schedule | Planned | Needed for scheduled single actions. |
 | `23` | IEC HDLC Setup | Planned | Needed to expose HDLC setup object state. |
 | `24` | IEC twisted pair setup | Application-provided | No built-in implementation. |

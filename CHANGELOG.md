@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.22.0 - 2026-06-15
+
+- Added Register Monitor IC `21` built-in object
+  (`CosemRegisterMonitorObject`) with class version `0`, exposing
+  attributes `1` logical_name, `2` thresholds, `3` monitored_value and
+  `4` actions as opaque encoded DLMS Data buffers prepared by the caller.
+  `thresholds` access mode is caller-selected; `monitored_value` and
+  `actions` are read-only.
+- Added explicit `MaxSupportedVersion` constant and version-taking
+  constructor for Register Monitor; constructors normalize versions above
+  the maximum.
+- Register Monitor v0 defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for every method id.
+
 ## 0.21.0 - 2026-06-15
 
 - Added Register Activation IC `6` built-in object

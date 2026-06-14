@@ -260,6 +260,54 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemRegisterMonitorObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemRegisterMonitorObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& thresholds,
+    const CosemByteBuffer& monitoredValue,
+    const CosemByteBuffer& actions,
+    AttributeAccessMode thresholdsAccess);
+  CosemRegisterMonitorObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& thresholds,
+    const CosemByteBuffer& monitoredValue,
+    const CosemByteBuffer& actions,
+    AttributeAccessMode thresholdsAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Thresholds() const;
+  const CosemByteBuffer& MonitoredValue() const;
+  const CosemByteBuffer& Actions() const;
+
+  void SetThresholds(const CosemByteBuffer& thresholds);
+  void SetMonitoredValue(const CosemByteBuffer& monitoredValue);
+  void SetActions(const CosemByteBuffer& actions);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer thresholds_;
+  CosemByteBuffer monitoredValue_;
+  CosemByteBuffer actions_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

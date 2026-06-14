@@ -2122,6 +2122,166 @@ void CosemRegisterActivationObject::SetActiveMask(
   activeMask_ = activeMask;
 }
 
+namespace {
+constexpr std::uint16_t kRegisterMonitorClassId = 21u;
+constexpr std::uint8_t kRegisterMonitorThresholdsAttributeId = 2u;
+constexpr std::uint8_t kRegisterMonitorMonitoredValueAttributeId = 3u;
+constexpr std::uint8_t kRegisterMonitorActionsAttributeId = 4u;
+} // namespace
+
+const std::uint8_t CosemRegisterMonitorObject::MaxSupportedVersion;
+
+CosemRegisterMonitorObject::CosemRegisterMonitorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& thresholds,
+  const CosemByteBuffer& monitoredValue,
+  const CosemByteBuffer& actions,
+  AttributeAccessMode thresholdsAccess)
+  : CosemRegisterMonitorObject(
+      logicalName,
+      thresholds,
+      monitoredValue,
+      actions,
+      thresholdsAccess,
+      kVersion0)
+{
+}
+
+CosemRegisterMonitorObject::CosemRegisterMonitorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& thresholds,
+  const CosemByteBuffer& monitoredValue,
+  const CosemByteBuffer& actions,
+  AttributeAccessMode thresholdsAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kRegisterMonitorClassId,
+      NormalizeVersion(
+        version,
+        CosemRegisterMonitorObject::MaxSupportedVersion),
+      logicalName))
+  , thresholds_(thresholds)
+  , monitoredValue_(monitoredValue)
+  , actions_(actions)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kRegisterMonitorThresholdsAttributeId,
+    thresholdsAccess);
+  rights_.SetAttributeAccess(
+    kRegisterMonitorMonitoredValueAttributeId,
+    AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kRegisterMonitorActionsAttributeId,
+    AttributeAccessMode::ReadOnly);
+}
+
+CosemObjectDescriptor CosemRegisterMonitorObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemRegisterMonitorObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemRegisterMonitorObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  if (attributeId == kLogicalNameAttributeId) {
+    output = EncodeLogicalName(descriptor_.key.logicalName);
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kRegisterMonitorThresholdsAttributeId) {
+    output = thresholds_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kRegisterMonitorMonitoredValueAttributeId) {
+    output = monitoredValue_;
+    return CosemStatus::Ok;
+  }
+  if (attributeId == kRegisterMonitorActionsAttributeId) {
+    output = actions_;
+    return CosemStatus::Ok;
+  }
+  output.clear();
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemRegisterMonitorObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kRegisterMonitorThresholdsAttributeId) {
+    const AttributeAccessMode mode = rights_.AttributeAccess(
+      kRegisterMonitorThresholdsAttributeId);
+    if (mode == AttributeAccessMode::WriteOnly
+        || mode == AttributeAccessMode::ReadAndWrite
+        || mode == AttributeAccessMode::AuthenticatedWriteOnly
+        || mode == AttributeAccessMode::AuthenticatedReadAndWrite) {
+      thresholds_ = input;
+      return CosemStatus::Ok;
+    }
+    return CosemStatus::AccessDenied;
+  }
+  if (attributeId == kLogicalNameAttributeId
+      || attributeId == kRegisterMonitorMonitoredValueAttributeId
+      || attributeId == kRegisterMonitorActionsAttributeId) {
+    return CosemStatus::AccessDenied;
+  }
+  return CosemStatus::AttributeNotFound;
+}
+
+CosemStatus CosemRegisterMonitorObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Register Monitor v0 defines no methods; every method id is
+  // unconditionally MethodNotFound.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemRegisterMonitorObject::Thresholds() const
+{
+  return thresholds_;
+}
+
+const CosemByteBuffer& CosemRegisterMonitorObject::MonitoredValue() const
+{
+  return monitoredValue_;
+}
+
+const CosemByteBuffer& CosemRegisterMonitorObject::Actions() const
+{
+  return actions_;
+}
+
+void CosemRegisterMonitorObject::SetThresholds(
+  const CosemByteBuffer& thresholds)
+{
+  thresholds_ = thresholds;
+}
+
+void CosemRegisterMonitorObject::SetMonitoredValue(
+  const CosemByteBuffer& monitoredValue)
+{
+  monitoredValue_ = monitoredValue;
+}
+
+void CosemRegisterMonitorObject::SetActions(
+  const CosemByteBuffer& actions)
+{
+  actions_ = actions;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

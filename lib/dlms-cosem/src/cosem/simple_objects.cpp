@@ -9743,6 +9743,172 @@ CosemPrimePlcMacCountersObject::CsmaChBusyCount() const
   return csmaChBusyCount_;
 }
 
+namespace {
+constexpr std::uint16_t kPrimePlcMacNetStatsClassId = 83u;
+constexpr std::uint8_t kPrimePlcMacNetStatsNodeRegistrationsId = 2u;
+constexpr std::uint8_t kPrimePlcMacNetStatsNodeUnregistrationsId =
+  3u;
+constexpr std::uint8_t kPrimePlcMacNetStatsProcessedAliveMsgsId = 4u;
+constexpr std::uint8_t kPrimePlcMacNetStatsHandledPromotionsId = 5u;
+constexpr std::uint8_t kPrimePlcMacNetStatsResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t
+  CosemPrimePlcMacNetworkStatisticsObject::MaxSupportedVersion;
+
+CosemPrimePlcMacNetworkStatisticsObject::
+  CosemPrimePlcMacNetworkStatisticsObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& nodeRegistrations,
+    const CosemByteBuffer& nodeUnregistrations,
+    const CosemByteBuffer& processedAliveMsgs,
+    const CosemByteBuffer& handledPromotions,
+    AttributeAccessMode mutableAccess)
+  : CosemPrimePlcMacNetworkStatisticsObject(
+      logicalName, nodeRegistrations, nodeUnregistrations,
+      processedAliveMsgs, handledPromotions, mutableAccess,
+      CosemPrimePlcMacNetworkStatisticsObject::MaxSupportedVersion)
+{
+}
+
+CosemPrimePlcMacNetworkStatisticsObject::
+  CosemPrimePlcMacNetworkStatisticsObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& nodeRegistrations,
+    const CosemByteBuffer& nodeUnregistrations,
+    const CosemByteBuffer& processedAliveMsgs,
+    const CosemByteBuffer& handledPromotions,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPrimePlcMacNetStatsClassId,
+      NormalizeVersion(
+        version,
+        CosemPrimePlcMacNetworkStatisticsObject::
+          MaxSupportedVersion),
+      logicalName))
+  , nodeRegistrations_(nodeRegistrations)
+  , nodeUnregistrations_(nodeUnregistrations)
+  , processedAliveMsgs_(processedAliveMsgs)
+  , handledPromotions_(handledPromotions)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr :
+       {kPrimePlcMacNetStatsNodeRegistrationsId,
+        kPrimePlcMacNetStatsNodeUnregistrationsId,
+        kPrimePlcMacNetStatsProcessedAliveMsgsId,
+        kPrimePlcMacNetStatsHandledPromotionsId}) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
+}
+
+CosemObjectDescriptor
+CosemPrimePlcMacNetworkStatisticsObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemPrimePlcMacNetworkStatisticsObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus
+CosemPrimePlcMacNetworkStatisticsObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPrimePlcMacNetStatsNodeRegistrationsId:
+      output = nodeRegistrations_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacNetStatsNodeUnregistrationsId:
+      output = nodeUnregistrations_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacNetStatsProcessedAliveMsgsId:
+      output = processedAliveMsgs_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacNetStatsHandledPromotionsId:
+      output = handledPromotions_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus
+CosemPrimePlcMacNetworkStatisticsObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case kPrimePlcMacNetStatsNodeRegistrationsId:
+      target = &nodeRegistrations_;
+      break;
+    case kPrimePlcMacNetStatsNodeUnregistrationsId:
+      target = &nodeUnregistrations_;
+      break;
+    case kPrimePlcMacNetStatsProcessedAliveMsgsId:
+      target = &processedAliveMsgs_;
+      break;
+    case kPrimePlcMacNetStatsHandledPromotionsId:
+      target = &handledPromotions_;
+      break;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus
+CosemPrimePlcMacNetworkStatisticsObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kPrimePlcMacNetStatsResetMethodId)
+    return CosemStatus::UnsupportedFeature;
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacNetworkStatisticsObject::NodeRegistrations() const
+{
+  return nodeRegistrations_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacNetworkStatisticsObject::NodeUnregistrations() const
+{
+  return nodeUnregistrations_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacNetworkStatisticsObject::ProcessedAliveMsgs() const
+{
+  return processedAliveMsgs_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacNetworkStatisticsObject::HandledPromotions() const
+{
+  return handledPromotions_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

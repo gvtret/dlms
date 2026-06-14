@@ -2432,6 +2432,54 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPrimePlcMacNetworkStatisticsObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemPrimePlcMacNetworkStatisticsObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& nodeRegistrations,
+    const CosemByteBuffer& nodeUnregistrations,
+    const CosemByteBuffer& processedAliveMsgs,
+    const CosemByteBuffer& handledPromotions,
+    AttributeAccessMode mutableAccess);
+  CosemPrimePlcMacNetworkStatisticsObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& nodeRegistrations,
+    const CosemByteBuffer& nodeUnregistrations,
+    const CosemByteBuffer& processedAliveMsgs,
+    const CosemByteBuffer& handledPromotions,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& NodeRegistrations() const;
+  const CosemByteBuffer& NodeUnregistrations() const;
+  const CosemByteBuffer& ProcessedAliveMsgs() const;
+  const CosemByteBuffer& HandledPromotions() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer nodeRegistrations_;
+  CosemByteBuffer nodeUnregistrations_;
+  CosemByteBuffer processedAliveMsgs_;
+  CosemByteBuffer handledPromotions_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

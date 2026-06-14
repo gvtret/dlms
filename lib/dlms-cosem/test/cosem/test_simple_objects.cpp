@@ -9166,4 +9166,158 @@ TEST(CosemPrimePlcMacCountersObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct PrimePlcMacNetStatsBuffers
+{
+  dlms::cosem::CosemByteBuffer nodeRegistrations;
+  dlms::cosem::CosemByteBuffer nodeUnregistrations;
+  dlms::cosem::CosemByteBuffer processedAliveMsgs;
+  dlms::cosem::CosemByteBuffer handledPromotions;
+};
+
+PrimePlcMacNetStatsBuffers MakeSamplePrimePlcMacNetStats()
+{
+  PrimePlcMacNetStatsBuffers b;
+  // double-long-unsigned 0x00000011
+  b.nodeRegistrations =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x11u});
+  // double-long-unsigned 0x00000022
+  b.nodeUnregistrations =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x22u});
+  // double-long-unsigned 0x00000033
+  b.processedAliveMsgs =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x33u});
+  // double-long-unsigned 0x00000044
+  b.handledPromotions =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x44u});
+  return b;
+}
+
+dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject
+MakePrimePlcMacNetStatsObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const PrimePlcMacNetStatsBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject(
+    name, b.nodeRegistrations, b.nodeUnregistrations,
+    b.processedAliveMsgs, b.handledPromotions, access);
+}
+
+} // namespace
+
+TEST(CosemPrimePlcMacNetworkStatisticsObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  const PrimePlcMacNetStatsBuffers b =
+    MakeSamplePrimePlcMacNetStats();
+  dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject object =
+    MakePrimePlcMacNetStatsObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(83u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject::
+      MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  const dlms::cosem::CosemByteBuffer* expected[] = {
+    &b.nodeRegistrations, &b.nodeUnregistrations,
+    &b.processedAliveMsgs, &b.handledPromotions};
+  std::uint8_t attrId = 2u;
+  for (const auto* exp : expected) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              object.ReadAttribute(attrId, out))
+      << "attr " << static_cast<unsigned>(attrId);
+    EXPECT_EQ(*exp, out)
+      << "attr " << static_cast<unsigned>(attrId);
+    ++attrId;
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(6u, out));
+}
+
+TEST(CosemPrimePlcMacNetworkStatisticsObject,
+     MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  const PrimePlcMacNetStatsBuffers b =
+    MakeSamplePrimePlcMacNetStats();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x06u, 0xCAu, 0xFEu, 0xBAu, 0xBEu});
+
+  dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject writable =
+    MakePrimePlcMacNetStatsObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(attr, replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement, writable.NodeRegistrations());
+  EXPECT_EQ(replacement, writable.NodeUnregistrations());
+  EXPECT_EQ(replacement, writable.ProcessedAliveMsgs());
+  EXPECT_EQ(replacement, writable.HandledPromotions());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject readOnly =
+    MakePrimePlcMacNetStatsObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(b.nodeRegistrations, readOnly.NodeRegistrations());
+}
+
+TEST(CosemPrimePlcMacNetworkStatisticsObject,
+     MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject object =
+    MakePrimePlcMacNetStatsObject(
+      name, MakeSamplePrimePlcMacNetStats(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  for (std::uint8_t method : {0u, 2u, 99u, 255u}) {
+    out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemPrimePlcMacNetworkStatisticsObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  const PrimePlcMacNetStatsBuffers b =
+    MakeSamplePrimePlcMacNetStats();
+  dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject object(
+    name, b.nodeRegistrations, b.nodeUnregistrations,
+    b.processedAliveMsgs, b.handledPromotions,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacNetworkStatisticsObject::
+      MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

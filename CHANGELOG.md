@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.62.0 - 2026-06-15
+
+- Added PRIME PLC MAC Network Statistics IC `83` built-in
+  object (`CosemPrimePlcMacNetworkStatisticsObject`) with class
+  version `0`, exposing `node_registrations`,
+  `node_unregistrations`, `processed_alive_msgs` and
+  `handled_promotions` (double-long-unsigned) as opaque encoded
+  DLMS Data buffers prepared by the caller.
+- Attributes `2`-`5` share a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer
+  in-place when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Method `1` `reset` returns `UnsupportedFeature`; undefined
+  method ids return `MethodNotFound`; method output is always
+  cleared.
+
 ## 0.61.0 - 2026-06-15
 
 - Added PRIME PLC MAC Counters IC `82` built-in object

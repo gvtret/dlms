@@ -946,6 +946,28 @@ PRIME PLC MAC Counters tests:
 - PRIME PLC MAC Counters normalizes versions above
   `MaxSupportedVersion`.
 
+PRIME PLC MAC Network Statistics tests:
+
+- PRIME PLC MAC Network Statistics exposes attributes `1`
+  logical_name and `2`-`5` (node_registrations,
+  node_unregistrations, processed_alive_msgs, handled_promotions)
+  as the encoded DLMS Data buffers supplied by the caller, and
+  reports `AttributeNotFound` for undefined attribute ids;
+- PRIME PLC MAC Network Statistics mutable attributes (`2`-`5`)
+  writes succeed when the caller-selected access mode permits
+  writes and replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving the
+  stored buffers unchanged;
+- PRIME PLC MAC Network Statistics rejects writes to
+  logical_name (`1`) with `AccessDenied`, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- PRIME PLC MAC Network Statistics `InvokeMethod` reports
+  `UnsupportedFeature` for method `1` `reset` and
+  `MethodNotFound` for every other method id, always clearing
+  method output;
+- PRIME PLC MAC Network Statistics normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

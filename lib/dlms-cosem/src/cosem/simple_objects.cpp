@@ -6149,6 +6149,121 @@ const CosemByteBuffer& CosemGsmDiagnosticObject::CaptureTime() const
   return captureTime_;
 }
 
+namespace {
+constexpr std::uint16_t kIecTwistedPairSetupClassId = 24u;
+constexpr std::uint8_t kIecTwistedPairSetupPrimaryAddressAttributeId = 2u;
+constexpr std::uint8_t kIecTwistedPairSetupTabisAttributeId = 3u;
+} // namespace
+
+const std::uint8_t CosemIecTwistedPairSetupObject::MaxSupportedVersion;
+
+CosemIecTwistedPairSetupObject::CosemIecTwistedPairSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& primaryAddress,
+  const CosemByteBuffer& tabis,
+  AttributeAccessMode mutableAccess)
+  : CosemIecTwistedPairSetupObject(
+      logicalName, primaryAddress, tabis, mutableAccess, kVersion0)
+{
+}
+
+CosemIecTwistedPairSetupObject::CosemIecTwistedPairSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& primaryAddress,
+  const CosemByteBuffer& tabis,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIecTwistedPairSetupClassId,
+      NormalizeVersion(
+        version, CosemIecTwistedPairSetupObject::MaxSupportedVersion),
+      logicalName))
+  , primaryAddress_(primaryAddress)
+  , tabis_(tabis)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kIecTwistedPairSetupPrimaryAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecTwistedPairSetupTabisAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIecTwistedPairSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIecTwistedPairSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIecTwistedPairSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kIecTwistedPairSetupPrimaryAddressAttributeId:
+      output = primaryAddress_;
+      return CosemStatus::Ok;
+    case kIecTwistedPairSetupTabisAttributeId:
+      output = tabis_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIecTwistedPairSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kIecTwistedPairSetupPrimaryAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      primaryAddress_ = input;
+      return CosemStatus::Ok;
+    case kIecTwistedPairSetupTabisAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      tabis_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIecTwistedPairSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // IEC twisted pair (1) Setup IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemIecTwistedPairSetupObject::PrimaryAddress() const
+{
+  return primaryAddress_;
+}
+
+const CosemByteBuffer& CosemIecTwistedPairSetupObject::Tabis() const
+{
+  return tabis_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

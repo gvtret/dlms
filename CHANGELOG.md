@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.44.0 - 2026-06-15
+
+- Added IEC twisted pair (1) Setup IC `24` built-in object
+  (`CosemIecTwistedPairSetupObject`) with class version `0`,
+  exposing `primary_address` (long-unsigned) and `tabis` (array of
+  long-unsigned listing the registered secondary addresses) as
+  opaque encoded DLMS Data buffers prepared by the caller.
+- Attributes `2` and `3` share a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer in-place
+  when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IEC twisted pair (1) Setup IC defines no methods; `InvokeMethod`
+  reports `MethodNotFound` for all method ids and clears method
+  output.
+
 ## 0.43.0 - 2026-06-15
 
 - Added GSM Diagnostic IC `47` built-in object

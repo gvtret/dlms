@@ -6188,4 +6188,133 @@ TEST(CosemGsmDiagnosticObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct IecTwistedPairSetupBuffers
+{
+  dlms::cosem::CosemByteBuffer primaryAddress;
+  dlms::cosem::CosemByteBuffer tabis;
+};
+
+IecTwistedPairSetupBuffers MakeSampleIecTwistedPairSetup()
+{
+  IecTwistedPairSetupBuffers b;
+  // long-unsigned 0x0011 (17)
+  b.primaryAddress = BytesFromList({0x12u, 0x00u, 0x11u});
+  // array(2) of long-unsigned 0x0001, 0x0002
+  b.tabis = BytesFromList({
+    0x01u, 0x02u,
+      0x12u, 0x00u, 0x01u,
+      0x12u, 0x00u, 0x02u});
+  return b;
+}
+
+dlms::cosem::CosemIecTwistedPairSetupObject
+MakeIecTwistedPairSetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const IecTwistedPairSetupBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemIecTwistedPairSetupObject(
+    name, b.primaryAddress, b.tabis, access);
+}
+
+} // namespace
+
+TEST(CosemIecTwistedPairSetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 22u, 0u, 1u, 255u);
+  const IecTwistedPairSetupBuffers b = MakeSampleIecTwistedPairSetup();
+  dlms::cosem::CosemIecTwistedPairSetupObject object =
+    MakeIecTwistedPairSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(24u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemIecTwistedPairSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.primaryAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.tabis, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(4u, out));
+}
+
+TEST(CosemIecTwistedPairSetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 22u, 0u, 1u, 255u);
+  const IecTwistedPairSetupBuffers b = MakeSampleIecTwistedPairSetup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x12u, 0x00u, 0x21u});
+
+  dlms::cosem::CosemIecTwistedPairSetupObject writable =
+    MakeIecTwistedPairSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.PrimaryAddress());
+  EXPECT_EQ(replacement, writable.Tabis());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemIecTwistedPairSetupObject readOnly =
+    MakeIecTwistedPairSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.primaryAddress, readOnly.PrimaryAddress());
+  EXPECT_EQ(b.tabis, readOnly.Tabis());
+}
+
+TEST(CosemIecTwistedPairSetupObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 22u, 0u, 1u, 255u);
+  const IecTwistedPairSetupBuffers b = MakeSampleIecTwistedPairSetup();
+  dlms::cosem::CosemIecTwistedPairSetupObject object =
+    MakeIecTwistedPairSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemIecTwistedPairSetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 22u, 0u, 1u, 255u);
+  const IecTwistedPairSetupBuffers b = MakeSampleIecTwistedPairSetup();
+  dlms::cosem::CosemIecTwistedPairSetupObject object(
+    name, b.primaryAddress, b.tabis,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemIecTwistedPairSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

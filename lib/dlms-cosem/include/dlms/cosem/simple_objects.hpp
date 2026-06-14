@@ -1420,6 +1420,46 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIecTwistedPairSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemIecTwistedPairSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& primaryAddress,
+    const CosemByteBuffer& tabis,
+    AttributeAccessMode mutableAccess);
+  CosemIecTwistedPairSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& primaryAddress,
+    const CosemByteBuffer& tabis,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& PrimaryAddress() const;
+  const CosemByteBuffer& Tabis() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer primaryAddress_;
+  CosemByteBuffer tabis_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

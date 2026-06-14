@@ -979,6 +979,22 @@ parameters after polling the PRIME PLC stack out-of-band. IC v0
 defines no methods; `InvokeMethod` reports `MethodNotFound` for
 all method ids and clears method output.
 
+`simple_objects.hpp` also exposes a partial PRIME PLC MAC
+Counters IC `82` (`CosemPrimePlcMacCountersObject`) with class
+version `0`. The constructors take `txdatapkt_count`,
+`rxdatapkt_count`, `txctrlpkt_count`, `rxctrlpkt_count`,
+`csmafail_count` and `csmachbusy_count` (double-long-unsigned)
+as encoded DLMS Data buffers prepared by the caller, the
+logical name, a caller-selected `AttributeAccessMode` shared by
+the mutable attributes (`2`-`7`), and an optional explicit
+version that is normalized to `MaxSupportedVersion` when out of
+range. Attribute `1` (logical_name) is read-only; the mutable
+attributes honor the caller access mode and replace the stored
+buffer in-place when writable. IC v0 defines a single method
+(`1` `reset`); `InvokeMethod` reports `UnsupportedFeature` for
+method `1` and `MethodNotFound` for every other method id,
+always clearing method output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

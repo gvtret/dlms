@@ -923,6 +923,29 @@ PRIME PLC MAC Functional Parameters tests:
 - PRIME PLC MAC Functional Parameters normalizes versions above
   `MaxSupportedVersion`.
 
+PRIME PLC MAC Counters tests:
+
+- PRIME PLC MAC Counters exposes attributes `1` logical_name
+  and `2`-`7` (txdatapkt_count, rxdatapkt_count,
+  txctrlpkt_count, rxctrlpkt_count, csmafail_count,
+  csmachbusy_count) as the encoded DLMS Data buffers supplied by
+  the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- PRIME PLC MAC Counters mutable attributes (`2`-`7`) writes
+  succeed when the caller-selected access mode permits writes
+  and replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving the
+  stored buffers unchanged;
+- PRIME PLC MAC Counters rejects writes to logical_name (`1`)
+  with `AccessDenied`, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- PRIME PLC MAC Counters `InvokeMethod` reports
+  `UnsupportedFeature` for method `1` `reset` and
+  `MethodNotFound` for every other method id, always clearing
+  method output;
+- PRIME PLC MAC Counters normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

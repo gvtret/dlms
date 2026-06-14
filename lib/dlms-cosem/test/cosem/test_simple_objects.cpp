@@ -9004,4 +9004,166 @@ TEST(CosemPrimePlcMacFunctionalParametersObject,
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct PrimePlcMacCountersBuffers
+{
+  dlms::cosem::CosemByteBuffer txDataPktCount;
+  dlms::cosem::CosemByteBuffer rxDataPktCount;
+  dlms::cosem::CosemByteBuffer txCtrlPktCount;
+  dlms::cosem::CosemByteBuffer rxCtrlPktCount;
+  dlms::cosem::CosemByteBuffer csmaFailCount;
+  dlms::cosem::CosemByteBuffer csmaChBusyCount;
+};
+
+PrimePlcMacCountersBuffers MakeSamplePrimePlcMacCounters()
+{
+  PrimePlcMacCountersBuffers b;
+  // double-long-unsigned 0x00001234
+  b.txDataPktCount =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x12u, 0x34u});
+  // double-long-unsigned 0x00005678
+  b.rxDataPktCount =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x56u, 0x78u});
+  // double-long-unsigned 0x000000FF
+  b.txCtrlPktCount =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0xFFu});
+  // double-long-unsigned 0x000000AA
+  b.rxCtrlPktCount =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0xAAu});
+  // double-long-unsigned 0x00000010
+  b.csmaFailCount =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x10u});
+  // double-long-unsigned 0x00000020
+  b.csmaChBusyCount =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x20u});
+  return b;
+}
+
+dlms::cosem::CosemPrimePlcMacCountersObject
+MakePrimePlcMacCountersObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const PrimePlcMacCountersBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemPrimePlcMacCountersObject(
+    name, b.txDataPktCount, b.rxDataPktCount,
+    b.txCtrlPktCount, b.rxCtrlPktCount, b.csmaFailCount,
+    b.csmaChBusyCount, access);
+}
+
+} // namespace
+
+TEST(CosemPrimePlcMacCountersObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 3u, 0u, 255u);
+  const PrimePlcMacCountersBuffers b =
+    MakeSamplePrimePlcMacCounters();
+  dlms::cosem::CosemPrimePlcMacCountersObject object =
+    MakePrimePlcMacCountersObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(82u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacCountersObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  const dlms::cosem::CosemByteBuffer* expected[] = {
+    &b.txDataPktCount, &b.rxDataPktCount, &b.txCtrlPktCount,
+    &b.rxCtrlPktCount, &b.csmaFailCount, &b.csmaChBusyCount};
+  std::uint8_t attrId = 2u;
+  for (const auto* exp : expected) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              object.ReadAttribute(attrId, out))
+      << "attr " << static_cast<unsigned>(attrId);
+    EXPECT_EQ(*exp, out)
+      << "attr " << static_cast<unsigned>(attrId);
+    ++attrId;
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(8u, out));
+}
+
+TEST(CosemPrimePlcMacCountersObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 3u, 0u, 255u);
+  const PrimePlcMacCountersBuffers b =
+    MakeSamplePrimePlcMacCounters();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x06u, 0xDEu, 0xADu, 0xBEu, 0xEFu});
+
+  dlms::cosem::CosemPrimePlcMacCountersObject writable =
+    MakePrimePlcMacCountersObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(attr, replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement, writable.TxDataPktCount());
+  EXPECT_EQ(replacement, writable.RxDataPktCount());
+  EXPECT_EQ(replacement, writable.TxCtrlPktCount());
+  EXPECT_EQ(replacement, writable.RxCtrlPktCount());
+  EXPECT_EQ(replacement, writable.CsmaFailCount());
+  EXPECT_EQ(replacement, writable.CsmaChBusyCount());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemPrimePlcMacCountersObject readOnly =
+    MakePrimePlcMacCountersObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(b.txDataPktCount, readOnly.TxDataPktCount());
+}
+
+TEST(CosemPrimePlcMacCountersObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 3u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcMacCountersObject object =
+    MakePrimePlcMacCountersObject(
+      name, MakeSamplePrimePlcMacCounters(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  for (std::uint8_t method : {0u, 2u, 99u, 255u}) {
+    out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemPrimePlcMacCountersObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 3u, 0u, 255u);
+  const PrimePlcMacCountersBuffers b =
+    MakeSamplePrimePlcMacCounters();
+  dlms::cosem::CosemPrimePlcMacCountersObject object(
+    name, b.txDataPktCount, b.rxDataPktCount,
+    b.txCtrlPktCount, b.rxCtrlPktCount, b.csmaFailCount,
+    b.csmaChBusyCount,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacCountersObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

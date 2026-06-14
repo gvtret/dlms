@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.61.0 - 2026-06-15
+
+- Added PRIME PLC MAC Counters IC `82` built-in object
+  (`CosemPrimePlcMacCountersObject`) with class version `0`,
+  exposing `txdatapkt_count`, `rxdatapkt_count`,
+  `txctrlpkt_count`, `rxctrlpkt_count`, `csmafail_count` and
+  `csmachbusy_count` (double-long-unsigned) as opaque encoded
+  DLMS Data buffers prepared by the caller.
+- Attributes `2`-`7` share a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer
+  in-place when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Method `1` `reset` returns `UnsupportedFeature`; undefined
+  method ids return `MethodNotFound`; method output is always
+  cleared.
+
 ## 0.60.0 - 2026-06-15
 
 - Added PRIME PLC MAC Functional Parameters IC `81` built-in

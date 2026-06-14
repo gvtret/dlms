@@ -9550,6 +9550,199 @@ CosemPrimePlcMacFunctionalParametersObject::Capabilities() const
   return capabilities_;
 }
 
+namespace {
+constexpr std::uint16_t kPrimePlcMacCountersClassId = 82u;
+constexpr std::uint8_t kPrimePlcMacCountersTxDataPktCountId = 2u;
+constexpr std::uint8_t kPrimePlcMacCountersRxDataPktCountId = 3u;
+constexpr std::uint8_t kPrimePlcMacCountersTxCtrlPktCountId = 4u;
+constexpr std::uint8_t kPrimePlcMacCountersRxCtrlPktCountId = 5u;
+constexpr std::uint8_t kPrimePlcMacCountersCsmaFailCountId = 6u;
+constexpr std::uint8_t kPrimePlcMacCountersCsmaChBusyCountId = 7u;
+constexpr std::uint8_t kPrimePlcMacCountersResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemPrimePlcMacCountersObject::MaxSupportedVersion;
+
+CosemPrimePlcMacCountersObject::CosemPrimePlcMacCountersObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& txDataPktCount,
+  const CosemByteBuffer& rxDataPktCount,
+  const CosemByteBuffer& txCtrlPktCount,
+  const CosemByteBuffer& rxCtrlPktCount,
+  const CosemByteBuffer& csmaFailCount,
+  const CosemByteBuffer& csmaChBusyCount,
+  AttributeAccessMode mutableAccess)
+  : CosemPrimePlcMacCountersObject(
+      logicalName, txDataPktCount, rxDataPktCount,
+      txCtrlPktCount, rxCtrlPktCount, csmaFailCount,
+      csmaChBusyCount, mutableAccess,
+      CosemPrimePlcMacCountersObject::MaxSupportedVersion)
+{
+}
+
+CosemPrimePlcMacCountersObject::CosemPrimePlcMacCountersObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& txDataPktCount,
+  const CosemByteBuffer& rxDataPktCount,
+  const CosemByteBuffer& txCtrlPktCount,
+  const CosemByteBuffer& rxCtrlPktCount,
+  const CosemByteBuffer& csmaFailCount,
+  const CosemByteBuffer& csmaChBusyCount,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPrimePlcMacCountersClassId,
+      NormalizeVersion(
+        version,
+        CosemPrimePlcMacCountersObject::MaxSupportedVersion),
+      logicalName))
+  , txDataPktCount_(txDataPktCount)
+  , rxDataPktCount_(rxDataPktCount)
+  , txCtrlPktCount_(txCtrlPktCount)
+  , rxCtrlPktCount_(rxCtrlPktCount)
+  , csmaFailCount_(csmaFailCount)
+  , csmaChBusyCount_(csmaChBusyCount)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr :
+       {kPrimePlcMacCountersTxDataPktCountId,
+        kPrimePlcMacCountersRxDataPktCountId,
+        kPrimePlcMacCountersTxCtrlPktCountId,
+        kPrimePlcMacCountersRxCtrlPktCountId,
+        kPrimePlcMacCountersCsmaFailCountId,
+        kPrimePlcMacCountersCsmaChBusyCountId}) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
+}
+
+CosemObjectDescriptor
+CosemPrimePlcMacCountersObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemPrimePlcMacCountersObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemPrimePlcMacCountersObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPrimePlcMacCountersTxDataPktCountId:
+      output = txDataPktCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacCountersRxDataPktCountId:
+      output = rxDataPktCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacCountersTxCtrlPktCountId:
+      output = txCtrlPktCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacCountersRxCtrlPktCountId:
+      output = rxCtrlPktCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacCountersCsmaFailCountId:
+      output = csmaFailCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacCountersCsmaChBusyCountId:
+      output = csmaChBusyCount_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPrimePlcMacCountersObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case kPrimePlcMacCountersTxDataPktCountId:
+      target = &txDataPktCount_;
+      break;
+    case kPrimePlcMacCountersRxDataPktCountId:
+      target = &rxDataPktCount_;
+      break;
+    case kPrimePlcMacCountersTxCtrlPktCountId:
+      target = &txCtrlPktCount_;
+      break;
+    case kPrimePlcMacCountersRxCtrlPktCountId:
+      target = &rxCtrlPktCount_;
+      break;
+    case kPrimePlcMacCountersCsmaFailCountId:
+      target = &csmaFailCount_;
+      break;
+    case kPrimePlcMacCountersCsmaChBusyCountId:
+      target = &csmaChBusyCount_;
+      break;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemPrimePlcMacCountersObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kPrimePlcMacCountersResetMethodId)
+    return CosemStatus::UnsupportedFeature;
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacCountersObject::TxDataPktCount() const
+{
+  return txDataPktCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacCountersObject::RxDataPktCount() const
+{
+  return rxDataPktCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacCountersObject::TxCtrlPktCount() const
+{
+  return txCtrlPktCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacCountersObject::RxCtrlPktCount() const
+{
+  return rxCtrlPktCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacCountersObject::CsmaFailCount() const
+{
+  return csmaFailCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacCountersObject::CsmaChBusyCount() const
+{
+  return csmaChBusyCount_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

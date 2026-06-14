@@ -2376,6 +2376,62 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPrimePlcMacCountersObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemPrimePlcMacCountersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& txDataPktCount,
+    const CosemByteBuffer& rxDataPktCount,
+    const CosemByteBuffer& txCtrlPktCount,
+    const CosemByteBuffer& rxCtrlPktCount,
+    const CosemByteBuffer& csmaFailCount,
+    const CosemByteBuffer& csmaChBusyCount,
+    AttributeAccessMode mutableAccess);
+  CosemPrimePlcMacCountersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& txDataPktCount,
+    const CosemByteBuffer& rxDataPktCount,
+    const CosemByteBuffer& txCtrlPktCount,
+    const CosemByteBuffer& rxCtrlPktCount,
+    const CosemByteBuffer& csmaFailCount,
+    const CosemByteBuffer& csmaChBusyCount,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& TxDataPktCount() const;
+  const CosemByteBuffer& RxDataPktCount() const;
+  const CosemByteBuffer& TxCtrlPktCount() const;
+  const CosemByteBuffer& RxCtrlPktCount() const;
+  const CosemByteBuffer& CsmaFailCount() const;
+  const CosemByteBuffer& CsmaChBusyCount() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer txDataPktCount_;
+  CosemByteBuffer rxDataPktCount_;
+  CosemByteBuffer txCtrlPktCount_;
+  CosemByteBuffer rxCtrlPktCount_;
+  CosemByteBuffer csmaFailCount_;
+  CosemByteBuffer csmaChBusyCount_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

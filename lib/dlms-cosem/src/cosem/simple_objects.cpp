@@ -5588,6 +5588,159 @@ const CosemByteBuffer& CosemMacAddressSetupObject::MacAddress() const
   return macAddress_;
 }
 
+namespace {
+constexpr std::uint16_t kPppSetupClassId = 44u;
+constexpr std::uint8_t kPppSetupPhyReferenceAttributeId = 2u;
+constexpr std::uint8_t kPppSetupLcpOptionsAttributeId = 3u;
+constexpr std::uint8_t kPppSetupIpcpOptionsAttributeId = 4u;
+constexpr std::uint8_t kPppSetupPppAuthenticationAttributeId = 5u;
+} // namespace
+
+const std::uint8_t CosemPppSetupObject::MaxSupportedVersion;
+
+CosemPppSetupObject::CosemPppSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& phyReference,
+  const CosemByteBuffer& lcpOptions,
+  const CosemByteBuffer& ipcpOptions,
+  const CosemByteBuffer& pppAuthentication,
+  AttributeAccessMode mutableAccess)
+  : CosemPppSetupObject(
+      logicalName, phyReference, lcpOptions, ipcpOptions,
+      pppAuthentication, mutableAccess, kVersion0)
+{
+}
+
+CosemPppSetupObject::CosemPppSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& phyReference,
+  const CosemByteBuffer& lcpOptions,
+  const CosemByteBuffer& ipcpOptions,
+  const CosemByteBuffer& pppAuthentication,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPppSetupClassId,
+      NormalizeVersion(
+        version, CosemPppSetupObject::MaxSupportedVersion),
+      logicalName))
+  , phyReference_(phyReference)
+  , lcpOptions_(lcpOptions)
+  , ipcpOptions_(ipcpOptions)
+  , pppAuthentication_(pppAuthentication)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kPppSetupPhyReferenceAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPppSetupLcpOptionsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPppSetupIpcpOptionsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kPppSetupPppAuthenticationAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemPppSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemPppSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemPppSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPppSetupPhyReferenceAttributeId:
+      output = phyReference_;
+      return CosemStatus::Ok;
+    case kPppSetupLcpOptionsAttributeId:
+      output = lcpOptions_;
+      return CosemStatus::Ok;
+    case kPppSetupIpcpOptionsAttributeId:
+      output = ipcpOptions_;
+      return CosemStatus::Ok;
+    case kPppSetupPppAuthenticationAttributeId:
+      output = pppAuthentication_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPppSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kPppSetupPhyReferenceAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      phyReference_ = input;
+      return CosemStatus::Ok;
+    case kPppSetupLcpOptionsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      lcpOptions_ = input;
+      return CosemStatus::Ok;
+    case kPppSetupIpcpOptionsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      ipcpOptions_ = input;
+      return CosemStatus::Ok;
+    case kPppSetupPppAuthenticationAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      pppAuthentication_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPppSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // PPP Setup IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemPppSetupObject::PhyReference() const
+{
+  return phyReference_;
+}
+
+const CosemByteBuffer& CosemPppSetupObject::LcpOptions() const
+{
+  return lcpOptions_;
+}
+
+const CosemByteBuffer& CosemPppSetupObject::IpcpOptions() const
+{
+  return ipcpOptions_;
+}
+
+const CosemByteBuffer& CosemPppSetupObject::PppAuthentication() const
+{
+  return pppAuthentication_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

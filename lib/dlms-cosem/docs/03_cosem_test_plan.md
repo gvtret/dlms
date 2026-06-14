@@ -521,6 +521,22 @@ MAC Address Setup tests:
   method ids and clears method output (IC defines no methods);
 - MAC Address Setup normalizes versions above `MaxSupportedVersion`.
 
+PPP Setup tests:
+
+- PPP Setup exposes attributes `1` logical_name, `2` PHY_reference,
+  `3` LCP_options, `4` IPCP_options and `5` PPP_authentication as
+  the encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- PPP Setup mutable attributes (`2`-`5`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode
+  is read-only, leaving the stored buffers unchanged;
+- PPP Setup rejects writes to logical_name (`1`) with `AccessDenied`,
+  and reports `AttributeNotFound` for undefined attribute ids;
+- PPP Setup `InvokeMethod` reports `MethodNotFound` for all method
+  ids and clears method output (IC defines no methods);
+- PPP Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -5682,4 +5682,159 @@ TEST(CosemMacAddressSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct PppSetupBuffers
+{
+  dlms::cosem::CosemByteBuffer phyReference;
+  dlms::cosem::CosemByteBuffer lcpOptions;
+  dlms::cosem::CosemByteBuffer ipcpOptions;
+  dlms::cosem::CosemByteBuffer pppAuthentication;
+};
+
+PppSetupBuffers MakeSamplePppSetup()
+{
+  PppSetupBuffers b;
+  // octet-string "0.0.27.0.0.255"
+  b.phyReference = BytesFromList({
+    0x09u, 0x06u, 0x00u, 0x00u, 0x1Bu, 0x00u, 0x00u, 0xFFu});
+  // array(1) of structure(3): option(MRU=1) length(2) value(05DC)
+  b.lcpOptions = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x03u,
+        0x11u, 0x01u,                                    // option id
+        0x11u, 0x02u,                                    // length
+        0x09u, 0x02u, 0x05u, 0xDCu});                    // value (MRU=1500)
+  // array(1) of structure(3): option(IP-Addr=3) length(4) 0.0.0.0
+  b.ipcpOptions = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x03u,
+        0x11u, 0x03u,
+        0x11u, 0x04u,
+        0x09u, 0x04u, 0x00u, 0x00u, 0x00u, 0x00u});
+  // structure(2): user_name "user", password "pass"
+  b.pppAuthentication = BytesFromList({
+    0x02u, 0x02u,
+      0x09u, 0x04u, 0x75u, 0x73u, 0x65u, 0x72u,          // "user"
+      0x09u, 0x04u, 0x70u, 0x61u, 0x73u, 0x73u});        // "pass"
+  return b;
+}
+
+dlms::cosem::CosemPppSetupObject MakePppSetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const PppSetupBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemPppSetupObject(
+    name, b.phyReference, b.lcpOptions, b.ipcpOptions,
+    b.pppAuthentication, access);
+}
+
+} // namespace
+
+TEST(CosemPppSetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 3u, 0u, 255u);
+  const PppSetupBuffers b = MakeSamplePppSetup();
+  dlms::cosem::CosemPppSetupObject object =
+    MakePppSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(44u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemPppSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.phyReference, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.lcpOptions, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.ipcpOptions, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.pppAuthentication, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(6u, out));
+}
+
+TEST(CosemPppSetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 3u, 0u, 255u);
+  const PppSetupBuffers b = MakeSamplePppSetup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x01u, 0x00u});
+
+  dlms::cosem::CosemPppSetupObject writable =
+    MakePppSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.PhyReference());
+  EXPECT_EQ(replacement, writable.LcpOptions());
+  EXPECT_EQ(replacement, writable.IpcpOptions());
+  EXPECT_EQ(replacement, writable.PppAuthentication());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemPppSetupObject readOnly =
+    MakePppSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.phyReference, readOnly.PhyReference());
+  EXPECT_EQ(b.lcpOptions, readOnly.LcpOptions());
+  EXPECT_EQ(b.ipcpOptions, readOnly.IpcpOptions());
+  EXPECT_EQ(b.pppAuthentication, readOnly.PppAuthentication());
+}
+
+TEST(CosemPppSetupObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 3u, 0u, 255u);
+  const PppSetupBuffers b = MakeSamplePppSetup();
+  dlms::cosem::CosemPppSetupObject object =
+    MakePppSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemPppSetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 3u, 0u, 255u);
+  const PppSetupBuffers b = MakeSamplePppSetup();
+  dlms::cosem::CosemPppSetupObject object(
+    name, b.phyReference, b.lcpOptions, b.ipcpOptions,
+    b.pppAuthentication,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemPppSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

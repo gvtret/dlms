@@ -1256,6 +1256,54 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPppSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemPppSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& phyReference,
+    const CosemByteBuffer& lcpOptions,
+    const CosemByteBuffer& ipcpOptions,
+    const CosemByteBuffer& pppAuthentication,
+    AttributeAccessMode mutableAccess);
+  CosemPppSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& phyReference,
+    const CosemByteBuffer& lcpOptions,
+    const CosemByteBuffer& ipcpOptions,
+    const CosemByteBuffer& pppAuthentication,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& PhyReference() const;
+  const CosemByteBuffer& LcpOptions() const;
+  const CosemByteBuffer& IpcpOptions() const;
+  const CosemByteBuffer& PppAuthentication() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer phyReference_;
+  CosemByteBuffer lcpOptions_;
+  CosemByteBuffer ipcpOptions_;
+  CosemByteBuffer pppAuthentication_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

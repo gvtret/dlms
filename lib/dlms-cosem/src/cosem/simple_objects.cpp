@@ -7720,6 +7720,204 @@ const CosemByteBuffer& CosemCompactDataObject::CaptureMethod() const
   return captureMethod_;
 }
 
+namespace {
+constexpr std::uint16_t kDataProtectionClassId = 30u;
+constexpr std::uint8_t
+  kDataProtectionProtectionBufferAttributeId = 2u;
+constexpr std::uint8_t
+  kDataProtectionProtectionObjectListAttributeId = 3u;
+constexpr std::uint8_t
+  kDataProtectionProtectionParametersGetAttributeId = 4u;
+constexpr std::uint8_t
+  kDataProtectionProtectionParametersSetAttributeId = 5u;
+constexpr std::uint8_t
+  kDataProtectionRequiredProtectionAttributeId = 6u;
+constexpr std::uint8_t
+  kDataProtectionGetProtectedAttributesMethodId = 1u;
+constexpr std::uint8_t
+  kDataProtectionSetProtectedAttributesMethodId = 2u;
+constexpr std::uint8_t
+  kDataProtectionInvokeProtectedMethodMethodId = 3u;
+} // namespace
+
+const std::uint8_t CosemDataProtectionObject::MaxSupportedVersion;
+
+CosemDataProtectionObject::CosemDataProtectionObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& protectionBuffer,
+  const CosemByteBuffer& protectionObjectList,
+  const CosemByteBuffer& protectionParametersGet,
+  const CosemByteBuffer& protectionParametersSet,
+  const CosemByteBuffer& requiredProtection,
+  AttributeAccessMode mutableAccess)
+  : CosemDataProtectionObject(
+      logicalName, protectionBuffer, protectionObjectList,
+      protectionParametersGet, protectionParametersSet,
+      requiredProtection, mutableAccess, kVersion0)
+{
+}
+
+CosemDataProtectionObject::CosemDataProtectionObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& protectionBuffer,
+  const CosemByteBuffer& protectionObjectList,
+  const CosemByteBuffer& protectionParametersGet,
+  const CosemByteBuffer& protectionParametersSet,
+  const CosemByteBuffer& requiredProtection,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kDataProtectionClassId,
+      NormalizeVersion(
+        version, CosemDataProtectionObject::MaxSupportedVersion),
+      logicalName))
+  , protectionBuffer_(protectionBuffer)
+  , protectionObjectList_(protectionObjectList)
+  , protectionParametersGet_(protectionParametersGet)
+  , protectionParametersSet_(protectionParametersSet)
+  , requiredProtection_(requiredProtection)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kDataProtectionProtectionBufferAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kDataProtectionProtectionObjectListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kDataProtectionProtectionParametersGetAttributeId,
+    mutableAccess);
+  rights_.SetAttributeAccess(
+    kDataProtectionProtectionParametersSetAttributeId,
+    mutableAccess);
+  rights_.SetAttributeAccess(
+    kDataProtectionRequiredProtectionAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemDataProtectionObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemDataProtectionObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemDataProtectionObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kDataProtectionProtectionBufferAttributeId:
+      output = protectionBuffer_;
+      return CosemStatus::Ok;
+    case kDataProtectionProtectionObjectListAttributeId:
+      output = protectionObjectList_;
+      return CosemStatus::Ok;
+    case kDataProtectionProtectionParametersGetAttributeId:
+      output = protectionParametersGet_;
+      return CosemStatus::Ok;
+    case kDataProtectionProtectionParametersSetAttributeId:
+      output = protectionParametersSet_;
+      return CosemStatus::Ok;
+    case kDataProtectionRequiredProtectionAttributeId:
+      output = requiredProtection_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemDataProtectionObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kDataProtectionProtectionBufferAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      protectionBuffer_ = input;
+      return CosemStatus::Ok;
+    case kDataProtectionProtectionObjectListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      protectionObjectList_ = input;
+      return CosemStatus::Ok;
+    case kDataProtectionProtectionParametersGetAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      protectionParametersGet_ = input;
+      return CosemStatus::Ok;
+    case kDataProtectionProtectionParametersSetAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      protectionParametersSet_ = input;
+      return CosemStatus::Ok;
+    case kDataProtectionRequiredProtectionAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      requiredProtection_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemDataProtectionObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kDataProtectionGetProtectedAttributesMethodId ||
+      methodId == kDataProtectionSetProtectedAttributesMethodId ||
+      methodId == kDataProtectionInvokeProtectedMethodMethodId) {
+    // Data Protection get/set/invoke are not exposed by the
+    // built-in object; backend is expected to perform the
+    // protected operations out-of-band and republish the stored
+    // buffers.
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemDataProtectionObject::ProtectionBuffer() const
+{
+  return protectionBuffer_;
+}
+
+const CosemByteBuffer&
+CosemDataProtectionObject::ProtectionObjectList() const
+{
+  return protectionObjectList_;
+}
+
+const CosemByteBuffer&
+CosemDataProtectionObject::ProtectionParametersGet() const
+{
+  return protectionParametersGet_;
+}
+
+const CosemByteBuffer&
+CosemDataProtectionObject::ProtectionParametersSet() const
+{
+  return protectionParametersSet_;
+}
+
+const CosemByteBuffer&
+CosemDataProtectionObject::RequiredProtection() const
+{
+  return requiredProtection_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

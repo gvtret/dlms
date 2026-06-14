@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.53.0 - 2026-06-15
+
+- Added Data Protection IC `30` built-in object
+  (`CosemDataProtectionObject`) with class version `0`, exposing
+  `protection_buffer` (octet-string carrying the protected
+  payload), `protection_object_list` (array of structure
+  {`protection_type`: enum, `protection_options`: structure,
+  `protection_parameters_id`: octet-string}),
+  `protection_parameters_get` (array of structure
+  {`protection_type`: enum, `protection_options`: structure}),
+  `protection_parameters_set` (array of structure
+  {`protection_type`: enum, `protection_options`: structure}) and
+  `required_protection` (bit-string with authentication /
+  encryption / digital-signature bits) as opaque encoded DLMS Data
+  buffers prepared by the caller.
+- Attributes `2`-`6` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish refreshed protection buffer, object list,
+  parameter tables and required-protection mask after performing
+  the protected operations out-of-band); logical_name (`1`) is
+  read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `get_protected_attributes`, `2`
+  `set_protected_attributes` and `3` `invoke_protected_method`
+  return `UnsupportedFeature` and clear method output (the
+  built-in object does not perform protected operations); other
+  method ids return `MethodNotFound`.
+
 ## 0.52.0 - 2026-06-15
 
 - Added Compact Data IC `62` built-in object

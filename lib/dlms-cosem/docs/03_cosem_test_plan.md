@@ -749,6 +749,28 @@ Compact Data tests:
   any other method id, always clearing method output;
 - Compact Data normalizes versions above `MaxSupportedVersion`.
 
+Data Protection tests:
+
+- Data Protection exposes attributes `1` logical_name,
+  `2` protection_buffer, `3` protection_object_list,
+  `4` protection_parameters_get, `5` protection_parameters_set
+  and `6` required_protection as the encoded DLMS Data buffers
+  supplied by the caller, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- Data Protection mutable attributes (`2`-`6`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Data Protection rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Data Protection `InvokeMethod` reports `UnsupportedFeature` for
+  methods `1` `get_protected_attributes`, `2`
+  `set_protected_attributes` and `3` `invoke_protected_method`,
+  and `MethodNotFound` for any other method id, always clearing
+  method output;
+- Data Protection normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

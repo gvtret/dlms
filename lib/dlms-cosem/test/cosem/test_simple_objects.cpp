@@ -7634,4 +7634,177 @@ TEST(CosemCompactDataObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct DataProtectionBuffers
+{
+  dlms::cosem::CosemByteBuffer protectionBuffer;
+  dlms::cosem::CosemByteBuffer protectionObjectList;
+  dlms::cosem::CosemByteBuffer protectionParametersGet;
+  dlms::cosem::CosemByteBuffer protectionParametersSet;
+  dlms::cosem::CosemByteBuffer requiredProtection;
+};
+
+DataProtectionBuffers MakeSampleDataProtection()
+{
+  DataProtectionBuffers b;
+  // octet-string(4) protected payload
+  b.protectionBuffer = BytesFromList({0x09u, 0x04u, 0xCAu, 0xFEu, 0xBAu, 0xBEu});
+  // array(1) of structure(3): {enum 1, structure(0) {}, octet-string(2) 0xAABB}
+  b.protectionObjectList = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x03u,
+        0x16u, 0x01u,
+        0x02u, 0x00u,
+        0x09u, 0x02u, 0xAAu, 0xBBu});
+  // array(1) of structure(2): {enum 1, structure(0) {}}
+  b.protectionParametersGet = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x16u, 0x01u,
+        0x02u, 0x00u});
+  // array(1) of structure(2): {enum 2, structure(0) {}}
+  b.protectionParametersSet = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x16u, 0x02u,
+        0x02u, 0x00u});
+  // bit-string(3) 0b111 (authentication + encryption + digital signature)
+  b.requiredProtection = BytesFromList({0x04u, 0x03u, 0xE0u});
+  return b;
+}
+
+dlms::cosem::CosemDataProtectionObject MakeDataProtectionObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const DataProtectionBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemDataProtectionObject(
+    name, b.protectionBuffer, b.protectionObjectList,
+    b.protectionParametersGet, b.protectionParametersSet,
+    b.requiredProtection, access);
+}
+
+} // namespace
+
+TEST(CosemDataProtectionObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 43u, 1u, 0u, 255u);
+  const DataProtectionBuffers b = MakeSampleDataProtection();
+  dlms::cosem::CosemDataProtectionObject object =
+    MakeDataProtectionObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(30u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemDataProtectionObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.protectionBuffer, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.protectionObjectList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.protectionParametersGet, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.protectionParametersSet, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.requiredProtection, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(7u, out));
+}
+
+TEST(CosemDataProtectionObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 43u, 1u, 0u, 255u);
+  const DataProtectionBuffers b = MakeSampleDataProtection();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemDataProtectionObject writable =
+    MakeDataProtectionObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.ProtectionBuffer());
+  EXPECT_EQ(replacement, writable.ProtectionObjectList());
+  EXPECT_EQ(replacement, writable.ProtectionParametersGet());
+  EXPECT_EQ(replacement, writable.ProtectionParametersSet());
+  EXPECT_EQ(replacement, writable.RequiredProtection());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemDataProtectionObject readOnly =
+    MakeDataProtectionObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.protectionBuffer, readOnly.ProtectionBuffer());
+  EXPECT_EQ(b.protectionObjectList, readOnly.ProtectionObjectList());
+  EXPECT_EQ(b.protectionParametersGet,
+            readOnly.ProtectionParametersGet());
+  EXPECT_EQ(b.protectionParametersSet,
+            readOnly.ProtectionParametersSet());
+  EXPECT_EQ(b.requiredProtection, readOnly.RequiredProtection());
+}
+
+TEST(CosemDataProtectionObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 43u, 1u, 0u, 255u);
+  const DataProtectionBuffers b = MakeSampleDataProtection();
+  dlms::cosem::CosemDataProtectionObject object =
+    MakeDataProtectionObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {4u, 5u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemDataProtectionObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 43u, 1u, 0u, 255u);
+  const DataProtectionBuffers b = MakeSampleDataProtection();
+  dlms::cosem::CosemDataProtectionObject object(
+    name, b.protectionBuffer, b.protectionObjectList,
+    b.protectionParametersGet, b.protectionParametersSet,
+    b.requiredProtection,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemDataProtectionObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

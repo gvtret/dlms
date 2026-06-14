@@ -4489,6 +4489,140 @@ void CosemSpecialDaysTableObject::SetEntries(const CosemByteBuffer& value)
   entries_ = value;
 }
 
+namespace {
+constexpr std::uint16_t kSingleActionScheduleClassId = 22u;
+constexpr std::uint8_t kSingleActionScheduleExecutedScriptAttributeId = 2u;
+constexpr std::uint8_t kSingleActionScheduleTypeAttributeId = 3u;
+constexpr std::uint8_t kSingleActionScheduleExecutionTimeAttributeId = 4u;
+} // namespace
+
+const std::uint8_t CosemSingleActionScheduleObject::MaxSupportedVersion;
+
+CosemSingleActionScheduleObject::CosemSingleActionScheduleObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& executedScript,
+  const CosemByteBuffer& type,
+  const CosemByteBuffer& executionTime,
+  AttributeAccessMode mutableAccess)
+  : CosemSingleActionScheduleObject(
+      logicalName, executedScript, type, executionTime,
+      mutableAccess, kVersion0)
+{
+}
+
+CosemSingleActionScheduleObject::CosemSingleActionScheduleObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& executedScript,
+  const CosemByteBuffer& type,
+  const CosemByteBuffer& executionTime,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSingleActionScheduleClassId,
+      NormalizeVersion(
+        version, CosemSingleActionScheduleObject::MaxSupportedVersion),
+      logicalName))
+  , executedScript_(executedScript)
+  , type_(type)
+  , executionTime_(executionTime)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSingleActionScheduleExecutedScriptAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSingleActionScheduleTypeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSingleActionScheduleExecutionTimeAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemSingleActionScheduleObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSingleActionScheduleObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSingleActionScheduleObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kSingleActionScheduleExecutedScriptAttributeId:
+      output = executedScript_;
+      return CosemStatus::Ok;
+    case kSingleActionScheduleTypeAttributeId:
+      output = type_;
+      return CosemStatus::Ok;
+    case kSingleActionScheduleExecutionTimeAttributeId:
+      output = executionTime_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSingleActionScheduleObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kSingleActionScheduleExecutedScriptAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      executedScript_ = input;
+      return CosemStatus::Ok;
+    case kSingleActionScheduleTypeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      type_ = input;
+      return CosemStatus::Ok;
+    case kSingleActionScheduleExecutionTimeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      executionTime_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSingleActionScheduleObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Single Action Schedule IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemSingleActionScheduleObject::ExecutedScript() const
+{
+  return executedScript_;
+}
+
+const CosemByteBuffer& CosemSingleActionScheduleObject::Type() const
+{
+  return type_;
+}
+
+const CosemByteBuffer& CosemSingleActionScheduleObject::ExecutionTime() const
+{
+  return executionTime_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

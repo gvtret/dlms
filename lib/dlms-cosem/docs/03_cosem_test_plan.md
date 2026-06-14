@@ -395,6 +395,24 @@ Special Days Table tests:
   report `MethodNotFound`;
 - Special Days Table normalizes versions above `MaxSupportedVersion`.
 
+Single Action Schedule tests:
+
+- Single Action Schedule exposes attributes `1` logical_name, `2`
+  executed_script, `3` type and `4` execution_time as the encoded
+  DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Single Action Schedule mutable attributes (`2`-`4`) writes succeed
+  when the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Single Action Schedule rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Single Action Schedule `InvokeMethod` reports `MethodNotFound` for
+  all method ids and clears method output (IC defines no methods);
+- Single Action Schedule normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

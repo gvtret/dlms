@@ -4661,4 +4661,143 @@ TEST(CosemSpecialDaysTableObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct SingleActionScheduleBuffers
+{
+  dlms::cosem::CosemByteBuffer executedScript;
+  dlms::cosem::CosemByteBuffer type;
+  dlms::cosem::CosemByteBuffer executionTime;
+};
+
+SingleActionScheduleBuffers MakeSampleSingleActionSchedule()
+{
+  SingleActionScheduleBuffers b;
+  // structure(2): script_logical_name + script_selector
+  b.executedScript = BytesFromList({
+    0x02u, 0x02u,
+      0x09u, 0x06u, 0x00u, 0x00u, 0x0Au, 0x00u, 0x64u, 0xFFu,
+      0x12u, 0x00u, 0x01u});
+  // enum 1 (SingleAction)
+  b.type = BytesFromList({0x16u, 0x01u});
+  // array(1) of structure(2): time + date
+  b.executionTime = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x09u, 0x04u, 0x06u, 0x00u, 0x00u, 0x00u,        // 06:00:00.00
+        0x09u, 0x05u, 0x07u, 0xE5u, 0x01u, 0x01u, 0xFFu});// 2021-01-01
+  return b;
+}
+
+dlms::cosem::CosemSingleActionScheduleObject MakeSingleActionScheduleObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const SingleActionScheduleBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemSingleActionScheduleObject(
+    name, b.executedScript, b.type, b.executionTime, access);
+}
+
+} // namespace
+
+TEST(CosemSingleActionScheduleObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
+  dlms::cosem::CosemSingleActionScheduleObject object =
+    MakeSingleActionScheduleObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(22u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemSingleActionScheduleObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.executedScript, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.type, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.executionTime, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+}
+
+TEST(CosemSingleActionScheduleObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x16u, 0x02u});
+
+  dlms::cosem::CosemSingleActionScheduleObject writable =
+    MakeSingleActionScheduleObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.ExecutedScript());
+  EXPECT_EQ(replacement, writable.Type());
+  EXPECT_EQ(replacement, writable.ExecutionTime());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemSingleActionScheduleObject readOnly =
+    MakeSingleActionScheduleObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.executedScript, readOnly.ExecutedScript());
+  EXPECT_EQ(b.type, readOnly.Type());
+  EXPECT_EQ(b.executionTime, readOnly.ExecutionTime());
+}
+
+TEST(CosemSingleActionScheduleObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
+  dlms::cosem::CosemSingleActionScheduleObject object =
+    MakeSingleActionScheduleObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemSingleActionScheduleObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
+  dlms::cosem::CosemSingleActionScheduleObject object(
+    name, b.executedScript, b.type, b.executionTime,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemSingleActionScheduleObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

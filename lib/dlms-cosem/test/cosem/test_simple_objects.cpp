@@ -3517,16 +3517,16 @@ dlms::cosem::CosemPushSetupObject MakePushSetupObject(
 
 } // namespace
 
-TEST(CosemPushSetupObject, V1ExposesAllAttributes)
+TEST(CosemPushSetupObject, V2ExposesAllAttributes)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 25u, 9u, 0u, 255u);
   const PushSetupBuffers b = MakeSamplePushSetup();
   dlms::cosem::CosemPushSetupObject object = MakePushSetupObject(
-    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 1u);
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 2u);
 
   EXPECT_EQ(40u, object.Descriptor().key.classId);
-  EXPECT_EQ(1u, object.Descriptor().key.version);
+  EXPECT_EQ(2u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemPushSetupObject::MaxSupportedVersion,
     object.Descriptor().key.version);
@@ -3560,6 +3560,36 @@ TEST(CosemPushSetupObject, V1ExposesAllAttributes)
   EXPECT_EQ(b.lastConfirmationDateTime, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(14u, out));
+}
+
+TEST(CosemPushSetupObject, V1ExposesV1AttributesAndHidesV2Extensions)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 9u, 0u, 255u);
+  const PushSetupBuffers b = MakeSamplePushSetup();
+  dlms::cosem::CosemPushSetupObject object = MakePushSetupObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 1u);
+
+  EXPECT_EQ(1u, object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  for (std::uint8_t id = 1u; id <= 10u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(id, out))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  for (std::uint8_t id = 11u; id <= 13u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+              object.ReadAttribute(id, out))
+      << "attribute id " << static_cast<unsigned>(id);
+    EXPECT_TRUE(out.empty());
+  }
+  const dlms::cosem::CosemByteBuffer payload =
+    BytesFromList({0x01u, 0x00u});
+  for (std::uint8_t id = 11u; id <= 13u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+              object.WriteAttribute(id, payload))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
 }
 
 TEST(CosemPushSetupObject, V0HidesV1AttributesAsAttributeNotFound)
@@ -3600,7 +3630,7 @@ TEST(CosemPushSetupObject, MutableAttributesHonorCallerAccessMode)
     BytesFromList({0x09u, 0x02u, 0xAAu, 0xBBu});
 
   dlms::cosem::CosemPushSetupObject writable = MakePushSetupObject(
-    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 1u);
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 2u);
   for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(
@@ -3618,7 +3648,7 @@ TEST(CosemPushSetupObject, MutableAttributesHonorCallerAccessMode)
             writable.WriteAttribute(99u, replacement));
 
   dlms::cosem::CosemPushSetupObject readOnly = MakePushSetupObject(
-    name, b, dlms::cosem::AttributeAccessMode::ReadOnly, 1u);
+    name, b, dlms::cosem::AttributeAccessMode::ReadOnly, 2u);
   for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
               readOnly.WriteAttribute(
@@ -3627,6 +3657,21 @@ TEST(CosemPushSetupObject, MutableAttributesHonorCallerAccessMode)
   }
   EXPECT_EQ(b.pushObjectList, readOnly.PushObjectList());
   EXPECT_EQ(b.confirmationParameters, readOnly.ConfirmationParameters());
+
+  // v1: attributes 11..13 are not part of the class at all and stay
+  // AttributeNotFound regardless of the caller-supplied access mode.
+  dlms::cosem::CosemPushSetupObject v1 = MakePushSetupObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 1u);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              v1.WriteAttribute(static_cast<std::uint8_t>(id), replacement))
+      << "v1 attribute id " << static_cast<unsigned>(id);
+  }
+  for (std::uint8_t id : {11u, 12u, 13u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+              v1.WriteAttribute(static_cast<std::uint8_t>(id), replacement))
+      << "v1 attribute id " << static_cast<unsigned>(id);
+  }
 }
 
 TEST(CosemPushSetupObject, PushIsUnsupportedAndOthersNotFound)
@@ -3635,16 +3680,41 @@ TEST(CosemPushSetupObject, PushIsUnsupportedAndOthersNotFound)
     dlms::cosem::CosemLogicalName(0u, 0u, 25u, 9u, 0u, 255u);
   const PushSetupBuffers b = MakeSamplePushSetup();
   dlms::cosem::CosemPushSetupObject object = MakePushSetupObject(
-    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 1u);
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 2u);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
   dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
   EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
             object.InvokeMethod(1u, in, out));
   EXPECT_TRUE(out.empty());
+  out = BytesFromList({0xCCu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(3u, in, out));
+  EXPECT_TRUE(out.empty());
+}
+
+TEST(CosemPushSetupObject, ResetMethodClearsLastConfirmationDateTimeInV2)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 9u, 0u, 255u);
+  const PushSetupBuffers b = MakeSamplePushSetup();
+  dlms::cosem::CosemPushSetupObject object = MakePushSetupObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 2u);
+
+  EXPECT_FALSE(object.LastConfirmationDateTime().empty());
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.InvokeMethod(2u, in, out));
+  EXPECT_TRUE(out.empty());
+  EXPECT_TRUE(object.LastConfirmationDateTime().empty());
+
+  // v1 does not define method 2 at all.
+  dlms::cosem::CosemPushSetupObject v1 = MakePushSetupObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite, 1u);
   out = BytesFromList({0xBBu});
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(2u, in, out));
+            v1.InvokeMethod(2u, in, out));
   EXPECT_TRUE(out.empty());
 }
 
@@ -3658,6 +3728,7 @@ TEST(CosemPushSetupObject, NormalizesVersionAboveMax)
   EXPECT_EQ(
     dlms::cosem::CosemPushSetupObject::MaxSupportedVersion,
     object.Descriptor().key.version);
+  EXPECT_EQ(2u, object.Descriptor().key.version);
 }
 
 namespace {

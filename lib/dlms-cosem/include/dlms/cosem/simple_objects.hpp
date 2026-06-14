@@ -483,10 +483,30 @@ private:
   CosemAccessRights rights_;
 };
 
+// Push setup (class_id = 40), IEC 62056-6-2 ED4 (2021).
+//
+// Per-version attribute layout:
+//   v0: 1..7   (1..7 always present)
+//   v1: 1..10  (adds 8 port_reference, 9 push_client_SAP,
+//              10 push_protection_parameters)
+//   v2: 1..13  (adds 11 push_operation_method, 12 confirmation_parameters,
+//              13 last_confirmation_date_time)
+//
+// Methods:
+//   v0/v1: 1 push (m)
+//   v2:    1 push (m), 2 reset (o)
+//
+// repetition_delay (attr 7) data type:
+//   v0/v1: long-unsigned (seconds)
+//   v2:    structure { repetition_delay_min: long-unsigned,
+//                      repetition_delay_exponent: long-unsigned,
+//                      repetition_delay_max: long-unsigned }
+// The buffer is opaque; the caller is responsible for encoding the value
+// that matches the negotiated version.
 class CosemPushSetupObject : public ICosemObject
 {
 public:
-  static const std::uint8_t MaxSupportedVersion = 1u;
+  static const std::uint8_t MaxSupportedVersion = 2u;
 
   CosemPushSetupObject(
     const CosemLogicalName& logicalName,

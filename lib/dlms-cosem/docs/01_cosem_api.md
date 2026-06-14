@@ -379,8 +379,8 @@ and are surfaced as `UnsupportedFeature`; other method ids report
 `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial Push Setup IC `40`
-(`CosemPushSetupObject`) with `MaxSupportedVersion = 1`. The single
-constructor takes the full v1 attribute payload
+(`CosemPushSetupObject`) with `MaxSupportedVersion = 2`. The single
+constructor takes the full v2 attribute payload
 (`push_object_list`, `send_destination_and_method`,
 `communication_window`, `randomisation_start_interval`,
 `number_of_retries`, `repetition_delay`, `port_reference`,
@@ -390,15 +390,23 @@ constructor takes the full v1 attribute payload
 the caller, the logical name, a caller-selected `AttributeAccessMode`
 shared by the mutable attributes, and an explicit version that is
 normalized to `MaxSupportedVersion` when out of range. On a v0 object
-the v1-only attributes (`8`-`13`) are hidden: reads and writes report
-`AttributeNotFound`. On a v1 object the mutable attributes (`2`-`12`)
-honor the caller access mode and replace the stored buffer in-place
-when writable; logical_name and `last_confirmation_date_time` (`13`)
-are read-only, and a setter exposes backend-driven refresh of the
-last-confirmation timestamp. Method `1` `push` dispatches
+the v1/v2 attributes (`8`-`13`) are hidden: reads and writes report
+`AttributeNotFound`. On a v1 object the v2-only attributes (`11`-`13`)
+are hidden in the same way. On a v2 object the mutable attributes
+(`2`-`12`) honor the caller access mode and replace the stored buffer
+in-place when writable; logical_name and `last_confirmation_date_time`
+(`13`) are read-only, and a setter exposes backend-driven refresh of
+the last-confirmation timestamp. The `repetition_delay` attribute
+(`7`) is long-unsigned in v0/v1 and a `{repetition_delay_min,
+repetition_delay_exponent, repetition_delay_max}` structure in v2; the
+buffer is opaque and the caller is responsible for encoding the value
+that matches the negotiated version. Method `1` `push` dispatches
 application-defined scheduling, transport selection and confirmation
-tracking and is surfaced as `UnsupportedFeature`; other method ids
-report `MethodNotFound`.
+tracking and is surfaced as `UnsupportedFeature`. Method `2` `reset`
+is defined for v2 only: on v2 instances it clears
+`last_confirmation_date_time` (the only persistent state the built-in
+object owns) and returns `Ok`; on v0/v1 instances it returns
+`MethodNotFound`. Other method ids report `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial Disconnect Control IC `70`
 (`CosemDisconnectControlObject`) with class version `0`. The

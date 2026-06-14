@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.67.0 - 2026-06-15
+
+- Bumped Push Setup IC `40` built-in object
+  (`CosemPushSetupObject`) from `MaxSupportedVersion = 1` to
+  `MaxSupportedVersion = 2`, aligning the per-version surface with
+  IEC 62056-6-2 ED4 (2021):
+  - v0 exposes attributes `1`-`7` (logical_name plus the v0 surface);
+  - v1 adds attributes `8` port_reference, `9` push_client_SAP and
+    `10` push_protection_parameters;
+  - v2 adds attributes `11` push_operation_method,
+    `12` confirmation_parameters and
+    `13` last_confirmation_date_time.
+  Reads and writes to attributes that are not part of the negotiated
+  class version report `AttributeNotFound`; this fixes a regression
+  in `0.26.0` that surfaced attributes `8`-`13` as if they all
+  belonged to v1.
+- Added method `2` `reset` (defined for v2 only): on a v2 instance
+  it clears the stored `last_confirmation_date_time` buffer (the
+  only persistent state owned by the built-in object) and returns
+  `Ok`; on v0/v1 instances it returns `MethodNotFound`. Method `1`
+  `push` continues to report `UnsupportedFeature` and undefined
+  method ids continue to report `MethodNotFound`; method output is
+  always cleared.
+- Documented that the `repetition_delay` attribute (`7`) is
+  long-unsigned in v0/v1 and a `{repetition_delay_min,
+  repetition_delay_exponent, repetition_delay_max}` structure in
+  v2. The buffer remains opaque; the caller is responsible for
+  encoding the value that matches the negotiated version.
+
 ## 0.66.0 - 2026-06-15
 
 - Added S-FSK Active Initiator IC `51` built-in object

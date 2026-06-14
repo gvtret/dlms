@@ -245,7 +245,7 @@ Image Transfer tests:
 
 Push Setup tests:
 
-- Push Setup v1 exposes attributes `1` logical_name and `2`-`13`
+- Push Setup v2 exposes attributes `1` logical_name and `2`-`13`
   (push_object_list, send_destination_and_method,
   communication_window, randomisation_start_interval,
   number_of_retries, repetition_delay, port_reference,
@@ -253,18 +253,26 @@ Push Setup tests:
   confirmation_parameters, last_confirmation_date_time) as the encoded
   DLMS Data buffers supplied by the caller, and reports
   `AttributeNotFound` for undefined attribute ids;
+- Push Setup v1 exposes attributes `1`-`10` and reports
+  `AttributeNotFound` on both read and write for the v2-only attributes
+  (`11`-`13`);
 - Push Setup v0 reports `AttributeNotFound` on both read and write for
-  the v1-only attributes (`8`-`13`), and still exposes `1`-`7` from the
+  the v1/v2 attributes (`8`-`13`), and still exposes `1`-`7` from the
   caller-supplied buffers;
-- Push Setup mutable attributes (`2`-`12` on v1) writes succeed when
-  the caller-selected access mode permits writes and replace the
-  stored buffer in-place; writes report `AccessDenied` when the access
-  mode is read-only, leaving the stored buffers unchanged;
+- Push Setup mutable attributes (`2`-`12` on v2; `2`-`10` on v1; `2`-`7`
+  on v0) writes succeed when the caller-selected access mode permits
+  writes and replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving the stored
+  buffers unchanged;
 - Push Setup rejects writes to `logical_name` and to
   `last_confirmation_date_time` (`13`) with `AccessDenied`, and reports
   `AttributeNotFound` for undefined attribute ids;
 - Push Setup method `1` `push` reports `UnsupportedFeature` and clears
-  method output; other method ids report `MethodNotFound`;
+  method output;
+- Push Setup method `2` `reset` (defined for v2 only) clears
+  `last_confirmation_date_time` and returns `Ok` on a v2 instance, and
+  reports `MethodNotFound` on v0/v1 instances; other method ids report
+  `MethodNotFound`;
 - Push Setup normalizes versions above `MaxSupportedVersion`.
 
 Disconnect Control tests:

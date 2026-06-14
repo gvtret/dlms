@@ -2973,6 +2973,7 @@ constexpr std::uint8_t kPushSetupPushOperationMethodAttributeId = 11u;
 constexpr std::uint8_t kPushSetupConfirmationParametersAttributeId = 12u;
 constexpr std::uint8_t kPushSetupLastConfirmationDateTimeAttributeId = 13u;
 constexpr std::uint8_t kPushSetupPushMethodId = 1u;
+constexpr std::uint8_t kPushSetupResetMethodId = 2u;
 } // namespace
 
 const std::uint8_t CosemPushSetupObject::MaxSupportedVersion;
@@ -3031,6 +3032,8 @@ CosemPushSetupObject::CosemPushSetupObject(
       kPushSetupPushClientSapAttributeId, mutableAccess);
     rights_.SetAttributeAccess(
       kPushSetupPushProtectionParametersAttributeId, mutableAccess);
+  }
+  if (descriptor_.key.version >= 2u) {
     rights_.SetAttributeAccess(
       kPushSetupPushOperationMethodAttributeId, mutableAccess);
     rights_.SetAttributeAccess(
@@ -3056,6 +3059,7 @@ CosemStatus CosemPushSetupObject::ReadAttribute(
   CosemByteBuffer& output) const
 {
   const bool v1 = descriptor_.key.version >= 1u;
+  const bool v2 = descriptor_.key.version >= 2u;
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
@@ -3091,15 +3095,15 @@ CosemStatus CosemPushSetupObject::ReadAttribute(
       output = pushProtectionParameters_;
       return CosemStatus::Ok;
     case kPushSetupPushOperationMethodAttributeId:
-      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      if (!v2) { output.clear(); return CosemStatus::AttributeNotFound; }
       output = pushOperationMethod_;
       return CosemStatus::Ok;
     case kPushSetupConfirmationParametersAttributeId:
-      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      if (!v2) { output.clear(); return CosemStatus::AttributeNotFound; }
       output = confirmationParameters_;
       return CosemStatus::Ok;
     case kPushSetupLastConfirmationDateTimeAttributeId:
-      if (!v1) { output.clear(); return CosemStatus::AttributeNotFound; }
+      if (!v2) { output.clear(); return CosemStatus::AttributeNotFound; }
       output = lastConfirmationDateTime_;
       return CosemStatus::Ok;
     default:
@@ -3113,6 +3117,7 @@ CosemStatus CosemPushSetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   const bool v1 = descriptor_.key.version >= 1u;
+  const bool v2 = descriptor_.key.version >= 2u;
   switch (attributeId) {
     case kPushSetupObjectListAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
@@ -3163,19 +3168,19 @@ CosemStatus CosemPushSetupObject::WriteAttribute(
       pushProtectionParameters_ = input;
       return CosemStatus::Ok;
     case kPushSetupPushOperationMethodAttributeId:
-      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!v2) return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       pushOperationMethod_ = input;
       return CosemStatus::Ok;
     case kPushSetupConfirmationParametersAttributeId:
-      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!v2) return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       confirmationParameters_ = input;
       return CosemStatus::Ok;
     case kPushSetupLastConfirmationDateTimeAttributeId:
-      if (!v1) return CosemStatus::AttributeNotFound;
+      if (!v2) return CosemStatus::AttributeNotFound;
       return CosemStatus::AccessDenied;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
@@ -3197,6 +3202,18 @@ CosemStatus CosemPushSetupObject::InvokeMethod(
   // transport selection and confirmation tracking.
   if (methodId == kPushSetupPushMethodId) {
     return CosemStatus::UnsupportedFeature;
+  }
+  // Method 2 (reset) is defined for v2 only (IEC 62056-6-2 ED4,
+  // 4.4.8.2.3.2). It resets the push process to its initial state.
+  // Without an active push backend, the only persistent state is the
+  // last_confirmation_date_time attribute, which we clear here so the
+  // method has an observable effect that matches the spec intent.
+  if (methodId == kPushSetupResetMethodId) {
+    if (descriptor_.key.version < 2u) {
+      return CosemStatus::MethodNotFound;
+    }
+    lastConfirmationDateTime_.clear();
+    return CosemStatus::Ok;
   }
   return CosemStatus::MethodNotFound;
 }

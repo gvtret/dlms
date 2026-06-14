@@ -7176,4 +7176,136 @@ TEST(CosemArbitratorObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct StatusMappingBuffers
+{
+  dlms::cosem::CosemByteBuffer statusWord;
+  dlms::cosem::CosemByteBuffer mappings;
+};
+
+StatusMappingBuffers MakeSampleStatusMapping()
+{
+  StatusMappingBuffers b;
+  // bit-string(8) 0b10100000 (raw status word)
+  b.statusWord = BytesFromList({0x04u, 0x08u, 0xA0u});
+  // array(2) of structure(2): {status_value bit-string(8), mapped_value bit-string(8)}
+  b.mappings = BytesFromList({
+    0x01u, 0x02u,
+      0x02u, 0x02u,
+        0x04u, 0x08u, 0x80u,
+        0x04u, 0x08u, 0x01u,
+      0x02u, 0x02u,
+        0x04u, 0x08u, 0x20u,
+        0x04u, 0x08u, 0x02u});
+  return b;
+}
+
+dlms::cosem::CosemStatusMappingObject MakeStatusMappingObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const StatusMappingBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemStatusMappingObject(
+    name, b.statusWord, b.mappings, access);
+}
+
+} // namespace
+
+TEST(CosemStatusMappingObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 5u, 0u, 255u);
+  const StatusMappingBuffers b = MakeSampleStatusMapping();
+  dlms::cosem::CosemStatusMappingObject object =
+    MakeStatusMappingObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(63u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemStatusMappingObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.statusWord, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.mappings, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(4u, out));
+}
+
+TEST(CosemStatusMappingObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 5u, 0u, 255u);
+  const StatusMappingBuffers b = MakeSampleStatusMapping();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemStatusMappingObject writable =
+    MakeStatusMappingObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.StatusWord());
+  EXPECT_EQ(replacement, writable.Mappings());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemStatusMappingObject readOnly =
+    MakeStatusMappingObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.statusWord, readOnly.StatusWord());
+  EXPECT_EQ(b.mappings, readOnly.Mappings());
+}
+
+TEST(CosemStatusMappingObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 5u, 0u, 255u);
+  const StatusMappingBuffers b = MakeSampleStatusMapping();
+  dlms::cosem::CosemStatusMappingObject object =
+    MakeStatusMappingObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemStatusMappingObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 96u, 5u, 0u, 255u);
+  const StatusMappingBuffers b = MakeSampleStatusMapping();
+  dlms::cosem::CosemStatusMappingObject object(
+    name, b.statusWord, b.mappings,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemStatusMappingObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

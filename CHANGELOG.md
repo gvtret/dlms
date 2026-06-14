@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.50.0 - 2026-06-15
+
+- Added Status Mapping IC `63` built-in object
+  (`CosemStatusMappingObject`) with class version `0`, exposing
+  `status_word` (bit-string carrying the raw status value) and
+  `mappings` (array of structure {`status_value`: bit-string,
+  `mapped_value`: bit-string}) as opaque encoded DLMS Data buffers
+  prepared by the caller.
+- Attributes `2`-`3` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish refreshed status and mapping tables after
+  evaluating the status word out-of-band); logical_name (`1`) is
+  read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Status Mapping IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.49.0 - 2026-06-15
 
 - Added Arbitrator IC `68` built-in object

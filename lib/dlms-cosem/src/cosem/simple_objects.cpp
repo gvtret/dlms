@@ -7276,6 +7276,120 @@ const CosemByteBuffer& CosemArbitratorObject::LastOutcome() const
   return lastOutcome_;
 }
 
+namespace {
+constexpr std::uint16_t kStatusMappingClassId = 63u;
+constexpr std::uint8_t kStatusMappingStatusWordAttributeId = 2u;
+constexpr std::uint8_t kStatusMappingMappingsAttributeId = 3u;
+} // namespace
+
+const std::uint8_t CosemStatusMappingObject::MaxSupportedVersion;
+
+CosemStatusMappingObject::CosemStatusMappingObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& statusWord,
+  const CosemByteBuffer& mappings,
+  AttributeAccessMode mutableAccess)
+  : CosemStatusMappingObject(
+      logicalName, statusWord, mappings, mutableAccess, kVersion0)
+{
+}
+
+CosemStatusMappingObject::CosemStatusMappingObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& statusWord,
+  const CosemByteBuffer& mappings,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kStatusMappingClassId,
+      NormalizeVersion(
+        version, CosemStatusMappingObject::MaxSupportedVersion),
+      logicalName))
+  , statusWord_(statusWord)
+  , mappings_(mappings)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kStatusMappingStatusWordAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kStatusMappingMappingsAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemStatusMappingObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemStatusMappingObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemStatusMappingObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kStatusMappingStatusWordAttributeId:
+      output = statusWord_;
+      return CosemStatus::Ok;
+    case kStatusMappingMappingsAttributeId:
+      output = mappings_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemStatusMappingObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kStatusMappingStatusWordAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      statusWord_ = input;
+      return CosemStatus::Ok;
+    case kStatusMappingMappingsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      mappings_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemStatusMappingObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Status Mapping IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemStatusMappingObject::StatusWord() const
+{
+  return statusWord_;
+}
+
+const CosemByteBuffer& CosemStatusMappingObject::Mappings() const
+{
+  return mappings_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

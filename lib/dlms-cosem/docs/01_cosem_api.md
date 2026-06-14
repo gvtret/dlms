@@ -752,6 +752,22 @@ Methods `1` `request_action` and `2` `reset` return
 does not own arbitration semantics); other method ids return
 `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial Status Mapping IC `63`
+(`CosemStatusMappingObject`) with class version `0`. The
+constructors take the `status_word` (bit-string carrying the raw
+status value) and `mappings` (array of structure
+{`status_value`: bit-string, `mapped_value`: bit-string})
+payloads as encoded DLMS Data buffers prepared by the caller, the
+logical name, a caller-selected `AttributeAccessMode` shared by
+the mutable attributes (`2`-`3`), and an optional explicit
+version that is normalized to `MaxSupportedVersion` when out of
+range. Attribute `1` (logical_name) is read-only; the mutable
+attributes honor the caller access mode and replace the stored
+buffer in-place when writable, so the backend can republish
+refreshed status and mapping tables after evaluating the status
+word out-of-band. IC defines no methods; `InvokeMethod` reports
+`MethodNotFound` for all method ids and clears method output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

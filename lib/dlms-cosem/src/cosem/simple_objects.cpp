@@ -8999,6 +8999,323 @@ CosemMBusDiagnosticObject::CaptureTime() const
   return captureTime_;
 }
 
+namespace {
+constexpr std::uint16_t kPrimePlcMacSetupClassId = 80u;
+constexpr std::uint8_t kPrimePlcMacSetupMacMinConWindowId = 2u;
+constexpr std::uint8_t kPrimePlcMacSetupMacMaxConWindowId = 3u;
+constexpr std::uint8_t
+  kPrimePlcMacSetupMacChannelAccessFairnessLimitId = 4u;
+constexpr std::uint8_t kPrimePlcMacSetupMacEmaId = 5u;
+constexpr std::uint8_t kPrimePlcMacSetupMacSarSizeId = 6u;
+constexpr std::uint8_t kPrimePlcMacSetupMacMaxPduSizeId = 7u;
+constexpr std::uint8_t
+  kPrimePlcMacSetupMacMinSwitchSearchTimeId = 8u;
+constexpr std::uint8_t kPrimePlcMacSetupMacMaxPromotionPduId = 9u;
+constexpr std::uint8_t
+  kPrimePlcMacSetupMacPromotionPduTxPeriodId = 10u;
+constexpr std::uint8_t kPrimePlcMacSetupMacBeaconsPerFrameId = 11u;
+constexpr std::uint8_t kPrimePlcMacSetupMacScpMaxTxAttemptsId = 12u;
+constexpr std::uint8_t kPrimePlcMacSetupMacCtlReTxTimerId = 13u;
+constexpr std::uint8_t kPrimePlcMacSetupMacMaxLnidId = 14u;
+} // namespace
+
+const std::uint8_t CosemPrimePlcMacSetupObject::MaxSupportedVersion;
+
+CosemPrimePlcMacSetupObject::CosemPrimePlcMacSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& macMinConWindow,
+  const CosemByteBuffer& macMaxConWindow,
+  const CosemByteBuffer& macChannelAccessFairnessLimit,
+  const CosemByteBuffer& macEma,
+  const CosemByteBuffer& macSarSize,
+  const CosemByteBuffer& macMaxPduSize,
+  const CosemByteBuffer& macMinSwitchSearchTime,
+  const CosemByteBuffer& macMaxPromotionPdu,
+  const CosemByteBuffer& macPromotionPduTxPeriod,
+  const CosemByteBuffer& macBeaconsPerFrame,
+  const CosemByteBuffer& macScpMaxTxAttempts,
+  const CosemByteBuffer& macCtlReTxTimer,
+  const CosemByteBuffer& macMaxLnid,
+  AttributeAccessMode mutableAccess)
+  : CosemPrimePlcMacSetupObject(
+      logicalName, macMinConWindow, macMaxConWindow,
+      macChannelAccessFairnessLimit, macEma, macSarSize,
+      macMaxPduSize, macMinSwitchSearchTime, macMaxPromotionPdu,
+      macPromotionPduTxPeriod, macBeaconsPerFrame,
+      macScpMaxTxAttempts, macCtlReTxTimer, macMaxLnid,
+      mutableAccess,
+      CosemPrimePlcMacSetupObject::MaxSupportedVersion)
+{
+}
+
+CosemPrimePlcMacSetupObject::CosemPrimePlcMacSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& macMinConWindow,
+  const CosemByteBuffer& macMaxConWindow,
+  const CosemByteBuffer& macChannelAccessFairnessLimit,
+  const CosemByteBuffer& macEma,
+  const CosemByteBuffer& macSarSize,
+  const CosemByteBuffer& macMaxPduSize,
+  const CosemByteBuffer& macMinSwitchSearchTime,
+  const CosemByteBuffer& macMaxPromotionPdu,
+  const CosemByteBuffer& macPromotionPduTxPeriod,
+  const CosemByteBuffer& macBeaconsPerFrame,
+  const CosemByteBuffer& macScpMaxTxAttempts,
+  const CosemByteBuffer& macCtlReTxTimer,
+  const CosemByteBuffer& macMaxLnid,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPrimePlcMacSetupClassId,
+      NormalizeVersion(
+        version,
+        CosemPrimePlcMacSetupObject::MaxSupportedVersion),
+      logicalName))
+  , macMinConWindow_(macMinConWindow)
+  , macMaxConWindow_(macMaxConWindow)
+  , macChannelAccessFairnessLimit_(macChannelAccessFairnessLimit)
+  , macEma_(macEma)
+  , macSarSize_(macSarSize)
+  , macMaxPduSize_(macMaxPduSize)
+  , macMinSwitchSearchTime_(macMinSwitchSearchTime)
+  , macMaxPromotionPdu_(macMaxPromotionPdu)
+  , macPromotionPduTxPeriod_(macPromotionPduTxPeriod)
+  , macBeaconsPerFrame_(macBeaconsPerFrame)
+  , macScpMaxTxAttempts_(macScpMaxTxAttempts)
+  , macCtlReTxTimer_(macCtlReTxTimer)
+  , macMaxLnid_(macMaxLnid)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr :
+       {kPrimePlcMacSetupMacMinConWindowId,
+        kPrimePlcMacSetupMacMaxConWindowId,
+        kPrimePlcMacSetupMacChannelAccessFairnessLimitId,
+        kPrimePlcMacSetupMacEmaId,
+        kPrimePlcMacSetupMacSarSizeId,
+        kPrimePlcMacSetupMacMaxPduSizeId,
+        kPrimePlcMacSetupMacMinSwitchSearchTimeId,
+        kPrimePlcMacSetupMacMaxPromotionPduId,
+        kPrimePlcMacSetupMacPromotionPduTxPeriodId,
+        kPrimePlcMacSetupMacBeaconsPerFrameId,
+        kPrimePlcMacSetupMacScpMaxTxAttemptsId,
+        kPrimePlcMacSetupMacCtlReTxTimerId,
+        kPrimePlcMacSetupMacMaxLnidId}) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
+}
+
+CosemObjectDescriptor
+CosemPrimePlcMacSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemPrimePlcMacSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemPrimePlcMacSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacMinConWindowId:
+      output = macMinConWindow_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacMaxConWindowId:
+      output = macMaxConWindow_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacChannelAccessFairnessLimitId:
+      output = macChannelAccessFairnessLimit_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacEmaId:
+      output = macEma_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacSarSizeId:
+      output = macSarSize_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacMaxPduSizeId:
+      output = macMaxPduSize_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacMinSwitchSearchTimeId:
+      output = macMinSwitchSearchTime_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacMaxPromotionPduId:
+      output = macMaxPromotionPdu_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacPromotionPduTxPeriodId:
+      output = macPromotionPduTxPeriod_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacBeaconsPerFrameId:
+      output = macBeaconsPerFrame_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacScpMaxTxAttemptsId:
+      output = macScpMaxTxAttempts_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacCtlReTxTimerId:
+      output = macCtlReTxTimer_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacSetupMacMaxLnidId:
+      output = macMaxLnid_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPrimePlcMacSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case kPrimePlcMacSetupMacMinConWindowId:
+      target = &macMinConWindow_;
+      break;
+    case kPrimePlcMacSetupMacMaxConWindowId:
+      target = &macMaxConWindow_;
+      break;
+    case kPrimePlcMacSetupMacChannelAccessFairnessLimitId:
+      target = &macChannelAccessFairnessLimit_;
+      break;
+    case kPrimePlcMacSetupMacEmaId:
+      target = &macEma_;
+      break;
+    case kPrimePlcMacSetupMacSarSizeId:
+      target = &macSarSize_;
+      break;
+    case kPrimePlcMacSetupMacMaxPduSizeId:
+      target = &macMaxPduSize_;
+      break;
+    case kPrimePlcMacSetupMacMinSwitchSearchTimeId:
+      target = &macMinSwitchSearchTime_;
+      break;
+    case kPrimePlcMacSetupMacMaxPromotionPduId:
+      target = &macMaxPromotionPdu_;
+      break;
+    case kPrimePlcMacSetupMacPromotionPduTxPeriodId:
+      target = &macPromotionPduTxPeriod_;
+      break;
+    case kPrimePlcMacSetupMacBeaconsPerFrameId:
+      target = &macBeaconsPerFrame_;
+      break;
+    case kPrimePlcMacSetupMacScpMaxTxAttemptsId:
+      target = &macScpMaxTxAttempts_;
+      break;
+    case kPrimePlcMacSetupMacCtlReTxTimerId:
+      target = &macCtlReTxTimer_;
+      break;
+    case kPrimePlcMacSetupMacMaxLnidId:
+      target = &macMaxLnid_;
+      break;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemPrimePlcMacSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IC v0 defines no methods.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacMinConWindow() const
+{
+  return macMinConWindow_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacMaxConWindow() const
+{
+  return macMaxConWindow_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacChannelAccessFairnessLimit() const
+{
+  return macChannelAccessFairnessLimit_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacEma() const
+{
+  return macEma_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacSarSize() const
+{
+  return macSarSize_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacMaxPduSize() const
+{
+  return macMaxPduSize_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacMinSwitchSearchTime() const
+{
+  return macMinSwitchSearchTime_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacMaxPromotionPdu() const
+{
+  return macMaxPromotionPdu_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacPromotionPduTxPeriod() const
+{
+  return macPromotionPduTxPeriod_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacBeaconsPerFrame() const
+{
+  return macBeaconsPerFrame_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacScpMaxTxAttempts() const
+{
+  return macScpMaxTxAttempts_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacCtlReTxTimer() const
+{
+  return macCtlReTxTimer_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacSetupObject::MacMaxLnid() const
+{
+  return macMaxLnid_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

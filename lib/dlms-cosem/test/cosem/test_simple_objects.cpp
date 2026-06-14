@@ -8651,4 +8651,192 @@ TEST(CosemMBusDiagnosticObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct PrimePlcMacSetupBuffers
+{
+  dlms::cosem::CosemByteBuffer macMinConWindow;
+  dlms::cosem::CosemByteBuffer macMaxConWindow;
+  dlms::cosem::CosemByteBuffer macChannelAccessFairnessLimit;
+  dlms::cosem::CosemByteBuffer macEma;
+  dlms::cosem::CosemByteBuffer macSarSize;
+  dlms::cosem::CosemByteBuffer macMaxPduSize;
+  dlms::cosem::CosemByteBuffer macMinSwitchSearchTime;
+  dlms::cosem::CosemByteBuffer macMaxPromotionPdu;
+  dlms::cosem::CosemByteBuffer macPromotionPduTxPeriod;
+  dlms::cosem::CosemByteBuffer macBeaconsPerFrame;
+  dlms::cosem::CosemByteBuffer macScpMaxTxAttempts;
+  dlms::cosem::CosemByteBuffer macCtlReTxTimer;
+  dlms::cosem::CosemByteBuffer macMaxLnid;
+};
+
+PrimePlcMacSetupBuffers MakeSamplePrimePlcMacSetup()
+{
+  PrimePlcMacSetupBuffers b;
+  // long-unsigned 1
+  b.macMinConWindow = BytesFromList({0x12u, 0x00u, 0x01u});
+  // long-unsigned 8
+  b.macMaxConWindow = BytesFromList({0x12u, 0x00u, 0x08u});
+  // unsigned 50
+  b.macChannelAccessFairnessLimit = BytesFromList({0x11u, 0x32u});
+  // long-unsigned 16
+  b.macEma = BytesFromList({0x12u, 0x00u, 0x10u});
+  // long-unsigned 128
+  b.macSarSize = BytesFromList({0x12u, 0x00u, 0x80u});
+  // long-unsigned 364
+  b.macMaxPduSize = BytesFromList({0x12u, 0x01u, 0x6Cu});
+  // long-unsigned 0x000F
+  b.macMinSwitchSearchTime = BytesFromList({0x12u, 0x00u, 0x0Fu});
+  // long-unsigned 4
+  b.macMaxPromotionPdu = BytesFromList({0x12u, 0x00u, 0x04u});
+  // long-unsigned 0x0020
+  b.macPromotionPduTxPeriod = BytesFromList({0x12u, 0x00u, 0x20u});
+  // unsigned 4
+  b.macBeaconsPerFrame = BytesFromList({0x11u, 0x04u});
+  // unsigned 3
+  b.macScpMaxTxAttempts = BytesFromList({0x11u, 0x03u});
+  // unsigned 5
+  b.macCtlReTxTimer = BytesFromList({0x11u, 0x05u});
+  // long-unsigned 0x00FF
+  b.macMaxLnid = BytesFromList({0x12u, 0x00u, 0xFFu});
+  return b;
+}
+
+dlms::cosem::CosemPrimePlcMacSetupObject
+MakePrimePlcMacSetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const PrimePlcMacSetupBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemPrimePlcMacSetupObject(
+    name, b.macMinConWindow, b.macMaxConWindow,
+    b.macChannelAccessFairnessLimit, b.macEma, b.macSarSize,
+    b.macMaxPduSize, b.macMinSwitchSearchTime,
+    b.macMaxPromotionPdu, b.macPromotionPduTxPeriod,
+    b.macBeaconsPerFrame, b.macScpMaxTxAttempts,
+    b.macCtlReTxTimer, b.macMaxLnid, access);
+}
+
+} // namespace
+
+TEST(CosemPrimePlcMacSetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 1u, 0u, 255u);
+  const PrimePlcMacSetupBuffers b = MakeSamplePrimePlcMacSetup();
+  dlms::cosem::CosemPrimePlcMacSetupObject object =
+    MakePrimePlcMacSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(80u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  const dlms::cosem::CosemByteBuffer* expected[] = {
+    &b.macMinConWindow, &b.macMaxConWindow,
+    &b.macChannelAccessFairnessLimit, &b.macEma, &b.macSarSize,
+    &b.macMaxPduSize, &b.macMinSwitchSearchTime,
+    &b.macMaxPromotionPdu, &b.macPromotionPduTxPeriod,
+    &b.macBeaconsPerFrame, &b.macScpMaxTxAttempts,
+    &b.macCtlReTxTimer, &b.macMaxLnid};
+  std::uint8_t attrId = 2u;
+  for (const auto* exp : expected) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              object.ReadAttribute(attrId, out))
+      << "attr " << static_cast<unsigned>(attrId);
+    EXPECT_EQ(*exp, out)
+      << "attr " << static_cast<unsigned>(attrId);
+    ++attrId;
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(15u, out));
+}
+
+TEST(CosemPrimePlcMacSetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 1u, 0u, 255u);
+  const PrimePlcMacSetupBuffers b = MakeSamplePrimePlcMacSetup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x12u, 0x07u, 0xFFu});
+
+  dlms::cosem::CosemPrimePlcMacSetupObject writable =
+    MakePrimePlcMacSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr :
+       {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(attr, replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement, writable.MacMinConWindow());
+  EXPECT_EQ(replacement, writable.MacMaxConWindow());
+  EXPECT_EQ(replacement, writable.MacChannelAccessFairnessLimit());
+  EXPECT_EQ(replacement, writable.MacEma());
+  EXPECT_EQ(replacement, writable.MacSarSize());
+  EXPECT_EQ(replacement, writable.MacMaxPduSize());
+  EXPECT_EQ(replacement, writable.MacMinSwitchSearchTime());
+  EXPECT_EQ(replacement, writable.MacMaxPromotionPdu());
+  EXPECT_EQ(replacement, writable.MacPromotionPduTxPeriod());
+  EXPECT_EQ(replacement, writable.MacBeaconsPerFrame());
+  EXPECT_EQ(replacement, writable.MacScpMaxTxAttempts());
+  EXPECT_EQ(replacement, writable.MacCtlReTxTimer());
+  EXPECT_EQ(replacement, writable.MacMaxLnid());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemPrimePlcMacSetupObject readOnly =
+    MakePrimePlcMacSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(b.macMinConWindow, readOnly.MacMinConWindow());
+}
+
+TEST(CosemPrimePlcMacSetupObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 1u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcMacSetupObject object =
+    MakePrimePlcMacSetupObject(
+      name, MakeSamplePrimePlcMacSetup(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemPrimePlcMacSetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 1u, 0u, 255u);
+  const PrimePlcMacSetupBuffers b = MakeSamplePrimePlcMacSetup();
+  dlms::cosem::CosemPrimePlcMacSetupObject object(
+    name, b.macMinConWindow, b.macMaxConWindow,
+    b.macChannelAccessFairnessLimit, b.macEma, b.macSarSize,
+    b.macMaxPduSize, b.macMinSwitchSearchTime,
+    b.macMaxPromotionPdu, b.macPromotionPduTxPeriod,
+    b.macBeaconsPerFrame, b.macScpMaxTxAttempts,
+    b.macCtlReTxTimer, b.macMaxLnid,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcMacSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

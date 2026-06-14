@@ -879,6 +879,30 @@ M-Bus Diagnostic tests:
 - M-Bus Diagnostic normalizes versions above
   `MaxSupportedVersion`.
 
+PRIME PLC MAC Setup tests:
+
+- PRIME PLC MAC Setup exposes attributes `1` logical_name and
+  `2`-`14` (mac_min_con_window, mac_max_con_window,
+  mac_channel_access_fairness_limit, mac_EMA, mac_SAR_size,
+  mac_max_PDU_size, mac_min_switch_search_time,
+  mac_max_promotion_PDU, mac_promotion_PDU_TX_period,
+  mac_beacons_per_frame, mac_scp_max_TX_attempts,
+  mac_CTL_re_TX_timer, mac_max_LNID) as the encoded DLMS Data
+  buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- PRIME PLC MAC Setup mutable attributes (`2`-`14`) writes
+  succeed when the caller-selected access mode permits writes
+  and replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving the
+  stored buffers unchanged;
+- PRIME PLC MAC Setup rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- PRIME PLC MAC Setup `InvokeMethod` reports `MethodNotFound`
+  for every method id and clears method output;
+- PRIME PLC MAC Setup normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

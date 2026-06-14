@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.59.0 - 2026-06-15
+
+- Added PRIME PLC MAC Setup IC `80` built-in object
+  (`CosemPrimePlcMacSetupObject`) with class version `0`,
+  exposing `mac_min_con_window`, `mac_max_con_window`
+  (long-unsigned), `mac_channel_access_fairness_limit`
+  (unsigned), `mac_EMA`, `mac_SAR_size`, `mac_max_PDU_size`,
+  `mac_min_switch_search_time`, `mac_max_promotion_PDU`,
+  `mac_promotion_PDU_TX_period` (long-unsigned),
+  `mac_beacons_per_frame`, `mac_scp_max_TX_attempts`,
+  `mac_CTL_re_TX_timer` (unsigned) and `mac_max_LNID`
+  (long-unsigned) as opaque encoded DLMS Data buffers prepared
+  by the caller.
+- Attributes `2`-`14` share a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer
+  in-place when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IC v0 defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for every method id and clears method output.
+
 ## 0.58.0 - 2026-06-15
 
 - Added M-Bus Diagnostic IC `77` built-in object

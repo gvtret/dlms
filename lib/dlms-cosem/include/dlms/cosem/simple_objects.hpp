@@ -2228,6 +2228,90 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPrimePlcMacSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemPrimePlcMacSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& macMinConWindow,
+    const CosemByteBuffer& macMaxConWindow,
+    const CosemByteBuffer& macChannelAccessFairnessLimit,
+    const CosemByteBuffer& macEma,
+    const CosemByteBuffer& macSarSize,
+    const CosemByteBuffer& macMaxPduSize,
+    const CosemByteBuffer& macMinSwitchSearchTime,
+    const CosemByteBuffer& macMaxPromotionPdu,
+    const CosemByteBuffer& macPromotionPduTxPeriod,
+    const CosemByteBuffer& macBeaconsPerFrame,
+    const CosemByteBuffer& macScpMaxTxAttempts,
+    const CosemByteBuffer& macCtlReTxTimer,
+    const CosemByteBuffer& macMaxLnid,
+    AttributeAccessMode mutableAccess);
+  CosemPrimePlcMacSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& macMinConWindow,
+    const CosemByteBuffer& macMaxConWindow,
+    const CosemByteBuffer& macChannelAccessFairnessLimit,
+    const CosemByteBuffer& macEma,
+    const CosemByteBuffer& macSarSize,
+    const CosemByteBuffer& macMaxPduSize,
+    const CosemByteBuffer& macMinSwitchSearchTime,
+    const CosemByteBuffer& macMaxPromotionPdu,
+    const CosemByteBuffer& macPromotionPduTxPeriod,
+    const CosemByteBuffer& macBeaconsPerFrame,
+    const CosemByteBuffer& macScpMaxTxAttempts,
+    const CosemByteBuffer& macCtlReTxTimer,
+    const CosemByteBuffer& macMaxLnid,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& MacMinConWindow() const;
+  const CosemByteBuffer& MacMaxConWindow() const;
+  const CosemByteBuffer& MacChannelAccessFairnessLimit() const;
+  const CosemByteBuffer& MacEma() const;
+  const CosemByteBuffer& MacSarSize() const;
+  const CosemByteBuffer& MacMaxPduSize() const;
+  const CosemByteBuffer& MacMinSwitchSearchTime() const;
+  const CosemByteBuffer& MacMaxPromotionPdu() const;
+  const CosemByteBuffer& MacPromotionPduTxPeriod() const;
+  const CosemByteBuffer& MacBeaconsPerFrame() const;
+  const CosemByteBuffer& MacScpMaxTxAttempts() const;
+  const CosemByteBuffer& MacCtlReTxTimer() const;
+  const CosemByteBuffer& MacMaxLnid() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer macMinConWindow_;
+  CosemByteBuffer macMaxConWindow_;
+  CosemByteBuffer macChannelAccessFairnessLimit_;
+  CosemByteBuffer macEma_;
+  CosemByteBuffer macSarSize_;
+  CosemByteBuffer macMaxPduSize_;
+  CosemByteBuffer macMinSwitchSearchTime_;
+  CosemByteBuffer macMaxPromotionPdu_;
+  CosemByteBuffer macPromotionPduTxPeriod_;
+  CosemByteBuffer macBeaconsPerFrame_;
+  CosemByteBuffer macScpMaxTxAttempts_;
+  CosemByteBuffer macCtlReTxTimer_;
+  CosemByteBuffer macMaxLnid_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

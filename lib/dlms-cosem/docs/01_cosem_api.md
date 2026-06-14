@@ -942,6 +942,25 @@ frame counters and capture time after polling the M-Bus link
 out-of-band. IC v0 defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids and clears method output.
 
+`simple_objects.hpp` also exposes a partial PRIME PLC MAC Setup
+IC `80` (`CosemPrimePlcMacSetupObject`) with class version `0`.
+The constructors take `mac_min_con_window`, `mac_max_con_window`
+(long-unsigned), `mac_channel_access_fairness_limit` (unsigned),
+`mac_EMA`, `mac_SAR_size`, `mac_max_PDU_size`,
+`mac_min_switch_search_time`, `mac_max_promotion_PDU`,
+`mac_promotion_PDU_TX_period` (long-unsigned),
+`mac_beacons_per_frame`, `mac_scp_max_TX_attempts`,
+`mac_CTL_re_TX_timer` (unsigned) and `mac_max_LNID`
+(long-unsigned) as encoded DLMS Data buffers prepared by the
+caller, the logical name, a caller-selected
+`AttributeAccessMode` shared by the mutable attributes
+(`2`-`14`), and an optional explicit version that is normalized
+to `MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name) is read-only; the mutable attributes honor the
+caller access mode and replace the stored buffer in-place when
+writable. IC v0 defines no methods; `InvokeMethod` reports
+`MethodNotFound` for all method ids and clears method output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

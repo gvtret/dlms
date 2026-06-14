@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.58.0 - 2026-06-15
+
+- Added M-Bus Diagnostic IC `77` built-in object
+  (`CosemMBusDiagnosticObject`) with class version `0`, exposing
+  `received_signal_quality` (unsigned),
+  `transmitter_signal_quality` (unsigned), `bbc` (long-unsigned),
+  `fcs_ok_frames_counter` (double-long-unsigned),
+  `fcs_nok_frames_counter` (double-long-unsigned) and
+  `capture_time` (date-time octet-string(12)) as opaque encoded
+  DLMS Data buffers prepared by the caller.
+- Attributes `2`-`7` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so
+  the backend can republish refreshed signal quality, frame
+  counters and capture time after polling the M-Bus link
+  out-of-band); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IC v0 defines no methods; `InvokeMethod` reports `MethodNotFound`
+  for every method id and clears method output.
+
 ## 0.57.0 - 2026-06-15
 
 - Added M-Bus Master Port Setup IC `73` built-in object

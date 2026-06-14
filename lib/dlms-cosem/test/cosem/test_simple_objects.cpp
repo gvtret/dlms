@@ -8492,4 +8492,163 @@ TEST(CosemMBusMasterPortSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct MBusDiagnosticBuffers
+{
+  dlms::cosem::CosemByteBuffer receivedSignalQuality;
+  dlms::cosem::CosemByteBuffer transmitterSignalQuality;
+  dlms::cosem::CosemByteBuffer bbc;
+  dlms::cosem::CosemByteBuffer fcsOkFramesCounter;
+  dlms::cosem::CosemByteBuffer fcsNokFramesCounter;
+  dlms::cosem::CosemByteBuffer captureTime;
+};
+
+MBusDiagnosticBuffers MakeSampleMBusDiagnostic()
+{
+  MBusDiagnosticBuffers b;
+  // unsigned 75 (RSSI quality)
+  b.receivedSignalQuality = BytesFromList({0x11u, 0x4Bu});
+  // unsigned 80
+  b.transmitterSignalQuality = BytesFromList({0x11u, 0x50u});
+  // long-unsigned 0x1234 (BBC)
+  b.bbc = BytesFromList({0x12u, 0x12u, 0x34u});
+  // double-long-unsigned 12345
+  b.fcsOkFramesCounter =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x30u, 0x39u});
+  // double-long-unsigned 7
+  b.fcsNokFramesCounter =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x07u});
+  // octet-string(12) date-time
+  b.captureTime = BytesFromList({0x09u, 0x0Cu,
+    0x07u, 0xE9u, 0x06u, 0x0Fu, 0x04u, 0x0Cu, 0x00u, 0x00u,
+    0x00u, 0x00u, 0x80u, 0x00u});
+  return b;
+}
+
+dlms::cosem::CosemMBusDiagnosticObject
+MakeMBusDiagnosticObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const MBusDiagnosticBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemMBusDiagnosticObject(
+    name, b.receivedSignalQuality, b.transmitterSignalQuality,
+    b.bbc, b.fcsOkFramesCounter, b.fcsNokFramesCounter,
+    b.captureTime, access);
+}
+
+} // namespace
+
+TEST(CosemMBusDiagnosticObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 9u, 0u, 255u);
+  const MBusDiagnosticBuffers b = MakeSampleMBusDiagnostic();
+  dlms::cosem::CosemMBusDiagnosticObject object =
+    MakeMBusDiagnosticObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(77u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemMBusDiagnosticObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.receivedSignalQuality, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.transmitterSignalQuality, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.bbc, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.fcsOkFramesCounter, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.fcsNokFramesCounter, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.captureTime, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(8u, out));
+}
+
+TEST(CosemMBusDiagnosticObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 9u, 0u, 255u);
+  const MBusDiagnosticBuffers b = MakeSampleMBusDiagnostic();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x00u});
+
+  dlms::cosem::CosemMBusDiagnosticObject writable =
+    MakeMBusDiagnosticObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(attr, replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement, writable.ReceivedSignalQuality());
+  EXPECT_EQ(replacement, writable.TransmitterSignalQuality());
+  EXPECT_EQ(replacement, writable.Bbc());
+  EXPECT_EQ(replacement, writable.FcsOkFramesCounter());
+  EXPECT_EQ(replacement, writable.FcsNokFramesCounter());
+  EXPECT_EQ(replacement, writable.CaptureTime());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemMBusDiagnosticObject readOnly =
+    MakeMBusDiagnosticObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(b.receivedSignalQuality, readOnly.ReceivedSignalQuality());
+}
+
+TEST(CosemMBusDiagnosticObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 9u, 0u, 255u);
+  dlms::cosem::CosemMBusDiagnosticObject object =
+    MakeMBusDiagnosticObject(
+      name, MakeSampleMBusDiagnostic(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemMBusDiagnosticObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 9u, 0u, 255u);
+  const MBusDiagnosticBuffers b = MakeSampleMBusDiagnostic();
+  dlms::cosem::CosemMBusDiagnosticObject object(
+    name, b.receivedSignalQuality, b.transmitterSignalQuality,
+    b.bbc, b.fcsOkFramesCounter, b.fcsNokFramesCounter,
+    b.captureTime,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemMBusDiagnosticObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

@@ -2172,6 +2172,62 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemMBusDiagnosticObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemMBusDiagnosticObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& receivedSignalQuality,
+    const CosemByteBuffer& transmitterSignalQuality,
+    const CosemByteBuffer& bbc,
+    const CosemByteBuffer& fcsOkFramesCounter,
+    const CosemByteBuffer& fcsNokFramesCounter,
+    const CosemByteBuffer& captureTime,
+    AttributeAccessMode mutableAccess);
+  CosemMBusDiagnosticObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& receivedSignalQuality,
+    const CosemByteBuffer& transmitterSignalQuality,
+    const CosemByteBuffer& bbc,
+    const CosemByteBuffer& fcsOkFramesCounter,
+    const CosemByteBuffer& fcsNokFramesCounter,
+    const CosemByteBuffer& captureTime,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& ReceivedSignalQuality() const;
+  const CosemByteBuffer& TransmitterSignalQuality() const;
+  const CosemByteBuffer& Bbc() const;
+  const CosemByteBuffer& FcsOkFramesCounter() const;
+  const CosemByteBuffer& FcsNokFramesCounter() const;
+  const CosemByteBuffer& CaptureTime() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer receivedSignalQuality_;
+  CosemByteBuffer transmitterSignalQuality_;
+  CosemByteBuffer bbc_;
+  CosemByteBuffer fcsOkFramesCounter_;
+  CosemByteBuffer fcsNokFramesCounter_;
+  CosemByteBuffer captureTime_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

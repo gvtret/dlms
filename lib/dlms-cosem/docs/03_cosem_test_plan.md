@@ -858,6 +858,27 @@ M-Bus Master Port Setup tests:
 - M-Bus Master Port Setup normalizes versions above
   `MaxSupportedVersion`.
 
+M-Bus Diagnostic tests:
+
+- M-Bus Diagnostic exposes attributes `1` logical_name,
+  `2` received_signal_quality, `3` transmitter_signal_quality,
+  `4` bbc, `5` fcs_ok_frames_counter,
+  `6` fcs_nok_frames_counter and `7` capture_time as the encoded
+  DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- M-Bus Diagnostic mutable attributes (`2`-`7`) writes succeed
+  when the caller-selected access mode permits writes and replace
+  the stored buffer in-place; writes report `AccessDenied` when
+  the access mode is read-only, leaving the stored buffers
+  unchanged;
+- M-Bus Diagnostic rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- M-Bus Diagnostic `InvokeMethod` reports `MethodNotFound` for
+  every method id and clears method output;
+- M-Bus Diagnostic normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

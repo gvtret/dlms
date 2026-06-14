@@ -924,6 +924,24 @@ caller access mode and replaces the stored buffer in-place when
 writable. IC v0 defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids and clears method output.
 
+`simple_objects.hpp` also exposes a partial M-Bus Diagnostic IC
+`77` (`CosemMBusDiagnosticObject`) with class version `0`. The
+constructors take the `received_signal_quality` (unsigned),
+`transmitter_signal_quality` (unsigned), `bbc` (long-unsigned),
+`fcs_ok_frames_counter` (double-long-unsigned),
+`fcs_nok_frames_counter` (double-long-unsigned) and
+`capture_time` (date-time octet-string(12)) payloads as encoded
+DLMS Data buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` shared by the mutable
+attributes (`2`-`7`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute
+`1` (logical_name) is read-only; the mutable attributes honor the
+caller access mode and replace the stored buffer in-place when
+writable, so the backend can republish refreshed signal quality,
+frame counters and capture time after polling the M-Bus link
+out-of-band. IC v0 defines no methods; `InvokeMethod` reports
+`MethodNotFound` for all method ids and clears method output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

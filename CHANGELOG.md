@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.42.0 - 2026-06-15
+
+- Added SMTP Setup IC `46` built-in object (`CosemSmtpSetupObject`)
+  with class version `0`, exposing `SMTP_server` (octet-string),
+  `SMTP_server_port` (long-unsigned), `user_name` (octet-string),
+  `login_password` (octet-string), `sender` (octet-string) and
+  `receivers` (array of octet-string) as opaque encoded DLMS Data
+  buffers prepared by the caller.
+- Attributes `2`-`7` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- SMTP Setup IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.41.0 - 2026-06-15
 
 - Added PPP Setup IC `44` built-in object (`CosemPppSetupObject`)

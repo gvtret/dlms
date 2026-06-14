@@ -5741,6 +5741,197 @@ const CosemByteBuffer& CosemPppSetupObject::PppAuthentication() const
   return pppAuthentication_;
 }
 
+namespace {
+constexpr std::uint16_t kSmtpSetupClassId = 46u;
+constexpr std::uint8_t kSmtpSetupSmtpServerAttributeId = 2u;
+constexpr std::uint8_t kSmtpSetupSmtpServerPortAttributeId = 3u;
+constexpr std::uint8_t kSmtpSetupUserNameAttributeId = 4u;
+constexpr std::uint8_t kSmtpSetupLoginPasswordAttributeId = 5u;
+constexpr std::uint8_t kSmtpSetupSenderAttributeId = 6u;
+constexpr std::uint8_t kSmtpSetupReceiversAttributeId = 7u;
+} // namespace
+
+const std::uint8_t CosemSmtpSetupObject::MaxSupportedVersion;
+
+CosemSmtpSetupObject::CosemSmtpSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& smtpServer,
+  const CosemByteBuffer& smtpServerPort,
+  const CosemByteBuffer& userName,
+  const CosemByteBuffer& loginPassword,
+  const CosemByteBuffer& sender,
+  const CosemByteBuffer& receivers,
+  AttributeAccessMode mutableAccess)
+  : CosemSmtpSetupObject(
+      logicalName, smtpServer, smtpServerPort, userName,
+      loginPassword, sender, receivers, mutableAccess, kVersion0)
+{
+}
+
+CosemSmtpSetupObject::CosemSmtpSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& smtpServer,
+  const CosemByteBuffer& smtpServerPort,
+  const CosemByteBuffer& userName,
+  const CosemByteBuffer& loginPassword,
+  const CosemByteBuffer& sender,
+  const CosemByteBuffer& receivers,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSmtpSetupClassId,
+      NormalizeVersion(
+        version, CosemSmtpSetupObject::MaxSupportedVersion),
+      logicalName))
+  , smtpServer_(smtpServer)
+  , smtpServerPort_(smtpServerPort)
+  , userName_(userName)
+  , loginPassword_(loginPassword)
+  , sender_(sender)
+  , receivers_(receivers)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSmtpSetupSmtpServerAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSmtpSetupSmtpServerPortAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSmtpSetupUserNameAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSmtpSetupLoginPasswordAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSmtpSetupSenderAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSmtpSetupReceiversAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemSmtpSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSmtpSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSmtpSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kSmtpSetupSmtpServerAttributeId:
+      output = smtpServer_;
+      return CosemStatus::Ok;
+    case kSmtpSetupSmtpServerPortAttributeId:
+      output = smtpServerPort_;
+      return CosemStatus::Ok;
+    case kSmtpSetupUserNameAttributeId:
+      output = userName_;
+      return CosemStatus::Ok;
+    case kSmtpSetupLoginPasswordAttributeId:
+      output = loginPassword_;
+      return CosemStatus::Ok;
+    case kSmtpSetupSenderAttributeId:
+      output = sender_;
+      return CosemStatus::Ok;
+    case kSmtpSetupReceiversAttributeId:
+      output = receivers_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSmtpSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kSmtpSetupSmtpServerAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      smtpServer_ = input;
+      return CosemStatus::Ok;
+    case kSmtpSetupSmtpServerPortAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      smtpServerPort_ = input;
+      return CosemStatus::Ok;
+    case kSmtpSetupUserNameAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      userName_ = input;
+      return CosemStatus::Ok;
+    case kSmtpSetupLoginPasswordAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      loginPassword_ = input;
+      return CosemStatus::Ok;
+    case kSmtpSetupSenderAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      sender_ = input;
+      return CosemStatus::Ok;
+    case kSmtpSetupReceiversAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      receivers_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSmtpSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // SMTP Setup IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemSmtpSetupObject::SmtpServer() const
+{
+  return smtpServer_;
+}
+
+const CosemByteBuffer& CosemSmtpSetupObject::SmtpServerPort() const
+{
+  return smtpServerPort_;
+}
+
+const CosemByteBuffer& CosemSmtpSetupObject::UserName() const
+{
+  return userName_;
+}
+
+const CosemByteBuffer& CosemSmtpSetupObject::LoginPassword() const
+{
+  return loginPassword_;
+}
+
+const CosemByteBuffer& CosemSmtpSetupObject::Sender() const
+{
+  return sender_;
+}
+
+const CosemByteBuffer& CosemSmtpSetupObject::Receivers() const
+{
+  return receivers_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

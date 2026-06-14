@@ -537,6 +537,23 @@ PPP Setup tests:
   ids and clears method output (IC defines no methods);
 - PPP Setup normalizes versions above `MaxSupportedVersion`.
 
+SMTP Setup tests:
+
+- SMTP Setup exposes attributes `1` logical_name, `2` SMTP_server,
+  `3` SMTP_server_port, `4` user_name, `5` login_password, `6`
+  sender and `7` receivers as the encoded DLMS Data buffers supplied
+  by the caller, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- SMTP Setup mutable attributes (`2`-`7`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode
+  is read-only, leaving the stored buffers unchanged;
+- SMTP Setup rejects writes to logical_name (`1`) with `AccessDenied`,
+  and reports `AttributeNotFound` for undefined attribute ids;
+- SMTP Setup `InvokeMethod` reports `MethodNotFound` for all method
+  ids and clears method output (IC defines no methods);
+- SMTP Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

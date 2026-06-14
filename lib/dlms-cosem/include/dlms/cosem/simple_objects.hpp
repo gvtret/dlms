@@ -1304,6 +1304,62 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemSmtpSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemSmtpSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& smtpServer,
+    const CosemByteBuffer& smtpServerPort,
+    const CosemByteBuffer& userName,
+    const CosemByteBuffer& loginPassword,
+    const CosemByteBuffer& sender,
+    const CosemByteBuffer& receivers,
+    AttributeAccessMode mutableAccess);
+  CosemSmtpSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& smtpServer,
+    const CosemByteBuffer& smtpServerPort,
+    const CosemByteBuffer& userName,
+    const CosemByteBuffer& loginPassword,
+    const CosemByteBuffer& sender,
+    const CosemByteBuffer& receivers,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& SmtpServer() const;
+  const CosemByteBuffer& SmtpServerPort() const;
+  const CosemByteBuffer& UserName() const;
+  const CosemByteBuffer& LoginPassword() const;
+  const CosemByteBuffer& Sender() const;
+  const CosemByteBuffer& Receivers() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer smtpServer_;
+  CosemByteBuffer smtpServerPort_;
+  CosemByteBuffer userName_;
+  CosemByteBuffer loginPassword_;
+  CosemByteBuffer sender_;
+  CosemByteBuffer receivers_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

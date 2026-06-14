@@ -1620,6 +1620,78 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemSensorManagerObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemSensorManagerObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& serialNumber,
+    const CosemByteBuffer& deviceType,
+    const CosemByteBuffer& manufacturerId,
+    const CosemByteBuffer& firmwareVersion,
+    const CosemByteBuffer& metrologyFirmwareVersion,
+    const CosemByteBuffer& driver,
+    const CosemByteBuffer& communicationDesc,
+    const CosemByteBuffer& setupDesc,
+    const CosemByteBuffer& measurementDesc,
+    AttributeAccessMode mutableAccess);
+  CosemSensorManagerObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& serialNumber,
+    const CosemByteBuffer& deviceType,
+    const CosemByteBuffer& manufacturerId,
+    const CosemByteBuffer& firmwareVersion,
+    const CosemByteBuffer& metrologyFirmwareVersion,
+    const CosemByteBuffer& driver,
+    const CosemByteBuffer& communicationDesc,
+    const CosemByteBuffer& setupDesc,
+    const CosemByteBuffer& measurementDesc,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Status() const;
+  const CosemByteBuffer& SerialNumber() const;
+  const CosemByteBuffer& DeviceType() const;
+  const CosemByteBuffer& ManufacturerId() const;
+  const CosemByteBuffer& FirmwareVersion() const;
+  const CosemByteBuffer& MetrologyFirmwareVersion() const;
+  const CosemByteBuffer& Driver() const;
+  const CosemByteBuffer& CommunicationDesc() const;
+  const CosemByteBuffer& SetupDesc() const;
+  const CosemByteBuffer& MeasurementDesc() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer status_;
+  CosemByteBuffer serialNumber_;
+  CosemByteBuffer deviceType_;
+  CosemByteBuffer manufacturerId_;
+  CosemByteBuffer firmwareVersion_;
+  CosemByteBuffer metrologyFirmwareVersion_;
+  CosemByteBuffer driver_;
+  CosemByteBuffer communicationDesc_;
+  CosemByteBuffer setupDesc_;
+  CosemByteBuffer measurementDesc_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

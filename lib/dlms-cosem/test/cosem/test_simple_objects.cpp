@@ -6815,4 +6815,195 @@ TEST(CosemUtilityTablesObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct SensorManagerBuffers
+{
+  dlms::cosem::CosemByteBuffer status;
+  dlms::cosem::CosemByteBuffer serialNumber;
+  dlms::cosem::CosemByteBuffer deviceType;
+  dlms::cosem::CosemByteBuffer manufacturerId;
+  dlms::cosem::CosemByteBuffer firmwareVersion;
+  dlms::cosem::CosemByteBuffer metrologyFirmwareVersion;
+  dlms::cosem::CosemByteBuffer driver;
+  dlms::cosem::CosemByteBuffer communicationDesc;
+  dlms::cosem::CosemByteBuffer setupDesc;
+  dlms::cosem::CosemByteBuffer measurementDesc;
+};
+
+SensorManagerBuffers MakeSampleSensorManager()
+{
+  SensorManagerBuffers b;
+  // enum 1 (operational)
+  b.status = BytesFromList({0x16u, 0x01u});
+  // octet-string(8) serial number
+  b.serialNumber = BytesFromList({
+    0x09u, 0x08u,
+      0x53u, 0x4Eu, 0x30u, 0x30u, 0x30u, 0x30u, 0x30u, 0x31u});
+  // octet-string(3) device type 'WAT'
+  b.deviceType = BytesFromList({0x09u, 0x03u, 0x57u, 0x41u, 0x54u});
+  // long-unsigned 0x1234 (manufacturer id)
+  b.manufacturerId = BytesFromList({0x12u, 0x12u, 0x34u});
+  // octet-string(4) fw v1.0
+  b.firmwareVersion = BytesFromList({
+    0x09u, 0x04u, 0x31u, 0x2Eu, 0x30u, 0x00u});
+  // octet-string(4) metrology fw v2.0
+  b.metrologyFirmwareVersion = BytesFromList({
+    0x09u, 0x04u, 0x32u, 0x2Eu, 0x30u, 0x00u});
+  // octet-string(6) driver id
+  b.driver = BytesFromList({
+    0x09u, 0x06u, 0x44u, 0x52u, 0x49u, 0x56u, 0x45u, 0x52u});
+  // array(0) communication descriptor
+  b.communicationDesc = BytesFromList({0x01u, 0x00u});
+  // array(0) setup descriptor
+  b.setupDesc = BytesFromList({0x01u, 0x00u});
+  // array(0) measurement descriptor
+  b.measurementDesc = BytesFromList({0x01u, 0x00u});
+  return b;
+}
+
+dlms::cosem::CosemSensorManagerObject MakeSensorManagerObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const SensorManagerBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemSensorManagerObject(
+    name, b.status, b.serialNumber, b.deviceType, b.manufacturerId,
+    b.firmwareVersion, b.metrologyFirmwareVersion, b.driver,
+    b.communicationDesc, b.setupDesc, b.measurementDesc, access);
+}
+
+} // namespace
+
+TEST(CosemSensorManagerObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 96u, 50u, 0u, 255u);
+  const SensorManagerBuffers b = MakeSampleSensorManager();
+  dlms::cosem::CosemSensorManagerObject object =
+    MakeSensorManagerObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(67u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemSensorManagerObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.status, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.serialNumber, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.deviceType, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.manufacturerId, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.firmwareVersion, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.metrologyFirmwareVersion, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.driver, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
+  EXPECT_EQ(b.communicationDesc, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.setupDesc, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(11u, out));
+  EXPECT_EQ(b.measurementDesc, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(12u, out));
+}
+
+TEST(CosemSensorManagerObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 96u, 50u, 0u, 255u);
+  const SensorManagerBuffers b = MakeSampleSensorManager();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemSensorManagerObject writable =
+    MakeSensorManagerObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.Status());
+  EXPECT_EQ(replacement, writable.SerialNumber());
+  EXPECT_EQ(replacement, writable.DeviceType());
+  EXPECT_EQ(replacement, writable.ManufacturerId());
+  EXPECT_EQ(replacement, writable.FirmwareVersion());
+  EXPECT_EQ(replacement, writable.MetrologyFirmwareVersion());
+  EXPECT_EQ(replacement, writable.Driver());
+  EXPECT_EQ(replacement, writable.CommunicationDesc());
+  EXPECT_EQ(replacement, writable.SetupDesc());
+  EXPECT_EQ(replacement, writable.MeasurementDesc());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemSensorManagerObject readOnly =
+    MakeSensorManagerObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.status, readOnly.Status());
+  EXPECT_EQ(b.serialNumber, readOnly.SerialNumber());
+  EXPECT_EQ(b.deviceType, readOnly.DeviceType());
+  EXPECT_EQ(b.manufacturerId, readOnly.ManufacturerId());
+  EXPECT_EQ(b.firmwareVersion, readOnly.FirmwareVersion());
+  EXPECT_EQ(b.metrologyFirmwareVersion,
+            readOnly.MetrologyFirmwareVersion());
+  EXPECT_EQ(b.driver, readOnly.Driver());
+  EXPECT_EQ(b.communicationDesc, readOnly.CommunicationDesc());
+  EXPECT_EQ(b.setupDesc, readOnly.SetupDesc());
+  EXPECT_EQ(b.measurementDesc, readOnly.MeasurementDesc());
+}
+
+TEST(CosemSensorManagerObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 96u, 50u, 0u, 255u);
+  const SensorManagerBuffers b = MakeSampleSensorManager();
+  dlms::cosem::CosemSensorManagerObject object =
+    MakeSensorManagerObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemSensorManagerObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 96u, 50u, 0u, 255u);
+  const SensorManagerBuffers b = MakeSampleSensorManager();
+  dlms::cosem::CosemSensorManagerObject object(
+    name, b.status, b.serialNumber, b.deviceType, b.manufacturerId,
+    b.firmwareVersion, b.metrologyFirmwareVersion, b.driver,
+    b.communicationDesc, b.setupDesc, b.measurementDesc,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemSensorManagerObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

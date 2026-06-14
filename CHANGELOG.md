@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.48.0 - 2026-06-15
+
+- Added Sensor Manager IC `67` built-in object
+  (`CosemSensorManagerObject`) with class version `0`, exposing
+  `status` (enum), `serial_number` (octet-string), `device_type`
+  (octet-string), `manufacturer_id` (long-unsigned),
+  `firmware_version` (octet-string), `metrology_firmware_version`
+  (octet-string), `driver` (octet-string), `communication_desc`,
+  `setup_desc` and `measurement_desc` (arrays of structure) as
+  opaque encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`11` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish refreshed sensor metadata after polling the
+  slave out-of-band); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Sensor Manager IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.47.0 - 2026-06-15
 
 - Added Utility Tables IC `26` built-in object

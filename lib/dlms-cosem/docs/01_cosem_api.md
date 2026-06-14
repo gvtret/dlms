@@ -678,6 +678,27 @@ writable. Method `1` `reset` returns `UnsupportedFeature` and
 clears method output (the built-in object does not own slave-port
 reset semantics); other method ids return `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial IPv6 Setup IC `48`
+(`CosemIpv6SetupObject`) with class version `0`. The constructors
+take the `data_link_layer_reference` (octet-string LN),
+`address_config_mode` (enum), `unicast_ip_address` and
+`multicast_ip_address` (arrays of 16-byte octet-string),
+`gateway_ip_address`, `primary_dns_address`,
+`secondary_dns_address` (16-byte octet-string), `traffic_class`
+(unsigned) and `neighbor_discovery_setup` (array of structure)
+payloads as encoded DLMS Data buffers prepared by the caller, the
+logical name, a caller-selected `AttributeAccessMode` shared by
+the mutable attributes (`2`-`10`), and an optional explicit
+version that is normalized to `MaxSupportedVersion` when out of
+range. Attribute `1` (logical_name) is read-only; the mutable
+attributes honor the caller access mode and replace the stored
+buffer in-place when writable, so the backend can republish
+refreshed addressing after running the network stack out-of-band.
+Methods `1` `add_address` and `2` `remove_address` return
+`UnsupportedFeature` and clear method output (the built-in object
+does not own network-stack semantics); other method ids return
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

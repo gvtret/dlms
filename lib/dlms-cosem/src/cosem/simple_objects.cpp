@@ -6424,6 +6424,265 @@ CosemMBusSlavePortSetupObject::MBusPortReference() const
   return mbusPortReference_;
 }
 
+namespace {
+constexpr std::uint16_t kIpv6SetupClassId = 48u;
+constexpr std::uint8_t kIpv6SetupDataLinkLayerReferenceAttributeId = 2u;
+constexpr std::uint8_t kIpv6SetupAddressConfigModeAttributeId = 3u;
+constexpr std::uint8_t kIpv6SetupUnicastIpAddressAttributeId = 4u;
+constexpr std::uint8_t kIpv6SetupMulticastIpAddressAttributeId = 5u;
+constexpr std::uint8_t kIpv6SetupGatewayIpAddressAttributeId = 6u;
+constexpr std::uint8_t kIpv6SetupPrimaryDnsAddressAttributeId = 7u;
+constexpr std::uint8_t kIpv6SetupSecondaryDnsAddressAttributeId = 8u;
+constexpr std::uint8_t kIpv6SetupTrafficClassAttributeId = 9u;
+constexpr std::uint8_t kIpv6SetupNeighborDiscoverySetupAttributeId = 10u;
+constexpr std::uint8_t kIpv6SetupAddAddressMethodId = 1u;
+constexpr std::uint8_t kIpv6SetupRemoveAddressMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemIpv6SetupObject::MaxSupportedVersion;
+
+CosemIpv6SetupObject::CosemIpv6SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& dataLinkLayerReference,
+  const CosemByteBuffer& addressConfigMode,
+  const CosemByteBuffer& unicastIpAddress,
+  const CosemByteBuffer& multicastIpAddress,
+  const CosemByteBuffer& gatewayIpAddress,
+  const CosemByteBuffer& primaryDnsAddress,
+  const CosemByteBuffer& secondaryDnsAddress,
+  const CosemByteBuffer& trafficClass,
+  const CosemByteBuffer& neighborDiscoverySetup,
+  AttributeAccessMode mutableAccess)
+  : CosemIpv6SetupObject(
+      logicalName, dataLinkLayerReference, addressConfigMode,
+      unicastIpAddress, multicastIpAddress, gatewayIpAddress,
+      primaryDnsAddress, secondaryDnsAddress, trafficClass,
+      neighborDiscoverySetup, mutableAccess, kVersion0)
+{
+}
+
+CosemIpv6SetupObject::CosemIpv6SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& dataLinkLayerReference,
+  const CosemByteBuffer& addressConfigMode,
+  const CosemByteBuffer& unicastIpAddress,
+  const CosemByteBuffer& multicastIpAddress,
+  const CosemByteBuffer& gatewayIpAddress,
+  const CosemByteBuffer& primaryDnsAddress,
+  const CosemByteBuffer& secondaryDnsAddress,
+  const CosemByteBuffer& trafficClass,
+  const CosemByteBuffer& neighborDiscoverySetup,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIpv6SetupClassId,
+      NormalizeVersion(
+        version, CosemIpv6SetupObject::MaxSupportedVersion),
+      logicalName))
+  , dataLinkLayerReference_(dataLinkLayerReference)
+  , addressConfigMode_(addressConfigMode)
+  , unicastIpAddress_(unicastIpAddress)
+  , multicastIpAddress_(multicastIpAddress)
+  , gatewayIpAddress_(gatewayIpAddress)
+  , primaryDnsAddress_(primaryDnsAddress)
+  , secondaryDnsAddress_(secondaryDnsAddress)
+  , trafficClass_(trafficClass)
+  , neighborDiscoverySetup_(neighborDiscoverySetup)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kIpv6SetupDataLinkLayerReferenceAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupAddressConfigModeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupUnicastIpAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupMulticastIpAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupGatewayIpAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupPrimaryDnsAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupSecondaryDnsAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupTrafficClassAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIpv6SetupNeighborDiscoverySetupAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIpv6SetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIpv6SetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIpv6SetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kIpv6SetupDataLinkLayerReferenceAttributeId:
+      output = dataLinkLayerReference_;
+      return CosemStatus::Ok;
+    case kIpv6SetupAddressConfigModeAttributeId:
+      output = addressConfigMode_;
+      return CosemStatus::Ok;
+    case kIpv6SetupUnicastIpAddressAttributeId:
+      output = unicastIpAddress_;
+      return CosemStatus::Ok;
+    case kIpv6SetupMulticastIpAddressAttributeId:
+      output = multicastIpAddress_;
+      return CosemStatus::Ok;
+    case kIpv6SetupGatewayIpAddressAttributeId:
+      output = gatewayIpAddress_;
+      return CosemStatus::Ok;
+    case kIpv6SetupPrimaryDnsAddressAttributeId:
+      output = primaryDnsAddress_;
+      return CosemStatus::Ok;
+    case kIpv6SetupSecondaryDnsAddressAttributeId:
+      output = secondaryDnsAddress_;
+      return CosemStatus::Ok;
+    case kIpv6SetupTrafficClassAttributeId:
+      output = trafficClass_;
+      return CosemStatus::Ok;
+    case kIpv6SetupNeighborDiscoverySetupAttributeId:
+      output = neighborDiscoverySetup_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIpv6SetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kIpv6SetupDataLinkLayerReferenceAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      dataLinkLayerReference_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupAddressConfigModeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      addressConfigMode_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupUnicastIpAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      unicastIpAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupMulticastIpAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      multicastIpAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupGatewayIpAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      gatewayIpAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupPrimaryDnsAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      primaryDnsAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupSecondaryDnsAddressAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      secondaryDnsAddress_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupTrafficClassAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      trafficClass_ = input;
+      return CosemStatus::Ok;
+    case kIpv6SetupNeighborDiscoverySetupAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      neighborDiscoverySetup_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIpv6SetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kIpv6SetupAddAddressMethodId ||
+      methodId == kIpv6SetupRemoveAddressMethodId) {
+    // IPv6 Setup add/remove address methods are not exposed by the
+    // built-in object; backend is expected to drive the network
+    // stack out-of-band and republish the stored buffers.
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemIpv6SetupObject::DataLinkLayerReference() const
+{
+  return dataLinkLayerReference_;
+}
+
+const CosemByteBuffer& CosemIpv6SetupObject::AddressConfigMode() const
+{
+  return addressConfigMode_;
+}
+
+const CosemByteBuffer& CosemIpv6SetupObject::UnicastIpAddress() const
+{
+  return unicastIpAddress_;
+}
+
+const CosemByteBuffer& CosemIpv6SetupObject::MulticastIpAddress() const
+{
+  return multicastIpAddress_;
+}
+
+const CosemByteBuffer& CosemIpv6SetupObject::GatewayIpAddress() const
+{
+  return gatewayIpAddress_;
+}
+
+const CosemByteBuffer& CosemIpv6SetupObject::PrimaryDnsAddress() const
+{
+  return primaryDnsAddress_;
+}
+
+const CosemByteBuffer& CosemIpv6SetupObject::SecondaryDnsAddress() const
+{
+  return secondaryDnsAddress_;
+}
+
+const CosemByteBuffer& CosemIpv6SetupObject::TrafficClass() const
+{
+  return trafficClass_;
+}
+
+const CosemByteBuffer&
+CosemIpv6SetupObject::NeighborDiscoverySetup() const
+{
+  return neighborDiscoverySetup_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

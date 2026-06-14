@@ -6465,4 +6465,220 @@ TEST(CosemMBusSlavePortSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct Ipv6SetupBuffers
+{
+  dlms::cosem::CosemByteBuffer dataLinkLayerReference;
+  dlms::cosem::CosemByteBuffer addressConfigMode;
+  dlms::cosem::CosemByteBuffer unicastIpAddress;
+  dlms::cosem::CosemByteBuffer multicastIpAddress;
+  dlms::cosem::CosemByteBuffer gatewayIpAddress;
+  dlms::cosem::CosemByteBuffer primaryDnsAddress;
+  dlms::cosem::CosemByteBuffer secondaryDnsAddress;
+  dlms::cosem::CosemByteBuffer trafficClass;
+  dlms::cosem::CosemByteBuffer neighborDiscoverySetup;
+};
+
+Ipv6SetupBuffers MakeSampleIpv6Setup()
+{
+  Ipv6SetupBuffers b;
+  // octet-string(6) LN 0.0.27.0.0.255 (TCP-UDP setup as link layer)
+  b.dataLinkLayerReference = BytesFromList({
+    0x09u, 0x06u,
+      0x00u, 0x00u, 0x1Bu, 0x00u, 0x00u, 0xFFu});
+  // enum 2 (auto-config DHCPv6)
+  b.addressConfigMode = BytesFromList({0x16u, 0x02u});
+  // array(1) of octet-string(16): fe80::1
+  b.unicastIpAddress = BytesFromList({
+    0x01u, 0x01u,
+      0x09u, 0x10u,
+        0xFEu, 0x80u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+        0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x01u});
+  // array(1) of octet-string(16): ff02::1 (all-nodes multicast)
+  b.multicastIpAddress = BytesFromList({
+    0x01u, 0x01u,
+      0x09u, 0x10u,
+        0xFFu, 0x02u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+        0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x01u});
+  // octet-string(16) gateway fe80::2
+  b.gatewayIpAddress = BytesFromList({
+    0x09u, 0x10u,
+      0xFEu, 0x80u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+      0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x02u});
+  // octet-string(16) primary DNS 2001:4860:4860::8888
+  b.primaryDnsAddress = BytesFromList({
+    0x09u, 0x10u,
+      0x20u, 0x01u, 0x48u, 0x60u, 0x48u, 0x60u, 0x00u, 0x00u,
+      0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x88u, 0x88u});
+  // octet-string(16) secondary DNS 2001:4860:4860::8844
+  b.secondaryDnsAddress = BytesFromList({
+    0x09u, 0x10u,
+      0x20u, 0x01u, 0x48u, 0x60u, 0x48u, 0x60u, 0x00u, 0x00u,
+      0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x88u, 0x44u});
+  // unsigned 0 (default traffic class)
+  b.trafficClass = BytesFromList({0x11u, 0x00u});
+  // array(1) of structure(4): {max_retry=3, retry_timer=1000,
+  //                            send_period=60, server_address=fe80::2}
+  b.neighborDiscoverySetup = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x04u,
+        0x11u, 0x03u,                                     // max_retry
+        0x12u, 0x03u, 0xE8u,                              // retry_timer
+        0x06u, 0x00u, 0x00u, 0x00u, 0x3Cu,                // send_period
+        0x09u, 0x10u,
+          0xFEu, 0x80u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+          0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x02u});
+  return b;
+}
+
+dlms::cosem::CosemIpv6SetupObject MakeIpv6SetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const Ipv6SetupBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemIpv6SetupObject(
+    name, b.dataLinkLayerReference, b.addressConfigMode,
+    b.unicastIpAddress, b.multicastIpAddress, b.gatewayIpAddress,
+    b.primaryDnsAddress, b.secondaryDnsAddress, b.trafficClass,
+    b.neighborDiscoverySetup, access);
+}
+
+} // namespace
+
+TEST(CosemIpv6SetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 7u, 0u, 255u);
+  const Ipv6SetupBuffers b = MakeSampleIpv6Setup();
+  dlms::cosem::CosemIpv6SetupObject object =
+    MakeIpv6SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(48u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemIpv6SetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.dataLinkLayerReference, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.addressConfigMode, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.unicastIpAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.multicastIpAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.gatewayIpAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.primaryDnsAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.secondaryDnsAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
+  EXPECT_EQ(b.trafficClass, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.neighborDiscoverySetup, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(11u, out));
+}
+
+TEST(CosemIpv6SetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 7u, 0u, 255u);
+  const Ipv6SetupBuffers b = MakeSampleIpv6Setup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemIpv6SetupObject writable =
+    MakeIpv6SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.DataLinkLayerReference());
+  EXPECT_EQ(replacement, writable.AddressConfigMode());
+  EXPECT_EQ(replacement, writable.UnicastIpAddress());
+  EXPECT_EQ(replacement, writable.MulticastIpAddress());
+  EXPECT_EQ(replacement, writable.GatewayIpAddress());
+  EXPECT_EQ(replacement, writable.PrimaryDnsAddress());
+  EXPECT_EQ(replacement, writable.SecondaryDnsAddress());
+  EXPECT_EQ(replacement, writable.TrafficClass());
+  EXPECT_EQ(replacement, writable.NeighborDiscoverySetup());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemIpv6SetupObject readOnly =
+    MakeIpv6SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.dataLinkLayerReference, readOnly.DataLinkLayerReference());
+  EXPECT_EQ(b.addressConfigMode, readOnly.AddressConfigMode());
+  EXPECT_EQ(b.unicastIpAddress, readOnly.UnicastIpAddress());
+  EXPECT_EQ(b.multicastIpAddress, readOnly.MulticastIpAddress());
+  EXPECT_EQ(b.gatewayIpAddress, readOnly.GatewayIpAddress());
+  EXPECT_EQ(b.primaryDnsAddress, readOnly.PrimaryDnsAddress());
+  EXPECT_EQ(b.secondaryDnsAddress, readOnly.SecondaryDnsAddress());
+  EXPECT_EQ(b.trafficClass, readOnly.TrafficClass());
+  EXPECT_EQ(b.neighborDiscoverySetup, readOnly.NeighborDiscoverySetup());
+}
+
+TEST(CosemIpv6SetupObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 7u, 0u, 255u);
+  const Ipv6SetupBuffers b = MakeSampleIpv6Setup();
+  dlms::cosem::CosemIpv6SetupObject object =
+    MakeIpv6SetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {3u, 4u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemIpv6SetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 25u, 7u, 0u, 255u);
+  const Ipv6SetupBuffers b = MakeSampleIpv6Setup();
+  dlms::cosem::CosemIpv6SetupObject object(
+    name, b.dataLinkLayerReference, b.addressConfigMode,
+    b.unicastIpAddress, b.multicastIpAddress, b.gatewayIpAddress,
+    b.primaryDnsAddress, b.secondaryDnsAddress, b.trafficClass,
+    b.neighborDiscoverySetup,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemIpv6SetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

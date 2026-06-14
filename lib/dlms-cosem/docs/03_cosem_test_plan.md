@@ -614,6 +614,29 @@ M-Bus slave port setup tests:
 - M-Bus slave port setup normalizes versions above
   `MaxSupportedVersion`.
 
+IPv6 Setup tests:
+
+- IPv6 Setup exposes attributes `1` logical_name,
+  `2` data_link_layer_reference, `3` address_config_mode,
+  `4` unicast_ip_address, `5` multicast_ip_address,
+  `6` gateway_ip_address, `7` primary_dns_address,
+  `8` secondary_dns_address, `9` traffic_class and
+  `10` neighbor_discovery_setup as the encoded DLMS Data buffers
+  supplied by the caller, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- IPv6 Setup mutable attributes (`2`-`10`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access
+  mode is read-only, leaving the stored buffers unchanged;
+- IPv6 Setup rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- IPv6 Setup `InvokeMethod` reports `UnsupportedFeature` for
+  methods `1` `add_address` and `2` `remove_address`, and
+  `MethodNotFound` for any other method id, always clearing method
+  output;
+- IPv6 Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

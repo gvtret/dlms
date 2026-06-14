@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.46.0 - 2026-06-15
+
+- Added IPv6 Setup IC `48` built-in object (`CosemIpv6SetupObject`)
+  with class version `0`, exposing `data_link_layer_reference`
+  (octet-string LN), `address_config_mode` (enum),
+  `unicast_ip_address` and `multicast_ip_address` (arrays of
+   16-byte octet-string), `gateway_ip_address`,
+  `primary_dns_address`, `secondary_dns_address` (16-byte
+  octet-string), `traffic_class` (unsigned) and
+  `neighbor_discovery_setup` (array of structure) as opaque
+  encoded DLMS Data buffers prepared by the caller.
+- Attributes `2`-`10` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish refreshed addressing after running the
+  network stack out-of-band); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `add_address` and `2` `remove_address` return
+  `UnsupportedFeature` and clear method output (the built-in object
+  does not own network-stack semantics); other method ids return
+  `MethodNotFound`.
+
 ## 0.45.0 - 2026-06-15
 
 - Added M-Bus slave port setup IC `25` built-in object

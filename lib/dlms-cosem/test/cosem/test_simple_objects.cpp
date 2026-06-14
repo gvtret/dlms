@@ -8162,4 +8162,225 @@ TEST(CosemAssociationSnObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct MBusClientBuffers
+{
+  dlms::cosem::CosemByteBuffer mbusPortReference;
+  dlms::cosem::CosemByteBuffer captureDefinition;
+  dlms::cosem::CosemByteBuffer capturePeriod;
+  dlms::cosem::CosemByteBuffer primaryAddress;
+  dlms::cosem::CosemByteBuffer identificationNumber;
+  dlms::cosem::CosemByteBuffer manufacturerId;
+  dlms::cosem::CosemByteBuffer version;
+  dlms::cosem::CosemByteBuffer deviceType;
+  dlms::cosem::CosemByteBuffer accessNumber;
+  dlms::cosem::CosemByteBuffer status;
+  dlms::cosem::CosemByteBuffer alarm;
+  dlms::cosem::CosemByteBuffer configuration;
+  dlms::cosem::CosemByteBuffer encryptionKeyStatus;
+};
+
+MBusClientBuffers MakeSampleMBusClient()
+{
+  MBusClientBuffers b;
+  // octet-string(6): IEC HDLC Setup LN 0.0.22.0.0.255
+  b.mbusPortReference = BytesFromList({
+    0x09u, 0x06u, 0x00u, 0x00u, 0x16u, 0x00u, 0x00u, 0xFFu});
+  // array(0)
+  b.captureDefinition = BytesFromList({0x01u, 0x00u});
+  // double-long-unsigned 3600
+  b.capturePeriod = BytesFromList({0x06u, 0x00u, 0x00u, 0x0Eu, 0x10u});
+  // unsigned 7
+  b.primaryAddress = BytesFromList({0x11u, 0x07u});
+  // double-long-unsigned 0x01234567
+  b.identificationNumber = BytesFromList({
+    0x06u, 0x01u, 0x23u, 0x45u, 0x67u});
+  // long-unsigned 0x1234
+  b.manufacturerId = BytesFromList({0x12u, 0x12u, 0x34u});
+  // unsigned 0x21
+  b.version = BytesFromList({0x11u, 0x21u});
+  // unsigned 0x07
+  b.deviceType = BytesFromList({0x11u, 0x07u});
+  // unsigned 0x42
+  b.accessNumber = BytesFromList({0x11u, 0x42u});
+  // unsigned 0x00
+  b.status = BytesFromList({0x11u, 0x00u});
+  // unsigned 0x00
+  b.alarm = BytesFromList({0x11u, 0x00u});
+  // long-unsigned 0x0001
+  b.configuration = BytesFromList({0x12u, 0x00u, 0x01u});
+  // enum 0 (no encryption key)
+  b.encryptionKeyStatus = BytesFromList({0x16u, 0x00u});
+  return b;
+}
+
+dlms::cosem::CosemMBusClientObject MakeMBusClientObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const MBusClientBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemMBusClientObject(
+    name, b.mbusPortReference, b.captureDefinition, b.capturePeriod,
+    b.primaryAddress, b.identificationNumber, b.manufacturerId,
+    b.version, b.deviceType, b.accessNumber, b.status, b.alarm,
+    b.configuration, b.encryptionKeyStatus, access);
+}
+
+} // namespace
+
+TEST(CosemMBusClientObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 24u, 0u, 0u, 255u);
+  const MBusClientBuffers b = MakeSampleMBusClient();
+  dlms::cosem::CosemMBusClientObject object = MakeMBusClientObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(72u, object.Descriptor().key.classId);
+  EXPECT_EQ(1u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemMBusClientObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.mbusPortReference, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.captureDefinition, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.capturePeriod, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.primaryAddress, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.identificationNumber, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.manufacturerId, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.version, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
+  EXPECT_EQ(b.deviceType, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.accessNumber, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(11u, out));
+  EXPECT_EQ(b.status, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(12u, out));
+  EXPECT_EQ(b.alarm, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(13u, out));
+  EXPECT_EQ(b.configuration, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(14u, out));
+  EXPECT_EQ(b.encryptionKeyStatus, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(15u, out));
+}
+
+TEST(CosemMBusClientObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 24u, 0u, 0u, 255u);
+  const MBusClientBuffers b = MakeSampleMBusClient();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x55u});
+
+  dlms::cosem::CosemMBusClientObject writable = MakeMBusClientObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u,
+                          11u, 12u, 13u, 14u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.MBusPortReference());
+  EXPECT_EQ(replacement, writable.CaptureDefinition());
+  EXPECT_EQ(replacement, writable.CapturePeriod());
+  EXPECT_EQ(replacement, writable.PrimaryAddress());
+  EXPECT_EQ(replacement, writable.IdentificationNumber());
+  EXPECT_EQ(replacement, writable.ManufacturerId());
+  EXPECT_EQ(replacement, writable.Version());
+  EXPECT_EQ(replacement, writable.DeviceType());
+  EXPECT_EQ(replacement, writable.AccessNumber());
+  EXPECT_EQ(replacement, writable.Status());
+  EXPECT_EQ(replacement, writable.Alarm());
+  EXPECT_EQ(replacement, writable.Configuration());
+  EXPECT_EQ(replacement, writable.EncryptionKeyStatus());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemMBusClientObject readOnly = MakeMBusClientObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u,
+                          11u, 12u, 13u, 14u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.mbusPortReference, readOnly.MBusPortReference());
+  EXPECT_EQ(b.captureDefinition, readOnly.CaptureDefinition());
+  EXPECT_EQ(b.capturePeriod, readOnly.CapturePeriod());
+  EXPECT_EQ(b.primaryAddress, readOnly.PrimaryAddress());
+  EXPECT_EQ(b.identificationNumber, readOnly.IdentificationNumber());
+  EXPECT_EQ(b.manufacturerId, readOnly.ManufacturerId());
+  EXPECT_EQ(b.version, readOnly.Version());
+  EXPECT_EQ(b.deviceType, readOnly.DeviceType());
+  EXPECT_EQ(b.accessNumber, readOnly.AccessNumber());
+  EXPECT_EQ(b.status, readOnly.Status());
+  EXPECT_EQ(b.alarm, readOnly.Alarm());
+  EXPECT_EQ(b.configuration, readOnly.Configuration());
+  EXPECT_EQ(b.encryptionKeyStatus, readOnly.EncryptionKeyStatus());
+}
+
+TEST(CosemMBusClientObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 24u, 0u, 0u, 255u);
+  const MBusClientBuffers b = MakeSampleMBusClient();
+  dlms::cosem::CosemMBusClientObject object = MakeMBusClientObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {9u, 10u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemMBusClientObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 24u, 0u, 0u, 255u);
+  const MBusClientBuffers b = MakeSampleMBusClient();
+  dlms::cosem::CosemMBusClientObject object(
+    name, b.mbusPortReference, b.captureDefinition, b.capturePeriod,
+    b.primaryAddress, b.identificationNumber, b.manufacturerId,
+    b.version, b.deviceType, b.accessNumber, b.status, b.alarm,
+    b.configuration, b.encryptionKeyStatus,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemMBusClientObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

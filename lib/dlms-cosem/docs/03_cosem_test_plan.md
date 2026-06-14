@@ -815,6 +815,31 @@ Association SN tests:
 - Association SN normalizes versions above
   `MaxSupportedVersion`.
 
+M-Bus Client tests:
+
+- M-Bus Client exposes attributes `1` logical_name,
+  `2` mbus_port_reference, `3` capture_definition,
+  `4` capture_period, `5` primary_address,
+  `6` identification_number, `7` manufacturer_id, `8` version,
+  `9` device_type, `10` access_number, `11` status, `12` alarm,
+  `13` configuration and `14` encryption_key_status as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- M-Bus Client mutable attributes (`2`-`14`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- M-Bus Client rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- M-Bus Client `InvokeMethod` reports `UnsupportedFeature` for
+  methods `1` `slave_install`, `2` `slave_deinstall`,
+  `3` `capture`, `4` `reset_alarm`, `5` `synchronise_clock`,
+  `6` `send_data`, `7` `set_encryption_key` and
+  `8` `transfer_key`, and `MethodNotFound` for any other method
+  id, always clearing method output;
+- M-Bus Client normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

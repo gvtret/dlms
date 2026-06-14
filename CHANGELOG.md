@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.56.0 - 2026-06-15
+
+- Added M-Bus Client IC `72` built-in object
+  (`CosemMBusClientObject`) with class version `1`, exposing
+  `mbus_port_reference` (octet-string(6) LN to IEC HDLC Setup),
+  `capture_definition` (array of structure {`data_link_reference`:
+  octet-string, `value_information_block`: octet-string}),
+  `capture_period` (double-long-unsigned, seconds),
+  `primary_address` (unsigned), `identification_number`
+  (double-long-unsigned), `manufacturer_id` (long-unsigned),
+  `version` (unsigned, M-Bus device version), `device_type`
+  (unsigned), `access_number` (unsigned), `status` (unsigned),
+  `alarm` (unsigned), `configuration` (long-unsigned, v1) and
+  `encryption_key_status` (enum, v1) as opaque encoded DLMS Data
+  buffers prepared by the caller.
+- Attributes `2`-`14` share a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer in-place
+  when permitted, so the backend can republish refreshed
+  identification, status, alarm, configuration and key-status
+  payloads after driving the M-Bus slave out-of-band);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `slave_install`, `2` `slave_deinstall`,
+  `3` `capture`, `4` `reset_alarm`, `5` `synchronise_clock`,
+  `6` `send_data`, `7` `set_encryption_key` and
+  `8` `transfer_key` return `UnsupportedFeature` and clear method
+  output (the built-in object does not drive the M-Bus slave);
+  other method ids return `MethodNotFound`.
+
 ## 0.55.0 - 2026-06-15
 
 - Added Association SN IC `12` built-in object

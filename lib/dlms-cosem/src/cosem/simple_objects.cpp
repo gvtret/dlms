@@ -8372,6 +8372,337 @@ const CosemByteBuffer& CosemAssociationSnObject::CurrentUser() const
   return currentUser_;
 }
 
+namespace {
+constexpr std::uint16_t kMBusClientClassId = 72u;
+constexpr std::uint8_t kMBusClientMbusPortReferenceAttributeId = 2u;
+constexpr std::uint8_t kMBusClientCaptureDefinitionAttributeId = 3u;
+constexpr std::uint8_t kMBusClientCapturePeriodAttributeId = 4u;
+constexpr std::uint8_t kMBusClientPrimaryAddressAttributeId = 5u;
+constexpr std::uint8_t
+  kMBusClientIdentificationNumberAttributeId = 6u;
+constexpr std::uint8_t kMBusClientManufacturerIdAttributeId = 7u;
+constexpr std::uint8_t kMBusClientVersionAttributeId = 8u;
+constexpr std::uint8_t kMBusClientDeviceTypeAttributeId = 9u;
+constexpr std::uint8_t kMBusClientAccessNumberAttributeId = 10u;
+constexpr std::uint8_t kMBusClientStatusAttributeId = 11u;
+constexpr std::uint8_t kMBusClientAlarmAttributeId = 12u;
+constexpr std::uint8_t kMBusClientConfigurationAttributeId = 13u;
+constexpr std::uint8_t kMBusClientEncryptionKeyStatusAttributeId = 14u;
+constexpr std::uint8_t kMBusClientSlaveInstallMethodId = 1u;
+constexpr std::uint8_t kMBusClientSlaveDeinstallMethodId = 2u;
+constexpr std::uint8_t kMBusClientCaptureMethodId = 3u;
+constexpr std::uint8_t kMBusClientResetAlarmMethodId = 4u;
+constexpr std::uint8_t kMBusClientSynchroniseClockMethodId = 5u;
+constexpr std::uint8_t kMBusClientSendDataMethodId = 6u;
+constexpr std::uint8_t kMBusClientSetEncryptionKeyMethodId = 7u;
+constexpr std::uint8_t kMBusClientTransferKeyMethodId = 8u;
+} // namespace
+
+const std::uint8_t CosemMBusClientObject::MaxSupportedVersion;
+
+CosemMBusClientObject::CosemMBusClientObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& mbusPortReference,
+  const CosemByteBuffer& captureDefinition,
+  const CosemByteBuffer& capturePeriod,
+  const CosemByteBuffer& primaryAddress,
+  const CosemByteBuffer& identificationNumber,
+  const CosemByteBuffer& manufacturerId,
+  const CosemByteBuffer& version,
+  const CosemByteBuffer& deviceType,
+  const CosemByteBuffer& accessNumber,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& alarm,
+  const CosemByteBuffer& configuration,
+  const CosemByteBuffer& encryptionKeyStatus,
+  AttributeAccessMode mutableAccess)
+  : CosemMBusClientObject(
+      logicalName, mbusPortReference, captureDefinition,
+      capturePeriod, primaryAddress, identificationNumber,
+      manufacturerId, version, deviceType, accessNumber, status,
+      alarm, configuration, encryptionKeyStatus, mutableAccess,
+      CosemMBusClientObject::MaxSupportedVersion)
+{
+}
+
+CosemMBusClientObject::CosemMBusClientObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& mbusPortReference,
+  const CosemByteBuffer& captureDefinition,
+  const CosemByteBuffer& capturePeriod,
+  const CosemByteBuffer& primaryAddress,
+  const CosemByteBuffer& identificationNumber,
+  const CosemByteBuffer& manufacturerId,
+  const CosemByteBuffer& version,
+  const CosemByteBuffer& deviceType,
+  const CosemByteBuffer& accessNumber,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& alarm,
+  const CosemByteBuffer& configuration,
+  const CosemByteBuffer& encryptionKeyStatus,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version_)
+  : descriptor_(MakeDescriptor(
+      kMBusClientClassId,
+      NormalizeVersion(
+        version_, CosemMBusClientObject::MaxSupportedVersion),
+      logicalName))
+  , mbusPortReference_(mbusPortReference)
+  , captureDefinition_(captureDefinition)
+  , capturePeriod_(capturePeriod)
+  , primaryAddress_(primaryAddress)
+  , identificationNumber_(identificationNumber)
+  , manufacturerId_(manufacturerId)
+  , version_(version)
+  , deviceType_(deviceType)
+  , accessNumber_(accessNumber)
+  , status_(status)
+  , alarm_(alarm)
+  , configuration_(configuration)
+  , encryptionKeyStatus_(encryptionKeyStatus)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kMBusClientMbusPortReferenceAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientCaptureDefinitionAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientCapturePeriodAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientPrimaryAddressAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientIdentificationNumberAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientManufacturerIdAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientVersionAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientDeviceTypeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientAccessNumberAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientStatusAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientAlarmAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientConfigurationAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientEncryptionKeyStatusAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemMBusClientObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemMBusClientObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemMBusClientObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kMBusClientMbusPortReferenceAttributeId:
+      output = mbusPortReference_;
+      return CosemStatus::Ok;
+    case kMBusClientCaptureDefinitionAttributeId:
+      output = captureDefinition_;
+      return CosemStatus::Ok;
+    case kMBusClientCapturePeriodAttributeId:
+      output = capturePeriod_;
+      return CosemStatus::Ok;
+    case kMBusClientPrimaryAddressAttributeId:
+      output = primaryAddress_;
+      return CosemStatus::Ok;
+    case kMBusClientIdentificationNumberAttributeId:
+      output = identificationNumber_;
+      return CosemStatus::Ok;
+    case kMBusClientManufacturerIdAttributeId:
+      output = manufacturerId_;
+      return CosemStatus::Ok;
+    case kMBusClientVersionAttributeId:
+      output = version_;
+      return CosemStatus::Ok;
+    case kMBusClientDeviceTypeAttributeId:
+      output = deviceType_;
+      return CosemStatus::Ok;
+    case kMBusClientAccessNumberAttributeId:
+      output = accessNumber_;
+      return CosemStatus::Ok;
+    case kMBusClientStatusAttributeId:
+      output = status_;
+      return CosemStatus::Ok;
+    case kMBusClientAlarmAttributeId:
+      output = alarm_;
+      return CosemStatus::Ok;
+    case kMBusClientConfigurationAttributeId:
+      output = configuration_;
+      return CosemStatus::Ok;
+    case kMBusClientEncryptionKeyStatusAttributeId:
+      output = encryptionKeyStatus_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemMBusClientObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case kMBusClientMbusPortReferenceAttributeId:
+      target = &mbusPortReference_;
+      break;
+    case kMBusClientCaptureDefinitionAttributeId:
+      target = &captureDefinition_;
+      break;
+    case kMBusClientCapturePeriodAttributeId:
+      target = &capturePeriod_;
+      break;
+    case kMBusClientPrimaryAddressAttributeId:
+      target = &primaryAddress_;
+      break;
+    case kMBusClientIdentificationNumberAttributeId:
+      target = &identificationNumber_;
+      break;
+    case kMBusClientManufacturerIdAttributeId:
+      target = &manufacturerId_;
+      break;
+    case kMBusClientVersionAttributeId:
+      target = &version_;
+      break;
+    case kMBusClientDeviceTypeAttributeId:
+      target = &deviceType_;
+      break;
+    case kMBusClientAccessNumberAttributeId:
+      target = &accessNumber_;
+      break;
+    case kMBusClientStatusAttributeId:
+      target = &status_;
+      break;
+    case kMBusClientAlarmAttributeId:
+      target = &alarm_;
+      break;
+    case kMBusClientConfigurationAttributeId:
+      target = &configuration_;
+      break;
+    case kMBusClientEncryptionKeyStatusAttributeId:
+      target = &encryptionKeyStatus_;
+      break;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemMBusClientObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kMBusClientSlaveInstallMethodId ||
+      methodId == kMBusClientSlaveDeinstallMethodId ||
+      methodId == kMBusClientCaptureMethodId ||
+      methodId == kMBusClientResetAlarmMethodId ||
+      methodId == kMBusClientSynchroniseClockMethodId ||
+      methodId == kMBusClientSendDataMethodId ||
+      methodId == kMBusClientSetEncryptionKeyMethodId ||
+      methodId == kMBusClientTransferKeyMethodId) {
+    // M-Bus client slave install/deinstall, capture, reset alarm,
+    // clock synchronisation, data send and encryption key
+    // distribution are not exposed by the built-in object; the
+    // backend is expected to perform those operations out-of-band
+    // and republish stored buffers (identification, status,
+    // alarm, configuration, key status).
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::MBusPortReference() const
+{
+  return mbusPortReference_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::CaptureDefinition() const
+{
+  return captureDefinition_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::CapturePeriod() const
+{
+  return capturePeriod_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::PrimaryAddress() const
+{
+  return primaryAddress_;
+}
+
+const CosemByteBuffer&
+CosemMBusClientObject::IdentificationNumber() const
+{
+  return identificationNumber_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::ManufacturerId() const
+{
+  return manufacturerId_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::Version() const
+{
+  return version_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::DeviceType() const
+{
+  return deviceType_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::AccessNumber() const
+{
+  return accessNumber_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::Status() const
+{
+  return status_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::Alarm() const
+{
+  return alarm_;
+}
+
+const CosemByteBuffer& CosemMBusClientObject::Configuration() const
+{
+  return configuration_;
+}
+
+const CosemByteBuffer&
+CosemMBusClientObject::EncryptionKeyStatus() const
+{
+  return encryptionKeyStatus_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

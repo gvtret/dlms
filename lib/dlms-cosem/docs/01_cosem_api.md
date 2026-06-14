@@ -884,6 +884,34 @@ mutations performed out-of-band. Methods `1`
 (the built-in object does not perform authentication or list
 mutations); other method ids return `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial M-Bus Client IC `72`
+(`CosemMBusClientObject`) with class version `1`. The constructors
+take the `mbus_port_reference` (octet-string(6) LN to an IEC HDLC
+Setup), `capture_definition` (array of structure
+{`data_link_reference`: octet-string, `value_information_block`:
+octet-string}), `capture_period` (double-long-unsigned, seconds),
+`primary_address` (unsigned), `identification_number`
+(double-long-unsigned), `manufacturer_id` (long-unsigned),
+`version` (unsigned, M-Bus device version), `device_type`
+(unsigned), `access_number` (unsigned), `status` (unsigned),
+`alarm` (unsigned), `configuration` (long-unsigned, v1) and
+`encryption_key_status` (enum, v1) payloads as encoded DLMS Data
+buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` shared by the mutable
+attributes (`2`-`14`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute
+`1` (logical_name) is read-only; the mutable attributes honor the
+caller access mode and replace the stored buffer in-place when
+writable, so the backend can republish refreshed identification,
+status, alarm, configuration and key-status payloads after driving
+the M-Bus slave out-of-band. Methods `1` `slave_install`,
+`2` `slave_deinstall`, `3` `capture`, `4` `reset_alarm`,
+`5` `synchronise_clock`, `6` `send_data`,
+`7` `set_encryption_key` and `8` `transfer_key` return
+`UnsupportedFeature` and clear method output (the built-in object
+does not drive the M-Bus slave); other method ids return
+`MethodNotFound`.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

@@ -2052,6 +2052,90 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemMBusClientObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  CosemMBusClientObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& mbusPortReference,
+    const CosemByteBuffer& captureDefinition,
+    const CosemByteBuffer& capturePeriod,
+    const CosemByteBuffer& primaryAddress,
+    const CosemByteBuffer& identificationNumber,
+    const CosemByteBuffer& manufacturerId,
+    const CosemByteBuffer& version,
+    const CosemByteBuffer& deviceType,
+    const CosemByteBuffer& accessNumber,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& alarm,
+    const CosemByteBuffer& configuration,
+    const CosemByteBuffer& encryptionKeyStatus,
+    AttributeAccessMode mutableAccess);
+  CosemMBusClientObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& mbusPortReference,
+    const CosemByteBuffer& captureDefinition,
+    const CosemByteBuffer& capturePeriod,
+    const CosemByteBuffer& primaryAddress,
+    const CosemByteBuffer& identificationNumber,
+    const CosemByteBuffer& manufacturerId,
+    const CosemByteBuffer& version,
+    const CosemByteBuffer& deviceType,
+    const CosemByteBuffer& accessNumber,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& alarm,
+    const CosemByteBuffer& configuration,
+    const CosemByteBuffer& encryptionKeyStatus,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version_);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& MBusPortReference() const;
+  const CosemByteBuffer& CaptureDefinition() const;
+  const CosemByteBuffer& CapturePeriod() const;
+  const CosemByteBuffer& PrimaryAddress() const;
+  const CosemByteBuffer& IdentificationNumber() const;
+  const CosemByteBuffer& ManufacturerId() const;
+  const CosemByteBuffer& Version() const;
+  const CosemByteBuffer& DeviceType() const;
+  const CosemByteBuffer& AccessNumber() const;
+  const CosemByteBuffer& Status() const;
+  const CosemByteBuffer& Alarm() const;
+  const CosemByteBuffer& Configuration() const;
+  const CosemByteBuffer& EncryptionKeyStatus() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer mbusPortReference_;
+  CosemByteBuffer captureDefinition_;
+  CosemByteBuffer capturePeriod_;
+  CosemByteBuffer primaryAddress_;
+  CosemByteBuffer identificationNumber_;
+  CosemByteBuffer manufacturerId_;
+  CosemByteBuffer version_;
+  CosemByteBuffer deviceType_;
+  CosemByteBuffer accessNumber_;
+  CosemByteBuffer status_;
+  CosemByteBuffer alarm_;
+  CosemByteBuffer configuration_;
+  CosemByteBuffer encryptionKeyStatus_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

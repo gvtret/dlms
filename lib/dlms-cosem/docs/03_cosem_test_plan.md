@@ -1034,6 +1034,27 @@ S-FSK PLC PHY & MAC Setup tests:
 - S-FSK PLC PHY & MAC Setup normalizes versions above
   `MaxSupportedVersion`.
 
+S-FSK Active Initiator tests:
+
+- S-FSK Active Initiator exposes attributes `1` logical_name
+  and `2` active_initiator (structure {system_title,
+  mac_address, llc_sap_selector}) as the encoded DLMS Data
+  buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- S-FSK Active Initiator mutable attribute (`2`) writes
+  succeed when the caller-selected access mode permits writes
+  and replace the stored buffer in-place; writes report
+  `AccessDenied` when the access mode is read-only, leaving
+  the stored buffer unchanged; writes to logical_name (`1`)
+  return `AccessDenied`, and writes to undefined attribute
+  ids return `AttributeNotFound`;
+- S-FSK Active Initiator `InvokeMethod` reports
+  `UnsupportedFeature` for method `1`
+  `reset_new_not_synchronized` and `MethodNotFound` for every
+  other method id, always clearing method output;
+- S-FSK Active Initiator normalizes versions above
+  `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

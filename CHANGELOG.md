@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.66.0 - 2026-06-15
+
+- Added S-FSK Active Initiator IC `51` built-in object
+  (`CosemSFskActiveInitiatorObject`) with class version `0`,
+  exposing `active_initiator` (structure {system_title:
+  octet-string(8), mac_address: octet-string,
+  llc_sap_selector: unsigned}) as an opaque encoded DLMS Data
+  buffer prepared by the caller.
+- Attribute `2` honours a caller-selected
+  `AttributeAccessMode` (writes replace the stored buffer
+  in-place when permitted); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Method `1` `reset_new_not_synchronized` returns
+  `UnsupportedFeature`; undefined method ids return
+  `MethodNotFound`; method output is always cleared.
+
 ## 0.65.0 - 2026-06-15
 
 - Added S-FSK PLC PHY & MAC Setup IC `50` built-in object

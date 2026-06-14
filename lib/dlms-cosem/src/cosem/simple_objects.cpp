@@ -10247,6 +10247,106 @@ CosemSFskPlcPhyMacSetupObject::AttributeData() const
   return attributes_;
 }
 
+namespace {
+constexpr std::uint16_t kSFskActiveInitiatorClassId = 51u;
+constexpr std::uint8_t kSFskActiveInitiatorAttributeId = 2u;
+constexpr std::uint8_t kSFskActiveInitiatorResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t
+  CosemSFskActiveInitiatorObject::MaxSupportedVersion;
+
+CosemSFskActiveInitiatorObject::CosemSFskActiveInitiatorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& activeInitiator,
+  AttributeAccessMode mutableAccess)
+  : CosemSFskActiveInitiatorObject(
+      logicalName, activeInitiator, mutableAccess,
+      CosemSFskActiveInitiatorObject::MaxSupportedVersion)
+{
+}
+
+CosemSFskActiveInitiatorObject::CosemSFskActiveInitiatorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& activeInitiator,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSFskActiveInitiatorClassId,
+      NormalizeVersion(
+        version,
+        CosemSFskActiveInitiatorObject::MaxSupportedVersion),
+      logicalName))
+  , activeInitiator_(activeInitiator)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSFskActiveInitiatorAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemSFskActiveInitiatorObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSFskActiveInitiatorObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSFskActiveInitiatorObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kSFskActiveInitiatorAttributeId:
+      output = activeInitiator_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskActiveInitiatorObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kSFskActiveInitiatorAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      activeInitiator_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskActiveInitiatorObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kSFskActiveInitiatorResetMethodId)
+    return CosemStatus::UnsupportedFeature;
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemSFskActiveInitiatorObject::ActiveInitiator() const
+{
+  return activeInitiator_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

@@ -1064,6 +1064,22 @@ writable. IC v1 defines a single method (`1` `reset`);
 `MethodNotFound` for every other method id, always clearing
 method output.
 
+`simple_objects.hpp` also exposes a partial S-FSK Active
+Initiator IC `51` (`CosemSFskActiveInitiatorObject`) with class
+version `0`. The constructors take the logical name, an
+encoded active_initiator buffer (structure `{system_title:
+octet-string(8), mac_address: octet-string, llc_sap_selector:
+unsigned}`) prepared by the caller, a caller-selected
+`AttributeAccessMode` for the mutable attribute `2`, and an
+optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1`
+(logical_name) is read-only; attribute `2` honors the caller
+access mode and replaces the stored buffer in-place when
+writable. IC v0 defines a single method (`1`
+`reset_new_not_synchronized`); `InvokeMethod` reports
+`UnsupportedFeature` for method `1` and `MethodNotFound` for
+every other method id, always clearing method output.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

@@ -9690,4 +9690,128 @@ TEST(CosemSFskPlcPhyMacSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+dlms::cosem::CosemByteBuffer SampleSFskActiveInitiator()
+{
+  // structure { octet-string(8) system_title, octet-string(6) mac,
+  //             unsigned llc_sap_selector }
+  return BytesFromList({
+    0x02u, 0x03u,
+    0x09u, 0x08u, 0x53u, 0x4Du, 0x54u, 0x01u,
+      0x02u, 0x03u, 0x04u, 0x05u,
+    0x09u, 0x06u, 0xAAu, 0xBBu, 0xCCu, 0xDDu, 0xEEu, 0xFFu,
+    0x11u, 0x7Fu});
+}
+
+dlms::cosem::CosemSFskActiveInitiatorObject
+MakeSFskActiveInitiatorObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const dlms::cosem::CosemByteBuffer& initiator,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemSFskActiveInitiatorObject(
+    name, initiator, access);
+}
+
+} // namespace
+
+TEST(CosemSFskActiveInitiatorObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 1u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer initiator =
+    SampleSFskActiveInitiator();
+  dlms::cosem::CosemSFskActiveInitiatorObject object =
+    MakeSFskActiveInitiatorObject(
+      name, initiator,
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(51u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskActiveInitiatorObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(initiator, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(3u, out));
+}
+
+TEST(CosemSFskActiveInitiatorObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 1u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer initiator =
+    SampleSFskActiveInitiator();
+  const dlms::cosem::CosemByteBuffer replacement = BytesFromList({
+    0x02u, 0x03u,
+    0x09u, 0x08u, 0x00u, 0x00u, 0x00u, 0x00u,
+      0x00u, 0x00u, 0x00u, 0x00u,
+    0x09u, 0x06u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u, 0x00u,
+    0x11u, 0x00u});
+
+  dlms::cosem::CosemSFskActiveInitiatorObject writable =
+    MakeSFskActiveInitiatorObject(
+      name, initiator,
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, replacement));
+  EXPECT_EQ(replacement, writable.ActiveInitiator());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemSFskActiveInitiatorObject readOnly =
+    MakeSFskActiveInitiatorObject(
+      name, initiator,
+      dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, replacement));
+  EXPECT_EQ(initiator, readOnly.ActiveInitiator());
+}
+
+TEST(CosemSFskActiveInitiatorObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 1u, 0u, 255u);
+  dlms::cosem::CosemSFskActiveInitiatorObject object =
+    MakeSFskActiveInitiatorObject(
+      name, SampleSFskActiveInitiator(),
+      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  for (std::uint8_t method : {0u, 2u, 99u, 255u}) {
+    out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemSFskActiveInitiatorObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 1u, 0u, 255u);
+  dlms::cosem::CosemSFskActiveInitiatorObject object(
+    name, SampleSFskActiveInitiator(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskActiveInitiatorObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

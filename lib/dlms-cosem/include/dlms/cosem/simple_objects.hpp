@@ -1692,6 +1692,58 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemArbitratorObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemArbitratorObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& actions,
+    const CosemByteBuffer& permissionsTable,
+    const CosemByteBuffer& weightingsTable,
+    const CosemByteBuffer& mostRecentRequestsTable,
+    const CosemByteBuffer& lastOutcome,
+    AttributeAccessMode mutableAccess);
+  CosemArbitratorObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& actions,
+    const CosemByteBuffer& permissionsTable,
+    const CosemByteBuffer& weightingsTable,
+    const CosemByteBuffer& mostRecentRequestsTable,
+    const CosemByteBuffer& lastOutcome,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& Actions() const;
+  const CosemByteBuffer& PermissionsTable() const;
+  const CosemByteBuffer& WeightingsTable() const;
+  const CosemByteBuffer& MostRecentRequestsTable() const;
+  const CosemByteBuffer& LastOutcome() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer actions_;
+  CosemByteBuffer permissionsTable_;
+  CosemByteBuffer weightingsTable_;
+  CosemByteBuffer mostRecentRequestsTable_;
+  CosemByteBuffer lastOutcome_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

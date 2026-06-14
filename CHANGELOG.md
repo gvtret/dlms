@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.49.0 - 2026-06-15
+
+- Added Arbitrator IC `68` built-in object
+  (`CosemArbitratorObject`) with class version `0`, exposing
+  `actions` (array of structure {`script_logical_name`,
+  `script_selector`}), `permissions_table` (array of bit-string,
+  one row per actor), `weightings_table` (array of array of
+  long-unsigned), `most_recent_requests_table` (array of
+  bit-string) and `last_outcome` (unsigned, index of the winning
+  script) as opaque encoded DLMS Data buffers prepared by the
+  caller.
+- Attributes `2`-`6` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted, so the
+  backend can republish refreshed arbitration state after driving
+  arbitration out-of-band); logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Methods `1` `request_action` and `2` `reset` return
+  `UnsupportedFeature` and clear method output (the built-in object
+  does not own arbitration semantics); other method ids return
+  `MethodNotFound`.
+
 ## 0.48.0 - 2026-06-15
 
 - Added Sensor Manager IC `67` built-in object

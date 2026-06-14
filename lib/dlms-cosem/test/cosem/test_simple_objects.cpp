@@ -7006,4 +7006,174 @@ TEST(CosemSensorManagerObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct ArbitratorBuffers
+{
+  dlms::cosem::CosemByteBuffer actions;
+  dlms::cosem::CosemByteBuffer permissionsTable;
+  dlms::cosem::CosemByteBuffer weightingsTable;
+  dlms::cosem::CosemByteBuffer mostRecentRequestsTable;
+  dlms::cosem::CosemByteBuffer lastOutcome;
+};
+
+ArbitratorBuffers MakeSampleArbitrator()
+{
+  ArbitratorBuffers b;
+  // array(1) of structure(2): {script_logical_name 0.0.10.0.100.255,
+  //                            script_selector long-unsigned 1}
+  b.actions = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x09u, 0x06u,
+          0x00u, 0x00u, 0x0Au, 0x00u, 0x64u, 0xFFu,
+        0x12u, 0x00u, 0x01u});
+  // array(1) of bit-string(8): 0b10000000 (actor 0 may run script 0)
+  b.permissionsTable = BytesFromList({
+    0x01u, 0x01u,
+      0x04u, 0x08u, 0x80u});
+  // array(1) of array(1) of long-unsigned: {{ 0x0001 }}
+  b.weightingsTable = BytesFromList({
+    0x01u, 0x01u,
+      0x01u, 0x01u,
+        0x12u, 0x00u, 0x01u});
+  // array(1) of bit-string(8): 0b00000000 (no recent requests)
+  b.mostRecentRequestsTable = BytesFromList({
+    0x01u, 0x01u,
+      0x04u, 0x08u, 0x00u});
+  // unsigned 0 (no script ran yet)
+  b.lastOutcome = BytesFromList({0x11u, 0x00u});
+  return b;
+}
+
+dlms::cosem::CosemArbitratorObject MakeArbitratorObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const ArbitratorBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemArbitratorObject(
+    name, b.actions, b.permissionsTable, b.weightingsTable,
+    b.mostRecentRequestsTable, b.lastOutcome, access);
+}
+
+} // namespace
+
+TEST(CosemArbitratorObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
+  const ArbitratorBuffers b = MakeSampleArbitrator();
+  dlms::cosem::CosemArbitratorObject object =
+    MakeArbitratorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(68u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemArbitratorObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.actions, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.permissionsTable, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.weightingsTable, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.mostRecentRequestsTable, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.lastOutcome, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(7u, out));
+}
+
+TEST(CosemArbitratorObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
+  const ArbitratorBuffers b = MakeSampleArbitrator();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x2Au});
+
+  dlms::cosem::CosemArbitratorObject writable =
+    MakeArbitratorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.Actions());
+  EXPECT_EQ(replacement, writable.PermissionsTable());
+  EXPECT_EQ(replacement, writable.WeightingsTable());
+  EXPECT_EQ(replacement, writable.MostRecentRequestsTable());
+  EXPECT_EQ(replacement, writable.LastOutcome());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemArbitratorObject readOnly =
+    MakeArbitratorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.actions, readOnly.Actions());
+  EXPECT_EQ(b.permissionsTable, readOnly.PermissionsTable());
+  EXPECT_EQ(b.weightingsTable, readOnly.WeightingsTable());
+  EXPECT_EQ(b.mostRecentRequestsTable,
+            readOnly.MostRecentRequestsTable());
+  EXPECT_EQ(b.lastOutcome, readOnly.LastOutcome());
+}
+
+TEST(CosemArbitratorObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
+  const ArbitratorBuffers b = MakeSampleArbitrator();
+  dlms::cosem::CosemArbitratorObject object =
+    MakeArbitratorObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+  for (std::uint8_t method : {3u, 4u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemArbitratorObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
+  const ArbitratorBuffers b = MakeSampleArbitrator();
+  dlms::cosem::CosemArbitratorObject object(
+    name, b.actions, b.permissionsTable, b.weightingsTable,
+    b.mostRecentRequestsTable, b.lastOutcome,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemArbitratorObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

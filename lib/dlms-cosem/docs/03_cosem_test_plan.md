@@ -673,6 +673,26 @@ Sensor Manager tests:
   method ids and clears method output (IC defines no methods);
 - Sensor Manager normalizes versions above `MaxSupportedVersion`.
 
+Arbitrator tests:
+
+- Arbitrator exposes attributes `1` logical_name, `2` actions,
+  `3` permissions_table, `4` weightings_table,
+  `5` most_recent_requests_table and `6` last_outcome as the
+  encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Arbitrator mutable attributes (`2`-`6`) writes succeed when the
+  caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- Arbitrator rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Arbitrator `InvokeMethod` reports `UnsupportedFeature` for
+  methods `1` `request_action` and `2` `reset`, and
+  `MethodNotFound` for any other method id, always clearing method
+  output;
+- Arbitrator normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

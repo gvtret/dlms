@@ -7094,6 +7094,188 @@ CosemSensorManagerObject::MeasurementDesc() const
   return measurementDesc_;
 }
 
+namespace {
+constexpr std::uint16_t kArbitratorClassId = 68u;
+constexpr std::uint8_t kArbitratorActionsAttributeId = 2u;
+constexpr std::uint8_t kArbitratorPermissionsTableAttributeId = 3u;
+constexpr std::uint8_t kArbitratorWeightingsTableAttributeId = 4u;
+constexpr std::uint8_t
+  kArbitratorMostRecentRequestsTableAttributeId = 5u;
+constexpr std::uint8_t kArbitratorLastOutcomeAttributeId = 6u;
+constexpr std::uint8_t kArbitratorRequestActionMethodId = 1u;
+constexpr std::uint8_t kArbitratorResetMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemArbitratorObject::MaxSupportedVersion;
+
+CosemArbitratorObject::CosemArbitratorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& actions,
+  const CosemByteBuffer& permissionsTable,
+  const CosemByteBuffer& weightingsTable,
+  const CosemByteBuffer& mostRecentRequestsTable,
+  const CosemByteBuffer& lastOutcome,
+  AttributeAccessMode mutableAccess)
+  : CosemArbitratorObject(
+      logicalName, actions, permissionsTable, weightingsTable,
+      mostRecentRequestsTable, lastOutcome, mutableAccess,
+      kVersion0)
+{
+}
+
+CosemArbitratorObject::CosemArbitratorObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& actions,
+  const CosemByteBuffer& permissionsTable,
+  const CosemByteBuffer& weightingsTable,
+  const CosemByteBuffer& mostRecentRequestsTable,
+  const CosemByteBuffer& lastOutcome,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kArbitratorClassId,
+      NormalizeVersion(
+        version, CosemArbitratorObject::MaxSupportedVersion),
+      logicalName))
+  , actions_(actions)
+  , permissionsTable_(permissionsTable)
+  , weightingsTable_(weightingsTable)
+  , mostRecentRequestsTable_(mostRecentRequestsTable)
+  , lastOutcome_(lastOutcome)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kArbitratorActionsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kArbitratorPermissionsTableAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kArbitratorWeightingsTableAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kArbitratorMostRecentRequestsTableAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kArbitratorLastOutcomeAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemArbitratorObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemArbitratorObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemArbitratorObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kArbitratorActionsAttributeId:
+      output = actions_;
+      return CosemStatus::Ok;
+    case kArbitratorPermissionsTableAttributeId:
+      output = permissionsTable_;
+      return CosemStatus::Ok;
+    case kArbitratorWeightingsTableAttributeId:
+      output = weightingsTable_;
+      return CosemStatus::Ok;
+    case kArbitratorMostRecentRequestsTableAttributeId:
+      output = mostRecentRequestsTable_;
+      return CosemStatus::Ok;
+    case kArbitratorLastOutcomeAttributeId:
+      output = lastOutcome_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemArbitratorObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kArbitratorActionsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      actions_ = input;
+      return CosemStatus::Ok;
+    case kArbitratorPermissionsTableAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      permissionsTable_ = input;
+      return CosemStatus::Ok;
+    case kArbitratorWeightingsTableAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      weightingsTable_ = input;
+      return CosemStatus::Ok;
+    case kArbitratorMostRecentRequestsTableAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      mostRecentRequestsTable_ = input;
+      return CosemStatus::Ok;
+    case kArbitratorLastOutcomeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      lastOutcome_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemArbitratorObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  if (methodId == kArbitratorRequestActionMethodId ||
+      methodId == kArbitratorResetMethodId) {
+    // Arbitrator request_action / reset are not exposed by the
+    // built-in object; backend is expected to drive arbitration
+    // out-of-band and republish the stored buffers.
+    return CosemStatus::UnsupportedFeature;
+  }
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemArbitratorObject::Actions() const
+{
+  return actions_;
+}
+
+const CosemByteBuffer& CosemArbitratorObject::PermissionsTable() const
+{
+  return permissionsTable_;
+}
+
+const CosemByteBuffer& CosemArbitratorObject::WeightingsTable() const
+{
+  return weightingsTable_;
+}
+
+const CosemByteBuffer&
+CosemArbitratorObject::MostRecentRequestsTable() const
+{
+  return mostRecentRequestsTable_;
+}
+
+const CosemByteBuffer& CosemArbitratorObject::LastOutcome() const
+{
+  return lastOutcome_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

@@ -448,6 +448,23 @@ Auto Connect tests:
   ids and clears method output (IC defines no methods);
 - Auto Connect normalizes versions above `MaxSupportedVersion`.
 
+GPRS Modem Setup tests:
+
+- GPRS Modem Setup exposes attributes `1` logical_name, `2` APN, `3`
+  PIN code and `4` quality_of_service as the encoded DLMS Data
+  buffers supplied by the caller, and reports `AttributeNotFound`
+  for undefined attribute ids;
+- GPRS Modem Setup mutable attributes (`2`-`4`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
+- GPRS Modem Setup rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- GPRS Modem Setup `InvokeMethod` reports `MethodNotFound` for all
+  method ids and clears method output (IC defines no methods);
+- GPRS Modem Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

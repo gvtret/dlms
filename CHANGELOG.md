@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.37.0 - 2026-06-15
+
+- Added GPRS Modem Setup IC `45` built-in object
+  (`CosemGprsModemSetupObject`) with class version `0`, exposing
+  `APN`, `PIN code` and `quality_of_service` as opaque encoded DLMS
+  Data buffers prepared by the caller.
+- Attributes `2`-`4` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- GPRS Modem Setup IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.36.0 - 2026-06-15
 
 - Added Auto Connect IC `29` built-in object (`CosemAutoConnectObject`)

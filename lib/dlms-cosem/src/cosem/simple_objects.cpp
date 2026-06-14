@@ -4931,6 +4931,139 @@ const CosemByteBuffer& CosemAutoConnectObject::DestinationList() const
   return destinationList_;
 }
 
+namespace {
+constexpr std::uint16_t kGprsModemSetupClassId = 45u;
+constexpr std::uint8_t kGprsModemSetupApnAttributeId = 2u;
+constexpr std::uint8_t kGprsModemSetupPinCodeAttributeId = 3u;
+constexpr std::uint8_t kGprsModemSetupQualityOfServiceAttributeId = 4u;
+} // namespace
+
+const std::uint8_t CosemGprsModemSetupObject::MaxSupportedVersion;
+
+CosemGprsModemSetupObject::CosemGprsModemSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& apn,
+  const CosemByteBuffer& pinCode,
+  const CosemByteBuffer& qualityOfService,
+  AttributeAccessMode mutableAccess)
+  : CosemGprsModemSetupObject(
+      logicalName, apn, pinCode, qualityOfService, mutableAccess, kVersion0)
+{
+}
+
+CosemGprsModemSetupObject::CosemGprsModemSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& apn,
+  const CosemByteBuffer& pinCode,
+  const CosemByteBuffer& qualityOfService,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kGprsModemSetupClassId,
+      NormalizeVersion(
+        version, CosemGprsModemSetupObject::MaxSupportedVersion),
+      logicalName))
+  , apn_(apn)
+  , pinCode_(pinCode)
+  , qualityOfService_(qualityOfService)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kGprsModemSetupApnAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGprsModemSetupPinCodeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kGprsModemSetupQualityOfServiceAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemGprsModemSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemGprsModemSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemGprsModemSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kGprsModemSetupApnAttributeId:
+      output = apn_;
+      return CosemStatus::Ok;
+    case kGprsModemSetupPinCodeAttributeId:
+      output = pinCode_;
+      return CosemStatus::Ok;
+    case kGprsModemSetupQualityOfServiceAttributeId:
+      output = qualityOfService_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemGprsModemSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kGprsModemSetupApnAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      apn_ = input;
+      return CosemStatus::Ok;
+    case kGprsModemSetupPinCodeAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      pinCode_ = input;
+      return CosemStatus::Ok;
+    case kGprsModemSetupQualityOfServiceAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      qualityOfService_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemGprsModemSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // GPRS Modem Setup IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemGprsModemSetupObject::Apn() const
+{
+  return apn_;
+}
+
+const CosemByteBuffer& CosemGprsModemSetupObject::PinCode() const
+{
+  return pinCode_;
+}
+
+const CosemByteBuffer& CosemGprsModemSetupObject::QualityOfService() const
+{
+  return qualityOfService_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

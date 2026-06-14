@@ -5094,4 +5094,143 @@ TEST(CosemAutoConnectObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct GprsModemSetupBuffers
+{
+  dlms::cosem::CosemByteBuffer apn;
+  dlms::cosem::CosemByteBuffer pinCode;
+  dlms::cosem::CosemByteBuffer qualityOfService;
+};
+
+GprsModemSetupBuffers MakeSampleGprsModemSetup()
+{
+  GprsModemSetupBuffers b;
+  // octet-string "internet"
+  b.apn = BytesFromList({
+    0x09u, 0x08u, 'i', 'n', 't', 'e', 'r', 'n', 'e', 't'});
+  // long-unsigned 1234
+  b.pinCode = BytesFromList({0x12u, 0x04u, 0xD2u});
+  // structure(5): precedence, delay, reliability, peak, mean
+  b.qualityOfService = BytesFromList({
+    0x02u, 0x05u,
+      0x11u, 0x02u,           // precedence 2
+      0x11u, 0x03u,           // delay 3
+      0x11u, 0x02u,           // reliability 2
+      0x11u, 0x04u,           // peak throughput 4
+      0x11u, 0x10u});         // mean throughput 16
+  return b;
+}
+
+dlms::cosem::CosemGprsModemSetupObject MakeGprsModemSetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const GprsModemSetupBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemGprsModemSetupObject(
+    name, b.apn, b.pinCode, b.qualityOfService, access);
+}
+
+} // namespace
+
+TEST(CosemGprsModemSetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 2u, 0u, 255u);
+  const GprsModemSetupBuffers b = MakeSampleGprsModemSetup();
+  dlms::cosem::CosemGprsModemSetupObject object =
+    MakeGprsModemSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(45u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemGprsModemSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.apn, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.pinCode, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.qualityOfService, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+}
+
+TEST(CosemGprsModemSetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 2u, 0u, 255u);
+  const GprsModemSetupBuffers b = MakeSampleGprsModemSetup();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x12u, 0x00u, 0x01u});
+
+  dlms::cosem::CosemGprsModemSetupObject writable =
+    MakeGprsModemSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {2u, 3u, 4u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.Apn());
+  EXPECT_EQ(replacement, writable.PinCode());
+  EXPECT_EQ(replacement, writable.QualityOfService());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemGprsModemSetupObject readOnly =
+    MakeGprsModemSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {2u, 3u, 4u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.apn, readOnly.Apn());
+  EXPECT_EQ(b.pinCode, readOnly.PinCode());
+  EXPECT_EQ(b.qualityOfService, readOnly.QualityOfService());
+}
+
+TEST(CosemGprsModemSetupObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 2u, 0u, 255u);
+  const GprsModemSetupBuffers b = MakeSampleGprsModemSetup();
+  dlms::cosem::CosemGprsModemSetupObject object =
+    MakeGprsModemSetupObject(
+      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemGprsModemSetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 2u, 0u, 255u);
+  const GprsModemSetupBuffers b = MakeSampleGprsModemSetup();
+  dlms::cosem::CosemGprsModemSetupObject object(
+    name, b.apn, b.pinCode, b.qualityOfService,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemGprsModemSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

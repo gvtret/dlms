@@ -63,7 +63,7 @@ Status values:
 | `42` | IPv4 Setup | Application-provided | No built-in implementation. |
 | `43` | MAC Address Setup | Application-provided | No built-in implementation. |
 | `44` | PPP Setup | Application-provided | No built-in implementation. |
-| `45` | GPRS Modem Setup | Application-provided | No built-in implementation. |
+| `45` | GPRS Modem Setup | Partial | `CosemGprsModemSetupObject` exposes APN (octet-string), PIN code (long-unsigned) and quality_of_service (structure) as opaque encoded DLMS Data buffers prepared by the caller. Class version `0`, constructor normalization to `MaxSupportedVersion`. logical_name (`1`) is read-only; attributes `2`-`4` share a caller-selected `AttributeAccessMode` (writes replace the stored buffer in-place when permitted). IC defines no methods; `InvokeMethod` reports `MethodNotFound` for all ids. |
 | `46` | SMTP Setup | Application-provided | No built-in implementation. |
 | `47` | GSM Diagnostic | Application-provided | No built-in implementation. |
 | `48` | IPv6 Setup | Application-provided | No built-in implementation. |

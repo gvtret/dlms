@@ -377,6 +377,24 @@ Schedule tests:
   report `MethodNotFound`;
 - Schedule normalizes versions above `MaxSupportedVersion`.
 
+Special Days Table tests:
+
+- Special Days Table exposes attributes `1` logical_name and `2`
+  entries as the encoded DLMS Data buffers supplied by the caller,
+  and reports `AttributeNotFound` for undefined attribute ids;
+- Special Days Table entries (`2`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode
+  is read-only, leaving the stored buffer unchanged; the `SetEntries`
+  setter exposes backend-driven refresh regardless of access mode;
+- Special Days Table rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Special Days Table methods `1` `insert` and `2` `delete` report
+  `UnsupportedFeature` and clear method output; other method ids
+  report `MethodNotFound`;
+- Special Days Table normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

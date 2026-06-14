@@ -4382,6 +4382,113 @@ void CosemScheduleObject::SetEntries(const CosemByteBuffer& value)
   entries_ = value;
 }
 
+namespace {
+constexpr std::uint16_t kSpecialDaysTableClassId = 11u;
+constexpr std::uint8_t kSpecialDaysTableEntriesAttributeId = 2u;
+constexpr std::uint8_t kSpecialDaysTableInsertMethodId = 1u;
+constexpr std::uint8_t kSpecialDaysTableDeleteMethodId = 2u;
+} // namespace
+
+const std::uint8_t CosemSpecialDaysTableObject::MaxSupportedVersion;
+
+CosemSpecialDaysTableObject::CosemSpecialDaysTableObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& entries,
+  AttributeAccessMode entriesAccess)
+  : CosemSpecialDaysTableObject(
+      logicalName, entries, entriesAccess, kVersion0)
+{
+}
+
+CosemSpecialDaysTableObject::CosemSpecialDaysTableObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& entries,
+  AttributeAccessMode entriesAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSpecialDaysTableClassId,
+      NormalizeVersion(
+        version, CosemSpecialDaysTableObject::MaxSupportedVersion),
+      logicalName))
+  , entries_(entries)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSpecialDaysTableEntriesAttributeId, entriesAccess);
+}
+
+CosemObjectDescriptor CosemSpecialDaysTableObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSpecialDaysTableObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSpecialDaysTableObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kSpecialDaysTableEntriesAttributeId:
+      output = entries_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSpecialDaysTableObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kSpecialDaysTableEntriesAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      entries_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSpecialDaysTableObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  switch (methodId) {
+    case kSpecialDaysTableInsertMethodId:
+    case kSpecialDaysTableDeleteMethodId:
+      // Application-defined special-day entry mutation.
+      return CosemStatus::UnsupportedFeature;
+    default:
+      return CosemStatus::MethodNotFound;
+  }
+}
+
+const CosemByteBuffer& CosemSpecialDaysTableObject::Entries() const
+{
+  return entries_;
+}
+
+void CosemSpecialDaysTableObject::SetEntries(const CosemByteBuffer& value)
+{
+  entries_ = value;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.63.0 - 2026-06-15
+
+- Added PRIME PLC MAC Address Setup IC `84` built-in object
+  (`CosemPrimePlcMacAddressSetupObject`) with class version
+  `0`, exposing `mac_address` (long-unsigned) as an opaque
+  encoded DLMS Data buffer prepared by the caller.
+- Attribute `2` uses a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- IC v0 defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for every method id and clears method output.
+
 ## 0.62.0 - 2026-06-15
 
 - Added PRIME PLC MAC Network Statistics IC `83` built-in

@@ -342,6 +342,24 @@ Register Table tests:
   report `MethodNotFound`;
 - Register Table normalizes versions above `MaxSupportedVersion`.
 
+TCP-UDP Setup tests:
+
+- TCP-UDP Setup exposes attributes `1` logical_name and `2`-`6`
+  (tcp_udp_port, ip_reference, mss, nb_of_sim_conn,
+  inactivity_time_out) as the encoded DLMS Data buffers supplied by
+  the caller, and reports `AttributeNotFound` for undefined attribute
+  ids;
+- TCP-UDP Setup mutable attributes (`2`-`6`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode is
+  read-only, leaving the stored buffers unchanged;
+- TCP-UDP Setup rejects writes to logical_name (`1`) with
+  `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- TCP-UDP Setup `InvokeMethod` reports `MethodNotFound` for all method
+  ids and clears method output (IC defines no methods);
+- TCP-UDP Setup normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -465,6 +465,18 @@ when writable. A setter exposes backend-driven refresh of
 column selection and update and are surfaced as `UnsupportedFeature`;
 other method ids report `MethodNotFound`.
 
+`simple_objects.hpp` also exposes a partial TCP-UDP Setup IC `41`
+(`CosemTcpUdpSetupObject`) with class version `0`. The constructors
+take the `tcp_udp_port`, `ip_reference`, `mss`, `nb_of_sim_conn` and
+`inactivity_time_out` payloads as encoded DLMS Data buffers prepared
+by the caller, the logical name, a caller-selected
+`AttributeAccessMode` shared by the mutable attributes (`2`-`6`), and
+an optional explicit version that is normalized to
+`MaxSupportedVersion` when out of range. Attribute `1` (logical_name)
+is read-only; attributes `2`-`6` honor the caller access mode and
+replace the stored buffer in-place when writable. IC defines no
+methods; `InvokeMethod` reports `MethodNotFound` for all method ids.
+
 Clock attribute `2`, `5`, and `6` are DLMS Data `octet-string` values
 formatted as 12-byte DLMS date-time octets, as defined by the Clock IC. This is
 different from the generic DLMS Data `date-time` tag. Clock methods

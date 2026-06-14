@@ -4104,6 +4104,178 @@ void CosemRegisterTableObject::SetTableCellValues(
   tableCellValues_ = value;
 }
 
+namespace {
+constexpr std::uint16_t kTcpUdpSetupClassId = 41u;
+constexpr std::uint8_t kTcpUdpSetupTcpUdpPortAttributeId = 2u;
+constexpr std::uint8_t kTcpUdpSetupIpReferenceAttributeId = 3u;
+constexpr std::uint8_t kTcpUdpSetupMssAttributeId = 4u;
+constexpr std::uint8_t kTcpUdpSetupNbOfSimConnAttributeId = 5u;
+constexpr std::uint8_t kTcpUdpSetupInactivityTimeOutAttributeId = 6u;
+} // namespace
+
+const std::uint8_t CosemTcpUdpSetupObject::MaxSupportedVersion;
+
+CosemTcpUdpSetupObject::CosemTcpUdpSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& tcpUdpPort,
+  const CosemByteBuffer& ipReference,
+  const CosemByteBuffer& mss,
+  const CosemByteBuffer& nbOfSimConn,
+  const CosemByteBuffer& inactivityTimeOut,
+  AttributeAccessMode mutableAccess)
+  : CosemTcpUdpSetupObject(
+      logicalName, tcpUdpPort, ipReference, mss, nbOfSimConn,
+      inactivityTimeOut, mutableAccess, kVersion0)
+{
+}
+
+CosemTcpUdpSetupObject::CosemTcpUdpSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& tcpUdpPort,
+  const CosemByteBuffer& ipReference,
+  const CosemByteBuffer& mss,
+  const CosemByteBuffer& nbOfSimConn,
+  const CosemByteBuffer& inactivityTimeOut,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kTcpUdpSetupClassId,
+      NormalizeVersion(
+        version, CosemTcpUdpSetupObject::MaxSupportedVersion),
+      logicalName))
+  , tcpUdpPort_(tcpUdpPort)
+  , ipReference_(ipReference)
+  , mss_(mss)
+  , nbOfSimConn_(nbOfSimConn)
+  , inactivityTimeOut_(inactivityTimeOut)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kTcpUdpSetupTcpUdpPortAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kTcpUdpSetupIpReferenceAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kTcpUdpSetupMssAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kTcpUdpSetupNbOfSimConnAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kTcpUdpSetupInactivityTimeOutAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemTcpUdpSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemTcpUdpSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemTcpUdpSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kTcpUdpSetupTcpUdpPortAttributeId:
+      output = tcpUdpPort_;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupIpReferenceAttributeId:
+      output = ipReference_;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupMssAttributeId:
+      output = mss_;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupNbOfSimConnAttributeId:
+      output = nbOfSimConn_;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupInactivityTimeOutAttributeId:
+      output = inactivityTimeOut_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemTcpUdpSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kTcpUdpSetupTcpUdpPortAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      tcpUdpPort_ = input;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupIpReferenceAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      ipReference_ = input;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupMssAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      mss_ = input;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupNbOfSimConnAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      nbOfSimConn_ = input;
+      return CosemStatus::Ok;
+    case kTcpUdpSetupInactivityTimeOutAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      inactivityTimeOut_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemTcpUdpSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // TCP-UDP Setup IC defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemTcpUdpSetupObject::TcpUdpPort() const
+{
+  return tcpUdpPort_;
+}
+
+const CosemByteBuffer& CosemTcpUdpSetupObject::IpReference() const
+{
+  return ipReference_;
+}
+
+const CosemByteBuffer& CosemTcpUdpSetupObject::Mss() const
+{
+  return mss_;
+}
+
+const CosemByteBuffer& CosemTcpUdpSetupObject::NbOfSimConn() const
+{
+  return nbOfSimConn_;
+}
+
+const CosemByteBuffer& CosemTcpUdpSetupObject::InactivityTimeOut() const
+{
+  return inactivityTimeOut_;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.31.0 - 2026-06-15
+
+- Added TCP-UDP Setup IC `41` built-in object
+  (`CosemTcpUdpSetupObject`) with class version `0`, exposing
+  `tcp_udp_port`, `ip_reference`, `mss`, `nb_of_sim_conn` and
+  `inactivity_time_out` as opaque encoded DLMS Data buffers prepared
+  by the caller.
+- Attributes `2`-`6` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name (`1`) is read-only.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- TCP-UDP Setup IC defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.30.0 - 2026-06-15
 
 - Added Register Table IC `61` built-in object

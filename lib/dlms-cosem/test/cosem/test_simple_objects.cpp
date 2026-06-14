@@ -3781,4 +3781,196 @@ TEST(CosemDisconnectControlObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+struct LimiterBuffers
+{
+  dlms::cosem::CosemByteBuffer monitoredValue;
+  dlms::cosem::CosemByteBuffer thresholdActive;
+  dlms::cosem::CosemByteBuffer thresholdNormal;
+  dlms::cosem::CosemByteBuffer thresholdEmergency;
+  dlms::cosem::CosemByteBuffer minOverThresholdDuration;
+  dlms::cosem::CosemByteBuffer minUnderThresholdDuration;
+  dlms::cosem::CosemByteBuffer emergencyProfile;
+  dlms::cosem::CosemByteBuffer emergencyProfileGroupIdList;
+  dlms::cosem::CosemByteBuffer emergencyProfileActive;
+  dlms::cosem::CosemByteBuffer actions;
+};
+
+LimiterBuffers MakeSampleLimiter()
+{
+  LimiterBuffers b;
+  // structure(3){ long-unsigned 3 (class_id), octet-string 6, integer 2 }
+  b.monitoredValue = BytesFromList({
+    0x02u, 0x03u,
+      0x12u, 0x00u, 0x03u,
+      0x09u, 0x06u, 0x01u, 0x00u, 0x01u, 0x08u, 0x00u, 0xFFu,
+      0x0Fu, 0x02u});
+  // long-unsigned 100
+  b.thresholdActive = BytesFromList({0x12u, 0x00u, 0x64u});
+  b.thresholdNormal = BytesFromList({0x12u, 0x00u, 0x64u});
+  b.thresholdEmergency = BytesFromList({0x12u, 0x00u, 0xC8u});
+  // double-long-unsigned 60
+  b.minOverThresholdDuration =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x3Cu});
+  b.minUnderThresholdDuration =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x3Cu});
+  // structure(3){ long-unsigned id, date_time, double-long-unsigned dur }
+  b.emergencyProfile = BytesFromList({
+    0x02u, 0x03u,
+      0x12u, 0x00u, 0x01u,
+      0x09u, 0x0Cu, 0x07u, 0xE5u, 0x06u, 0x15u, 0xFFu,
+        0x12u, 0x00u, 0x00u, 0x00u, 0x80u, 0x00u, 0x00u,
+      0x06u, 0x00u, 0x00u, 0x01u, 0x2Cu});
+  // array(1){ long-unsigned 1 }
+  b.emergencyProfileGroupIdList = BytesFromList({
+    0x01u, 0x01u, 0x12u, 0x00u, 0x01u});
+  // boolean false
+  b.emergencyProfileActive = BytesFromList({0x03u, 0x00u});
+  // structure(2){ structure(2){class_id, ln}, structure(2){class_id, ln} }
+  b.actions = BytesFromList({
+    0x02u, 0x02u,
+      0x02u, 0x02u,
+        0x12u, 0x00u, 0x09u,
+        0x09u, 0x06u, 0x00u, 0x00u, 0x0Au, 0x00u, 0x64u, 0xFFu,
+      0x02u, 0x02u,
+        0x12u, 0x00u, 0x09u,
+        0x09u, 0x06u, 0x00u, 0x00u, 0x0Au, 0x00u, 0x65u, 0xFFu});
+  return b;
+}
+
+dlms::cosem::CosemLimiterObject MakeLimiterObject(
+  const dlms::cosem::CosemLogicalName& name,
+  const LimiterBuffers& b,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemLimiterObject(
+    name,
+    b.monitoredValue, b.thresholdActive, b.thresholdNormal,
+    b.thresholdEmergency, b.minOverThresholdDuration,
+    b.minUnderThresholdDuration, b.emergencyProfile,
+    b.emergencyProfileGroupIdList, b.emergencyProfileActive,
+    b.actions, access);
+}
+
+} // namespace
+
+TEST(CosemLimiterObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 17u, 0u, 0u, 255u);
+  const LimiterBuffers b = MakeSampleLimiter();
+  dlms::cosem::CosemLimiterObject object = MakeLimiterObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(71u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemLimiterObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
+  EXPECT_EQ(b.monitoredValue, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
+  EXPECT_EQ(b.thresholdActive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.thresholdNormal, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.thresholdEmergency, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
+  EXPECT_EQ(b.minOverThresholdDuration, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.minUnderThresholdDuration, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.emergencyProfile, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
+  EXPECT_EQ(b.emergencyProfileGroupIdList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.emergencyProfileActive, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(11u, out));
+  EXPECT_EQ(b.actions, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(12u, out));
+}
+
+TEST(CosemLimiterObject, MutableAttributesHonorCallerAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 17u, 0u, 0u, 255u);
+  const LimiterBuffers b = MakeSampleLimiter();
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x12u, 0x01u, 0x2Cu});
+
+  dlms::cosem::CosemLimiterObject writable = MakeLimiterObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t id : {3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(replacement, writable.ThresholdActive());
+  EXPECT_EQ(replacement, writable.Actions());
+  // Read-only attributes always reject writes.
+  for (std::uint8_t id : {1u, 2u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemLimiterObject readOnly = MakeLimiterObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id : {3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(id), replacement))
+      << "attribute id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(b.thresholdActive, readOnly.ThresholdActive());
+  EXPECT_EQ(b.actions, readOnly.Actions());
+}
+
+TEST(CosemLimiterObject, NoMethodsDefined)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 17u, 0u, 0u, 255u);
+  const LimiterBuffers b = MakeSampleLimiter();
+  dlms::cosem::CosemLimiterObject object = MakeLimiterObject(
+    name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {1u, 2u, 3u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemLimiterObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 17u, 0u, 0u, 255u);
+  const LimiterBuffers b = MakeSampleLimiter();
+  dlms::cosem::CosemLimiterObject object(
+    name,
+    b.monitoredValue, b.thresholdActive, b.thresholdNormal,
+    b.thresholdEmergency, b.minOverThresholdDuration,
+    b.minUnderThresholdDuration, b.emergencyProfile,
+    b.emergencyProfileGroupIdList, b.emergencyProfileActive,
+    b.actions, dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemLimiterObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

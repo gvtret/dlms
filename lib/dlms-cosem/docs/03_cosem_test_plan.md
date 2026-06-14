@@ -285,6 +285,26 @@ Disconnect Control tests:
   output; other method ids report `MethodNotFound`;
 - Disconnect Control normalizes versions above `MaxSupportedVersion`.
 
+Limiter tests:
+
+- Limiter exposes attributes `1` logical_name and `2`-`11`
+  (monitored_value, threshold_active, threshold_normal,
+  threshold_emergency, min_over_threshold_duration,
+  min_under_threshold_duration, emergency_profile,
+  emergency_profile_group_id_list, emergency_profile_active, actions)
+  as the encoded DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Limiter mutable attributes (`3`-`11`) writes succeed when the
+  caller-selected access mode permits writes and replace the stored
+  buffer in-place; writes report `AccessDenied` when the access mode is
+  read-only, leaving the stored buffers unchanged;
+- Limiter rejects writes to logical_name and monitored_value (`1`, `2`)
+  with `AccessDenied`, and reports `AttributeNotFound` for undefined
+  attribute ids;
+- Limiter `InvokeMethod` reports `MethodNotFound` for all method ids
+  and clears method output (IC v0 defines no methods);
+- Limiter normalizes versions above `MaxSupportedVersion`.
+
 Security Setup tests:
 
 - Security Setup default descriptor version is

@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.28.0 - 2026-06-15
+
+- Added Limiter IC `71` built-in object (`CosemLimiterObject`) with
+  class version `0`, exposing `monitored_value`, `threshold_active`,
+  `threshold_normal`, `threshold_emergency`,
+  `min_over_threshold_duration`, `min_under_threshold_duration`,
+  `emergency_profile`, `emergency_profile_group_id_list`,
+  `emergency_profile_active` and `actions` as opaque encoded DLMS Data
+  buffers prepared by the caller.
+- Attributes `3`-`11` share a caller-selected `AttributeAccessMode`
+  (writes replace the stored buffer in-place when permitted);
+  logical_name and monitored_value (`1`, `2`) are read-only with
+  setters that expose backend-driven refresh of `threshold_active` and
+  `emergency_profile_active` from a future limiter backend.
+- Constructors normalize versions above `MaxSupportedVersion`.
+- Limiter IC v0 defines no methods; `InvokeMethod` reports
+  `MethodNotFound` for all method ids and clears method output.
+
 ## 0.27.0 - 2026-06-15
 
 - Added Disconnect Control IC `70` built-in object

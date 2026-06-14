@@ -3421,6 +3421,287 @@ void CosemDisconnectControlObject::SetControlState(
   controlState_ = value;
 }
 
+namespace {
+constexpr std::uint16_t kLimiterClassId = 71u;
+constexpr std::uint8_t kLimiterMonitoredValueAttributeId = 2u;
+constexpr std::uint8_t kLimiterThresholdActiveAttributeId = 3u;
+constexpr std::uint8_t kLimiterThresholdNormalAttributeId = 4u;
+constexpr std::uint8_t kLimiterThresholdEmergencyAttributeId = 5u;
+constexpr std::uint8_t kLimiterMinOverThresholdDurationAttributeId = 6u;
+constexpr std::uint8_t kLimiterMinUnderThresholdDurationAttributeId = 7u;
+constexpr std::uint8_t kLimiterEmergencyProfileAttributeId = 8u;
+constexpr std::uint8_t kLimiterEmergencyProfileGroupIdListAttributeId = 9u;
+constexpr std::uint8_t kLimiterEmergencyProfileActiveAttributeId = 10u;
+constexpr std::uint8_t kLimiterActionsAttributeId = 11u;
+} // namespace
+
+const std::uint8_t CosemLimiterObject::MaxSupportedVersion;
+
+CosemLimiterObject::CosemLimiterObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& monitoredValue,
+  const CosemByteBuffer& thresholdActive,
+  const CosemByteBuffer& thresholdNormal,
+  const CosemByteBuffer& thresholdEmergency,
+  const CosemByteBuffer& minOverThresholdDuration,
+  const CosemByteBuffer& minUnderThresholdDuration,
+  const CosemByteBuffer& emergencyProfile,
+  const CosemByteBuffer& emergencyProfileGroupIdList,
+  const CosemByteBuffer& emergencyProfileActive,
+  const CosemByteBuffer& actions,
+  AttributeAccessMode mutableAccess)
+  : CosemLimiterObject(
+      logicalName, monitoredValue, thresholdActive, thresholdNormal,
+      thresholdEmergency, minOverThresholdDuration,
+      minUnderThresholdDuration, emergencyProfile,
+      emergencyProfileGroupIdList, emergencyProfileActive, actions,
+      mutableAccess, kVersion0)
+{
+}
+
+CosemLimiterObject::CosemLimiterObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& monitoredValue,
+  const CosemByteBuffer& thresholdActive,
+  const CosemByteBuffer& thresholdNormal,
+  const CosemByteBuffer& thresholdEmergency,
+  const CosemByteBuffer& minOverThresholdDuration,
+  const CosemByteBuffer& minUnderThresholdDuration,
+  const CosemByteBuffer& emergencyProfile,
+  const CosemByteBuffer& emergencyProfileGroupIdList,
+  const CosemByteBuffer& emergencyProfileActive,
+  const CosemByteBuffer& actions,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kLimiterClassId,
+      NormalizeVersion(version, CosemLimiterObject::MaxSupportedVersion),
+      logicalName))
+  , monitoredValue_(monitoredValue)
+  , thresholdActive_(thresholdActive)
+  , thresholdNormal_(thresholdNormal)
+  , thresholdEmergency_(thresholdEmergency)
+  , minOverThresholdDuration_(minOverThresholdDuration)
+  , minUnderThresholdDuration_(minUnderThresholdDuration)
+  , emergencyProfile_(emergencyProfile)
+  , emergencyProfileGroupIdList_(emergencyProfileGroupIdList)
+  , emergencyProfileActive_(emergencyProfileActive)
+  , actions_(actions)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  // monitored_value identifies the source attribute and is part of the
+  // limiter configuration; keep it read-only via the built-in object.
+  rights_.SetAttributeAccess(
+    kLimiterMonitoredValueAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kLimiterThresholdActiveAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterThresholdNormalAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterThresholdEmergencyAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterMinOverThresholdDurationAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterMinUnderThresholdDurationAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterEmergencyProfileAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterEmergencyProfileGroupIdListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterEmergencyProfileActiveAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kLimiterActionsAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemLimiterObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemLimiterObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemLimiterObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kLimiterMonitoredValueAttributeId:
+      output = monitoredValue_;
+      return CosemStatus::Ok;
+    case kLimiterThresholdActiveAttributeId:
+      output = thresholdActive_;
+      return CosemStatus::Ok;
+    case kLimiterThresholdNormalAttributeId:
+      output = thresholdNormal_;
+      return CosemStatus::Ok;
+    case kLimiterThresholdEmergencyAttributeId:
+      output = thresholdEmergency_;
+      return CosemStatus::Ok;
+    case kLimiterMinOverThresholdDurationAttributeId:
+      output = minOverThresholdDuration_;
+      return CosemStatus::Ok;
+    case kLimiterMinUnderThresholdDurationAttributeId:
+      output = minUnderThresholdDuration_;
+      return CosemStatus::Ok;
+    case kLimiterEmergencyProfileAttributeId:
+      output = emergencyProfile_;
+      return CosemStatus::Ok;
+    case kLimiterEmergencyProfileGroupIdListAttributeId:
+      output = emergencyProfileGroupIdList_;
+      return CosemStatus::Ok;
+    case kLimiterEmergencyProfileActiveAttributeId:
+      output = emergencyProfileActive_;
+      return CosemStatus::Ok;
+    case kLimiterActionsAttributeId:
+      output = actions_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemLimiterObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kLimiterThresholdActiveAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      thresholdActive_ = input;
+      return CosemStatus::Ok;
+    case kLimiterThresholdNormalAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      thresholdNormal_ = input;
+      return CosemStatus::Ok;
+    case kLimiterThresholdEmergencyAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      thresholdEmergency_ = input;
+      return CosemStatus::Ok;
+    case kLimiterMinOverThresholdDurationAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      minOverThresholdDuration_ = input;
+      return CosemStatus::Ok;
+    case kLimiterMinUnderThresholdDurationAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      minUnderThresholdDuration_ = input;
+      return CosemStatus::Ok;
+    case kLimiterEmergencyProfileAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      emergencyProfile_ = input;
+      return CosemStatus::Ok;
+    case kLimiterEmergencyProfileGroupIdListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      emergencyProfileGroupIdList_ = input;
+      return CosemStatus::Ok;
+    case kLimiterEmergencyProfileActiveAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      emergencyProfileActive_ = input;
+      return CosemStatus::Ok;
+    case kLimiterActionsAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      actions_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+    case kLimiterMonitoredValueAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemLimiterObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // Limiter IC v0 defines no methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemLimiterObject::MonitoredValue() const
+{
+  return monitoredValue_;
+}
+
+const CosemByteBuffer& CosemLimiterObject::ThresholdActive() const
+{
+  return thresholdActive_;
+}
+
+const CosemByteBuffer& CosemLimiterObject::ThresholdNormal() const
+{
+  return thresholdNormal_;
+}
+
+const CosemByteBuffer& CosemLimiterObject::ThresholdEmergency() const
+{
+  return thresholdEmergency_;
+}
+
+const CosemByteBuffer&
+CosemLimiterObject::MinOverThresholdDuration() const
+{
+  return minOverThresholdDuration_;
+}
+
+const CosemByteBuffer&
+CosemLimiterObject::MinUnderThresholdDuration() const
+{
+  return minUnderThresholdDuration_;
+}
+
+const CosemByteBuffer& CosemLimiterObject::EmergencyProfile() const
+{
+  return emergencyProfile_;
+}
+
+const CosemByteBuffer&
+CosemLimiterObject::EmergencyProfileGroupIdList() const
+{
+  return emergencyProfileGroupIdList_;
+}
+
+const CosemByteBuffer& CosemLimiterObject::EmergencyProfileActive() const
+{
+  return emergencyProfileActive_;
+}
+
+const CosemByteBuffer& CosemLimiterObject::Actions() const
+{
+  return actions_;
+}
+
+void CosemLimiterObject::SetThresholdActive(const CosemByteBuffer& value)
+{
+  thresholdActive_ = value;
+}
+
+void CosemLimiterObject::SetEmergencyProfileActive(
+  const CosemByteBuffer& value)
+{
+  emergencyProfileActive_ = value;
+}
+
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(

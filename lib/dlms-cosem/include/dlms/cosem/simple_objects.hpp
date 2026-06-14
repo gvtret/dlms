@@ -597,6 +597,81 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemLimiterObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  CosemLimiterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& monitoredValue,
+    const CosemByteBuffer& thresholdActive,
+    const CosemByteBuffer& thresholdNormal,
+    const CosemByteBuffer& thresholdEmergency,
+    const CosemByteBuffer& minOverThresholdDuration,
+    const CosemByteBuffer& minUnderThresholdDuration,
+    const CosemByteBuffer& emergencyProfile,
+    const CosemByteBuffer& emergencyProfileGroupIdList,
+    const CosemByteBuffer& emergencyProfileActive,
+    const CosemByteBuffer& actions,
+    AttributeAccessMode mutableAccess);
+  CosemLimiterObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& monitoredValue,
+    const CosemByteBuffer& thresholdActive,
+    const CosemByteBuffer& thresholdNormal,
+    const CosemByteBuffer& thresholdEmergency,
+    const CosemByteBuffer& minOverThresholdDuration,
+    const CosemByteBuffer& minUnderThresholdDuration,
+    const CosemByteBuffer& emergencyProfile,
+    const CosemByteBuffer& emergencyProfileGroupIdList,
+    const CosemByteBuffer& emergencyProfileActive,
+    const CosemByteBuffer& actions,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& MonitoredValue() const;
+  const CosemByteBuffer& ThresholdActive() const;
+  const CosemByteBuffer& ThresholdNormal() const;
+  const CosemByteBuffer& ThresholdEmergency() const;
+  const CosemByteBuffer& MinOverThresholdDuration() const;
+  const CosemByteBuffer& MinUnderThresholdDuration() const;
+  const CosemByteBuffer& EmergencyProfile() const;
+  const CosemByteBuffer& EmergencyProfileGroupIdList() const;
+  const CosemByteBuffer& EmergencyProfileActive() const;
+  const CosemByteBuffer& Actions() const;
+
+  void SetThresholdActive(const CosemByteBuffer& value);
+  void SetEmergencyProfileActive(const CosemByteBuffer& value);
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer monitoredValue_;
+  CosemByteBuffer thresholdActive_;
+  CosemByteBuffer thresholdNormal_;
+  CosemByteBuffer thresholdEmergency_;
+  CosemByteBuffer minOverThresholdDuration_;
+  CosemByteBuffer minUnderThresholdDuration_;
+  CosemByteBuffer emergencyProfile_;
+  CosemByteBuffer emergencyProfileGroupIdList_;
+  CosemByteBuffer emergencyProfileActive_;
+  CosemByteBuffer actions_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

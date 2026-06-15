@@ -627,10 +627,19 @@ TEST(CosemProfileGenericObject, ExposesReadOnlyProfileAttributes)
             object.ReadAttribute(5u, output));
   EXPECT_EQ(expectedSortMethod, output);
 
+  dlms::cosem::CosemCaptureObject emptySort;
+  emptySort.object.classId = 0u;
+  emptySort.object.version = 0u;
+  emptySort.object.logicalName =
+    dlms::cosem::CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
+  emptySort.attributeId = 0u;
+  emptySort.dataIndex = 0u;
+  const dlms::cosem::CosemByteBuffer expectedSortObject =
+    EncodedCaptureObject(emptySort);
   output.clear();
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(6u, output));
-  EXPECT_EQ(encodedCapture, output);
+  EXPECT_EQ(expectedSortObject, output);
 
   dlms::cosem::CosemByteBuffer expectedEntriesInUse;
   AppendDoubleLongUnsigned(expectedEntriesInUse, 1u);
@@ -947,14 +956,21 @@ TEST(CosemProfileGenericObject, RejectsWritesAndReportsUnsupportedMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.WriteAttribute(99u, input));
 
-  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(1u, input, output));
-  EXPECT_TRUE(output.empty());
+  for (std::uint8_t methodId = 1u; methodId <= 4u; ++methodId) {
+    dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+              object.InvokeMethod(methodId, input, output))
+      << "methodId=" << static_cast<int>(methodId);
+    EXPECT_TRUE(output.empty())
+      << "methodId=" << static_cast<int>(methodId);
+    EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+              object.AccessRights().MethodAccess(methodId))
+      << "methodId=" << static_cast<int>(methodId);
+  }
 
-  output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(2u, input, output));
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(5u, input, output));
   EXPECT_TRUE(output.empty());
 
   output = Bytes(0xAAu, 0xBBu);
@@ -992,18 +1008,127 @@ TEST(CosemProfileGenericObject, AcceptsExplicitVersion)
   EXPECT_EQ(dlms::cosem::CosemProfileGenericObject::MaxSupportedVersion,
             capped.Descriptor().key.version);
 
-  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
-            version0.AccessRights().MethodAccess(3u));
-  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
-            version0.AccessRights().MethodAccess(4u));
-  EXPECT_EQ(dlms::cosem::MethodAccessMode::NoAccess,
-            capped.AccessRights().MethodAccess(3u));
+  for (std::uint8_t methodId = 1u; methodId <= 4u; ++methodId) {
+    EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+              version0.AccessRights().MethodAccess(methodId))
+      << "v0 methodId=" << static_cast<int>(methodId);
+    EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+              capped.AccessRights().MethodAccess(methodId))
+      << "v1 methodId=" << static_cast<int>(methodId);
+
+    dlms::cosem::CosemByteBuffer output;
+    EXPECT_EQ(
+      dlms::cosem::CosemStatus::UnsupportedFeature,
+      version0.InvokeMethod(methodId, dlms::cosem::CosemByteBuffer(), output))
+      << "v0 methodId=" << static_cast<int>(methodId);
+    EXPECT_EQ(
+      dlms::cosem::CosemStatus::UnsupportedFeature,
+      capped.InvokeMethod(methodId, dlms::cosem::CosemByteBuffer(), output))
+      << "v1 methodId=" << static_cast<int>(methodId);
+  }
 
   dlms::cosem::CosemByteBuffer output;
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            version0.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            capped.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
+            version0.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            capped.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
+}
+
+TEST(CosemProfileGenericObject, HonorsConfigurableSortMethodAndSortObject)
+{
+  std::vector<dlms::cosem::CosemByteBuffer> rows;
+  std::vector<dlms::cosem::CosemCaptureObject> captures;
+
+  dlms::cosem::CosemCaptureObject capturedClock;
+  capturedClock.object.classId = 8u;
+  capturedClock.object.version = 0u;
+  capturedClock.object.logicalName = MakeName(8u);
+  capturedClock.attributeId = 2u;
+  capturedClock.dataIndex = 0u;
+  captures.push_back(capturedClock);
+
+  dlms::cosem::CosemCaptureObject capturedDemand;
+  capturedDemand.object.classId = 5u;
+  capturedDemand.object.version = 0u;
+  capturedDemand.object.logicalName = MakeName(5u);
+  capturedDemand.attributeId = 3u;
+  capturedDemand.dataIndex = 0u;
+  captures.push_back(capturedDemand);
+
+  dlms::cosem::CosemProfileGenericObject object(
+    MakeName(7u),
+    rows,
+    captures,
+    0u,
+    50u,
+    dlms::cosem::CosemProfileGenericSortMethod::Largest,
+    capturedDemand);
+
+  EXPECT_EQ(
+    dlms::cosem::CosemProfileGenericSortMethod::Largest,
+    object.SortMethod());
+  EXPECT_EQ(capturedDemand.object.classId, object.SortObject().object.classId);
+  EXPECT_EQ(
+    capturedDemand.object.logicalName,
+    object.SortObject().object.logicalName);
+  EXPECT_EQ(capturedDemand.attributeId, object.SortObject().attributeId);
+
+  dlms::cosem::CosemByteBuffer expectedSortMethod;
+  AppendEnum(expectedSortMethod, static_cast<std::uint8_t>(
+    dlms::cosem::CosemProfileGenericSortMethod::Largest));
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, output));
+  EXPECT_EQ(expectedSortMethod, output);
+
+  const dlms::cosem::CosemByteBuffer expectedSortObject =
+    EncodedCaptureObject(capturedDemand);
+  output.clear();
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, output));
+  EXPECT_EQ(expectedSortObject, output);
+}
+
+TEST(CosemProfileGenericObject, DefaultSortMethodIsFifoWithEmptySortObject)
+{
+  std::vector<dlms::cosem::CosemByteBuffer> rows;
+  std::vector<dlms::cosem::CosemCaptureObject> captures;
+
+  dlms::cosem::CosemCaptureObject capture;
+  capture.object.classId = 3u;
+  capture.object.version = 0u;
+  capture.object.logicalName = MakeName(3u);
+  capture.attributeId = 2u;
+  capture.dataIndex = 0u;
+  captures.push_back(capture);
+
+  dlms::cosem::CosemProfileGenericObject object(
+    MakeName(7u),
+    rows,
+    captures,
+    60u,
+    100u);
+
+  EXPECT_EQ(
+    dlms::cosem::CosemProfileGenericSortMethod::Fifo,
+    object.SortMethod());
+  EXPECT_EQ(0u, object.SortObject().object.classId);
+  EXPECT_EQ(0u, object.SortObject().attributeId);
+
+  dlms::cosem::CosemCaptureObject empty;
+  empty.object.classId = 0u;
+  empty.object.version = 0u;
+  empty.object.logicalName =
+    dlms::cosem::CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
+  empty.attributeId = 0u;
+  empty.dataIndex = 0u;
+  const dlms::cosem::CosemByteBuffer expectedSortObject =
+    EncodedCaptureObject(empty);
+
+  dlms::cosem::CosemByteBuffer output;
+  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, output));
+  EXPECT_EQ(expectedSortObject, output);
 }
 
 TEST(SimpleObjects, WorkThroughObjectRegistryAccessChecks)

@@ -1124,6 +1124,23 @@ public:
     const std::vector<CosemCaptureObject>& captureObjects,
     std::uint32_t capturePeriod,
     std::uint32_t profileEntries,
+    CosemProfileGenericSortMethod sortMethod,
+    const CosemCaptureObject& sortObject);
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries,
+    std::uint8_t version);
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries,
+    CosemProfileGenericSortMethod sortMethod,
+    const CosemCaptureObject& sortObject,
     std::uint8_t version);
 };
 
@@ -1177,10 +1194,18 @@ The decoder validates the allowed simple data tags, including `date-time`,
 
 Profile Generic descriptors use class version `1` by default. The explicit
 version constructor can publish version `0` when required by a specific meter
-model; values above `MaxSupportedVersion` are normalized. Version `0` exposes
-legacy methods `3` and `4`, `get_buffer_by_range` and `get_buffer_by_index`,
-as `UnsupportedFeature`. Version `1` keeps those method ids unavailable because
-the same behavior is represented by selective access.
+model; values above `MaxSupportedVersion` are normalized. Both v0 and v1
+expose the full method set defined by IEC 62056-6-2 ED4 §4.3.6 / §5.2.1:
+`reset` (1), `capture` (2), `get_buffer_by_range` (3), and
+`get_buffer_by_index` (4). All four are advertised in access rights and
+currently return `UnsupportedFeature` until a capture and journal execution
+policy is added.
+
+`sort_method` (attr 5) and `sort_object` (attr 6) are explicit static
+properties of the IC. The basic constructors default to `Fifo` with an empty
+`ObjectDefinition` (`class_id = 0`, zeroed logical name, `attribute_index = 0`,
+`data_index = 0`); the `CosemProfileGenericSortMethod` / `CosemCaptureObject`
+overloads let callers publish a fully configured sorted profile.
 
 The same header also adds minimal discovery objects:
 

@@ -2827,6 +2827,23 @@ public:
     const std::vector<CosemCaptureObject>& captureObjects,
     std::uint32_t capturePeriod,
     std::uint32_t profileEntries,
+    CosemProfileGenericSortMethod sortMethod,
+    const CosemCaptureObject& sortObject);
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries,
+    std::uint8_t version);
+  CosemProfileGenericObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<CosemByteBuffer>& bufferRows,
+    const std::vector<CosemCaptureObject>& captureObjects,
+    std::uint32_t capturePeriod,
+    std::uint32_t profileEntries,
+    CosemProfileGenericSortMethod sortMethod,
+    const CosemCaptureObject& sortObject,
     std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
@@ -2844,6 +2861,8 @@ public:
 
   const std::vector<CosemByteBuffer>& BufferRows() const;
   const std::vector<CosemCaptureObject>& CaptureObjects() const;
+  CosemProfileGenericSortMethod SortMethod() const;
+  const CosemCaptureObject& SortObject() const;
 
 private:
   CosemObjectDescriptor descriptor_;
@@ -2851,6 +2870,8 @@ private:
   std::vector<CosemCaptureObject> captureObjects_;
   std::uint32_t capturePeriod_;
   std::uint32_t profileEntries_;
+  CosemProfileGenericSortMethod sortMethod_;
+  CosemCaptureObject sortObject_;
   CosemAccessRights rights_;
 };
 

@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.71.0 - 2026-06-15
+
+- Aligned the Profile Generic IC `7` built-in object
+  (`CosemProfileGenericObject`) with IEC 62056-6-2 ED4 (2021) clause
+  4.3.6 and DLMS UA Blue Book Ed. 12.1 clause 5.2.1. Both class
+  version `0` (legacy) and version `1` (current) expose the full
+  method set defined by the standard: `reset` (1), `capture` (2),
+  `get_buffer_by_range` (3), and `get_buffer_by_index` (4). Previously
+  methods `3` and `4` were silently hidden on the default v1
+  instances (the gating predicate was also inverted relative to the
+  spec, which does not gate the methods by version at all) and
+  returned `MethodNotFound` instead of `UnsupportedFeature`. All four
+  ids are now advertised in access rights as `Access` and return
+  `UnsupportedFeature` pending the capture and journal execution
+  policy.
+- Made `sort_method` (attribute `5`) and `sort_object` (attribute
+  `6`) explicit static properties of the IC instead of synthesising
+  them. The basic constructor defaults to
+  `CosemProfileGenericSortMethod::Fifo` with an empty
+  `ObjectDefinition` (`class_id = 0`, zeroed logical name,
+  `attribute_index = 0`, `data_index = 0`). New constructor
+  overloads accept a `CosemProfileGenericSortMethod` and a
+  `CosemCaptureObject` (combined with or without an explicit
+  version) for callers that publish a sorted profile, and the new
+  `SortMethod()` / `SortObject()` getters return the published
+  values. The previous behaviour of returning the hardcoded `Fifo`
+  enum for attribute `5` and deriving attribute `6` from the first
+  capture object was incorrect: the standard treats them as
+  independently configurable static attributes.
+- Added regression tests
+  `CosemProfileGenericObject.HonorsConfigurableSortMethodAndSortObject`
+  and `CosemProfileGenericObject.DefaultSortMethodIsFifoWithEmptySortObject`
+  that lock the new sort surface, extended
+  `CosemProfileGenericObject.RejectsWritesAndReportsUnsupportedMethods`
+  to assert all four method ids report `Access` /
+  `UnsupportedFeature`, and rewrote
+  `CosemProfileGenericObject.AcceptsExplicitVersion` so it exercises
+  the corrected v0 and v1 method tables instead of the inverted
+  gating.
+
 ## 0.70.0 - 2026-06-15
 
 - Re-aligned the Association SN IC `12` built-in object

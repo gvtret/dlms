@@ -10660,6 +10660,21 @@ CosemClockBase CosemClockObject::ClockBase() const
 
 const std::uint8_t CosemProfileGenericObject::MaxSupportedVersion;
 
+namespace {
+
+CosemCaptureObject MakeEmptyProfileGenericSortObject()
+{
+  CosemCaptureObject empty;
+  empty.object.classId = 0u;
+  empty.object.version = 0u;
+  empty.object.logicalName = CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
+  empty.attributeId = 0u;
+  empty.dataIndex = 0u;
+  return empty;
+}
+
+}  // namespace
+
 CosemProfileGenericObject::CosemProfileGenericObject(
   const CosemLogicalName& logicalName,
   const std::vector<CosemByteBuffer>& bufferRows,
@@ -10672,6 +10687,28 @@ CosemProfileGenericObject::CosemProfileGenericObject(
       captureObjects,
       capturePeriod,
       profileEntries,
+      CosemProfileGenericSortMethod::Fifo,
+      MakeEmptyProfileGenericSortObject(),
+      kProfileGenericVersion)
+{
+}
+
+CosemProfileGenericObject::CosemProfileGenericObject(
+  const CosemLogicalName& logicalName,
+  const std::vector<CosemByteBuffer>& bufferRows,
+  const std::vector<CosemCaptureObject>& captureObjects,
+  std::uint32_t capturePeriod,
+  std::uint32_t profileEntries,
+  CosemProfileGenericSortMethod sortMethod,
+  const CosemCaptureObject& sortObject)
+  : CosemProfileGenericObject(
+      logicalName,
+      bufferRows,
+      captureObjects,
+      capturePeriod,
+      profileEntries,
+      sortMethod,
+      sortObject,
       kProfileGenericVersion)
 {
 }
@@ -10683,6 +10720,27 @@ CosemProfileGenericObject::CosemProfileGenericObject(
   std::uint32_t capturePeriod,
   std::uint32_t profileEntries,
   std::uint8_t version)
+  : CosemProfileGenericObject(
+      logicalName,
+      bufferRows,
+      captureObjects,
+      capturePeriod,
+      profileEntries,
+      CosemProfileGenericSortMethod::Fifo,
+      MakeEmptyProfileGenericSortObject(),
+      version)
+{
+}
+
+CosemProfileGenericObject::CosemProfileGenericObject(
+  const CosemLogicalName& logicalName,
+  const std::vector<CosemByteBuffer>& bufferRows,
+  const std::vector<CosemCaptureObject>& captureObjects,
+  std::uint32_t capturePeriod,
+  std::uint32_t profileEntries,
+  CosemProfileGenericSortMethod sortMethod,
+  const CosemCaptureObject& sortObject,
+  std::uint8_t version)
   : descriptor_(MakeDescriptor(
       kProfileGenericClassId,
       NormalizeVersion(version, CosemProfileGenericObject::MaxSupportedVersion),
@@ -10691,6 +10749,8 @@ CosemProfileGenericObject::CosemProfileGenericObject(
   , captureObjects_(captureObjects)
   , capturePeriod_(capturePeriod)
   , profileEntries_(profileEntries)
+  , sortMethod_(sortMethod)
+  , sortObject_(sortObject)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
@@ -10718,14 +10778,12 @@ CosemProfileGenericObject::CosemProfileGenericObject(
     AttributeAccessMode::ReadOnly);
   rights_.SetMethodAccess(kProfileResetMethodId, MethodAccessMode::Access);
   rights_.SetMethodAccess(kProfileCaptureMethodId, MethodAccessMode::Access);
-  if (descriptor_.key.version == 0u) {
-    rights_.SetMethodAccess(
-      kProfileGetBufferByRangeMethodId,
-      MethodAccessMode::Access);
-    rights_.SetMethodAccess(
-      kProfileGetBufferByIndexMethodId,
-      MethodAccessMode::Access);
-  }
+  rights_.SetMethodAccess(
+    kProfileGetBufferByRangeMethodId,
+    MethodAccessMode::Access);
+  rights_.SetMethodAccess(
+    kProfileGetBufferByIndexMethodId,
+    MethodAccessMode::Access);
 }
 
 CosemObjectDescriptor CosemProfileGenericObject::Descriptor() const
@@ -10761,24 +10819,11 @@ CosemStatus CosemProfileGenericObject::ReadAttribute(
   }
   if (attributeId == kProfileSortMethodAttributeId) {
     output.clear();
-    AppendEnum(
-      output,
-      static_cast<std::uint8_t>(CosemProfileGenericSortMethod::Fifo));
+    AppendEnum(output, static_cast<std::uint8_t>(sortMethod_));
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileSortObjectAttributeId) {
-    output.clear();
-    if (captureObjects_.empty()) {
-      CosemCaptureObject empty;
-      empty.object.classId = 0u;
-      empty.object.version = 0u;
-      empty.object.logicalName = CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
-      empty.attributeId = 0u;
-      empty.dataIndex = 0u;
-      output = EncodeProfileGenericCaptureObject(empty);
-    } else {
-      output = EncodeProfileGenericCaptureObject(captureObjects_[0]);
-    }
+    output = EncodeProfileGenericCaptureObject(sortObject_);
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileEntriesInUseAttributeId) {
@@ -10818,12 +10863,9 @@ CosemStatus CosemProfileGenericObject::InvokeMethod(
   (void)input;
   output.clear();
   if (methodId == kProfileResetMethodId ||
-      methodId == kProfileCaptureMethodId) {
-    return CosemStatus::UnsupportedFeature;
-  }
-  if (descriptor_.key.version == 0u &&
-      methodId >= kProfileGetBufferByRangeMethodId &&
-      methodId <= kProfileGetBufferByIndexMethodId) {
+      methodId == kProfileCaptureMethodId ||
+      methodId == kProfileGetBufferByRangeMethodId ||
+      methodId == kProfileGetBufferByIndexMethodId) {
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;
@@ -10839,6 +10881,16 @@ const std::vector<CosemCaptureObject>&
 CosemProfileGenericObject::CaptureObjects() const
 {
   return captureObjects_;
+}
+
+CosemProfileGenericSortMethod CosemProfileGenericObject::SortMethod() const
+{
+  return sortMethod_;
+}
+
+const CosemCaptureObject& CosemProfileGenericObject::SortObject() const
+{
+  return sortObject_;
 }
 
 const std::uint8_t CosemAssociationLnObject::MaxSupportedVersion;

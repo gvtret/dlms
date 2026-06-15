@@ -11,6 +11,9 @@ constexpr std::uint16_t kClockClassId = 8u;
 constexpr std::uint16_t kProfileGenericClassId = 7u;
 constexpr std::uint16_t kAssociationLnClassId = 15u;
 constexpr std::uint16_t kSapAssignmentClassId = 17u;
+// IEC 62056-6-2 ED4 (2021) §4.4.4 / DLMS UA Blue Book Ed. 12.1 §5.3.4:
+// class_id=17 defines a single specific method.
+constexpr std::uint8_t kSapAssignmentConnectLogicalDeviceMethodId = 1u;
 constexpr std::uint16_t kSecuritySetupClassId = 64u;
 constexpr std::uint8_t kLogicalNameAttributeId = 1u;
 constexpr std::uint8_t kValueAttributeId = 2u;
@@ -11234,9 +11237,15 @@ CosemStatus CosemSapAssignmentObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)methodId;
   (void)input;
   output.clear();
+  if (methodId == kSapAssignmentConnectLogicalDeviceMethodId) {
+    // method 1 (connect_logical_device) attaches or detaches a logical
+    // device to/from a SAP. The built-in object does not own that
+    // dispatch policy and surfaces the spec method explicitly as
+    // UnsupportedFeature instead of silently returning MethodNotFound.
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
 }
 

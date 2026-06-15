@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.74.0 - 2026-06-17
+
+- Surfaced the SAP Assignment IC `17` `connect_logical_device` method
+  (id `1`) per IEC 62056-6-2 ED4 (2021) clause 4.4.4 and DLMS UA Blue
+  Book Ed. 12.1 clause 5.3.4. `CosemSapAssignmentObject::InvokeMethod`
+  previously returned `MethodNotFound` for every method id, silently
+  hiding the only spec-defined method. The built-in object does not
+  own the SAP / logical-device attachment policy, so method `1` is now
+  surfaced explicitly as `UnsupportedFeature` (matching the pattern
+  used by IC 5, 9, 10, 11 and 22); unknown method ids still report
+  `MethodNotFound`. Not a breaking change at the public surface: any
+  caller that was already receiving `MethodNotFound` for method 1 was
+  out of spec, and callers that respect the documented status set
+  (Ok / AccessDenied / UnsupportedFeature / MethodNotFound) handle
+  the new status without changes.
+- Updated the `DiscoveryObjects.RejectUnsupportedAttributesWritesAndMethods`
+  regression test to assert the new SAP Assignment method semantics
+  (id `1` -> `UnsupportedFeature`, id `99` -> `MethodNotFound`).
+- Updated `docs/ic_support_matrix.md` and
+  `lib/dlms-cosem/docs/01_cosem_api.md` to document the SAP Assignment
+  method surface.
+- Bumped `VERSION` to `0.74.0`.
+
 ## 0.73.0 - 2026-06-17
 
 - Aligned the Schedule IC `10` built-in object (`CosemScheduleObject`)

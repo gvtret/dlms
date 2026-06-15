@@ -1741,8 +1741,15 @@ TEST(DiscoveryObjects, RejectUnsupportedAttributesWritesAndMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             sap.WriteAttribute(2u, bytes));
   output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+  // IEC 62056-6-2 ED4 (2021) §4.4.4 defines method 1 (connect_logical_device)
+  // for class_id=17. The built-in object does not own the SAP-mutation
+  // dispatch policy and exposes the spec id explicitly as
+  // UnsupportedFeature; unknown ids continue to report MethodNotFound.
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
             sap.InvokeMethod(1u, bytes, output));
+  EXPECT_TRUE(output.empty());
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            sap.InvokeMethod(99u, bytes, output));
   EXPECT_TRUE(output.empty());
 }
 

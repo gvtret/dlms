@@ -1286,7 +1286,10 @@ exposes attributes `10`, `11` and methods `5`, `6` for user-list handling.
 Unimplemented Association LN methods return `UnsupportedFeature`.
 
 SAP Assignment uses class version `0`; its explicit version constructor
-normalizes values above `MaxSupportedVersion`.
+normalizes values above `MaxSupportedVersion`. Method `1`
+`connect_logical_device` (IEC 62056-6-2 ED4 §4.4.4) dispatches
+application-defined SAP/LD attachment policy and is surfaced as
+`UnsupportedFeature`; other method ids report `MethodNotFound`.
 
 Security setup is exposed by `CosemSecuritySetupObject`:
 

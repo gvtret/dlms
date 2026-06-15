@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.85.0 - 2026-06-17
+
+- Fixed the class_id of the M-Bus Master Port Setup built-in
+  object (`CosemMBusMasterPortSetupObject`) from `73` to `74`
+  to match IEC 62056-6-2 ED4 (2021) §4.8.5 (and the
+  DLMS UA Blue Book Ed. 12.1 §4.8.4). class_id `73` is
+  reserved for the Wireless Mode Q channel IC, which is not
+  shipped as a built-in object.
+- Updated the `ExposesAllAttributes` unit test to assert
+  `classId == 74u`.
+- Refreshed the COSEM IC support matrix (split the previous
+  `74`-`76` row, added an explicit Wireless Mode Q channel
+  entry for `73`, moved the M-Bus Master Port Setup row to
+  `74`) and the COSEM API guide.
+
 ## 0.84.0 - 2026-06-17
 
 - Rebuilt the Sensor Manager IC `67` built-in object

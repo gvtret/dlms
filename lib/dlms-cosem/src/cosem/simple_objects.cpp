@@ -9003,7 +9003,7 @@ CosemMBusClientObject::EncryptionKeyStatus() const
 }
 
 namespace {
-constexpr std::uint16_t kMBusMasterPortSetupClassId = 73u;
+constexpr std::uint16_t kMBusMasterPortSetupClassId = 74u;
 constexpr std::uint8_t kMBusMasterPortSetupCommSpeedAttributeId = 2u;
 } // namespace
 

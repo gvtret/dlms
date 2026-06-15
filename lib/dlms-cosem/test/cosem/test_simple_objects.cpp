@@ -8982,7 +8982,7 @@ TEST(CosemMBusMasterPortSetupObject, ExposesAllAttributes)
       name, commSpeed,
       dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
-  EXPECT_EQ(73u, object.Descriptor().key.classId);
+  EXPECT_EQ(74u, object.Descriptor().key.classId);
   EXPECT_EQ(0u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemMBusMasterPortSetupObject::MaxSupportedVersion,

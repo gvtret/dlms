@@ -978,14 +978,15 @@ does not drive the M-Bus slave); other method ids return
 `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial M-Bus Master Port
-Setup IC `73` (`CosemMBusMasterPortSetupObject`) with class
-version `0`. The constructors take the `comm_speed` (enum)
-payload as an encoded DLMS Data buffer prepared by the caller,
-the logical name, a caller-selected `AttributeAccessMode` for the
-single mutable attribute (`2`), and an optional explicit version
-that is normalized to `MaxSupportedVersion` when out of range.
-Attribute `1` (logical_name) is read-only; comm_speed honors the
-caller access mode and replaces the stored buffer in-place when
+Setup IC `74` (`CosemMBusMasterPortSetupObject`) with class
+version `0` per IEC 62056-6-2 ED4 (2021) §4.8.5. The constructors
+take the `comm_speed` (enum) payload as an encoded DLMS Data
+buffer prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` for the single mutable
+attribute (`2`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute
+`1` (logical_name) is read-only; comm_speed honors the caller
+access mode and replaces the stored buffer in-place when
 writable. IC v0 defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids and clears method output.
 

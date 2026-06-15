@@ -549,12 +549,13 @@ PPP Setup tests:
 
 SMTP Setup tests:
 
-- SMTP Setup exposes attributes `1` logical_name, `2` SMTP_server,
-  `3` SMTP_server_port, `4` user_name, `5` login_password, `6`
-  sender and `7` receivers as the encoded DLMS Data buffers supplied
-  by the caller, and reports `AttributeNotFound` for undefined
-  attribute ids;
-- SMTP Setup mutable attributes (`2`-`7`) writes succeed when the
+- SMTP Setup exposes attributes `1` logical_name, `2` server_port,
+  `3` user_name, `4` login_password, `5` server_address and `6`
+  sender_address as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute
+  ids (IEC 62056-6-2 ED4 §4.9.6; the IC defines six attributes
+  total);
+- SMTP Setup mutable attributes (`2`-`6`) writes succeed when the
   caller-selected access mode permits writes and replace the stored
   buffer in-place; writes report `AccessDenied` when the access mode
   is read-only, leaving the stored buffers unchanged;

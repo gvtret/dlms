@@ -5796,39 +5796,41 @@ const CosemByteBuffer& CosemPppSetupObject::PppAuthentication() const
 
 namespace {
 constexpr std::uint16_t kSmtpSetupClassId = 46u;
-constexpr std::uint8_t kSmtpSetupSmtpServerAttributeId = 2u;
-constexpr std::uint8_t kSmtpSetupSmtpServerPortAttributeId = 3u;
-constexpr std::uint8_t kSmtpSetupUserNameAttributeId = 4u;
-constexpr std::uint8_t kSmtpSetupLoginPasswordAttributeId = 5u;
-constexpr std::uint8_t kSmtpSetupSenderAttributeId = 6u;
-constexpr std::uint8_t kSmtpSetupReceiversAttributeId = 7u;
+constexpr std::uint8_t kSmtpSetupServerPortAttributeId = 2u;
+constexpr std::uint8_t kSmtpSetupUserNameAttributeId = 3u;
+constexpr std::uint8_t kSmtpSetupLoginPasswordAttributeId = 4u;
+constexpr std::uint8_t kSmtpSetupServerAddressAttributeId = 5u;
+constexpr std::uint8_t kSmtpSetupSenderAddressAttributeId = 6u;
+// IEC 62056-6-2 ED4 (2021) §4.9.6 / DLMS UA Blue Book Ed. 12.1 §4.9.6
+// define class_id=46, version=0 with six attributes:
+//   1 logical_name, 2 server_port, 3 user_name,
+//   4 login_password, 5 server_address, 6 sender_address.
+// No specific methods are defined.
 } // namespace
 
 const std::uint8_t CosemSmtpSetupObject::MaxSupportedVersion;
 
 CosemSmtpSetupObject::CosemSmtpSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& smtpServer,
-  const CosemByteBuffer& smtpServerPort,
+  const CosemByteBuffer& serverPort,
   const CosemByteBuffer& userName,
   const CosemByteBuffer& loginPassword,
-  const CosemByteBuffer& sender,
-  const CosemByteBuffer& receivers,
+  const CosemByteBuffer& serverAddress,
+  const CosemByteBuffer& senderAddress,
   AttributeAccessMode mutableAccess)
   : CosemSmtpSetupObject(
-      logicalName, smtpServer, smtpServerPort, userName,
-      loginPassword, sender, receivers, mutableAccess, kVersion0)
+      logicalName, serverPort, userName, loginPassword,
+      serverAddress, senderAddress, mutableAccess, kVersion0)
 {
 }
 
 CosemSmtpSetupObject::CosemSmtpSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& smtpServer,
-  const CosemByteBuffer& smtpServerPort,
+  const CosemByteBuffer& serverPort,
   const CosemByteBuffer& userName,
   const CosemByteBuffer& loginPassword,
-  const CosemByteBuffer& sender,
-  const CosemByteBuffer& receivers,
+  const CosemByteBuffer& serverAddress,
+  const CosemByteBuffer& senderAddress,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -5836,27 +5838,24 @@ CosemSmtpSetupObject::CosemSmtpSetupObject(
       NormalizeVersion(
         version, CosemSmtpSetupObject::MaxSupportedVersion),
       logicalName))
-  , smtpServer_(smtpServer)
-  , smtpServerPort_(smtpServerPort)
+  , serverPort_(serverPort)
   , userName_(userName)
   , loginPassword_(loginPassword)
-  , sender_(sender)
-  , receivers_(receivers)
+  , serverAddress_(serverAddress)
+  , senderAddress_(senderAddress)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
-    kSmtpSetupSmtpServerAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kSmtpSetupSmtpServerPortAttributeId, mutableAccess);
+    kSmtpSetupServerPortAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kSmtpSetupUserNameAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kSmtpSetupLoginPasswordAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kSmtpSetupSenderAttributeId, mutableAccess);
+    kSmtpSetupServerAddressAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kSmtpSetupReceiversAttributeId, mutableAccess);
+    kSmtpSetupSenderAddressAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemSmtpSetupObject::Descriptor() const
@@ -5877,11 +5876,8 @@ CosemStatus CosemSmtpSetupObject::ReadAttribute(
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case kSmtpSetupSmtpServerAttributeId:
-      output = smtpServer_;
-      return CosemStatus::Ok;
-    case kSmtpSetupSmtpServerPortAttributeId:
-      output = smtpServerPort_;
+    case kSmtpSetupServerPortAttributeId:
+      output = serverPort_;
       return CosemStatus::Ok;
     case kSmtpSetupUserNameAttributeId:
       output = userName_;
@@ -5889,11 +5885,11 @@ CosemStatus CosemSmtpSetupObject::ReadAttribute(
     case kSmtpSetupLoginPasswordAttributeId:
       output = loginPassword_;
       return CosemStatus::Ok;
-    case kSmtpSetupSenderAttributeId:
-      output = sender_;
+    case kSmtpSetupServerAddressAttributeId:
+      output = serverAddress_;
       return CosemStatus::Ok;
-    case kSmtpSetupReceiversAttributeId:
-      output = receivers_;
+    case kSmtpSetupSenderAddressAttributeId:
+      output = senderAddress_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -5906,15 +5902,10 @@ CosemStatus CosemSmtpSetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kSmtpSetupSmtpServerAttributeId:
+    case kSmtpSetupServerPortAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      smtpServer_ = input;
-      return CosemStatus::Ok;
-    case kSmtpSetupSmtpServerPortAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      smtpServerPort_ = input;
+      serverPort_ = input;
       return CosemStatus::Ok;
     case kSmtpSetupUserNameAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
@@ -5926,15 +5917,15 @@ CosemStatus CosemSmtpSetupObject::WriteAttribute(
         return CosemStatus::AccessDenied;
       loginPassword_ = input;
       return CosemStatus::Ok;
-    case kSmtpSetupSenderAttributeId:
+    case kSmtpSetupServerAddressAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      sender_ = input;
+      serverAddress_ = input;
       return CosemStatus::Ok;
-    case kSmtpSetupReceiversAttributeId:
+    case kSmtpSetupSenderAddressAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      receivers_ = input;
+      senderAddress_ = input;
       return CosemStatus::Ok;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
@@ -5955,14 +5946,9 @@ CosemStatus CosemSmtpSetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::SmtpServer() const
+const CosemByteBuffer& CosemSmtpSetupObject::ServerPort() const
 {
-  return smtpServer_;
-}
-
-const CosemByteBuffer& CosemSmtpSetupObject::SmtpServerPort() const
-{
-  return smtpServerPort_;
+  return serverPort_;
 }
 
 const CosemByteBuffer& CosemSmtpSetupObject::UserName() const
@@ -5975,14 +5961,14 @@ const CosemByteBuffer& CosemSmtpSetupObject::LoginPassword() const
   return loginPassword_;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::Sender() const
+const CosemByteBuffer& CosemSmtpSetupObject::ServerAddress() const
 {
-  return sender_;
+  return serverAddress_;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::Receivers() const
+const CosemByteBuffer& CosemSmtpSetupObject::SenderAddress() const
 {
-  return receivers_;
+  return senderAddress_;
 }
 
 namespace {

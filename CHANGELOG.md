@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.79.0 - 2026-06-17
+
+- Rebuilt the SMTP Setup IC `46` built-in object
+  (`CosemSmtpSetupObject`) to match IEC 62056-6-2 ED4 (2021)
+  §4.9.6 and DLMS UA Blue Book Ed. 12.1 §4.9.6. The spec defines
+  six attributes: `1 logical_name`, `2 server_port`,
+  `3 user_name`, `4 login_password`, `5 server_address`,
+  `6 sender_address`. The previous implementation invented a
+  non-spec `smtp_server` octet-string at id 2, shifted every
+  subsequent attribute by one, used different names
+  (`sender` vs `sender_address`), and added a non-existent
+  seventh `receivers` array attribute. Constants, ctor parameter
+  list, access-rights table, read/write switches and accessors
+  are now `kSmtpSetup{ServerPort,UserName,LoginPassword,
+  ServerAddress,SenderAddress}AttributeId` with attribute ids
+  `2..6`. `ReadAttribute(7, ...)` now reports `AttributeNotFound`.
+  Methods remain absent (the IC defines none); `InvokeMethod`
+  continues to report `MethodNotFound` for every id.
+- Updated `CosemSmtpSetupObject.ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`, `NoMethodsDefined` and
+  `NormalizesVersionAboveMax` to match the spec layout. The
+  writable id set in the mutable-attribute test is now
+  `{2, 3, 4, 5, 6}`; the `AttributeNotFound` probe shifts from
+  id `8` to id `7`. The sample `SmtpSetupBuffers` helper now
+  encodes a `long-unsigned 587` `server_port`, an octet-string
+  `"smtp.example.com"` `server_address` and an octet-string
+  `"a@b.c"` `sender_address` (no more `smtpServer`/`receivers`
+  fields).
+- Refreshed the COSEM IC support matrix, COSEM API guide and
+  COSEM test plan to describe IC 46 attributes `2..6` and the
+  new mutable set `{2, 3, 4, 5, 6}`.
+
 ## 0.78.0 - 2026-06-17
 
 - Added the missing `7 list_of_allowed_callers` attribute to the

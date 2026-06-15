@@ -6119,37 +6119,32 @@ namespace {
 
 struct SmtpSetupBuffers
 {
-  dlms::cosem::CosemByteBuffer smtpServer;
-  dlms::cosem::CosemByteBuffer smtpServerPort;
+  dlms::cosem::CosemByteBuffer serverPort;
   dlms::cosem::CosemByteBuffer userName;
   dlms::cosem::CosemByteBuffer loginPassword;
-  dlms::cosem::CosemByteBuffer sender;
-  dlms::cosem::CosemByteBuffer receivers;
+  dlms::cosem::CosemByteBuffer serverAddress;
+  dlms::cosem::CosemByteBuffer senderAddress;
 };
 
 SmtpSetupBuffers MakeSampleSmtpSetup()
 {
   SmtpSetupBuffers b;
-  // octet-string "smtp.example.com" (16 chars)
-  b.smtpServer = BytesFromList({
-    0x09u, 0x10u,
-      0x73u, 0x6Du, 0x74u, 0x70u, 0x2Eu, 0x65u, 0x78u, 0x61u,
-      0x6Du, 0x70u, 0x6Cu, 0x65u, 0x2Eu, 0x63u, 0x6Fu, 0x6Du});
-  // long-unsigned 587
-  b.smtpServerPort = BytesFromList({0x12u, 0x02u, 0x4Bu});
+  // long-unsigned 587 (SMTP submission port)
+  b.serverPort = BytesFromList({0x12u, 0x02u, 0x4Bu});
   // octet-string "meter"
   b.userName = BytesFromList({
     0x09u, 0x05u, 0x6Du, 0x65u, 0x74u, 0x65u, 0x72u});
   // octet-string "secret"
   b.loginPassword = BytesFromList({
     0x09u, 0x06u, 0x73u, 0x65u, 0x63u, 0x72u, 0x65u, 0x74u});
-  // octet-string "a@b.c"
-  b.sender = BytesFromList({
+  // octet-string "smtp.example.com" (16 chars) as server_address
+  b.serverAddress = BytesFromList({
+    0x09u, 0x10u,
+      0x73u, 0x6Du, 0x74u, 0x70u, 0x2Eu, 0x65u, 0x78u, 0x61u,
+      0x6Du, 0x70u, 0x6Cu, 0x65u, 0x2Eu, 0x63u, 0x6Fu, 0x6Du});
+  // octet-string "a@b.c" as sender_address
+  b.senderAddress = BytesFromList({
     0x09u, 0x05u, 0x61u, 0x40u, 0x62u, 0x2Eu, 0x63u});
-  // array(1) of octet-string "x@y.z"
-  b.receivers = BytesFromList({
-    0x01u, 0x01u,
-      0x09u, 0x05u, 0x78u, 0x40u, 0x79u, 0x2Eu, 0x7Au});
   return b;
 }
 
@@ -6159,8 +6154,8 @@ dlms::cosem::CosemSmtpSetupObject MakeSmtpSetupObject(
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemSmtpSetupObject(
-    name, b.smtpServer, b.smtpServerPort, b.userName,
-    b.loginPassword, b.sender, b.receivers, access);
+    name, b.serverPort, b.userName, b.loginPassword,
+    b.serverAddress, b.senderAddress, access);
 }
 
 } // namespace
@@ -6184,19 +6179,17 @@ TEST(CosemSmtpSetupObject, ExposesAllAttributes)
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
   EXPECT_EQ(EncodedLogicalName(name), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
-  EXPECT_EQ(b.smtpServer, out);
+  EXPECT_EQ(b.serverPort, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
-  EXPECT_EQ(b.smtpServerPort, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
   EXPECT_EQ(b.userName, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
   EXPECT_EQ(b.loginPassword, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.serverAddress, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
-  EXPECT_EQ(b.sender, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
-  EXPECT_EQ(b.receivers, out);
+  EXPECT_EQ(b.senderAddress, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(8u, out));
+            object.ReadAttribute(7u, out));
 }
 
 TEST(CosemSmtpSetupObject, MutableAttributesHonorAccessMode)
@@ -6210,18 +6203,17 @@ TEST(CosemSmtpSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemSmtpSetupObject writable =
     MakeSmtpSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u}) {
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
       << "attribute id " << static_cast<unsigned>(id);
   }
-  EXPECT_EQ(replacement, writable.SmtpServer());
-  EXPECT_EQ(replacement, writable.SmtpServerPort());
+  EXPECT_EQ(replacement, writable.ServerPort());
   EXPECT_EQ(replacement, writable.UserName());
   EXPECT_EQ(replacement, writable.LoginPassword());
-  EXPECT_EQ(replacement, writable.Sender());
-  EXPECT_EQ(replacement, writable.Receivers());
+  EXPECT_EQ(replacement, writable.ServerAddress());
+  EXPECT_EQ(replacement, writable.SenderAddress());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
@@ -6230,18 +6222,17 @@ TEST(CosemSmtpSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemSmtpSetupObject readOnly =
     MakeSmtpSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u}) {
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
               readOnly.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
       << "attribute id " << static_cast<unsigned>(id);
   }
-  EXPECT_EQ(b.smtpServer, readOnly.SmtpServer());
-  EXPECT_EQ(b.smtpServerPort, readOnly.SmtpServerPort());
+  EXPECT_EQ(b.serverPort, readOnly.ServerPort());
   EXPECT_EQ(b.userName, readOnly.UserName());
   EXPECT_EQ(b.loginPassword, readOnly.LoginPassword());
-  EXPECT_EQ(b.sender, readOnly.Sender());
-  EXPECT_EQ(b.receivers, readOnly.Receivers());
+  EXPECT_EQ(b.serverAddress, readOnly.ServerAddress());
+  EXPECT_EQ(b.senderAddress, readOnly.SenderAddress());
 }
 
 TEST(CosemSmtpSetupObject, NoMethodsDefined)
@@ -6270,8 +6261,8 @@ TEST(CosemSmtpSetupObject, NormalizesVersionAboveMax)
     dlms::cosem::CosemLogicalName(0u, 0u, 25u, 4u, 0u, 255u);
   const SmtpSetupBuffers b = MakeSampleSmtpSetup();
   dlms::cosem::CosemSmtpSetupObject object(
-    name, b.smtpServer, b.smtpServerPort, b.userName,
-    b.loginPassword, b.sender, b.receivers,
+    name, b.serverPort, b.userName, b.loginPassword,
+    b.serverAddress, b.senderAddress,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemSmtpSetupObject::MaxSupportedVersion,

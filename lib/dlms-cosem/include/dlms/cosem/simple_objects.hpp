@@ -1335,21 +1335,19 @@ public:
 
   CosemSmtpSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& smtpServer,
-    const CosemByteBuffer& smtpServerPort,
+    const CosemByteBuffer& serverPort,
     const CosemByteBuffer& userName,
     const CosemByteBuffer& loginPassword,
-    const CosemByteBuffer& sender,
-    const CosemByteBuffer& receivers,
+    const CosemByteBuffer& serverAddress,
+    const CosemByteBuffer& senderAddress,
     AttributeAccessMode mutableAccess);
   CosemSmtpSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& smtpServer,
-    const CosemByteBuffer& smtpServerPort,
+    const CosemByteBuffer& serverPort,
     const CosemByteBuffer& userName,
     const CosemByteBuffer& loginPassword,
-    const CosemByteBuffer& sender,
-    const CosemByteBuffer& receivers,
+    const CosemByteBuffer& serverAddress,
+    const CosemByteBuffer& senderAddress,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1366,21 +1364,19 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& SmtpServer() const;
-  const CosemByteBuffer& SmtpServerPort() const;
+  const CosemByteBuffer& ServerPort() const;
   const CosemByteBuffer& UserName() const;
   const CosemByteBuffer& LoginPassword() const;
-  const CosemByteBuffer& Sender() const;
-  const CosemByteBuffer& Receivers() const;
+  const CosemByteBuffer& ServerAddress() const;
+  const CosemByteBuffer& SenderAddress() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer smtpServer_;
-  CosemByteBuffer smtpServerPort_;
+  CosemByteBuffer serverPort_;
   CosemByteBuffer userName_;
   CosemByteBuffer loginPassword_;
-  CosemByteBuffer sender_;
-  CosemByteBuffer receivers_;
+  CosemByteBuffer serverAddress_;
+  CosemByteBuffer senderAddress_;
   CosemAccessRights rights_;
 };
 

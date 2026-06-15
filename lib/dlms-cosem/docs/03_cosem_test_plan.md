@@ -445,6 +445,7 @@ Auto Connect tests:
   repetitions, `4` repetition_delay, `5` calling_window and `6`
   destination_list as the encoded DLMS Data buffers supplied by the
   caller, and reports `AttributeNotFound` for undefined attribute ids;
+  the default class version is `2` (IEC 62056-6-2 ED4 §4.7.6);
 - Auto Connect mutable attributes (`2`-`6`) writes succeed when the
   caller-selected access mode permits writes and replace the stored
   buffer in-place; writes report `AccessDenied` when the access mode
@@ -452,9 +453,15 @@ Auto Connect tests:
 - Auto Connect rejects writes to logical_name (`1`) with
   `AccessDenied`, and reports `AttributeNotFound` for undefined
   attribute ids;
-- Auto Connect `InvokeMethod` reports `MethodNotFound` for all method
-  ids and clears method output (IC defines no methods);
-- Auto Connect normalizes versions above `MaxSupportedVersion`.
+- Auto Connect (default class version `2`) `InvokeMethod` surfaces
+  the spec-defined method `1 connect (data)` as `UnsupportedFeature`
+  (the built-in object does not own the dialler / radio stack) and
+  clears method output; every other method id reports
+  `MethodNotFound`;
+- Auto Connect pinned to legacy class version `0` ("PSTN auto dial")
+  reports `MethodNotFound` for every method id including `1` since
+  v0 defines no methods;
+- Auto Connect normalizes versions above `MaxSupportedVersion = 2`.
 
 GPRS Modem Setup tests:
 

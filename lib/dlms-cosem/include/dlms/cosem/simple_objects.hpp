@@ -1025,7 +1025,7 @@ private:
 class CosemAutoConnectObject : public ICosemObject
 {
 public:
-  static const std::uint8_t MaxSupportedVersion = 0u;
+  static const std::uint8_t MaxSupportedVersion = 2u;
 
   CosemAutoConnectObject(
     const CosemLogicalName& logicalName,

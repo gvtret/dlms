@@ -1,0 +1,54 @@
+feat(cosem)!: align IC 29 Auto Connect with ED4 class version 2
+
+IEC 62056-6-2 ED4 (2021) §4.7.6 / DLMS UA Blue Book Ed. 12.1
+§4.7.6 define the Auto Connect IC (class_id 29) in two
+versions:
+
+  * version 0 — legacy "PSTN auto dial": 6 attributes
+    (logical_name, mode, repetitions, repetition_delay,
+    calling_window, destination_list) and NO methods.
+  * version 2 — "Auto connect": same 6 attributes plus one
+    specific method `1 connect (data)`.
+
+The previous `CosemAutoConnectObject` was pinned to
+`MaxSupportedVersion = 0` and unconditionally returned
+`MethodNotFound` for every method id, completely hiding the
+v2 `connect` method.
+
+Raise `MaxSupportedVersion` to `2` and make the short
+constructor default to class version `2` so freshly-constructed
+instances reflect the current edition. The longer ctor that
+accepts an explicit `version` still allows v0 (legacy
+"PSTN auto dial") for backward compatibility, and any
+out-of-range version is normalized to
+`MaxSupportedVersion = 2`.
+
+Version-gate `InvokeMethod`: method id `1` returns
+`UnsupportedFeature` when the instance is at class version
+`>= 2` (matching the established pattern for built-in objects
+that don't own their mutation backend — the dialler / radio
+stack is driven out-of-band), and `MethodNotFound` for legacy
+v0 instances. Every other method id continues to report
+`MethodNotFound`.
+
+Replace the `NoMethodsDefined` test with
+`ConnectMethodIsUnsupportedFeature` (covers default-v2
+instances) and `LegacyVersion0ReportsMethodNotFound` (pins
+version 0 explicitly and verifies methods are gone). Update
+`ExposesAllAttributes` to assert the new default version `2`.
+
+Refresh the IC support matrix, COSEM API guide and COSEM test
+plan to describe the new default version, the spec-defined
+`connect` method, and the legacy-v0 escape hatch.
+
+Tests: dlms_cosem_tests 276/276, full ctest 937/937.
+
+BREAKING CHANGE: `CosemAutoConnectObject::MaxSupportedVersion`
+is now `2u` and the short constructor produces objects with
+class version `2` instead of `0`. Callers that relied on the
+short ctor producing legacy v0 instances must switch to the
+explicit-version constructor and pass `0u`. The
+`CosemObjectDescriptor::key.version` observable for default-
+constructed instances changes from `0` to `2`, and
+`InvokeMethod(1, ...)` on a default instance now returns
+`UnsupportedFeature` instead of `MethodNotFound`.

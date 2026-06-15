@@ -5262,7 +5262,7 @@ TEST(CosemAutoConnectObject, ExposesAllAttributes)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   EXPECT_EQ(29u, object.Descriptor().key.classId);
-  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(2u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemAutoConnectObject::MaxSupportedVersion,
     object.Descriptor().key.version);
@@ -5327,7 +5327,7 @@ TEST(CosemAutoConnectObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(b.destinationList, readOnly.DestinationList());
 }
 
-TEST(CosemAutoConnectObject, NoMethodsDefined)
+TEST(CosemAutoConnectObject, ConnectMethodIsUnsupportedFeature)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 2u, 1u, 0u, 255u);
@@ -5337,10 +5337,47 @@ TEST(CosemAutoConnectObject, NoMethodsDefined)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  // method 1 "connect" is defined from class version 2 onward; the
+  // built-in object does not own the dialler/radio stack so it
+  // surfaces the spec-defined method as UnsupportedFeature.
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+
+  // every other method id (including ids that match no spec entry)
+  // still reports MethodNotFound.
+  for (std::uint8_t method : {2u, 3u}) {
+    out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemAutoConnectObject, LegacyVersion0ReportsMethodNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 2u, 1u, 0u, 255u);
+  const AutoConnectBuffers b = MakeSampleAutoConnect();
+  // The legacy v0 "PSTN auto dial" IC defines no methods at all;
+  // explicitly pinning version 0 must report MethodNotFound for the
+  // "connect" method id (and every other id) since it does not exist
+  // in that edition.
+  dlms::cosem::CosemAutoConnectObject legacy(
+    name, b.mode, b.repetitions, b.repetitionDelay,
+    b.callingWindow, b.destinationList,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    static_cast<std::uint8_t>(0u));
+  EXPECT_EQ(0u, legacy.Descriptor().key.version);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
   for (std::uint8_t method : {1u, 2u, 3u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-              object.InvokeMethod(
+              legacy.InvokeMethod(
                 static_cast<std::uint8_t>(method), in, out))
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());

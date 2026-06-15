@@ -538,16 +538,21 @@ when writable. IC defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids.
 
 `simple_objects.hpp` also exposes a partial Auto Connect IC `29`
-(`CosemAutoConnectObject`) with class version `0`. The constructors
-take the `mode`, `repetitions`, `repetition_delay`, `calling_window`
-and `destination_list` payloads as encoded DLMS Data buffers prepared
-by the caller, the logical name, a caller-selected
-`AttributeAccessMode` shared by the mutable attributes (`2`-`6`), and
-an optional explicit version that is normalized to
-`MaxSupportedVersion` when out of range. Attribute `1` (logical_name)
-is read-only; attributes `2`-`6` honor the caller access mode and
-replace the stored buffer in-place when writable. IC defines no
-methods; `InvokeMethod` reports `MethodNotFound` for all method ids.
+(`CosemAutoConnectObject`) with class version `2` (the default;
+legacy v0 "PSTN auto dial" is still constructible by passing an
+explicit version). The constructors take the `mode`, `repetitions`,
+`repetition_delay`, `calling_window` and `destination_list` payloads
+as encoded DLMS Data buffers prepared by the caller, the logical
+name, a caller-selected `AttributeAccessMode` shared by the mutable
+attributes (`2`-`6`), and an optional explicit version that is
+normalized to `MaxSupportedVersion = 2` when out of range. Attribute
+`1` (logical_name) is read-only; attributes `2`-`6` honor the caller
+access mode and replace the stored buffer in-place when writable.
+From class version `2` onward the IC defines one method
+`1 connect (data)`; the built-in object surfaces it as
+`UnsupportedFeature` because it does not own the dialler / radio
+stack. For instances pinned to legacy version `0` the method does
+not exist and `InvokeMethod` reports `MethodNotFound` for every id.
 
 `simple_objects.hpp` also exposes a partial GPRS Modem Setup IC `45`
 (`CosemGprsModemSetupObject`) with class version `0`. The

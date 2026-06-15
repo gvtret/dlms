@@ -4793,6 +4793,7 @@ constexpr std::uint8_t kAutoConnectRepetitionsAttributeId = 3u;
 constexpr std::uint8_t kAutoConnectRepetitionDelayAttributeId = 4u;
 constexpr std::uint8_t kAutoConnectCallingWindowAttributeId = 5u;
 constexpr std::uint8_t kAutoConnectDestinationListAttributeId = 6u;
+constexpr std::uint8_t kAutoConnectConnectMethodId = 1u;
 } // namespace
 
 const std::uint8_t CosemAutoConnectObject::MaxSupportedVersion;
@@ -4807,7 +4808,8 @@ CosemAutoConnectObject::CosemAutoConnectObject(
   AttributeAccessMode mutableAccess)
   : CosemAutoConnectObject(
       logicalName, mode, repetitions, repetitionDelay,
-      callingWindow, destinationList, mutableAccess, kVersion0)
+      callingWindow, destinationList, mutableAccess,
+      static_cast<std::uint8_t>(2u))
 {
 }
 
@@ -4926,10 +4928,18 @@ CosemStatus CosemAutoConnectObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)methodId;
   (void)input;
   output.clear();
-  // Auto Connect IC defines no methods.
+  // The "connect" method (id 1) is only defined from class
+  // version 2 onward (Auto connect). The legacy v0 PSTN auto
+  // dial IC defines no methods.
+  if (methodId == kAutoConnectConnectMethodId &&
+      descriptor_.key.version >= static_cast<std::uint8_t>(2u)) {
+    // Built-in object does not own the dialler / radio stack;
+    // the backend is expected to drive the connect attempt
+    // out-of-band.
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
 }
 

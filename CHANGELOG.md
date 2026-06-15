@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.80.0 - 2026-06-17
+
+- Aligned the Auto Connect IC `29` built-in object
+  (`CosemAutoConnectObject`) with IEC 62056-6-2 ED4 (2021)
+  §4.7.6. The spec defines class version `2` ("Auto connect")
+  with attributes `1..6` and one specific method
+  `1 connect (data)`; the legacy class version `0`
+  ("PSTN auto dial") keeps the same six attributes but defines
+  no methods. The previous implementation was pinned to
+  `MaxSupportedVersion = 0` and unconditionally reported
+  `MethodNotFound` for every id, hiding the v2 method.
+- Raised `MaxSupportedVersion` to `2` and made the short
+  constructor default to class version `2`; the longer ctor that
+  accepts an explicit version still allows v0 ("PSTN auto dial")
+  for backward compatibility, and any out-of-range version is
+  normalized to `MaxSupportedVersion = 2`.
+- `InvokeMethod` now version-gates the spec-defined method:
+  `method id 1` returns `UnsupportedFeature` for instances at
+  class version `>= 2` (the built-in object does not own the
+  dialler / radio stack), and `MethodNotFound` for legacy v0
+  instances. Every other method id continues to report
+  `MethodNotFound`.
+- Replaced the `CosemAutoConnectObject.NoMethodsDefined` test
+  with `ConnectMethodIsUnsupportedFeature` and
+  `LegacyVersion0ReportsMethodNotFound`; updated
+  `ExposesAllAttributes` to assert the new default version `2`.
+- Refreshed the COSEM IC support matrix, COSEM API guide and
+  COSEM test plan to describe the new default version, the
+  spec-defined `connect` method and the legacy-v0 escape hatch.
+
 ## 0.79.0 - 2026-06-17
 
 - Rebuilt the SMTP Setup IC `46` built-in object

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.91.0 - 2026-06-17
+
+- Removed the duplicate `CosemPrimePlcMacAddressSetupObject`
+  built-in object (class_id `84`). IEC 62056-6-2 ED4 (2021)
+  §4.12.10 places the PRIME NB OFDM PLC MAC address setup
+  IC at class_id `43`, which is already covered by the
+  existing built-in `CosemMacAddressSetupObject`. The
+  duplicate carried the wrong class_id (`84`) and would not
+  interoperate with a spec-conformant client/server.
+- Refreshed unit tests (4 removed), COSEM IC support matrix,
+  COSEM API guide and COSEM test plan accordingly. The
+  support matrix now lists row `84` as reserved/
+  application-provided and points callers at row `43`.
+
 ## 0.90.0 - 2026-06-17
 
 - Fixed the class_id of the PRIME NB OFDM PLC MAC network

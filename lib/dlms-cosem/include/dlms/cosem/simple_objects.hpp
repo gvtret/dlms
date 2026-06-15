@@ -2548,42 +2548,6 @@ private:
   CosemAccessRights rights_;
 };
 
-class CosemPrimePlcMacAddressSetupObject : public ICosemObject
-{
-public:
-  static const std::uint8_t MaxSupportedVersion = 0u;
-
-  CosemPrimePlcMacAddressSetupObject(
-    const CosemLogicalName& logicalName,
-    const CosemByteBuffer& macAddress,
-    AttributeAccessMode mutableAccess);
-  CosemPrimePlcMacAddressSetupObject(
-    const CosemLogicalName& logicalName,
-    const CosemByteBuffer& macAddress,
-    AttributeAccessMode mutableAccess,
-    std::uint8_t version);
-
-  CosemObjectDescriptor Descriptor() const;
-  CosemAccessRights AccessRights() const;
-  CosemStatus ReadAttribute(
-    std::uint8_t attributeId,
-    CosemByteBuffer& output) const;
-  CosemStatus WriteAttribute(
-    std::uint8_t attributeId,
-    const CosemByteBuffer& input);
-  CosemStatus InvokeMethod(
-    std::uint8_t methodId,
-    const CosemByteBuffer& input,
-    CosemByteBuffer& output);
-
-  const CosemByteBuffer& MacAddress() const;
-
-private:
-  CosemObjectDescriptor descriptor_;
-  CosemByteBuffer macAddress_;
-  CosemAccessRights rights_;
-};
-
 class CosemPrimePlcApplicationIdentificationObject : public ICosemObject
 {
 public:

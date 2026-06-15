@@ -1085,21 +1085,6 @@ out-of-band. IC v0 defines a single method (`1` `reset`);
 `MethodNotFound` for every other method id, always clearing
 method output.
 
-`simple_objects.hpp` also exposes a partial PRIME PLC MAC
-Address Setup IC `84` (`CosemPrimePlcMacAddressSetupObject`)
-with class version `0`. The constructors take `mac_address`
-(long-unsigned) as an encoded DLMS Data buffer prepared by the
-caller, the logical name, a caller-selected
-`AttributeAccessMode` for the mutable attribute (`2`), and an
-optional explicit version that is normalized to
-`MaxSupportedVersion` when out of range. Attribute `1`
-(logical_name) is read-only; the mutable attribute honors the
-caller access mode and replaces the stored buffer in-place when
-writable, so the backend can republish a refreshed PRIME MAC
-address after the stack assigns or updates it. IC v0 defines no
-methods; `InvokeMethod` reports `MethodNotFound` for all method
-ids and clears method output.
-
 `simple_objects.hpp` also exposes a partial PRIME PLC
 Application Identification IC `85`
 (`CosemPrimePlcApplicationIdentificationObject`) with class

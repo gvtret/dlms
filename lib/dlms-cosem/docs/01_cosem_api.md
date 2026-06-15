@@ -664,17 +664,34 @@ that the spec never defines; it has been removed.
 
 `simple_objects.hpp` also exposes a partial IEC twisted pair (1)
 Setup IC `24` (`CosemIecTwistedPairSetupObject`) with class version
-`0`. The constructors take the `primary_address` (long-unsigned)
-and `tabis` (array of long-unsigned listing the registered
-secondary addresses) payloads as encoded DLMS Data buffers prepared
-by the caller, the logical name, a caller-selected
-`AttributeAccessMode` shared by the mutable attributes (`2` and
-`3`), and an optional explicit version that is normalized to
+`0`. Per IEC 62056-6-2 ED4 (2021) §4.7.3 and DLMS UA Blue Book
+Ed. 12.1 §4.7.3, the class defines five attributes:
+`1 logical_name` (octet-string, static, read-only),
+`2 secondary_address` (octet-string of size 6, static),
+`3 primary_address_list` (array of octet-string, static),
+`4 tabi_list` (array of integer, static) and
+`5 fatal_error` (enum, dynamic) carrying the latest occurrence of
+one of the IEC 62056-31 protocol fatal errors. The constructors
+take the four content payloads as encoded DLMS Data buffers
+prepared by the caller, the logical name, a caller-selected
+`AttributeAccessMode` shared by the mutable attributes (`2`, `3`,
+`4`), and an optional explicit version that is normalized to
 `MaxSupportedVersion` when out of range. Attribute `1`
-(logical_name) is read-only; the mutable attributes honor the
+(logical_name) is read-only; attributes `2`, `3` and `4` honor the
 caller access mode and replace the stored buffer in-place when
-writable. IC defines no methods; `InvokeMethod` reports
-`MethodNotFound` for all method ids.
+writable. Attribute `5` (fatal_error) is server-managed and
+remains read-only at the wire surface even when the caller-
+selected mutableAccess is `ReadAndWrite`; backends are expected to
+republish the buffer when the underlying stack observes a new
+fatal error. The class defines no specific methods (the spec's
+`Specific methods | m/o` column is empty); `InvokeMethod` therefore
+returns `MethodNotFound` for every method id and clears method
+output.
+
+Earlier revisions of this implementation exposed only two
+attributes (`primary_address`, `tabis`) using a mismatched naming
+and layout; the constructor and accessor signature have been
+rebuilt to align with the spec.
 
 `simple_objects.hpp` also exposes a partial M-Bus slave port setup
 IC `25` (`CosemMBusSlavePortSetupObject`) with class version `0`.

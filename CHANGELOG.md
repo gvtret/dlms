@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.76.0 - 2026-06-17
+
+- Rebuilt the IEC twisted pair (1) Setup IC `24`
+  (`CosemIecTwistedPairSetupObject`) to match the five-attribute
+  spec layout defined in IEC 62056-6-2 ED4 (2021) §4.7.3 and DLMS
+  UA Blue Book Ed. 12.1 §4.7.3. The class definition lists:
+  `1 logical_name` (octet-string, static, read-only),
+  `2 secondary_address` (octet-string of size 6, static),
+  `3 primary_address_list` (array of octet-string, static),
+  `4 tabi_list` (array of integer, static) and
+  `5 fatal_error` (enum, dynamic) carrying the latest occurrence of
+  one of the IEC 62056-31 protocol fatal errors. The built-in
+  object previously exposed only two attributes using a mismatched
+  naming and layout (`primary_address` long-unsigned at id `2` and
+  `tabis` array of long-unsigned at id `3`) which did not match
+  any published edition of the spec. The constructors and
+  accessor signatures have been rewritten to take the four content
+  buffers (`secondary_address`, `primary_address_list`,
+  `tabi_list`, `fatal_error`) as encoded DLMS Data buffers prepared
+  by the caller. Attributes `2`, `3` and `4` share the
+  caller-selected `AttributeAccessMode` and accept in-place writes
+  when permitted; `5 fatal_error` is server-managed and remains
+  read-only at the wire surface regardless of the caller-selected
+  mode (backends republish the buffer when the underlying stack
+  observes a new fatal error). The IC defines no specific methods
+  (`Specific methods | m/o` column is empty in both editions);
+  `InvokeMethod` continues to return `MethodNotFound` for every id
+  and clears method output.
+- Replaced the existing
+  `CosemIecTwistedPairSetupObject.ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode` and `NormalizesVersionAboveMax`
+  regression tests with versions that exercise the new five-attribute
+  surface (sample `IecTwistedPairSetupBuffers` now carries the
+  spec-shaped payloads, including a six-octet secondary address, an
+  array of one-octet primary addresses, an array of TAB(i) integers
+  and an enum-encoded fatal error). `MutableAttributesHonorAccessMode`
+  additionally pins fatal_error's read-only semantics on writable
+  instances. `NoMethodsDefined` keeps asserting `MethodNotFound` for
+  every method id.
+- Updated the IC support matrix (`docs/ic_support_matrix.md`) and
+  the COSEM API guide (`lib/dlms-cosem/docs/01_cosem_api.md`) to
+  describe the spec-aligned five-attribute layout and the
+  read-only-by-design fatal_error semantics.
+
+  BREAKING CHANGE: `CosemIecTwistedPairSetupObject`'s constructors
+  and accessors have changed shape. The constructors now take
+  four content buffers in the order
+  `(secondary_address, primary_address_list, tabi_list, fatal_error)`
+  instead of the previous two
+  `(primary_address, tabis)`, and the accessor pair
+  `PrimaryAddress()`/`Tabis()` has been replaced by
+  `SecondaryAddress()`/`PrimaryAddressList()`/`TabiList()`/
+  `FatalError()`. Callers constructing the IC at runtime or reading
+  back its content must update their call sites and the encoded
+  payloads they pass in (note the spec data-type changes: primary
+  addresses are now array elements of octet-string of size 1, and
+  TAB(i) entries are integers rather than long-unsigned values).
+  The on-wire attribute count also grows from `3` to `5`; clients
+  iterating over attributes `2..N` based on the previous
+  implementation now observe ids `2..5` and must be prepared for
+  the additional payloads.
+
 ## 0.75.0 - 2026-06-17
 
 - Aligned the IPv4 Setup IC `42` (`CosemIpv4SetupObject`) method

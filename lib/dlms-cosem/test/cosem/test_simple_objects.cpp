@@ -6464,20 +6464,31 @@ namespace {
 
 struct IecTwistedPairSetupBuffers
 {
-  dlms::cosem::CosemByteBuffer primaryAddress;
-  dlms::cosem::CosemByteBuffer tabis;
+  dlms::cosem::CosemByteBuffer secondaryAddress;
+  dlms::cosem::CosemByteBuffer primaryAddressList;
+  dlms::cosem::CosemByteBuffer tabiList;
+  dlms::cosem::CosemByteBuffer fatalError;
 };
 
 IecTwistedPairSetupBuffers MakeSampleIecTwistedPairSetup()
 {
   IecTwistedPairSetupBuffers b;
-  // long-unsigned 0x0011 (17)
-  b.primaryAddress = BytesFromList({0x12u, 0x00u, 0x11u});
-  // array(2) of long-unsigned 0x0001, 0x0002
-  b.tabis = BytesFromList({
+  // octet-string(6): ADS of the secondary station
+  b.secondaryAddress = BytesFromList({
+    0x09u, 0x06u,
+      0x01u, 0x02u, 0x03u, 0x04u, 0x05u, 0x06u});
+  // primary_address_list: array(2) of octet-string(1)
+  b.primaryAddressList = BytesFromList({
     0x01u, 0x02u,
-      0x12u, 0x00u, 0x01u,
-      0x12u, 0x00u, 0x02u});
+      0x09u, 0x01u, 0x11u,
+      0x09u, 0x01u, 0x12u});
+  // tabi_list: array(2) of integer
+  b.tabiList = BytesFromList({
+    0x01u, 0x02u,
+      0x0Fu, 0x01u,
+      0x0Fu, 0x02u});
+  // fatal_error: enum (0 = No-error)
+  b.fatalError = BytesFromList({0x16u, 0x00u});
   return b;
 }
 
@@ -6488,7 +6499,12 @@ MakeIecTwistedPairSetupObject(
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemIecTwistedPairSetupObject(
-    name, b.primaryAddress, b.tabis, access);
+    name,
+    b.secondaryAddress,
+    b.primaryAddressList,
+    b.tabiList,
+    b.fatalError,
+    access);
 }
 
 } // namespace
@@ -6508,15 +6524,22 @@ TEST(CosemIecTwistedPairSetupObject, ExposesAllAttributes)
     dlms::cosem::CosemIecTwistedPairSetupObject::MaxSupportedVersion,
     object.Descriptor().key.version);
 
+  // IEC 62056-6-2 ED4 (2021) §4.7.3 and DLMS UA Blue Book Ed. 12.1
+  // §4.7.3 define five attributes: logical_name, secondary_address,
+  // primary_address_list, tabi_list, fatal_error.
   dlms::cosem::CosemByteBuffer out;
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
   EXPECT_EQ(EncodedLogicalName(name), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
-  EXPECT_EQ(b.primaryAddress, out);
+  EXPECT_EQ(b.secondaryAddress, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
-  EXPECT_EQ(b.tabis, out);
+  EXPECT_EQ(b.primaryAddressList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  EXPECT_EQ(b.tabiList, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
+  EXPECT_EQ(b.fatalError, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(4u, out));
+            object.ReadAttribute(6u, out));
 }
 
 TEST(CosemIecTwistedPairSetupObject, MutableAttributesHonorAccessMode)
@@ -6525,19 +6548,27 @@ TEST(CosemIecTwistedPairSetupObject, MutableAttributesHonorAccessMode)
     dlms::cosem::CosemLogicalName(0u, 0u, 22u, 0u, 1u, 255u);
   const IecTwistedPairSetupBuffers b = MakeSampleIecTwistedPairSetup();
   const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x12u, 0x00u, 0x21u});
+    BytesFromList({0x09u, 0x01u, 0x21u});
+  const dlms::cosem::CosemByteBuffer fatalReplacement =
+    BytesFromList({0x16u, 0x01u});
 
   dlms::cosem::CosemIecTwistedPairSetupObject writable =
     MakeIecTwistedPairSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t id : {2u, 3u}) {
+  for (std::uint8_t id : {2u, 3u, 4u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
       << "attribute id " << static_cast<unsigned>(id);
   }
-  EXPECT_EQ(replacement, writable.PrimaryAddress());
-  EXPECT_EQ(replacement, writable.Tabis());
+  EXPECT_EQ(replacement, writable.SecondaryAddress());
+  EXPECT_EQ(replacement, writable.PrimaryAddressList());
+  EXPECT_EQ(replacement, writable.TabiList());
+  // fatal_error is server-managed; writes are always rejected even
+  // when the caller asked for ReadAndWrite.
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(5u, fatalReplacement));
+  EXPECT_EQ(b.fatalError, writable.FatalError());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
@@ -6546,14 +6577,18 @@ TEST(CosemIecTwistedPairSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemIecTwistedPairSetupObject readOnly =
     MakeIecTwistedPairSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  for (std::uint8_t id : {2u, 3u}) {
+  for (std::uint8_t id : {2u, 3u, 4u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
               readOnly.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
       << "attribute id " << static_cast<unsigned>(id);
   }
-  EXPECT_EQ(b.primaryAddress, readOnly.PrimaryAddress());
-  EXPECT_EQ(b.tabis, readOnly.Tabis());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(5u, fatalReplacement));
+  EXPECT_EQ(b.secondaryAddress, readOnly.SecondaryAddress());
+  EXPECT_EQ(b.primaryAddressList, readOnly.PrimaryAddressList());
+  EXPECT_EQ(b.tabiList, readOnly.TabiList());
+  EXPECT_EQ(b.fatalError, readOnly.FatalError());
 }
 
 TEST(CosemIecTwistedPairSetupObject, NoMethodsDefined)
@@ -6582,8 +6617,13 @@ TEST(CosemIecTwistedPairSetupObject, NormalizesVersionAboveMax)
     dlms::cosem::CosemLogicalName(0u, 0u, 22u, 0u, 1u, 255u);
   const IecTwistedPairSetupBuffers b = MakeSampleIecTwistedPairSetup();
   dlms::cosem::CosemIecTwistedPairSetupObject object(
-    name, b.primaryAddress, b.tabis,
-    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+    name,
+    b.secondaryAddress,
+    b.primaryAddressList,
+    b.tabiList,
+    b.fatalError,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
   EXPECT_EQ(
     dlms::cosem::CosemIecTwistedPairSetupObject::MaxSupportedVersion,
     object.Descriptor().key.version);

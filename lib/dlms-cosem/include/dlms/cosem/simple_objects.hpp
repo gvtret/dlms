@@ -1445,15 +1445,27 @@ class CosemIecTwistedPairSetupObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // IEC 62056-6-2 ED4 (2021) §4.7.3 and DLMS UA Blue Book Ed. 12.1
+  // §4.7.3 define class_id 24, version 0 with five attributes:
+  // 1 logical_name, 2 secondary_address, 3 primary_address_list,
+  // 4 tabi_list, 5 fatal_error. Attributes 2..4 are static, 5 is
+  // dynamic. The fatal_error attribute always returns the latest
+  // observed protocol fatal error (server-managed); the built-in
+  // object treats it as ReadOnly even when mutableAccess is
+  // ReadAndWrite.
   CosemIecTwistedPairSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& primaryAddress,
-    const CosemByteBuffer& tabis,
+    const CosemByteBuffer& secondaryAddress,
+    const CosemByteBuffer& primaryAddressList,
+    const CosemByteBuffer& tabiList,
+    const CosemByteBuffer& fatalError,
     AttributeAccessMode mutableAccess);
   CosemIecTwistedPairSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& primaryAddress,
-    const CosemByteBuffer& tabis,
+    const CosemByteBuffer& secondaryAddress,
+    const CosemByteBuffer& primaryAddressList,
+    const CosemByteBuffer& tabiList,
+    const CosemByteBuffer& fatalError,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1470,13 +1482,17 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& PrimaryAddress() const;
-  const CosemByteBuffer& Tabis() const;
+  const CosemByteBuffer& SecondaryAddress() const;
+  const CosemByteBuffer& PrimaryAddressList() const;
+  const CosemByteBuffer& TabiList() const;
+  const CosemByteBuffer& FatalError() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer primaryAddress_;
-  CosemByteBuffer tabis_;
+  CosemByteBuffer secondaryAddress_;
+  CosemByteBuffer primaryAddressList_;
+  CosemByteBuffer tabiList_;
+  CosemByteBuffer fatalError_;
   CosemAccessRights rights_;
 };
 

@@ -6187,26 +6187,38 @@ const CosemByteBuffer& CosemGsmDiagnosticObject::CaptureTime() const
 
 namespace {
 constexpr std::uint16_t kIecTwistedPairSetupClassId = 24u;
-constexpr std::uint8_t kIecTwistedPairSetupPrimaryAddressAttributeId = 2u;
-constexpr std::uint8_t kIecTwistedPairSetupTabisAttributeId = 3u;
+constexpr std::uint8_t kIecTwistedPairSetupSecondaryAddressAttributeId = 2u;
+constexpr std::uint8_t kIecTwistedPairSetupPrimaryAddressListAttributeId = 3u;
+constexpr std::uint8_t kIecTwistedPairSetupTabiListAttributeId = 4u;
+constexpr std::uint8_t kIecTwistedPairSetupFatalErrorAttributeId = 5u;
 } // namespace
 
 const std::uint8_t CosemIecTwistedPairSetupObject::MaxSupportedVersion;
 
 CosemIecTwistedPairSetupObject::CosemIecTwistedPairSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& primaryAddress,
-  const CosemByteBuffer& tabis,
+  const CosemByteBuffer& secondaryAddress,
+  const CosemByteBuffer& primaryAddressList,
+  const CosemByteBuffer& tabiList,
+  const CosemByteBuffer& fatalError,
   AttributeAccessMode mutableAccess)
   : CosemIecTwistedPairSetupObject(
-      logicalName, primaryAddress, tabis, mutableAccess, kVersion0)
+      logicalName,
+      secondaryAddress,
+      primaryAddressList,
+      tabiList,
+      fatalError,
+      mutableAccess,
+      kVersion0)
 {
 }
 
 CosemIecTwistedPairSetupObject::CosemIecTwistedPairSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& primaryAddress,
-  const CosemByteBuffer& tabis,
+  const CosemByteBuffer& secondaryAddress,
+  const CosemByteBuffer& primaryAddressList,
+  const CosemByteBuffer& tabiList,
+  const CosemByteBuffer& fatalError,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -6214,15 +6226,25 @@ CosemIecTwistedPairSetupObject::CosemIecTwistedPairSetupObject(
       NormalizeVersion(
         version, CosemIecTwistedPairSetupObject::MaxSupportedVersion),
       logicalName))
-  , primaryAddress_(primaryAddress)
-  , tabis_(tabis)
+  , secondaryAddress_(secondaryAddress)
+  , primaryAddressList_(primaryAddressList)
+  , tabiList_(tabiList)
+  , fatalError_(fatalError)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
-    kIecTwistedPairSetupPrimaryAddressAttributeId, mutableAccess);
+    kIecTwistedPairSetupSecondaryAddressAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kIecTwistedPairSetupTabisAttributeId, mutableAccess);
+    kIecTwistedPairSetupPrimaryAddressListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecTwistedPairSetupTabiListAttributeId, mutableAccess);
+  // fatal_error is server-managed (latest protocol fatal error
+  // observed by the IEC 62056-31 stack); it is read-only at the
+  // wire surface regardless of the caller-selected mutableAccess.
+  rights_.SetAttributeAccess(
+    kIecTwistedPairSetupFatalErrorAttributeId,
+    AttributeAccessMode::ReadOnly);
 }
 
 CosemObjectDescriptor CosemIecTwistedPairSetupObject::Descriptor() const
@@ -6243,11 +6265,17 @@ CosemStatus CosemIecTwistedPairSetupObject::ReadAttribute(
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case kIecTwistedPairSetupPrimaryAddressAttributeId:
-      output = primaryAddress_;
+    case kIecTwistedPairSetupSecondaryAddressAttributeId:
+      output = secondaryAddress_;
       return CosemStatus::Ok;
-    case kIecTwistedPairSetupTabisAttributeId:
-      output = tabis_;
+    case kIecTwistedPairSetupPrimaryAddressListAttributeId:
+      output = primaryAddressList_;
+      return CosemStatus::Ok;
+    case kIecTwistedPairSetupTabiListAttributeId:
+      output = tabiList_;
+      return CosemStatus::Ok;
+    case kIecTwistedPairSetupFatalErrorAttributeId:
+      output = fatalError_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -6260,16 +6288,25 @@ CosemStatus CosemIecTwistedPairSetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kIecTwistedPairSetupPrimaryAddressAttributeId:
+    case kIecTwistedPairSetupSecondaryAddressAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      primaryAddress_ = input;
+      secondaryAddress_ = input;
       return CosemStatus::Ok;
-    case kIecTwistedPairSetupTabisAttributeId:
+    case kIecTwistedPairSetupPrimaryAddressListAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      tabis_ = input;
+      primaryAddressList_ = input;
       return CosemStatus::Ok;
+    case kIecTwistedPairSetupTabiListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      tabiList_ = input;
+      return CosemStatus::Ok;
+    case kIecTwistedPairSetupFatalErrorAttributeId:
+      // fatal_error is server-managed; reject writes regardless of
+      // the caller-selected mutableAccess.
+      return CosemStatus::AccessDenied;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -6285,19 +6322,31 @@ CosemStatus CosemIecTwistedPairSetupObject::InvokeMethod(
   (void)methodId;
   (void)input;
   output.clear();
-  // IEC twisted pair (1) Setup IC defines no methods.
+  // IEC 62056-6-2 ED4 (2021) §4.7.3 and DLMS UA Blue Book Ed. 12.1
+  // §4.7.3 define class_id 24, version 0 with no specific methods.
   return CosemStatus::MethodNotFound;
 }
 
 const CosemByteBuffer&
-CosemIecTwistedPairSetupObject::PrimaryAddress() const
+CosemIecTwistedPairSetupObject::SecondaryAddress() const
 {
-  return primaryAddress_;
+  return secondaryAddress_;
 }
 
-const CosemByteBuffer& CosemIecTwistedPairSetupObject::Tabis() const
+const CosemByteBuffer&
+CosemIecTwistedPairSetupObject::PrimaryAddressList() const
 {
-  return tabis_;
+  return primaryAddressList_;
+}
+
+const CosemByteBuffer& CosemIecTwistedPairSetupObject::TabiList() const
+{
+  return tabiList_;
+}
+
+const CosemByteBuffer& CosemIecTwistedPairSetupObject::FatalError() const
+{
+  return fatalError_;
 }
 
 namespace {

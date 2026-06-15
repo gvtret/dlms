@@ -893,12 +893,13 @@ M-Bus Master Port Setup tests:
 M-Bus Diagnostic tests:
 
 - M-Bus Diagnostic exposes attributes `1` logical_name,
-  `2` received_signal_quality, `3` transmitter_signal_quality,
-  `4` bbc, `5` fcs_ok_frames_counter,
-  `6` fcs_nok_frames_counter and `7` capture_time as the encoded
+  `2` received_signal_strength, `3` channel_id,
+  `4` link_status, `5` broadcast_frames_counter,
+  `6` transmissions_counter, `7` fcs_ok_frames_counter,
+  `8` fcs_nok_frames_counter and `9` capture_time as the encoded
   DLMS Data buffers supplied by the caller, and reports
   `AttributeNotFound` for undefined attribute ids;
-- M-Bus Diagnostic mutable attributes (`2`-`7`) writes succeed
+- M-Bus Diagnostic mutable attributes (`2`-`9`) writes succeed
   when the caller-selected access mode permits writes and replace
   the stored buffer in-place; writes report `AccessDenied` when
   the access mode is read-only, leaving the stored buffers
@@ -906,8 +907,10 @@ M-Bus Diagnostic tests:
 - M-Bus Diagnostic rejects writes to logical_name (`1`) with
   `AccessDenied`, and reports `AttributeNotFound` for undefined
   attribute ids;
-- M-Bus Diagnostic `InvokeMethod` reports `MethodNotFound` for
-  every method id and clears method output;
+- M-Bus Diagnostic method `1` `reset` (optional) reports
+  `UnsupportedFeature` and clears method output because the
+  built-in object does not own the counter sources; undefined
+  method ids report `MethodNotFound`;
 - M-Bus Diagnostic normalizes versions above
   `MaxSupportedVersion`.
 

@@ -9102,31 +9102,38 @@ CosemMBusMasterPortSetupObject::CommSpeed() const
 namespace {
 constexpr std::uint16_t kMBusDiagnosticClassId = 77u;
 constexpr std::uint8_t
-  kMBusDiagnosticReceivedSignalQualityAttributeId = 2u;
+  kMBusDiagnosticReceivedSignalStrengthAttributeId = 2u;
+constexpr std::uint8_t kMBusDiagnosticChannelIdAttributeId = 3u;
+constexpr std::uint8_t kMBusDiagnosticLinkStatusAttributeId = 4u;
 constexpr std::uint8_t
-  kMBusDiagnosticTransmitterSignalQualityAttributeId = 3u;
-constexpr std::uint8_t kMBusDiagnosticBbcAttributeId = 4u;
+  kMBusDiagnosticBroadcastFramesCounterAttributeId = 5u;
 constexpr std::uint8_t
-  kMBusDiagnosticFcsOkFramesCounterAttributeId = 5u;
+  kMBusDiagnosticTransmissionsCounterAttributeId = 6u;
 constexpr std::uint8_t
-  kMBusDiagnosticFcsNokFramesCounterAttributeId = 6u;
-constexpr std::uint8_t kMBusDiagnosticCaptureTimeAttributeId = 7u;
+  kMBusDiagnosticFcsOkFramesCounterAttributeId = 7u;
+constexpr std::uint8_t
+  kMBusDiagnosticFcsNokFramesCounterAttributeId = 8u;
+constexpr std::uint8_t kMBusDiagnosticCaptureTimeAttributeId = 9u;
+constexpr std::uint8_t kMBusDiagnosticResetMethodId = 1u;
 } // namespace
 
 const std::uint8_t CosemMBusDiagnosticObject::MaxSupportedVersion;
 
 CosemMBusDiagnosticObject::CosemMBusDiagnosticObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& receivedSignalQuality,
-  const CosemByteBuffer& transmitterSignalQuality,
-  const CosemByteBuffer& bbc,
+  const CosemByteBuffer& receivedSignalStrength,
+  const CosemByteBuffer& channelId,
+  const CosemByteBuffer& linkStatus,
+  const CosemByteBuffer& broadcastFramesCounter,
+  const CosemByteBuffer& transmissionsCounter,
   const CosemByteBuffer& fcsOkFramesCounter,
   const CosemByteBuffer& fcsNokFramesCounter,
   const CosemByteBuffer& captureTime,
   AttributeAccessMode mutableAccess)
   : CosemMBusDiagnosticObject(
-      logicalName, receivedSignalQuality, transmitterSignalQuality,
-      bbc, fcsOkFramesCounter, fcsNokFramesCounter, captureTime,
+      logicalName, receivedSignalStrength, channelId, linkStatus,
+      broadcastFramesCounter, transmissionsCounter,
+      fcsOkFramesCounter, fcsNokFramesCounter, captureTime,
       mutableAccess,
       CosemMBusDiagnosticObject::MaxSupportedVersion)
 {
@@ -9134,9 +9141,11 @@ CosemMBusDiagnosticObject::CosemMBusDiagnosticObject(
 
 CosemMBusDiagnosticObject::CosemMBusDiagnosticObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& receivedSignalQuality,
-  const CosemByteBuffer& transmitterSignalQuality,
-  const CosemByteBuffer& bbc,
+  const CosemByteBuffer& receivedSignalStrength,
+  const CosemByteBuffer& channelId,
+  const CosemByteBuffer& linkStatus,
+  const CosemByteBuffer& broadcastFramesCounter,
+  const CosemByteBuffer& transmissionsCounter,
   const CosemByteBuffer& fcsOkFramesCounter,
   const CosemByteBuffer& fcsNokFramesCounter,
   const CosemByteBuffer& captureTime,
@@ -9147,9 +9156,11 @@ CosemMBusDiagnosticObject::CosemMBusDiagnosticObject(
       NormalizeVersion(
         version, CosemMBusDiagnosticObject::MaxSupportedVersion),
       logicalName))
-  , receivedSignalQuality_(receivedSignalQuality)
-  , transmitterSignalQuality_(transmitterSignalQuality)
-  , bbc_(bbc)
+  , receivedSignalStrength_(receivedSignalStrength)
+  , channelId_(channelId)
+  , linkStatus_(linkStatus)
+  , broadcastFramesCounter_(broadcastFramesCounter)
+  , transmissionsCounter_(transmissionsCounter)
   , fcsOkFramesCounter_(fcsOkFramesCounter)
   , fcsNokFramesCounter_(fcsNokFramesCounter)
   , captureTime_(captureTime)
@@ -9157,12 +9168,16 @@ CosemMBusDiagnosticObject::CosemMBusDiagnosticObject(
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
-    kMBusDiagnosticReceivedSignalQualityAttributeId, mutableAccess);
+    kMBusDiagnosticReceivedSignalStrengthAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kMBusDiagnosticTransmitterSignalQualityAttributeId,
+    kMBusDiagnosticChannelIdAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusDiagnosticLinkStatusAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusDiagnosticBroadcastFramesCounterAttributeId,
     mutableAccess);
   rights_.SetAttributeAccess(
-    kMBusDiagnosticBbcAttributeId, mutableAccess);
+    kMBusDiagnosticTransmissionsCounterAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kMBusDiagnosticFcsOkFramesCounterAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
@@ -9191,14 +9206,20 @@ CosemStatus CosemMBusDiagnosticObject::ReadAttribute(
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case kMBusDiagnosticReceivedSignalQualityAttributeId:
-      output = receivedSignalQuality_;
+    case kMBusDiagnosticReceivedSignalStrengthAttributeId:
+      output = receivedSignalStrength_;
       return CosemStatus::Ok;
-    case kMBusDiagnosticTransmitterSignalQualityAttributeId:
-      output = transmitterSignalQuality_;
+    case kMBusDiagnosticChannelIdAttributeId:
+      output = channelId_;
       return CosemStatus::Ok;
-    case kMBusDiagnosticBbcAttributeId:
-      output = bbc_;
+    case kMBusDiagnosticLinkStatusAttributeId:
+      output = linkStatus_;
+      return CosemStatus::Ok;
+    case kMBusDiagnosticBroadcastFramesCounterAttributeId:
+      output = broadcastFramesCounter_;
+      return CosemStatus::Ok;
+    case kMBusDiagnosticTransmissionsCounterAttributeId:
+      output = transmissionsCounter_;
       return CosemStatus::Ok;
     case kMBusDiagnosticFcsOkFramesCounterAttributeId:
       output = fcsOkFramesCounter_;
@@ -9221,14 +9242,20 @@ CosemStatus CosemMBusDiagnosticObject::WriteAttribute(
 {
   CosemByteBuffer* target = nullptr;
   switch (attributeId) {
-    case kMBusDiagnosticReceivedSignalQualityAttributeId:
-      target = &receivedSignalQuality_;
+    case kMBusDiagnosticReceivedSignalStrengthAttributeId:
+      target = &receivedSignalStrength_;
       break;
-    case kMBusDiagnosticTransmitterSignalQualityAttributeId:
-      target = &transmitterSignalQuality_;
+    case kMBusDiagnosticChannelIdAttributeId:
+      target = &channelId_;
       break;
-    case kMBusDiagnosticBbcAttributeId:
-      target = &bbc_;
+    case kMBusDiagnosticLinkStatusAttributeId:
+      target = &linkStatus_;
+      break;
+    case kMBusDiagnosticBroadcastFramesCounterAttributeId:
+      target = &broadcastFramesCounter_;
+      break;
+    case kMBusDiagnosticTransmissionsCounterAttributeId:
+      target = &transmissionsCounter_;
       break;
     case kMBusDiagnosticFcsOkFramesCounterAttributeId:
       target = &fcsOkFramesCounter_;
@@ -9255,29 +9282,46 @@ CosemStatus CosemMBusDiagnosticObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)methodId;
   (void)input;
-  // IC v0 defines no methods.
   output.clear();
+  if (methodId == kMBusDiagnosticResetMethodId) {
+    // Optional `reset` clears the dynamic counters and the
+    // capture_time; the built-in object does not own those
+    // counter sources, so the backend must republish refreshed
+    // values via the attribute setters.
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
 }
 
 const CosemByteBuffer&
-CosemMBusDiagnosticObject::ReceivedSignalQuality() const
+CosemMBusDiagnosticObject::ReceivedSignalStrength() const
 {
-  return receivedSignalQuality_;
+  return receivedSignalStrength_;
 }
 
 const CosemByteBuffer&
-CosemMBusDiagnosticObject::TransmitterSignalQuality() const
+CosemMBusDiagnosticObject::ChannelId() const
 {
-  return transmitterSignalQuality_;
+  return channelId_;
 }
 
 const CosemByteBuffer&
-CosemMBusDiagnosticObject::Bbc() const
+CosemMBusDiagnosticObject::LinkStatus() const
 {
-  return bbc_;
+  return linkStatus_;
+}
+
+const CosemByteBuffer&
+CosemMBusDiagnosticObject::BroadcastFramesCounter() const
+{
+  return broadcastFramesCounter_;
+}
+
+const CosemByteBuffer&
+CosemMBusDiagnosticObject::TransmissionsCounter() const
+{
+  return transmissionsCounter_;
 }
 
 const CosemByteBuffer&

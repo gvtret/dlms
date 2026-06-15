@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.86.0 - 2026-06-17
+
+- Rebuilt the M-Bus Diagnostic built-in object
+  (`CosemMBusDiagnosticObject`) to match IEC 62056-6-2 ED4
+  (2021) §4.8.7 (class_id 77, version 0):
+  - Replaced the prior 6-attribute layout
+    (`received_signal_quality`, `transmitter_signal_quality`,
+    `bbc`, `fcs_ok_frames_counter`, `fcs_nok_frames_counter`,
+    `capture_time`) with the spec-defined 8 dynamic attributes:
+    `2 received_signal_strength` (unsigned, dBm),
+    `3 channel_id` (unsigned), `4 link_status` (enum),
+    `5 broadcast_frames_counter` (array),
+    `6 transmissions_counter` (double-long-unsigned),
+    `7 fcs_ok_frames_counter` (double-long-unsigned),
+    `8 fcs_nok_frames_counter` (double-long-unsigned),
+    `9 capture_time` (date-time octet-string(12)).
+  - Renamed accessors accordingly
+    (`ReceivedSignalStrength`, `ChannelId`, `LinkStatus`,
+    `BroadcastFramesCounter`, `TransmissionsCounter`,
+    plus the existing FCS counters and `CaptureTime`).
+  - Surfaced the optional `1 reset` method as
+    `UnsupportedFeature` (built-in object does not own the
+    counter sources); undefined method ids still return
+    `MethodNotFound`.
+- Refreshed unit tests, COSEM IC support matrix, COSEM API
+  guide and COSEM test plan.
+
 ## 0.85.0 - 2026-06-17
 
 - Fixed the class_id of the M-Bus Master Port Setup built-in

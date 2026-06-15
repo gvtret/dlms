@@ -9064,9 +9064,11 @@ namespace {
 
 struct MBusDiagnosticBuffers
 {
-  dlms::cosem::CosemByteBuffer receivedSignalQuality;
-  dlms::cosem::CosemByteBuffer transmitterSignalQuality;
-  dlms::cosem::CosemByteBuffer bbc;
+  dlms::cosem::CosemByteBuffer receivedSignalStrength;
+  dlms::cosem::CosemByteBuffer channelId;
+  dlms::cosem::CosemByteBuffer linkStatus;
+  dlms::cosem::CosemByteBuffer broadcastFramesCounter;
+  dlms::cosem::CosemByteBuffer transmissionsCounter;
   dlms::cosem::CosemByteBuffer fcsOkFramesCounter;
   dlms::cosem::CosemByteBuffer fcsNokFramesCounter;
   dlms::cosem::CosemByteBuffer captureTime;
@@ -9075,16 +9077,21 @@ struct MBusDiagnosticBuffers
 MBusDiagnosticBuffers MakeSampleMBusDiagnostic()
 {
   MBusDiagnosticBuffers b;
-  // unsigned 75 (RSSI quality)
-  b.receivedSignalQuality = BytesFromList({0x11u, 0x4Bu});
-  // unsigned 80
-  b.transmitterSignalQuality = BytesFromList({0x11u, 0x50u});
-  // long-unsigned 0x1234 (BBC)
-  b.bbc = BytesFromList({0x12u, 0x12u, 0x34u});
-  // double-long-unsigned 12345
+  // unsigned 75 (RSSI dBm)
+  b.receivedSignalStrength = BytesFromList({0x11u, 0x4Bu});
+  // unsigned 3 (channel id)
+  b.channelId = BytesFromList({0x11u, 0x03u});
+  // enum 1 (link status)
+  b.linkStatus = BytesFromList({0x16u, 0x01u});
+  // array of broadcast frames counters (empty array)
+  b.broadcastFramesCounter = BytesFromList({0x01u, 0x00u});
+  // double-long-unsigned 42 (transmissions counter)
+  b.transmissionsCounter =
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x2Au});
+  // double-long-unsigned 12345 (FCS OK)
   b.fcsOkFramesCounter =
     BytesFromList({0x06u, 0x00u, 0x00u, 0x30u, 0x39u});
-  // double-long-unsigned 7
+  // double-long-unsigned 7 (FCS NOK)
   b.fcsNokFramesCounter =
     BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x07u});
   // octet-string(12) date-time
@@ -9101,8 +9108,9 @@ MakeMBusDiagnosticObject(
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemMBusDiagnosticObject(
-    name, b.receivedSignalQuality, b.transmitterSignalQuality,
-    b.bbc, b.fcsOkFramesCounter, b.fcsNokFramesCounter,
+    name, b.receivedSignalStrength, b.channelId, b.linkStatus,
+    b.broadcastFramesCounter, b.transmissionsCounter,
+    b.fcsOkFramesCounter, b.fcsNokFramesCounter,
     b.captureTime, access);
 }
 
@@ -9129,24 +9137,30 @@ TEST(CosemMBusDiagnosticObject, ExposesAllAttributes)
   EXPECT_EQ(EncodedLogicalName(name), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(2u, out));
-  EXPECT_EQ(b.receivedSignalQuality, out);
+  EXPECT_EQ(b.receivedSignalStrength, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(3u, out));
-  EXPECT_EQ(b.transmitterSignalQuality, out);
+  EXPECT_EQ(b.channelId, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(4u, out));
-  EXPECT_EQ(b.bbc, out);
+  EXPECT_EQ(b.linkStatus, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(5u, out));
-  EXPECT_EQ(b.fcsOkFramesCounter, out);
+  EXPECT_EQ(b.broadcastFramesCounter, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(6u, out));
-  EXPECT_EQ(b.fcsNokFramesCounter, out);
+  EXPECT_EQ(b.transmissionsCounter, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.fcsOkFramesCounter, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(8u, out));
+  EXPECT_EQ(b.fcsNokFramesCounter, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(9u, out));
   EXPECT_EQ(b.captureTime, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(8u, out));
+            object.ReadAttribute(10u, out));
 }
 
 TEST(CosemMBusDiagnosticObject, MutableAttributesHonorAccessMode)
@@ -9160,14 +9174,16 @@ TEST(CosemMBusDiagnosticObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemMBusDiagnosticObject writable =
     MakeMBusDiagnosticObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u}) {
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(attr, replacement))
       << "attr " << static_cast<unsigned>(attr);
   }
-  EXPECT_EQ(replacement, writable.ReceivedSignalQuality());
-  EXPECT_EQ(replacement, writable.TransmitterSignalQuality());
-  EXPECT_EQ(replacement, writable.Bbc());
+  EXPECT_EQ(replacement, writable.ReceivedSignalStrength());
+  EXPECT_EQ(replacement, writable.ChannelId());
+  EXPECT_EQ(replacement, writable.LinkStatus());
+  EXPECT_EQ(replacement, writable.BroadcastFramesCounter());
+  EXPECT_EQ(replacement, writable.TransmissionsCounter());
   EXPECT_EQ(replacement, writable.FcsOkFramesCounter());
   EXPECT_EQ(replacement, writable.FcsNokFramesCounter());
   EXPECT_EQ(replacement, writable.CaptureTime());
@@ -9181,10 +9197,11 @@ TEST(CosemMBusDiagnosticObject, MutableAttributesHonorAccessMode)
       name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             readOnly.WriteAttribute(2u, replacement));
-  EXPECT_EQ(b.receivedSignalQuality, readOnly.ReceivedSignalQuality());
+  EXPECT_EQ(b.receivedSignalStrength,
+            readOnly.ReceivedSignalStrength());
 }
 
-TEST(CosemMBusDiagnosticObject, NoMethodsDefined)
+TEST(CosemMBusDiagnosticObject, ResetIsUnsupportedFeature)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 24u, 9u, 0u, 255u);
@@ -9194,8 +9211,12 @@ TEST(CosemMBusDiagnosticObject, NoMethodsDefined)
       dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  for (std::uint8_t method : {0u, 2u, 3u, 99u, 255u}) {
+    out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(
                 static_cast<std::uint8_t>(method), in, out))
@@ -9210,8 +9231,9 @@ TEST(CosemMBusDiagnosticObject, NormalizesVersionAboveMax)
     dlms::cosem::CosemLogicalName(0u, 0u, 24u, 9u, 0u, 255u);
   const MBusDiagnosticBuffers b = MakeSampleMBusDiagnostic();
   dlms::cosem::CosemMBusDiagnosticObject object(
-    name, b.receivedSignalQuality, b.transmitterSignalQuality,
-    b.bbc, b.fcsOkFramesCounter, b.fcsNokFramesCounter,
+    name, b.receivedSignalStrength, b.channelId, b.linkStatus,
+    b.broadcastFramesCounter, b.transmissionsCounter,
+    b.fcsOkFramesCounter, b.fcsNokFramesCounter,
     b.captureTime,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(

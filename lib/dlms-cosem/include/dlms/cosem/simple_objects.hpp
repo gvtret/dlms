@@ -2239,18 +2239,22 @@ public:
 
   CosemMBusDiagnosticObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& receivedSignalQuality,
-    const CosemByteBuffer& transmitterSignalQuality,
-    const CosemByteBuffer& bbc,
+    const CosemByteBuffer& receivedSignalStrength,
+    const CosemByteBuffer& channelId,
+    const CosemByteBuffer& linkStatus,
+    const CosemByteBuffer& broadcastFramesCounter,
+    const CosemByteBuffer& transmissionsCounter,
     const CosemByteBuffer& fcsOkFramesCounter,
     const CosemByteBuffer& fcsNokFramesCounter,
     const CosemByteBuffer& captureTime,
     AttributeAccessMode mutableAccess);
   CosemMBusDiagnosticObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& receivedSignalQuality,
-    const CosemByteBuffer& transmitterSignalQuality,
-    const CosemByteBuffer& bbc,
+    const CosemByteBuffer& receivedSignalStrength,
+    const CosemByteBuffer& channelId,
+    const CosemByteBuffer& linkStatus,
+    const CosemByteBuffer& broadcastFramesCounter,
+    const CosemByteBuffer& transmissionsCounter,
     const CosemByteBuffer& fcsOkFramesCounter,
     const CosemByteBuffer& fcsNokFramesCounter,
     const CosemByteBuffer& captureTime,
@@ -2270,18 +2274,22 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& ReceivedSignalQuality() const;
-  const CosemByteBuffer& TransmitterSignalQuality() const;
-  const CosemByteBuffer& Bbc() const;
+  const CosemByteBuffer& ReceivedSignalStrength() const;
+  const CosemByteBuffer& ChannelId() const;
+  const CosemByteBuffer& LinkStatus() const;
+  const CosemByteBuffer& BroadcastFramesCounter() const;
+  const CosemByteBuffer& TransmissionsCounter() const;
   const CosemByteBuffer& FcsOkFramesCounter() const;
   const CosemByteBuffer& FcsNokFramesCounter() const;
   const CosemByteBuffer& CaptureTime() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer receivedSignalQuality_;
-  CosemByteBuffer transmitterSignalQuality_;
-  CosemByteBuffer bbc_;
+  CosemByteBuffer receivedSignalStrength_;
+  CosemByteBuffer channelId_;
+  CosemByteBuffer linkStatus_;
+  CosemByteBuffer broadcastFramesCounter_;
+  CosemByteBuffer transmissionsCounter_;
   CosemByteBuffer fcsOkFramesCounter_;
   CosemByteBuffer fcsNokFramesCounter_;
   CosemByteBuffer captureTime_;

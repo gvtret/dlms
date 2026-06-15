@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.89.0 - 2026-06-17
+
+- Fixed the class_id of the PRIME NB OFDM PLC MAC counters
+  built-in object (`CosemPrimePlcMacCountersObject`) from
+  `82` to `84` per IEC 62056-6-2 ED4 (2021) §4.12.8 and
+  DLMS UA Blue Book Ed. 12.1. Class_id `82` is reserved by
+  the spec for the unrelated `PRIME NB OFDM PLC MAC setup`
+  IC (already corrected in 0.87.0).
+- Refreshed unit test, COSEM IC support matrix and COSEM
+  API guide accordingly.
+
 ## 0.88.0 - 2026-06-17
 
 - Fixed the class_id of the PRIME NB OFDM PLC MAC functional

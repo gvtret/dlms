@@ -9894,7 +9894,7 @@ CosemPrimePlcMacFunctionalParametersObject::Capabilities() const
 }
 
 namespace {
-constexpr std::uint16_t kPrimePlcMacCountersClassId = 82u;
+constexpr std::uint16_t kPrimePlcMacCountersClassId = 84u;
 constexpr std::uint8_t kPrimePlcMacCountersTxDataPktCountId = 2u;
 constexpr std::uint8_t kPrimePlcMacCountersRxDataPktCountId = 3u;
 constexpr std::uint8_t kPrimePlcMacCountersTxCtrlPktCountId = 4u;

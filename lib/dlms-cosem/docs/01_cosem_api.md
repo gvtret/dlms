@@ -1051,8 +1051,8 @@ defines no methods; `InvokeMethod` reports `MethodNotFound` for
 all method ids and clears method output.
 
 `simple_objects.hpp` also exposes a partial PRIME PLC MAC
-Counters IC `82` (`CosemPrimePlcMacCountersObject`) with class
-version `0`. The constructors take `txdatapkt_count`,
+Counters IC `84` (`CosemPrimePlcMacCountersObject`) with class
+version `0` per IEC 62056-6-2 ED4 (2021) §4.12.8. The constructors take `txdatapkt_count`,
 `rxdatapkt_count`, `txctrlpkt_count`, `rxctrlpkt_count`,
 `csmafail_count` and `csmachbusy_count` (double-long-unsigned)
 as encoded DLMS Data buffers prepared by the caller, the

@@ -9654,7 +9654,7 @@ TEST(CosemPrimePlcMacCountersObject, ExposesAllAttributes)
     MakePrimePlcMacCountersObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
-  EXPECT_EQ(82u, object.Descriptor().key.classId);
+  EXPECT_EQ(84u, object.Descriptor().key.classId);
   EXPECT_EQ(0u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemPrimePlcMacCountersObject::MaxSupportedVersion,

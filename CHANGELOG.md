@@ -1,5 +1,53 @@
 # Changelog
 
+## 0.77.0 - 2026-06-17
+
+- Rebuilt the M-Bus slave port setup IC `25`
+  (`CosemMBusSlavePortSetupObject`) to match the five-attribute,
+  zero-method spec layout defined in IEC 62056-6-2 ED4 (2021)
+  §4.8.2 and DLMS UA Blue Book Ed. 12.1 §4.8.1. The class
+  definition lists: `1 logical_name` (octet-string, static,
+  read-only), `2 default_baud` (enum, static), `3 avail_baud`
+  (enum, static), `4 addr_state` (enum, static, indicating whether
+  the slave has been assigned a bus address) and `5 bus_address`
+  (unsigned, static). The built-in object previously used the
+  non-spec attribute names `status` and `mbus_port_reference` for
+  attributes `4` and `5`, mismodelling them as a status enum and an
+  octet-string reference to another object respectively. The
+  constructors and accessor signatures have been rewritten to take
+  the four content buffers (`default_baud`, `avail_baud`,
+  `addr_state`, `bus_address`) as encoded DLMS Data buffers
+  prepared by the caller; attributes `2`-`5` share the
+  caller-selected `AttributeAccessMode` and accept in-place writes
+  when permitted. The IC defines no specific methods
+  (`Specific methods | m/o` column is empty in both editions);
+  `InvokeMethod` now returns `MethodNotFound` for every id and
+  clears method output. Earlier revisions surfaced a phantom
+  `reset` method (id `1`) as `UnsupportedFeature`; that method is
+  not defined by any published edition of the spec and has been
+  removed along with the `kMBusSlavePortSetupResetMethodId`
+  constant.
+- Replaced the existing
+  `CosemMBusSlavePortSetupObject.ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `MethodsReturnUnsupportedFeature` and `NormalizesVersionAboveMax`
+  regression tests with versions that exercise the new attribute
+  layout (sample `MBusSlavePortSetupBuffers` now carries
+  enum-encoded `default_baud` 9 600 bps, `avail_baud` 38 400 bps,
+  `addr_state` 1 "assigned" and unsigned-encoded `bus_address`
+  0x42). The method test has been renamed `NoMethodsDefined` and
+  asserts `MethodNotFound` plus cleared method output for every
+  probed method id (`1`, `2`, `3`, `99`), matching the
+  zero-method spec surface.
+- Updated the COSEM IC support matrix and COSEM API guide to
+  document the new spec-shaped attribute layout
+  (`default_baud`, `avail_baud`, `addr_state`, `bus_address`),
+  call out the removed `reset` method, and note that
+  `InvokeMethod` now reports `MethodNotFound` for every id. The
+  COSEM test plan's M-Bus slave port setup checklist has been
+  refreshed to reflect the new attribute names and the
+  zero-method `MethodNotFound` semantics.
+
 ## 0.76.0 - 2026-06-17
 
 - Rebuilt the IEC twisted pair (1) Setup IC `24`

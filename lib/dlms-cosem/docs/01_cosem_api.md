@@ -695,18 +695,23 @@ rebuilt to align with the spec.
 
 `simple_objects.hpp` also exposes a partial M-Bus slave port setup
 IC `25` (`CosemMBusSlavePortSetupObject`) with class version `0`.
-The constructors take the `default_baud` (enum), `available_baud`
-(enum), `status` (enum) and `mbus_port_reference` (octet-string
-referencing an IEC HDLC Setup logical name) payloads as encoded
-DLMS Data buffers prepared by the caller, the logical name, a
-caller-selected `AttributeAccessMode` shared by the mutable
-attributes (`2`-`5`), and an optional explicit version that is
-normalized to `MaxSupportedVersion` when out of range. Attribute
-`1` (logical_name) is read-only; the mutable attributes honor the
-caller access mode and replace the stored buffer in-place when
-writable. Method `1` `reset` returns `UnsupportedFeature` and
-clears method output (the built-in object does not own slave-port
-reset semantics); other method ids return `MethodNotFound`.
+The constructors take the `default_baud` (enum), `avail_baud`
+(enum), `addr_state` (enum indicating whether the slave has been
+assigned a bus address) and `bus_address` (unsigned) payloads as
+encoded DLMS Data buffers prepared by the caller, the logical
+name, a caller-selected `AttributeAccessMode` shared by the
+mutable attributes (`2`-`5`), and an optional explicit version
+that is normalized to `MaxSupportedVersion` when out of range.
+Attribute `1` (logical_name) is read-only; the mutable attributes
+honor the caller access mode and replace the stored buffer
+in-place when writable. IEC 62056-6-2 ED4 (2021) §4.8.2 and DLMS
+UA Blue Book Ed. 12.1 §4.8.1 leave the "Specific methods | m/o"
+column empty for this IC; `InvokeMethod` therefore returns
+`MethodNotFound` and clears method output for every id. Earlier
+revisions exposed a phantom `reset` method (id `1`) and used the
+non-spec attribute names `status`/`mbus_port_reference` for
+attributes `4` and `5`; both the constructor and accessor
+signature have been rebuilt to align with the spec.
 
 `simple_objects.hpp` also exposes a partial IPv6 Setup IC `48`
 (`CosemIpv6SetupObject`) with class version `0`. The constructors

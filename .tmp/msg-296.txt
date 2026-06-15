@@ -1,0 +1,60 @@
+fix(cosem)!: rebuild IEC twisted pair setup IC 24 to spec five-attribute layout
+
+The built-in IEC twisted pair (1) Setup IC 24
+(CosemIecTwistedPairSetupObject) previously exposed only two
+attributes - primary_address (long-unsigned) at id 2 and tabis
+(array of long-unsigned) at id 3 - which did not match any
+published edition of the spec.
+
+Per IEC 62056-6-2 ED4 (2021) §4.7.3 and DLMS UA Blue Book Ed. 12.1
+§4.7.3, class_id 24, version 0 defines five attributes:
+  1 logical_name        (octet-string, static, read-only)
+  2 secondary_address   (octet-string of size 6, static)
+  3 primary_address_list (array of octet-string, static)
+  4 tabi_list           (array of integer, static)
+  5 fatal_error         (enum, dynamic)
+
+fatal_error carries the latest occurrence of one of the IEC
+62056-31 protocol fatal errors and is server-managed; it stays
+read-only at the wire surface regardless of the caller-selected
+mutableAccess so that backends can republish the buffer when the
+underlying stack observes a new fatal error.
+
+The class defines no specific methods (Specific methods | m/o
+column is empty in both editions); InvokeMethod continues to
+return MethodNotFound for every id and clears method output.
+
+Refreshed the IC support matrix (docs/ic_support_matrix.md) and
+the COSEM API guide (lib/dlms-cosem/docs/01_cosem_api.md) to
+describe the spec-aligned layout and read-only-by-design
+fatal_error semantics. Rebuilt the three affected regression
+tests (ExposesAllAttributes, MutableAttributesHonorAccessMode,
+NormalizesVersionAboveMax) to exercise the five-attribute surface
+and to pin fatal_error's read-only semantics on writable
+instances; NoMethodsDefined is unchanged.
+
+Bumped VERSION to 0.76.0 and added a CHANGELOG entry.
+
+Test plan:
+- cmake --build build-mingw64 --target dlms_cosem_tests -j 8 (clean)
+- ./build-mingw64/lib/dlms-cosem/test/dlms_cosem_tests.exe
+  --gtest_filter='CosemIecTwistedPairSetupObject.*'  -> 4/4 pass
+- ./build-mingw64/lib/dlms-cosem/test/dlms_cosem_tests.exe
+  (full COSEM suite)                                 -> 275/275 pass
+- ctest --output-on-failure -j8 (build-mingw64)      -> 936/936 pass
+
+BREAKING CHANGE: CosemIecTwistedPairSetupObject's constructors and
+accessors have changed shape. The constructors now take four
+content buffers in the order (secondary_address,
+primary_address_list, tabi_list, fatal_error) instead of the
+previous two (primary_address, tabis), and the accessor pair
+PrimaryAddress()/Tabis() has been replaced by SecondaryAddress()/
+PrimaryAddressList()/TabiList()/FatalError(). Callers constructing
+the IC at runtime or reading back its content must update their
+call sites and the encoded payloads they pass in (note the spec
+data-type changes: primary addresses are now array elements of
+octet-string of size 1, and TAB(i) entries are integers rather
+than long-unsigned values). The on-wire attribute count also
+grows from 3 to 5; clients iterating over attributes 2..N based on
+the previous implementation now observe ids 2..5 and must be
+prepared for the additional payloads.

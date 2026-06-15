@@ -1504,16 +1504,16 @@ public:
   CosemMBusSlavePortSetupObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& defaultBaud,
-    const CosemByteBuffer& availableBaud,
-    const CosemByteBuffer& status,
-    const CosemByteBuffer& mbusPortReference,
+    const CosemByteBuffer& availBaud,
+    const CosemByteBuffer& addrState,
+    const CosemByteBuffer& busAddress,
     AttributeAccessMode mutableAccess);
   CosemMBusSlavePortSetupObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& defaultBaud,
-    const CosemByteBuffer& availableBaud,
-    const CosemByteBuffer& status,
-    const CosemByteBuffer& mbusPortReference,
+    const CosemByteBuffer& availBaud,
+    const CosemByteBuffer& addrState,
+    const CosemByteBuffer& busAddress,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1531,16 +1531,16 @@ public:
     CosemByteBuffer& output);
 
   const CosemByteBuffer& DefaultBaud() const;
-  const CosemByteBuffer& AvailableBaud() const;
-  const CosemByteBuffer& Status() const;
-  const CosemByteBuffer& MBusPortReference() const;
+  const CosemByteBuffer& AvailBaud() const;
+  const CosemByteBuffer& AddrState() const;
+  const CosemByteBuffer& BusAddress() const;
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer defaultBaud_;
-  CosemByteBuffer availableBaud_;
-  CosemByteBuffer status_;
-  CosemByteBuffer mbusPortReference_;
+  CosemByteBuffer availBaud_;
+  CosemByteBuffer addrState_;
+  CosemByteBuffer busAddress_;
   CosemAccessRights rights_;
 };
 

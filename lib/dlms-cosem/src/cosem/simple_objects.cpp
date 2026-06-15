@@ -6352,10 +6352,9 @@ const CosemByteBuffer& CosemIecTwistedPairSetupObject::FatalError() const
 namespace {
 constexpr std::uint16_t kMBusSlavePortSetupClassId = 25u;
 constexpr std::uint8_t kMBusSlavePortSetupDefaultBaudAttributeId = 2u;
-constexpr std::uint8_t kMBusSlavePortSetupAvailableBaudAttributeId = 3u;
-constexpr std::uint8_t kMBusSlavePortSetupStatusAttributeId = 4u;
-constexpr std::uint8_t kMBusSlavePortSetupMBusPortReferenceAttributeId = 5u;
-constexpr std::uint8_t kMBusSlavePortSetupResetMethodId = 1u;
+constexpr std::uint8_t kMBusSlavePortSetupAvailBaudAttributeId = 3u;
+constexpr std::uint8_t kMBusSlavePortSetupAddrStateAttributeId = 4u;
+constexpr std::uint8_t kMBusSlavePortSetupBusAddressAttributeId = 5u;
 } // namespace
 
 const std::uint8_t CosemMBusSlavePortSetupObject::MaxSupportedVersion;
@@ -6363,22 +6362,22 @@ const std::uint8_t CosemMBusSlavePortSetupObject::MaxSupportedVersion;
 CosemMBusSlavePortSetupObject::CosemMBusSlavePortSetupObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& defaultBaud,
-  const CosemByteBuffer& availableBaud,
-  const CosemByteBuffer& status,
-  const CosemByteBuffer& mbusPortReference,
+  const CosemByteBuffer& availBaud,
+  const CosemByteBuffer& addrState,
+  const CosemByteBuffer& busAddress,
   AttributeAccessMode mutableAccess)
   : CosemMBusSlavePortSetupObject(
-      logicalName, defaultBaud, availableBaud, status,
-      mbusPortReference, mutableAccess, kVersion0)
+      logicalName, defaultBaud, availBaud, addrState,
+      busAddress, mutableAccess, kVersion0)
 {
 }
 
 CosemMBusSlavePortSetupObject::CosemMBusSlavePortSetupObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& defaultBaud,
-  const CosemByteBuffer& availableBaud,
-  const CosemByteBuffer& status,
-  const CosemByteBuffer& mbusPortReference,
+  const CosemByteBuffer& availBaud,
+  const CosemByteBuffer& addrState,
+  const CosemByteBuffer& busAddress,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -6387,20 +6386,20 @@ CosemMBusSlavePortSetupObject::CosemMBusSlavePortSetupObject(
         version, CosemMBusSlavePortSetupObject::MaxSupportedVersion),
       logicalName))
   , defaultBaud_(defaultBaud)
-  , availableBaud_(availableBaud)
-  , status_(status)
-  , mbusPortReference_(mbusPortReference)
+  , availBaud_(availBaud)
+  , addrState_(addrState)
+  , busAddress_(busAddress)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
     kMBusSlavePortSetupDefaultBaudAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kMBusSlavePortSetupAvailableBaudAttributeId, mutableAccess);
+    kMBusSlavePortSetupAvailBaudAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kMBusSlavePortSetupStatusAttributeId, mutableAccess);
+    kMBusSlavePortSetupAddrStateAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kMBusSlavePortSetupMBusPortReferenceAttributeId, mutableAccess);
+    kMBusSlavePortSetupBusAddressAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemMBusSlavePortSetupObject::Descriptor() const
@@ -6424,14 +6423,14 @@ CosemStatus CosemMBusSlavePortSetupObject::ReadAttribute(
     case kMBusSlavePortSetupDefaultBaudAttributeId:
       output = defaultBaud_;
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupAvailableBaudAttributeId:
-      output = availableBaud_;
+    case kMBusSlavePortSetupAvailBaudAttributeId:
+      output = availBaud_;
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupStatusAttributeId:
-      output = status_;
+    case kMBusSlavePortSetupAddrStateAttributeId:
+      output = addrState_;
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupMBusPortReferenceAttributeId:
-      output = mbusPortReference_;
+    case kMBusSlavePortSetupBusAddressAttributeId:
+      output = busAddress_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -6449,20 +6448,20 @@ CosemStatus CosemMBusSlavePortSetupObject::WriteAttribute(
         return CosemStatus::AccessDenied;
       defaultBaud_ = input;
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupAvailableBaudAttributeId:
+    case kMBusSlavePortSetupAvailBaudAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      availableBaud_ = input;
+      availBaud_ = input;
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupStatusAttributeId:
+    case kMBusSlavePortSetupAddrStateAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      status_ = input;
+      addrState_ = input;
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupMBusPortReferenceAttributeId:
+    case kMBusSlavePortSetupBusAddressAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      mbusPortReference_ = input;
+      busAddress_ = input;
       return CosemStatus::Ok;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
@@ -6476,13 +6475,15 @@ CosemStatus CosemMBusSlavePortSetupObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
+  (void)methodId;
   (void)input;
+  // IEC 62056-6-2 ED4 (2021) §4.8.2 and DLMS UA Blue Book Ed. 12.1
+  // §4.8.1 leave the "Specific methods | m/o" column empty for
+  // M-Bus slave port setup IC 25; the built-in object therefore
+  // exposes no methods. Earlier revisions surfaced a phantom
+  // `reset` method (id 1) that the spec never defines; it has
+  // been removed.
   output.clear();
-  if (methodId == kMBusSlavePortSetupResetMethodId) {
-    // M-Bus slave port reset is not exposed by the built-in object;
-    // backend is expected to drive the slave port out-of-band.
-    return CosemStatus::UnsupportedFeature;
-  }
   return CosemStatus::MethodNotFound;
 }
 
@@ -6493,20 +6494,20 @@ CosemMBusSlavePortSetupObject::DefaultBaud() const
 }
 
 const CosemByteBuffer&
-CosemMBusSlavePortSetupObject::AvailableBaud() const
+CosemMBusSlavePortSetupObject::AvailBaud() const
 {
-  return availableBaud_;
+  return availBaud_;
 }
 
-const CosemByteBuffer& CosemMBusSlavePortSetupObject::Status() const
+const CosemByteBuffer& CosemMBusSlavePortSetupObject::AddrState() const
 {
-  return status_;
+  return addrState_;
 }
 
 const CosemByteBuffer&
-CosemMBusSlavePortSetupObject::MBusPortReference() const
+CosemMBusSlavePortSetupObject::BusAddress() const
 {
-  return mbusPortReference_;
+  return busAddress_;
 }
 
 namespace {

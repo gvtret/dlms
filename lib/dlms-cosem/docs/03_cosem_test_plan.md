@@ -604,10 +604,10 @@ IEC twisted pair (1) Setup tests:
 M-Bus slave port setup tests:
 
 - M-Bus slave port setup exposes attributes `1` logical_name,
-  `2` default_baud, `3` available_baud, `4` status and
-  `5` mbus_port_reference as the encoded DLMS Data buffers supplied
-  by the caller, and reports `AttributeNotFound` for undefined
-  attribute ids;
+  `2` default_baud, `3` avail_baud, `4` addr_state and
+  `5` bus_address as the encoded DLMS Data buffers supplied by the
+  caller, and reports `AttributeNotFound` for undefined attribute
+  ids;
 - M-Bus slave port setup mutable attributes (`2`-`5`) writes
   succeed when the caller-selected access mode permits writes and
   replace the stored buffer in-place; writes report `AccessDenied`
@@ -616,9 +616,10 @@ M-Bus slave port setup tests:
 - M-Bus slave port setup rejects writes to logical_name (`1`) with
   `AccessDenied`, and reports `AttributeNotFound` for undefined
   attribute ids;
-- M-Bus slave port setup `InvokeMethod` reports `UnsupportedFeature`
-  for method `1` `reset` and `MethodNotFound` for any other method
-  id, always clearing method output;
+- M-Bus slave port setup `InvokeMethod` reports `MethodNotFound`
+  for every method id (IEC 62056-6-2 ED4 §4.8.2 and DLMS UA Blue
+  Book Ed. 12.1 §4.8.1 leave the "Specific methods | m/o" column
+  empty for this IC), always clearing method output;
 - M-Bus slave port setup normalizes versions above
   `MaxSupportedVersion`.
 

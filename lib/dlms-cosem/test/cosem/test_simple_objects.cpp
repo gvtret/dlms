@@ -6634,24 +6634,22 @@ namespace {
 struct MBusSlavePortSetupBuffers
 {
   dlms::cosem::CosemByteBuffer defaultBaud;
-  dlms::cosem::CosemByteBuffer availableBaud;
-  dlms::cosem::CosemByteBuffer status;
-  dlms::cosem::CosemByteBuffer mbusPortReference;
+  dlms::cosem::CosemByteBuffer availBaud;
+  dlms::cosem::CosemByteBuffer addrState;
+  dlms::cosem::CosemByteBuffer busAddress;
 };
 
 MBusSlavePortSetupBuffers MakeSampleMBusSlavePortSetup()
 {
   MBusSlavePortSetupBuffers b;
-  // enum 5 (9600 bps)
+  // default_baud: enum 5 (9 600 baud)
   b.defaultBaud = BytesFromList({0x16u, 0x05u});
-  // enum 7 (19200 bps)
-  b.availableBaud = BytesFromList({0x16u, 0x07u});
-  // enum 0 (synchronized)
-  b.status = BytesFromList({0x16u, 0x00u});
-  // octet-string(6) logical name 0.0.22.0.0.255 (IEC HDLC setup)
-  b.mbusPortReference = BytesFromList({
-    0x09u, 0x06u,
-      0x00u, 0x00u, 0x16u, 0x00u, 0x00u, 0xFFu});
+  // avail_baud: enum 7 (38 400 baud)
+  b.availBaud = BytesFromList({0x16u, 0x07u});
+  // addr_state: enum 1 (assigned)
+  b.addrState = BytesFromList({0x16u, 0x01u});
+  // bus_address: unsigned 0x42 (66)
+  b.busAddress = BytesFromList({0x11u, 0x42u});
   return b;
 }
 
@@ -6662,8 +6660,8 @@ MakeMBusSlavePortSetupObject(
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemMBusSlavePortSetupObject(
-    name, b.defaultBaud, b.availableBaud, b.status,
-    b.mbusPortReference, access);
+    name, b.defaultBaud, b.availBaud, b.addrState,
+    b.busAddress, access);
 }
 
 } // namespace
@@ -6689,11 +6687,11 @@ TEST(CosemMBusSlavePortSetupObject, ExposesAllAttributes)
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
   EXPECT_EQ(b.defaultBaud, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
-  EXPECT_EQ(b.availableBaud, out);
+  EXPECT_EQ(b.availBaud, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
-  EXPECT_EQ(b.status, out);
+  EXPECT_EQ(b.addrState, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
-  EXPECT_EQ(b.mbusPortReference, out);
+  EXPECT_EQ(b.busAddress, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(6u, out));
 }
@@ -6716,9 +6714,9 @@ TEST(CosemMBusSlavePortSetupObject, MutableAttributesHonorAccessMode)
       << "attribute id " << static_cast<unsigned>(id);
   }
   EXPECT_EQ(replacement, writable.DefaultBaud());
-  EXPECT_EQ(replacement, writable.AvailableBaud());
-  EXPECT_EQ(replacement, writable.Status());
-  EXPECT_EQ(replacement, writable.MBusPortReference());
+  EXPECT_EQ(replacement, writable.AvailBaud());
+  EXPECT_EQ(replacement, writable.AddrState());
+  EXPECT_EQ(replacement, writable.BusAddress());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
@@ -6734,12 +6732,12 @@ TEST(CosemMBusSlavePortSetupObject, MutableAttributesHonorAccessMode)
       << "attribute id " << static_cast<unsigned>(id);
   }
   EXPECT_EQ(b.defaultBaud, readOnly.DefaultBaud());
-  EXPECT_EQ(b.availableBaud, readOnly.AvailableBaud());
-  EXPECT_EQ(b.status, readOnly.Status());
-  EXPECT_EQ(b.mbusPortReference, readOnly.MBusPortReference());
+  EXPECT_EQ(b.availBaud, readOnly.AvailBaud());
+  EXPECT_EQ(b.addrState, readOnly.AddrState());
+  EXPECT_EQ(b.busAddress, readOnly.BusAddress());
 }
 
-TEST(CosemMBusSlavePortSetupObject, MethodsReturnUnsupportedFeature)
+TEST(CosemMBusSlavePortSetupObject, NoMethodsDefined)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 24u, 0u, 0u, 255u);
@@ -6749,12 +6747,8 @@ TEST(CosemMBusSlavePortSetupObject, MethodsReturnUnsupportedFeature)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(1u, in, out));
-  EXPECT_TRUE(out.empty());
-  for (std::uint8_t method : {2u, 3u, 99u}) {
-    out = BytesFromList({0xAAu});
+  for (std::uint8_t method : {1u, 2u, 3u, 99u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(
                 static_cast<std::uint8_t>(method), in, out))
@@ -6769,8 +6763,8 @@ TEST(CosemMBusSlavePortSetupObject, NormalizesVersionAboveMax)
     dlms::cosem::CosemLogicalName(0u, 0u, 24u, 0u, 0u, 255u);
   const MBusSlavePortSetupBuffers b = MakeSampleMBusSlavePortSetup();
   dlms::cosem::CosemMBusSlavePortSetupObject object(
-    name, b.defaultBaud, b.availableBaud, b.status,
-    b.mbusPortReference,
+    name, b.defaultBaud, b.availBaud, b.addrState,
+    b.busAddress,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemMBusSlavePortSetupObject::MaxSupportedVersion,

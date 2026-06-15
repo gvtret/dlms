@@ -1,36 +1,37 @@
-fix(cosem)!: align IC 42 IPv4 Setup methods and remove phantom IC 47 GSM reset
+fix(cosem)!: rebuild IC 25 M-Bus slave port setup to match spec
 
-* IC 42 (CosemIpv4SetupObject): InvokeMethod now dispatches the third
-  spec method, `3` `get_nbof_mc_IP_addresses`, alongside `1`
-  `add_mc_IP_address` and `2` `delete_mc_IP_address` per IEC 62056-6-2
-  ED4 (2021) §4.9.2.3. All three return UnsupportedFeature; the
-  built-in object does not own multicast subscription policy nor
-  expose the runtime multicast_IP_address array size. Previously id
-  `3` silently returned MethodNotFound, hiding the spec method.
+IEC 62056-6-2 ED4 (2021) §4.8.2 and DLMS UA Blue Book Ed. 12.1
+§4.8.1 define IC 25 with five attributes (1 logical_name,
+2 default_baud, 3 avail_baud, 4 addr_state, 5 bus_address) and an
+empty "Specific methods | m/o" column. The built-in object
+previously used non-spec attribute names `status`/`mbus_port_reference`
+for attributes 4 and 5 (mismodelling them as a status enum and an
+octet-string reference to another object), and surfaced a phantom
+`reset` method (id 1) that no edition of the spec defines.
 
-* IC 47 (CosemGsmDiagnosticObject): removed the phantom `reset`
-  method (id `1`) that the spec never defines. IEC 62056-6-2 ED4
-  (2021) §5.6.8 and DLMS UA Blue Book Ed. 12.1 §5.6.8 define
-  class_id 47, version 0 with NO specific methods (the
-  "Specific methods | m/o" column is empty in both editions).
-  InvokeMethod now returns MethodNotFound for every method id.
-  The `kGsmDiagnosticResetMethodId` constant has been removed.
+Rebuild the constructor + accessor signature around the four spec
+content buffers (`default_baud`, `avail_baud`, `addr_state`,
+`bus_address`). Drop the `kMBusSlavePortSetupResetMethodId`
+constant; `InvokeMethod` now returns `MethodNotFound` for every id
+and clears method output. Attributes 2..5 keep sharing the
+caller-selected `AttributeAccessMode`; logical_name stays
+read-only.
 
-* Tests: updated CosemIpv4SetupObject.MulticastMethodsReturnUnsupportedFeature
-  to assert all three spec method ids return UnsupportedFeature.
-  Renamed CosemGsmDiagnosticObject.MethodsReturnUnsupportedFeature
-  to AllMethodsReturnMethodNotFound and rewrote it to assert every
-  id (including the former `1`) returns MethodNotFound.
+Replace the four `CosemMBusSlavePortSetupObject` regression tests
+with versions covering the new attribute layout and rename the
+method test `NoMethodsDefined`, asserting `MethodNotFound` for
+every probed id.
 
-* Docs: updated docs/ic_support_matrix.md and
-  lib/dlms-cosem/docs/01_cosem_api.md with spec citations and the
-  corrected method-surface descriptions for IC 42 and IC 47.
+Refresh the IC support matrix, COSEM API guide and COSEM test
+plan to document the new attribute names, the removed `reset`
+method and the zero-method `MethodNotFound` semantics.
 
-* Verified: 275/275 COSEM gtest, 936/936 full ctest.
-* VERSION 0.74.0 -> 0.75.0; CHANGELOG entry added.
+Tests: dlms_cosem_tests 275/275, full ctest 936/936.
 
-BREAKING CHANGE: the public constant kGsmDiagnosticResetMethodId has
-been removed. Any caller that referenced it was relying on a
-non-spec method id and must be updated; production wire callers
-that respected the InvokeMethod status set (Ok / AccessDenied /
-UnsupportedFeature / MethodNotFound) require no changes.
+BREAKING CHANGE: `CosemMBusSlavePortSetupObject` constructors now
+take `availBaud`/`addrState`/`busAddress` parameters instead of
+`availableBaud`/`status`/`mbusPortReference`, and the
+`AvailableBaud()`/`Status()`/`MBusPortReference()` accessors are
+renamed `AvailBaud()`/`AddrState()`/`BusAddress()`. Callers that
+previously dispatched method id `1` against this IC now receive
+`MethodNotFound` instead of `UnsupportedFeature`.

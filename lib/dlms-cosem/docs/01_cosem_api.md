@@ -565,11 +565,12 @@ methods; `InvokeMethod` reports `MethodNotFound` for all method ids.
 `simple_objects.hpp` also exposes a partial Auto Answer IC `28`
 (`CosemAutoAnswerObject`) with class version `0`. The constructors
 take the `mode` (enum), `listening_window` (array of structure of
-start/end time), `status` (enum), `number_of_calls` (unsigned) and
-`number_of_rings` (structure of in/out-of-window ring counts)
-payloads as encoded DLMS Data buffers prepared by the caller, the
-logical name, a caller-selected `AttributeAccessMode` shared by the
-mutable attributes (`2`, `3`, `5`, `6`), and an optional explicit
+start/end time), `status` (enum), `number_of_calls` (unsigned),
+`number_of_rings` (structure of in/out-of-window ring counts) and
+`list_of_allowed_callers` (array of `allowed_caller_element`) payloads
+as encoded DLMS Data buffers prepared by the caller, the logical
+name, a caller-selected `AttributeAccessMode` shared by the mutable
+attributes (`2`, `3`, `5`, `6`, `7`), and an optional explicit
 version that is normalized to `MaxSupportedVersion` when out of
 range. Attribute `1` (logical_name) and attribute `4` (status) are
 read-only; the mutable attributes honor the caller access mode and

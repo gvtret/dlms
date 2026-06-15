@@ -1130,6 +1130,7 @@ public:
     const CosemByteBuffer& status,
     const CosemByteBuffer& numberOfCalls,
     const CosemByteBuffer& numberOfRings,
+    const CosemByteBuffer& listOfAllowedCallers,
     AttributeAccessMode mutableAccess);
   CosemAutoAnswerObject(
     const CosemLogicalName& logicalName,
@@ -1138,6 +1139,7 @@ public:
     const CosemByteBuffer& status,
     const CosemByteBuffer& numberOfCalls,
     const CosemByteBuffer& numberOfRings,
+    const CosemByteBuffer& listOfAllowedCallers,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1159,6 +1161,7 @@ public:
   const CosemByteBuffer& Status() const;
   const CosemByteBuffer& NumberOfCalls() const;
   const CosemByteBuffer& NumberOfRings() const;
+  const CosemByteBuffer& ListOfAllowedCallers() const;
 
   void SetStatus(const CosemByteBuffer& status);
 
@@ -1169,6 +1172,7 @@ private:
   CosemByteBuffer status_;
   CosemByteBuffer numberOfCalls_;
   CosemByteBuffer numberOfRings_;
+  CosemByteBuffer listOfAllowedCallers_;
   CosemAccessRights rights_;
 };
 

@@ -476,13 +476,15 @@ GPRS Modem Setup tests:
 Auto Answer tests:
 
 - Auto Answer exposes attributes `1` logical_name, `2` mode, `3`
-  listening_window, `4` status, `5` number_of_calls and `6`
-  number_of_rings as the encoded DLMS Data buffers supplied by the
-  caller, and reports `AttributeNotFound` for undefined attribute ids;
-- Auto Answer mutable attributes (`2`, `3`, `5`, `6`) writes succeed
-  when the caller-selected access mode permits writes and replace the
-  stored buffer in-place; writes report `AccessDenied` when the
-  access mode is read-only, leaving the stored buffers unchanged;
+  listening_window, `4` status, `5` number_of_calls, `6`
+  number_of_rings and `7` list_of_allowed_callers as the encoded
+  DLMS Data buffers supplied by the caller, and reports
+  `AttributeNotFound` for undefined attribute ids;
+- Auto Answer mutable attributes (`2`, `3`, `5`, `6`, `7`) writes
+  succeed when the caller-selected access mode permits writes and
+  replace the stored buffer in-place; writes report `AccessDenied`
+  when the access mode is read-only, leaving the stored buffers
+  unchanged;
 - Auto Answer rejects writes to logical_name (`1`) and status (`4`)
   with `AccessDenied`; the `SetStatus` setter refreshes status
   regardless of the access mode used for the mutable attributes;

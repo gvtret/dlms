@@ -5509,6 +5509,7 @@ struct AutoAnswerBuffers
   dlms::cosem::CosemByteBuffer status;
   dlms::cosem::CosemByteBuffer numberOfCalls;
   dlms::cosem::CosemByteBuffer numberOfRings;
+  dlms::cosem::CosemByteBuffer listOfAllowedCallers;
 };
 
 AutoAnswerBuffers MakeSampleAutoAnswer()
@@ -5531,6 +5532,8 @@ AutoAnswerBuffers MakeSampleAutoAnswer()
     0x02u, 0x02u,
       0x11u, 0x02u,           // rings in listening window
       0x11u, 0x04u});         // rings out of listening window
+  // array(0): empty list_of_allowed_callers
+  b.listOfAllowedCallers = BytesFromList({0x01u, 0x00u});
   return b;
 }
 
@@ -5541,7 +5544,7 @@ dlms::cosem::CosemAutoAnswerObject MakeAutoAnswerObject(
 {
   return dlms::cosem::CosemAutoAnswerObject(
     name, b.mode, b.listeningWindow, b.status, b.numberOfCalls,
-    b.numberOfRings, access);
+    b.numberOfRings, b.listOfAllowedCallers, access);
 }
 
 } // namespace
@@ -5574,8 +5577,10 @@ TEST(CosemAutoAnswerObject, ExposesAllAttributes)
   EXPECT_EQ(b.numberOfCalls, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(6u, out));
   EXPECT_EQ(b.numberOfRings, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(7u, out));
+  EXPECT_EQ(b.listOfAllowedCallers, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(7u, out));
+            object.ReadAttribute(8u, out));
 }
 
 TEST(CosemAutoAnswerObject, MutableAttributesHonorAccessMode)
@@ -5589,7 +5594,7 @@ TEST(CosemAutoAnswerObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemAutoAnswerObject writable =
     MakeAutoAnswerObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t id : {2u, 3u, 5u, 6u}) {
+  for (std::uint8_t id : {2u, 3u, 5u, 6u, 7u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
@@ -5599,6 +5604,7 @@ TEST(CosemAutoAnswerObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(replacement, writable.ListeningWindow());
   EXPECT_EQ(replacement, writable.NumberOfCalls());
   EXPECT_EQ(replacement, writable.NumberOfRings());
+  EXPECT_EQ(replacement, writable.ListOfAllowedCallers());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
@@ -5616,7 +5622,7 @@ TEST(CosemAutoAnswerObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemAutoAnswerObject readOnly =
     MakeAutoAnswerObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  for (std::uint8_t id : {2u, 3u, 5u, 6u}) {
+  for (std::uint8_t id : {2u, 3u, 5u, 6u, 7u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
               readOnly.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
@@ -5626,6 +5632,7 @@ TEST(CosemAutoAnswerObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(b.listeningWindow, readOnly.ListeningWindow());
   EXPECT_EQ(b.numberOfCalls, readOnly.NumberOfCalls());
   EXPECT_EQ(b.numberOfRings, readOnly.NumberOfRings());
+  EXPECT_EQ(b.listOfAllowedCallers, readOnly.ListOfAllowedCallers());
   readOnly.SetStatus(newStatus);
   EXPECT_EQ(newStatus, readOnly.Status());
 }
@@ -5657,7 +5664,7 @@ TEST(CosemAutoAnswerObject, NormalizesVersionAboveMax)
   const AutoAnswerBuffers b = MakeSampleAutoAnswer();
   dlms::cosem::CosemAutoAnswerObject object(
     name, b.mode, b.listeningWindow, b.status, b.numberOfCalls,
-    b.numberOfRings,
+    b.numberOfRings, b.listOfAllowedCallers,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemAutoAnswerObject::MaxSupportedVersion,

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.78.0 - 2026-06-17
+
+- Added the missing `7 list_of_allowed_callers` attribute to the
+  Auto Answer IC `28` (`CosemAutoAnswerObject`). IEC 62056-6-2
+  ED4 (2021) §4.7.5 and DLMS UA Blue Book Ed. 12.1 §4.6.4 define
+  this attribute as an `array of allowed_caller_element`
+  structures listing the caller identifications that the meter
+  accepts; the built-in object previously stopped at
+  attribute `6` and reported `AttributeNotFound` for the spec-
+  defined attribute `7`. The constructors now take an extra
+  `listOfAllowedCallers` content buffer (positioned after
+  `numberOfRings`), the new attribute joins the writable set
+  governed by the caller-selected `AttributeAccessMode`, and a
+  `ListOfAllowedCallers()` accessor exposes the stored buffer.
+  Methods remain absent (the IC defines none); `InvokeMethod`
+  continues to report `MethodNotFound` for every id.
+- Updated `CosemAutoAnswerObject.ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode` and
+  `NormalizesVersionAboveMax` to round-trip the new attribute, and
+  expanded the writable id set in the mutable-attribute test to
+  `{2, 3, 5, 6, 7}` so both writable and read-only paths assert
+  the new behavior. `AttributeNotFound` is now expected at id `8`
+  (previously `7`). The sample `AutoAnswerBuffers` helper now
+  carries an empty `array(0)` payload as the
+  `list_of_allowed_callers` default.
+- Refreshed the COSEM IC support matrix, COSEM API guide and
+  COSEM test plan to document attribute `7 list_of_allowed_callers`
+  and the new mutable set `{2, 3, 5, 6, 7}` for IC 28.
+
 ## 0.77.0 - 2026-06-17
 
 - Rebuilt the M-Bus slave port setup IC `25`

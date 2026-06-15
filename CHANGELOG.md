@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.87.0 - 2026-06-17
+
+- Fixed the class_id of the PRIME NB OFDM PLC MAC setup
+  built-in object (`CosemPrimePlcMacSetupObject`) from `80`
+  to `82` per IEC 62056-6-2 ED4 (2021) §4.12.6 and DLMS UA
+  Blue Book Ed. 12.1. Class_id `80` is reserved by the spec
+  for the unrelated `61334-4-32 LLC SSCS setup` IC and was
+  never the right id for PRIME PLC MAC setup.
+- Refreshed unit test, COSEM IC support matrix and COSEM API
+  guide accordingly. The IC support matrix now lists IC `80`
+  separately as `Application-provided` (no built-in
+  implementation).
+
 ## 0.86.0 - 2026-06-17
 
 - Rebuilt the M-Bus Diagnostic built-in object

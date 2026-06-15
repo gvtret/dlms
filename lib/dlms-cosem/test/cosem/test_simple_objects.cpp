@@ -9318,7 +9318,7 @@ TEST(CosemPrimePlcMacSetupObject, ExposesAllAttributes)
     MakePrimePlcMacSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
-  EXPECT_EQ(80u, object.Descriptor().key.classId);
+  EXPECT_EQ(82u, object.Descriptor().key.classId);
   EXPECT_EQ(0u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemPrimePlcMacSetupObject::MaxSupportedVersion,

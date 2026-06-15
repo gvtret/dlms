@@ -1013,7 +1013,8 @@ built-in object does not own the counter sources; undefined
 method ids return `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial PRIME PLC MAC Setup
-IC `80` (`CosemPrimePlcMacSetupObject`) with class version `0`.
+IC `82` (`CosemPrimePlcMacSetupObject`) with class version `0`
+per IEC 62056-6-2 ED4 (2021) §4.12.6.
 The constructors take `mac_min_con_window`, `mac_max_con_window`
 (long-unsigned), `mac_channel_access_fairness_limit` (unsigned),
 `mac_EMA`, `mac_SAR_size`, `mac_max_PDU_size`,

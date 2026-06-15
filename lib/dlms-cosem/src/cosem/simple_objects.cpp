@@ -9343,7 +9343,7 @@ CosemMBusDiagnosticObject::CaptureTime() const
 }
 
 namespace {
-constexpr std::uint16_t kPrimePlcMacSetupClassId = 80u;
+constexpr std::uint16_t kPrimePlcMacSetupClassId = 82u;
 constexpr std::uint8_t kPrimePlcMacSetupMacMinConWindowId = 2u;
 constexpr std::uint8_t kPrimePlcMacSetupMacMaxConWindowId = 3u;
 constexpr std::uint8_t

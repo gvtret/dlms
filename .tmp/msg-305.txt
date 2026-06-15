@@ -1,0 +1,24 @@
+fix(cosem)!: correct PRIME PLC MAC setup class_id from 80 to 82
+
+IEC 62056-6-2 ED4 (2021) §4.12.6 and DLMS UA Blue Book Ed.
+12.1 §4.12.6 both define "PRIME NB OFDM PLC MAC setup" with
+class_id = 82, not 80. Class_id 80 is reserved by the spec
+for the unrelated "61334-4-32 LLC SSCS setup" IC.
+
+Our built-in `CosemPrimePlcMacSetupObject` carried the
+correct attribute layout but reported the wrong class_id on
+the wire (`80` instead of `82`), which would not interoperate
+with a spec-conformant client/server.
+
+Change `kPrimePlcMacSetupClassId` from 80 to 82, refresh the
+unit-test class_id check, the COSEM IC support matrix and
+the COSEM API guide. The support matrix now lists IC `80`
+separately as application-provided.
+
+Tests: dlms_cosem_tests 277/277, full ctest 938/938.
+
+BREAKING CHANGE: `CosemPrimePlcMacSetupObject` instances now
+report class_id `82` instead of `80` in their descriptor and
+on the wire. Clients/servers that previously interoperated
+with the incorrect class_id `80` will need to be updated to
+the spec-conformant id `82`.

@@ -1,0 +1,41 @@
+fix(cosem)!: align Association SN method ids and per-version gating with ED4
+
+The Association SN IC `12` built-in object exposed a fabricated method
+table - `1` reply_to_HLS_authentication, `2` change_HLS_secret, `3`
+add_object, `4` remove_object, `5` add_user, `6` remove_user - and
+returned `UnsupportedFeature` for that contiguous range. IEC 62056-6-2
+ED4 (2021) clause 4.4.3 and DLMS UA Blue Book Ed. 12.1 clause 5.4.5
+define the Association SN specific methods at non-contiguous ids: `3`
+read_by_logicalname, `5` change_secret, `8` reply_to_HLS_authentication,
+`9` add_user (v3+), `10` remove_user (v3+); ids `1`, `2`, `4`, `6`, `7`
+and `11+` are reserved from previous versions or undefined. The legacy
+add_object / remove_object pair belongs to Association LN (IC 15) and
+does not exist for IC 12.
+
+Renumbered the built-in method handlers to match the spec. Raised
+`MaxSupportedVersion` from `3` to `4` to match the current ED4 ceiling
+(class_id = 12, version = 4). Added per-version gating so
+`security_setup_reference` (attribute `4`) is exposed for v>=2 and
+`user_list` (attribute `5`) plus `current_user` (attribute `6`) for
+v>=3; constructing a lower-version instance clears those caller buffers,
+reports `NoAccess` for them in the access-rights list and returns
+`AttributeNotFound` on reads or writes. The `add_user` / `remove_user`
+methods return `UnsupportedFeature` for v>=3 and `MethodNotFound`
+otherwise.
+
+Added regression tests
+`CosemAssociationSnObject.Version0DoesNotExposeSecuritySetupOrUserAttributes`
+and `CosemAssociationSnObject.Version2ExposesSecuritySetupButNotUserAttributes`
+that lock the new per-version gating, and updated
+`MethodsReturnUnsupportedFeature` to exercise the corrected method ids.
+Updated the IC support matrix, COSEM API guide and CHANGELOG. Verified
+with the full COSEM gtest binary (272/272) and `ctest --test-dir
+build-mingw64 --output-on-failure` (933/933).
+
+Marked as breaking: callers that depended on the previous fabricated
+method id mapping (`1`/`2`/`3`/`4` returning `UnsupportedFeature`) will
+now observe `MethodNotFound` on those ids, and method id `8` newly
+reports `UnsupportedFeature`. Callers that constructed v<3 instances
+with non-empty `userList` / `currentUser` payloads will observe empty
+`UserList()` / `CurrentUser()` and `AttributeNotFound` on attribute
+`5`/`6` reads, and v<2 instances behave the same way for attribute `4`.

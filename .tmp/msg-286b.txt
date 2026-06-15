@@ -1,0 +1,50 @@
+fix: align builtin s-fsk active initiator with ed4 mac_address/l_sap_selector types
+
+Phase 286b. Phase 286 (commit 3165545) added CosemSFskActiveInitiatorObject
+but described and exercised active_initiator as
+  structure { octet-string(8) system_title,
+              octet-string mac_address,
+              unsigned llc_sap_selector }
+which does not match the IC 51 attribute table in DLMS UA Blue Book Ed. 16
+chapter 4.4.10.2 and IEC 62056-6-2 ED4 (2021) section 4.10.4.2.2. The Blue
+Book/ED4 definition is
+  structure { octet-string(8) system_title,
+              long-unsigned       MAC_address,
+              unsigned            L_SAP_selector }
+The MAC address is a 16-bit S-FSK MAC address (long-unsigned), not an
+octet-string, and the third field is the LLC L_SAP_selector (the LLC SAP
+on which the initiator sent the discovery frame), not "llc_sap_selector".
+
+This commit is documentation/test-only: the built-in object stores
+active_initiator as an opaque encoded DLMS Data buffer prepared by the
+caller, so the on-wire bytes a meter sees depend on what the caller
+encodes. The fix realigns the documented contract and the sample buffer
+used in tests so that consumers reading the docs (or copy-pasting the
+sample) encode the correct ED4 structure.
+
+Changes:
+- CHANGELOG.md (0.66.0 entry): rename mac_address -> MAC_address
+  (long-unsigned), llc_sap_selector -> L_SAP_selector, and add the
+  ED4/Blue Book reference.
+- docs/ic_support_matrix.md (row IC 51): same field renames and ED4
+  reference.
+- lib/dlms-cosem/docs/01_cosem_api.md (S-FSK Active Initiator paragraph):
+  same field renames and ED4 reference.
+- lib/dlms-cosem/test/cosem/test_simple_objects.cpp
+  (SampleSFskActiveInitiator): replace the 8-byte octet-string MAC
+  encoding (0x09 0x06 ...) with a 16-bit long-unsigned encoding
+  (0x12 0x01 0xF4, MAC = 500); update the doc comment to reference the
+  ED4 structure.
+- lib/dlms-cosem/test/cosem/test_simple_objects.cpp
+  (CosemSFskActiveInitiatorObject.MutableAttributesHonorAccessMode):
+  rebuild the "not registered" replacement buffer with the correct
+  long-unsigned MAC encoding (0x12 0x00 0x00) instead of the
+  octet-string(6) zero-MAC, and document the field meanings.
+
+Verification:
+- cmake --build build-mingw64 --target dlms_cosem_tests : OK
+- dlms_cosem_tests.exe --gtest_filter='*SFskActiveInitiator*' : 4/4 PASS
+- dlms_cosem_tests.exe (full COSEM suite) : 267/267 PASS
+
+No production code or public header touched; behaviour change is limited
+to the documented contract and the test fixtures.

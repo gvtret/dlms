@@ -1,0 +1,1 @@
+{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"doc_search","arguments":{"query":"S-FSK MAC synchronization timeouts class_id 52 attributes","top_k":4}}}

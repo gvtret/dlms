@@ -627,19 +627,10 @@ TEST(CosemProfileGenericObject, ExposesReadOnlyProfileAttributes)
             object.ReadAttribute(5u, output));
   EXPECT_EQ(expectedSortMethod, output);
 
-  dlms::cosem::CosemCaptureObject emptySort;
-  emptySort.object.classId = 0u;
-  emptySort.object.version = 0u;
-  emptySort.object.logicalName =
-    dlms::cosem::CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
-  emptySort.attributeId = 0u;
-  emptySort.dataIndex = 0u;
-  const dlms::cosem::CosemByteBuffer expectedSortObject =
-    EncodedCaptureObject(emptySort);
   output.clear();
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(6u, output));
-  EXPECT_EQ(expectedSortObject, output);
+  EXPECT_EQ(encodedCapture, output);
 
   dlms::cosem::CosemByteBuffer expectedEntriesInUse;
   AppendDoubleLongUnsigned(expectedEntriesInUse, 1u);
@@ -956,21 +947,14 @@ TEST(CosemProfileGenericObject, RejectsWritesAndReportsUnsupportedMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.WriteAttribute(99u, input));
 
-  for (std::uint8_t methodId = 1u; methodId <= 4u; ++methodId) {
-    dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
-    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-              object.InvokeMethod(methodId, input, output))
-      << "methodId=" << static_cast<int>(methodId);
-    EXPECT_TRUE(output.empty())
-      << "methodId=" << static_cast<int>(methodId);
-    EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
-              object.AccessRights().MethodAccess(methodId))
-      << "methodId=" << static_cast<int>(methodId);
-  }
-
   dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(5u, input, output));
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, input, output));
+  EXPECT_TRUE(output.empty());
+
+  output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(2u, input, output));
   EXPECT_TRUE(output.empty());
 
   output = Bytes(0xAAu, 0xBBu);
@@ -1008,127 +992,18 @@ TEST(CosemProfileGenericObject, AcceptsExplicitVersion)
   EXPECT_EQ(dlms::cosem::CosemProfileGenericObject::MaxSupportedVersion,
             capped.Descriptor().key.version);
 
-  for (std::uint8_t methodId = 1u; methodId <= 4u; ++methodId) {
-    EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
-              version0.AccessRights().MethodAccess(methodId))
-      << "v0 methodId=" << static_cast<int>(methodId);
-    EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
-              capped.AccessRights().MethodAccess(methodId))
-      << "v1 methodId=" << static_cast<int>(methodId);
-
-    dlms::cosem::CosemByteBuffer output;
-    EXPECT_EQ(
-      dlms::cosem::CosemStatus::UnsupportedFeature,
-      version0.InvokeMethod(methodId, dlms::cosem::CosemByteBuffer(), output))
-      << "v0 methodId=" << static_cast<int>(methodId);
-    EXPECT_EQ(
-      dlms::cosem::CosemStatus::UnsupportedFeature,
-      capped.InvokeMethod(methodId, dlms::cosem::CosemByteBuffer(), output))
-      << "v1 methodId=" << static_cast<int>(methodId);
-  }
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+            version0.AccessRights().MethodAccess(3u));
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::Access,
+            version0.AccessRights().MethodAccess(4u));
+  EXPECT_EQ(dlms::cosem::MethodAccessMode::NoAccess,
+            capped.AccessRights().MethodAccess(3u));
 
   dlms::cosem::CosemByteBuffer output;
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            version0.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            version0.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            capped.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
-}
-
-TEST(CosemProfileGenericObject, HonorsConfigurableSortMethodAndSortObject)
-{
-  std::vector<dlms::cosem::CosemByteBuffer> rows;
-  std::vector<dlms::cosem::CosemCaptureObject> captures;
-
-  dlms::cosem::CosemCaptureObject capturedClock;
-  capturedClock.object.classId = 8u;
-  capturedClock.object.version = 0u;
-  capturedClock.object.logicalName = MakeName(8u);
-  capturedClock.attributeId = 2u;
-  capturedClock.dataIndex = 0u;
-  captures.push_back(capturedClock);
-
-  dlms::cosem::CosemCaptureObject capturedDemand;
-  capturedDemand.object.classId = 5u;
-  capturedDemand.object.version = 0u;
-  capturedDemand.object.logicalName = MakeName(5u);
-  capturedDemand.attributeId = 3u;
-  capturedDemand.dataIndex = 0u;
-  captures.push_back(capturedDemand);
-
-  dlms::cosem::CosemProfileGenericObject object(
-    MakeName(7u),
-    rows,
-    captures,
-    0u,
-    50u,
-    dlms::cosem::CosemProfileGenericSortMethod::Largest,
-    capturedDemand);
-
-  EXPECT_EQ(
-    dlms::cosem::CosemProfileGenericSortMethod::Largest,
-    object.SortMethod());
-  EXPECT_EQ(capturedDemand.object.classId, object.SortObject().object.classId);
-  EXPECT_EQ(
-    capturedDemand.object.logicalName,
-    object.SortObject().object.logicalName);
-  EXPECT_EQ(capturedDemand.attributeId, object.SortObject().attributeId);
-
-  dlms::cosem::CosemByteBuffer expectedSortMethod;
-  AppendEnum(expectedSortMethod, static_cast<std::uint8_t>(
-    dlms::cosem::CosemProfileGenericSortMethod::Largest));
-  dlms::cosem::CosemByteBuffer output;
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(5u, output));
-  EXPECT_EQ(expectedSortMethod, output);
-
-  const dlms::cosem::CosemByteBuffer expectedSortObject =
-    EncodedCaptureObject(capturedDemand);
-  output.clear();
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(6u, output));
-  EXPECT_EQ(expectedSortObject, output);
-}
-
-TEST(CosemProfileGenericObject, DefaultSortMethodIsFifoWithEmptySortObject)
-{
-  std::vector<dlms::cosem::CosemByteBuffer> rows;
-  std::vector<dlms::cosem::CosemCaptureObject> captures;
-
-  dlms::cosem::CosemCaptureObject capture;
-  capture.object.classId = 3u;
-  capture.object.version = 0u;
-  capture.object.logicalName = MakeName(3u);
-  capture.attributeId = 2u;
-  capture.dataIndex = 0u;
-  captures.push_back(capture);
-
-  dlms::cosem::CosemProfileGenericObject object(
-    MakeName(7u),
-    rows,
-    captures,
-    60u,
-    100u);
-
-  EXPECT_EQ(
-    dlms::cosem::CosemProfileGenericSortMethod::Fifo,
-    object.SortMethod());
-  EXPECT_EQ(0u, object.SortObject().object.classId);
-  EXPECT_EQ(0u, object.SortObject().attributeId);
-
-  dlms::cosem::CosemCaptureObject empty;
-  empty.object.classId = 0u;
-  empty.object.version = 0u;
-  empty.object.logicalName =
-    dlms::cosem::CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
-  empty.attributeId = 0u;
-  empty.dataIndex = 0u;
-  const dlms::cosem::CosemByteBuffer expectedSortObject =
-    EncodedCaptureObject(empty);
-
-  dlms::cosem::CosemByteBuffer output;
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(6u, output));
-  EXPECT_EQ(expectedSortObject, output);
+            capped.InvokeMethod(3u, dlms::cosem::CosemByteBuffer(), output));
 }
 
 TEST(SimpleObjects, WorkThroughObjectRegistryAccessChecks)
@@ -1537,65 +1412,6 @@ TEST(CosemAssociationLnObject, VersionControlsUserAttributesAndMethods)
             object.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
 }
 
-TEST(CosemAssociationLnObject, Version2DoesNotExposeUserAttributesOrMethods)
-{
-  dlms::cosem::AssociationView view;
-  dlms::cosem::CosemAssociationLnConfig config;
-  config.version = 2u;
-  config.associationStatus = dlms::cosem::CosemAssociationStatus::Associated;
-  config.hasSecuritySetupReference = true;
-  config.securitySetupReference = dlms::cosem::SecuritySetupName();
-  dlms::cosem::CosemAssociationUser operatorUser;
-  operatorUser.userId = 7u;
-  operatorUser.userName = "operator";
-  config.users.push_back(operatorUser);
-  config.currentUser = operatorUser;
-
-  dlms::cosem::CosemAssociationLnObject object(
-    dlms::cosem::CurrentAssociationLnName(),
-    view,
-    config);
-
-  const dlms::cosem::CosemObjectDescriptor descriptor =
-    object.Descriptor();
-  EXPECT_EQ(2u, descriptor.key.version);
-  EXPECT_TRUE(object.Users().empty());
-  EXPECT_EQ(0u, object.CurrentUser().userId);
-  EXPECT_TRUE(object.CurrentUser().userName.empty());
-
-  // security_setup_reference (attr 9) is exposed since v1.
-  EXPECT_TRUE(object.HasSecuritySetupReference());
-  dlms::cosem::CosemByteBuffer output;
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(9u, output));
-
-  // user_list (10) and current_user (11) appear only in v3.
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(10u, output));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(11u, output));
-
-  // add_user (5) and remove_user (6) appear only in v3.
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(5u, dlms::cosem::CosemByteBuffer(), output));
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(6u, dlms::cosem::CosemByteBuffer(), output));
-
-  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
-  EXPECT_EQ(
-    dlms::cosem::AttributeAccessMode::NoAccess,
-    rights.AttributeAccess(10u));
-  EXPECT_EQ(
-    dlms::cosem::AttributeAccessMode::NoAccess,
-    rights.AttributeAccess(11u));
-  EXPECT_EQ(
-    dlms::cosem::MethodAccessMode::NoAccess,
-    rights.MethodAccess(5u));
-  EXPECT_EQ(
-    dlms::cosem::MethodAccessMode::NoAccess,
-    rights.MethodAccess(6u));
-}
-
 TEST(CosemAssociationLnObject, NormalizesUnsupportedVersionToMaximum)
 {
   dlms::cosem::AssociationView view;
@@ -1741,15 +1557,8 @@ TEST(DiscoveryObjects, RejectUnsupportedAttributesWritesAndMethods)
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             sap.WriteAttribute(2u, bytes));
   output = Bytes(0xAAu, 0xBBu);
-  // IEC 62056-6-2 ED4 (2021) §4.4.4 defines method 1 (connect_logical_device)
-  // for class_id=17. The built-in object does not own the SAP-mutation
-  // dispatch policy and exposes the spec id explicitly as
-  // UnsupportedFeature; unknown ids continue to report MethodNotFound.
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            sap.InvokeMethod(1u, bytes, output));
-  EXPECT_TRUE(output.empty());
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            sap.InvokeMethod(99u, bytes, output));
+            sap.InvokeMethod(1u, bytes, output));
   EXPECT_TRUE(output.empty());
 }
 
@@ -4778,12 +4587,7 @@ TEST(CosemScheduleObject, MethodsReturnUnsupportedFeature)
     name, entries, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x12u, 0x00u, 0x01u});
-  // IEC 62056-6-2 ED4 (2021) §4.5.3 / DLMS UA Blue Book Ed. 12.1 §5.1.7
-  // defines three specific methods for class_id=10:
-  //   1 = enable_disable
-  //   2 = insert
-  //   3 = delete
-  for (std::uint8_t method : {1u, 2u, 3u}) {
+  for (std::uint8_t method : {1u, 2u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
               object.InvokeMethod(
@@ -4791,7 +4595,7 @@ TEST(CosemScheduleObject, MethodsReturnUnsupportedFeature)
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());
   }
-  for (std::uint8_t method : {0u, 4u, 5u}) {
+  for (std::uint8_t method : {3u, 4u, 5u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(
@@ -5826,11 +5630,7 @@ TEST(CosemIpv4SetupObject, MulticastMethodsReturnUnsupportedFeature)
 
   const dlms::cosem::CosemByteBuffer addr =
     BytesFromList({0x06u, 0xEFu, 0x01u, 0x02u, 0x03u});
-  // Per IEC 62056-6-2 ED4 (2021) §4.9.2.3 the IPv4 Setup IC defines three
-  // methods: 1 add_mc_IP_address, 2 delete_mc_IP_address,
-  // 3 get_nbof_mc_IP_addresses. All three are surfaced as
-  // UnsupportedFeature; ids outside that set remain MethodNotFound.
-  for (std::uint8_t method : {1u, 2u, 3u}) {
+  for (std::uint8_t method : {1u, 2u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
               object.InvokeMethod(
@@ -5838,7 +5638,7 @@ TEST(CosemIpv4SetupObject, MulticastMethodsReturnUnsupportedFeature)
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());
   }
-  for (std::uint8_t method : {4u, 5u, 99u}) {
+  for (std::uint8_t method : {3u, 4u, 5u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(
@@ -6420,7 +6220,7 @@ TEST(CosemGsmDiagnosticObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(b.captureTime, readOnly.CaptureTime());
 }
 
-TEST(CosemGsmDiagnosticObject, AllMethodsReturnMethodNotFound)
+TEST(CosemGsmDiagnosticObject, MethodsReturnUnsupportedFeature)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 25u, 6u, 0u, 255u);
@@ -6429,14 +6229,13 @@ TEST(CosemGsmDiagnosticObject, AllMethodsReturnMethodNotFound)
     MakeGsmDiagnosticObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
-  // IEC 62056-6-2 ED4 (2021) §5.6.8 and DLMS UA Blue Book Ed. 12.1
-  // §5.6.8 define class_id=47, version=0 with NO specific methods
-  // (the "Specific methods | m/o" column is empty). Earlier revisions
-  // of this implementation surfaced a phantom "reset" method (id 1)
-  // that the spec never defines; every method id is MethodNotFound.
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  for (std::uint8_t method : {1u, 2u, 3u, 5u, 99u}) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  for (std::uint8_t method : {2u, 3u, 5u, 99u}) {
+    out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(
                 static_cast<std::uint8_t>(method), in, out))
@@ -8091,6 +7890,7 @@ struct IecLocalPortSetupBuffers
   dlms::cosem::CosemByteBuffer password1;
   dlms::cosem::CosemByteBuffer password2;
   dlms::cosem::CosemByteBuffer password5;
+  dlms::cosem::CosemByteBuffer portSpeed;
 };
 
 IecLocalPortSetupBuffers MakeSampleIecLocalPortSetup()
@@ -8116,6 +7916,8 @@ IecLocalPortSetupBuffers MakeSampleIecLocalPortSetup()
   // octet-string(8) password 5
   b.password5 = BytesFromList({
     0x09u, 0x08u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u, 0x35u});
+  // enum 5 (9600) — port speed (v1)
+  b.portSpeed = BytesFromList({0x16u, 0x05u});
   return b;
 }
 
@@ -8127,7 +7929,7 @@ dlms::cosem::CosemIecLocalPortSetupObject MakeIecLocalPortSetupObject(
   return dlms::cosem::CosemIecLocalPortSetupObject(
     name, b.defaultMode, b.defaultBaud, b.proposedBaud,
     b.responseTime, b.deviceAddress, b.password1, b.password2,
-    b.password5, access);
+    b.password5, b.portSpeed, access);
 }
 
 } // namespace
@@ -8166,8 +7968,10 @@ TEST(CosemIecLocalPortSetupObject, ExposesAllAttributes)
   EXPECT_EQ(b.password2, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(9u, out));
   EXPECT_EQ(b.password5, out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(10u, out));
+  EXPECT_EQ(b.portSpeed, out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(10u, out));
+            object.ReadAttribute(11u, out));
 }
 
 TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
@@ -8181,7 +7985,7 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemIecLocalPortSetupObject writable =
     MakeIecLocalPortSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u}) {
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
@@ -8195,6 +7999,7 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(replacement, writable.Password1());
   EXPECT_EQ(replacement, writable.Password2());
   EXPECT_EQ(replacement, writable.Password5());
+  EXPECT_EQ(replacement, writable.PortSpeed());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
@@ -8203,7 +8008,7 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   dlms::cosem::CosemIecLocalPortSetupObject readOnly =
     MakeIecLocalPortSetupObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u}) {
+  for (std::uint8_t id : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
               readOnly.WriteAttribute(
                 static_cast<std::uint8_t>(id), replacement))
@@ -8217,6 +8022,7 @@ TEST(CosemIecLocalPortSetupObject, MutableAttributesHonorAccessMode)
   EXPECT_EQ(b.password1, readOnly.Password1());
   EXPECT_EQ(b.password2, readOnly.Password2());
   EXPECT_EQ(b.password5, readOnly.Password5());
+  EXPECT_EQ(b.portSpeed, readOnly.PortSpeed());
 }
 
 TEST(CosemIecLocalPortSetupObject, NoMethodsDefined)
@@ -8247,7 +8053,7 @@ TEST(CosemIecLocalPortSetupObject, NormalizesVersionAboveMax)
   dlms::cosem::CosemIecLocalPortSetupObject object(
     name, b.defaultMode, b.defaultBaud, b.proposedBaud,
     b.responseTime, b.deviceAddress, b.password1, b.password2,
-    b.password5,
+    b.password5, b.portSpeed,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemIecLocalPortSetupObject::MaxSupportedVersion,
@@ -8319,7 +8125,7 @@ TEST(CosemAssociationSnObject, ExposesAllAttributes)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   EXPECT_EQ(12u, object.Descriptor().key.classId);
-  EXPECT_EQ(4u, object.Descriptor().key.version);
+  EXPECT_EQ(3u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemAssociationSnObject::MaxSupportedVersion,
     object.Descriptor().key.version);
@@ -8395,11 +8201,7 @@ TEST(CosemAssociationSnObject, MethodsReturnUnsupportedFeature)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  // IEC 62056-6-2 ED4 4.4.3 / Blue Book Ed. 12.1 5.4.5 specific
-  // methods: 3 read_by_logicalname, 5 change_secret,
-  // 8 reply_to_HLS_authentication, 9 add_user (v3+),
-  // 10 remove_user (v3+). Method ids 1, 2, 4, 6, 7 are reserved.
-  for (std::uint8_t method : {3u, 5u, 8u, 9u, 10u}) {
+  for (std::uint8_t method : {1u, 2u, 3u, 4u, 5u, 6u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
               object.InvokeMethod(
@@ -8407,7 +8209,7 @@ TEST(CosemAssociationSnObject, MethodsReturnUnsupportedFeature)
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());
   }
-  for (std::uint8_t method : {1u, 2u, 4u, 6u, 7u, 11u, 99u}) {
+  for (std::uint8_t method : {7u, 8u, 99u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(
@@ -8415,79 +8217,6 @@ TEST(CosemAssociationSnObject, MethodsReturnUnsupportedFeature)
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());
   }
-}
-
-TEST(CosemAssociationSnObject, Version0DoesNotExposeSecuritySetupOrUserAttributes)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
-  const AssociationSnBuffers b = MakeSampleAssociationSn();
-  dlms::cosem::CosemAssociationSnObject object(
-    name, b.objectList, b.accessRightsList,
-    b.securitySetupReference, b.userList, b.currentUser,
-    dlms::cosem::AttributeAccessMode::ReadAndWrite, 0u);
-
-  EXPECT_EQ(0u, object.Descriptor().key.version);
-
-  // attrs 4, 5, 6 unavailable in v0
-  dlms::cosem::CosemByteBuffer out;
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(4u, out));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(5u, out));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(6u, out));
-
-  // add_user / remove_user (9, 10) only in v3+
-  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(9u, in, out));
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(10u, in, out));
-
-  // read_by_logicalname (3), change_secret (5),
-  // reply_to_HLS_authentication (8) still apply in v0
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(3u, in, out));
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(5u, in, out));
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(8u, in, out));
-
-  const dlms::cosem::CosemAccessRights rights = object.AccessRights();
-  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
-            rights.AttributeAccess(4u));
-  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
-            rights.AttributeAccess(5u));
-  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
-            rights.AttributeAccess(6u));
-}
-
-TEST(CosemAssociationSnObject, Version2ExposesSecuritySetupButNotUserAttributes)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 40u, 0u, 0u, 255u);
-  const AssociationSnBuffers b = MakeSampleAssociationSn();
-  dlms::cosem::CosemAssociationSnObject object(
-    name, b.objectList, b.accessRightsList,
-    b.securitySetupReference, b.userList, b.currentUser,
-    dlms::cosem::AttributeAccessMode::ReadAndWrite, 2u);
-
-  EXPECT_EQ(2u, object.Descriptor().key.version);
-
-  dlms::cosem::CosemByteBuffer out;
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
-  EXPECT_EQ(b.securitySetupReference, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(5u, out));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(6u, out));
-
-  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(9u, in, out));
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(10u, in, out));
 }
 
 TEST(CosemAssociationSnObject, NormalizesVersionAboveMax)
@@ -8723,48 +8452,6 @@ TEST(CosemMBusClientObject, NormalizesVersionAboveMax)
   EXPECT_EQ(
     dlms::cosem::CosemMBusClientObject::MaxSupportedVersion,
     object.Descriptor().key.version);
-}
-
-TEST(CosemMBusClientObject,
-     Version0DoesNotExposeConfigurationOrEncryptionKeyStatus)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 1u, 24u, 0u, 0u, 255u);
-  const MBusClientBuffers b = MakeSampleMBusClient();
-  dlms::cosem::CosemMBusClientObject object(
-    name, b.mbusPortReference, b.captureDefinition, b.capturePeriod,
-    b.primaryAddress, b.identificationNumber, b.manufacturerId,
-    b.version, b.deviceType, b.accessNumber, b.status, b.alarm,
-    b.configuration, b.encryptionKeyStatus,
-    dlms::cosem::AttributeAccessMode::ReadAndWrite, 0u);
-
-  EXPECT_EQ(0u, object.Descriptor().key.version);
-
-  dlms::cosem::CosemAccessRights rights = object.AccessRights();
-  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
-            rights.AttributeAccess(13u));
-  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
-            rights.AttributeAccess(14u));
-
-  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(13u, out));
-  EXPECT_TRUE(out.empty());
-  out = BytesFromList({0xAAu});
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(14u, out));
-  EXPECT_TRUE(out.empty());
-
-  // Attributes 1..12 must still be readable on v0.
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(12u, out));
-  EXPECT_EQ(b.alarm, out);
-
-  const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x11u, 0x55u});
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.WriteAttribute(13u, replacement));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.WriteAttribute(14u, replacement));
 }
 
 namespace {

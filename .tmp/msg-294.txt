@@ -1,0 +1,35 @@
+fix(cosem): expose SAP Assignment IC 17 connect_logical_device method per spec
+
+IEC 62056-6-2 ED4 (2021) clause 4.4.4 and DLMS UA Blue Book Ed. 12.1
+clause 5.3.4 define a single specific method for class_id=17:
+  1 = connect_logical_device
+
+CosemSapAssignmentObject::InvokeMethod previously returned MethodNotFound
+for *every* method id, silently hiding the only spec-defined method.
+
+The built-in object does not own the SAP / logical-device attachment
+policy, so method 1 is now surfaced explicitly as UnsupportedFeature
+(matching the pattern used by IC 5, 9, 10, 11 and 22 built-in objects);
+unknown method ids still report MethodNotFound.
+
+Not a breaking change at the public surface: any caller that was
+already receiving MethodNotFound for method 1 was out of spec, and
+callers that respect the documented CosemStatus set (Ok /
+AccessDenied / UnsupportedFeature / MethodNotFound) handle the new
+status without changes.
+
+Fix:
+- Add kSapAssignmentConnectLogicalDeviceMethodId = 1 with a comment
+  citing ED4 4.4.4 / Blue Book 5.3.4.
+- Replace the catch-all MethodNotFound branch with an explicit check
+  for the spec id, returning UnsupportedFeature for method 1 and
+  MethodNotFound otherwise.
+- Update the DiscoveryObjects.RejectUnsupportedAttributesWritesAndMethods
+  regression test to assert id 1 -> UnsupportedFeature and id 99 ->
+  MethodNotFound for the SAP Assignment surface.
+
+Updated docs/ic_support_matrix.md and lib/dlms-cosem/docs/01_cosem_api.md
+to document the SAP Assignment method surface. Bumped VERSION to
+0.74.0 and added the corresponding CHANGELOG entry. Verified with
+the full COSEM gtest binary (275/275 passing) and full ctest suite
+(936/936 passing).

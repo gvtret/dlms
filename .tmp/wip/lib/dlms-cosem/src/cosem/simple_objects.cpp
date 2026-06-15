@@ -11,9 +11,6 @@ constexpr std::uint16_t kClockClassId = 8u;
 constexpr std::uint16_t kProfileGenericClassId = 7u;
 constexpr std::uint16_t kAssociationLnClassId = 15u;
 constexpr std::uint16_t kSapAssignmentClassId = 17u;
-// IEC 62056-6-2 ED4 (2021) §4.4.4 / DLMS UA Blue Book Ed. 12.1 §5.3.4:
-// class_id=17 defines a single specific method.
-constexpr std::uint8_t kSapAssignmentConnectLogicalDeviceMethodId = 1u;
 constexpr std::uint16_t kSecuritySetupClassId = 64u;
 constexpr std::uint8_t kLogicalNameAttributeId = 1u;
 constexpr std::uint8_t kValueAttributeId = 2u;
@@ -4299,11 +4296,8 @@ const CosemByteBuffer& CosemTcpUdpSetupObject::InactivityTimeOut() const
 namespace {
 constexpr std::uint16_t kScheduleClassId = 10u;
 constexpr std::uint8_t kScheduleEntriesAttributeId = 2u;
-// IEC 62056-6-2 ED4 (2021) §4.5.3 / DLMS UA Blue Book Ed. 12.1 §5.1.7:
-// class_id=10 defines three specific methods.
-constexpr std::uint8_t kScheduleEnableDisableMethodId = 1u;
-constexpr std::uint8_t kScheduleInsertMethodId = 2u;
-constexpr std::uint8_t kScheduleDeleteMethodId = 3u;
+constexpr std::uint8_t kScheduleInsertMethodId = 1u;
+constexpr std::uint8_t kScheduleDeleteMethodId = 2u;
 } // namespace
 
 const std::uint8_t CosemScheduleObject::MaxSupportedVersion;
@@ -4386,13 +4380,9 @@ CosemStatus CosemScheduleObject::InvokeMethod(
   (void)input;
   output.clear();
   switch (methodId) {
-    case kScheduleEnableDisableMethodId:
     case kScheduleInsertMethodId:
     case kScheduleDeleteMethodId:
-      // Application-defined schedule entry mutation (enable_disable / insert /
-      // delete). The built-in object surfaces them explicitly as
-      // UnsupportedFeature pending a backend that can mutate the schedule
-      // entries table.
+      // Application-defined schedule entry mutation.
       return CosemStatus::UnsupportedFeature;
     default:
       return CosemStatus::MethodNotFound;
@@ -5277,8 +5267,6 @@ constexpr std::uint8_t kIpv4SetupPrimaryDnsAddressAttributeId = 9u;
 constexpr std::uint8_t kIpv4SetupSecondaryDnsAddressAttributeId = 10u;
 constexpr std::uint8_t kIpv4SetupAddMcIpAddressMethodId = 1u;
 constexpr std::uint8_t kIpv4SetupDeleteMcIpAddressMethodId = 2u;
-// IEC 62056-6-2 ED4 (2021) §4.9.2.3.3 defines a third method on class_id=42.
-constexpr std::uint8_t kIpv4SetupGetNbofMcIpAddressesMethodId = 3u;
 } // namespace
 
 const std::uint8_t CosemIpv4SetupObject::MaxSupportedVersion;
@@ -5470,12 +5458,7 @@ CosemStatus CosemIpv4SetupObject::InvokeMethod(
   switch (methodId) {
     case kIpv4SetupAddMcIpAddressMethodId:
     case kIpv4SetupDeleteMcIpAddressMethodId:
-    case kIpv4SetupGetNbofMcIpAddressesMethodId:
-      // Built-in object does not own multicast subscription policy nor
-      // expose the runtime multicast_IP_address array size. All three
-      // spec methods are surfaced as UnsupportedFeature so a backend
-      // can attach the IGMP/array-size semantics without changing the
-      // object surface.
+      // Built-in object does not own the multicast subscription policy.
       return CosemStatus::UnsupportedFeature;
     default:
       return CosemStatus::MethodNotFound;
@@ -5975,11 +5958,7 @@ constexpr std::uint8_t kGsmDiagnosticPsStatusAttributeId = 5u;
 constexpr std::uint8_t kGsmDiagnosticCellInfoAttributeId = 6u;
 constexpr std::uint8_t kGsmDiagnosticAdjacentCellsAttributeId = 7u;
 constexpr std::uint8_t kGsmDiagnosticCaptureTimeAttributeId = 8u;
-// IEC 62056-6-2 ED4 (2021) §5.6.8 / DLMS UA Blue Book Ed. 12.1 §5.6.8 define
-// class_id=47, version=0 with NO specific methods (the "Specific methods
-// m/o" column is empty). Earlier revisions of this implementation
-// surfaced a phantom "reset" method (id 1) that the spec never
-// defines; it is intentionally removed.
+constexpr std::uint8_t kGsmDiagnosticResetMethodId = 1u;
 } // namespace
 
 const std::uint8_t CosemGsmDiagnosticObject::MaxSupportedVersion;
@@ -6140,11 +6119,13 @@ CosemStatus CosemGsmDiagnosticObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)methodId;
   (void)input;
   output.clear();
-  // GSM Diagnostic IC v0 defines no methods (see ED4 §5.6.8 /
-  // Blue Book Ed. 12.1 §5.6.8); every method id is MethodNotFound.
+  if (methodId == kGsmDiagnosticResetMethodId) {
+    // GSM Diagnostic reset is not exposed by the built-in object;
+    // backend is expected to refresh status fields out-of-band.
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
 }
 
@@ -7964,6 +7945,7 @@ constexpr std::uint8_t kIecLocalPortSetupDeviceAddressAttributeId = 6u;
 constexpr std::uint8_t kIecLocalPortSetupPassword1AttributeId = 7u;
 constexpr std::uint8_t kIecLocalPortSetupPassword2AttributeId = 8u;
 constexpr std::uint8_t kIecLocalPortSetupPassword5AttributeId = 9u;
+constexpr std::uint8_t kIecLocalPortSetupPortSpeedAttributeId = 10u;
 constexpr std::uint8_t kVersion1 = 1u;
 } // namespace
 
@@ -7979,11 +7961,12 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
   const CosemByteBuffer& password1,
   const CosemByteBuffer& password2,
   const CosemByteBuffer& password5,
+  const CosemByteBuffer& portSpeed,
   AttributeAccessMode mutableAccess)
   : CosemIecLocalPortSetupObject(
       logicalName, defaultMode, defaultBaud, proposedBaud,
       responseTime, deviceAddress, password1, password2, password5,
-      mutableAccess, kVersion1)
+      portSpeed, mutableAccess, kVersion1)
 {
 }
 
@@ -7997,6 +7980,7 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
   const CosemByteBuffer& password1,
   const CosemByteBuffer& password2,
   const CosemByteBuffer& password5,
+  const CosemByteBuffer& portSpeed,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -8013,6 +7997,7 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
   , password1_(password1)
   , password2_(password2)
   , password5_(password5)
+  , portSpeed_(portSpeed)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
@@ -8032,6 +8017,8 @@ CosemIecLocalPortSetupObject::CosemIecLocalPortSetupObject(
     kIecLocalPortSetupPassword2AttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kIecLocalPortSetupPassword5AttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIecLocalPortSetupPortSpeedAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemIecLocalPortSetupObject::Descriptor() const
@@ -8075,6 +8062,9 @@ CosemStatus CosemIecLocalPortSetupObject::ReadAttribute(
       return CosemStatus::Ok;
     case kIecLocalPortSetupPassword5AttributeId:
       output = password5_;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPortSpeedAttributeId:
+      output = portSpeed_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -8126,6 +8116,11 @@ CosemStatus CosemIecLocalPortSetupObject::WriteAttribute(
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       password5_ = input;
+      return CosemStatus::Ok;
+    case kIecLocalPortSetupPortSpeedAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      portSpeed_ = input;
       return CosemStatus::Ok;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
@@ -8193,6 +8188,12 @@ CosemIecLocalPortSetupObject::Password5() const
   return password5_;
 }
 
+const CosemByteBuffer&
+CosemIecLocalPortSetupObject::PortSpeed() const
+{
+  return portSpeed_;
+}
+
 namespace {
 constexpr std::uint16_t kAssociationSnClassId = 12u;
 constexpr std::uint8_t kAssociationSnObjectListAttributeId = 2u;
@@ -8202,15 +8203,13 @@ constexpr std::uint8_t
 constexpr std::uint8_t kAssociationSnUserListAttributeId = 5u;
 constexpr std::uint8_t kAssociationSnCurrentUserAttributeId = 6u;
 constexpr std::uint8_t
-  kAssociationSnReadByLogicalNameMethodId = 3u;
-constexpr std::uint8_t kAssociationSnChangeSecretMethodId = 5u;
-constexpr std::uint8_t
-  kAssociationSnReplyToHlsAuthenticationMethodId = 8u;
-constexpr std::uint8_t kAssociationSnAddUserMethodId = 9u;
-constexpr std::uint8_t kAssociationSnRemoveUserMethodId = 10u;
-constexpr std::uint8_t kVersion2 = 2u;
+  kAssociationSnReplyToHlsAuthenticationMethodId = 1u;
+constexpr std::uint8_t kAssociationSnChangeHlsSecretMethodId = 2u;
+constexpr std::uint8_t kAssociationSnAddObjectMethodId = 3u;
+constexpr std::uint8_t kAssociationSnRemoveObjectMethodId = 4u;
+constexpr std::uint8_t kAssociationSnAddUserMethodId = 5u;
+constexpr std::uint8_t kAssociationSnRemoveUserMethodId = 6u;
 constexpr std::uint8_t kVersion3 = 3u;
-constexpr std::uint8_t kVersion4 = 4u;
 } // namespace
 
 const std::uint8_t CosemAssociationSnObject::MaxSupportedVersion;
@@ -8226,7 +8225,7 @@ CosemAssociationSnObject::CosemAssociationSnObject(
   : CosemAssociationSnObject(
       logicalName, objectList, accessRightsList,
       securitySetupReference, userList, currentUser,
-      mutableAccess, kVersion4)
+      mutableAccess, kVersion3)
 {
 }
 
@@ -8257,22 +8256,12 @@ CosemAssociationSnObject::CosemAssociationSnObject(
     kAssociationSnObjectListAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kAssociationSnAccessRightsListAttributeId, mutableAccess);
-  if (descriptor_.key.version >= kVersion2) {
-    rights_.SetAttributeAccess(
-      kAssociationSnSecuritySetupReferenceAttributeId, mutableAccess);
-  }
-  if (descriptor_.key.version >= kVersion3) {
-    rights_.SetAttributeAccess(
-      kAssociationSnUserListAttributeId, mutableAccess);
-    rights_.SetAttributeAccess(
-      kAssociationSnCurrentUserAttributeId, mutableAccess);
-  } else {
-    userList_.clear();
-    currentUser_.clear();
-  }
-  if (descriptor_.key.version < kVersion2) {
-    securitySetupReference_.clear();
-  }
+  rights_.SetAttributeAccess(
+    kAssociationSnSecuritySetupReferenceAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAssociationSnUserListAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kAssociationSnCurrentUserAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemAssociationSnObject::Descriptor() const
@@ -8300,24 +8289,12 @@ CosemStatus CosemAssociationSnObject::ReadAttribute(
       output = accessRightsList_;
       return CosemStatus::Ok;
     case kAssociationSnSecuritySetupReferenceAttributeId:
-      if (descriptor_.key.version < kVersion2) {
-        output.clear();
-        return CosemStatus::AttributeNotFound;
-      }
       output = securitySetupReference_;
       return CosemStatus::Ok;
     case kAssociationSnUserListAttributeId:
-      if (descriptor_.key.version < kVersion3) {
-        output.clear();
-        return CosemStatus::AttributeNotFound;
-      }
       output = userList_;
       return CosemStatus::Ok;
     case kAssociationSnCurrentUserAttributeId:
-      if (descriptor_.key.version < kVersion3) {
-        output.clear();
-        return CosemStatus::AttributeNotFound;
-      }
       output = currentUser_;
       return CosemStatus::Ok;
     default:
@@ -8342,22 +8319,16 @@ CosemStatus CosemAssociationSnObject::WriteAttribute(
       accessRightsList_ = input;
       return CosemStatus::Ok;
     case kAssociationSnSecuritySetupReferenceAttributeId:
-      if (descriptor_.key.version < kVersion2)
-        return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       securitySetupReference_ = input;
       return CosemStatus::Ok;
     case kAssociationSnUserListAttributeId:
-      if (descriptor_.key.version < kVersion3)
-        return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       userList_ = input;
       return CosemStatus::Ok;
     case kAssociationSnCurrentUserAttributeId:
-      if (descriptor_.key.version < kVersion3)
-        return CosemStatus::AttributeNotFound;
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       currentUser_ = input;
@@ -8376,21 +8347,16 @@ CosemStatus CosemAssociationSnObject::InvokeMethod(
 {
   (void)input;
   output.clear();
-  if (methodId == kAssociationSnReadByLogicalNameMethodId ||
-      methodId == kAssociationSnChangeSecretMethodId ||
-      methodId == kAssociationSnReplyToHlsAuthenticationMethodId) {
-    // IEC 62056-6-2 ED4 4.4.3 / Blue Book 5.4 define methods
-    // read_by_logicalname (3), change_secret (5) and
-    // reply_to_HLS_authentication (8) on every Association SN
-    // version. The built-in object does not execute SN-mode
-    // authentication or secret rotation; backend handles them
-    // out-of-band and republishes the stored buffers.
-    return CosemStatus::UnsupportedFeature;
-  }
-  if (descriptor_.key.version >= kVersion3 &&
-      (methodId == kAssociationSnAddUserMethodId ||
-       methodId == kAssociationSnRemoveUserMethodId)) {
-    // add_user (9) and remove_user (10) appear in v3 and later.
+  if (methodId == kAssociationSnReplyToHlsAuthenticationMethodId ||
+      methodId == kAssociationSnChangeHlsSecretMethodId ||
+      methodId == kAssociationSnAddObjectMethodId ||
+      methodId == kAssociationSnRemoveObjectMethodId ||
+      methodId == kAssociationSnAddUserMethodId ||
+      methodId == kAssociationSnRemoveUserMethodId) {
+    // Association SN HLS authentication, HLS secret rotation and
+    // object/user list mutations are not exposed by the built-in
+    // object; backend is expected to perform those operations
+    // out-of-band and republish the stored buffers.
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;
@@ -8536,15 +8502,10 @@ CosemMBusClientObject::CosemMBusClientObject(
     kMBusClientStatusAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kMBusClientAlarmAttributeId, mutableAccess);
-  // Attributes 13 (configuration) and 14 (encryption_key_status) are
-  // only defined for class_id = 72, version = 1 per IEC 62056-6-2:2021
-  // 4.8.3. Version 0 (Blue Book 12.1 5.7.1) stops at attribute 12.
-  if (descriptor_.key.version >= 1u) {
-    rights_.SetAttributeAccess(
-      kMBusClientConfigurationAttributeId, mutableAccess);
-    rights_.SetAttributeAccess(
-      kMBusClientEncryptionKeyStatusAttributeId, mutableAccess);
-  }
+  rights_.SetAttributeAccess(
+    kMBusClientConfigurationAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kMBusClientEncryptionKeyStatusAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemMBusClientObject::Descriptor() const
@@ -8599,17 +8560,9 @@ CosemStatus CosemMBusClientObject::ReadAttribute(
       output = alarm_;
       return CosemStatus::Ok;
     case kMBusClientConfigurationAttributeId:
-      if (descriptor_.key.version < 1u) {
-        output.clear();
-        return CosemStatus::AttributeNotFound;
-      }
       output = configuration_;
       return CosemStatus::Ok;
     case kMBusClientEncryptionKeyStatusAttributeId:
-      if (descriptor_.key.version < 1u) {
-        output.clear();
-        return CosemStatus::AttributeNotFound;
-      }
       output = encryptionKeyStatus_;
       return CosemStatus::Ok;
     default:
@@ -8658,15 +8611,9 @@ CosemStatus CosemMBusClientObject::WriteAttribute(
       target = &alarm_;
       break;
     case kMBusClientConfigurationAttributeId:
-      if (descriptor_.key.version < 1u) {
-        return CosemStatus::AttributeNotFound;
-      }
       target = &configuration_;
       break;
     case kMBusClientEncryptionKeyStatusAttributeId:
-      if (descriptor_.key.version < 1u) {
-        return CosemStatus::AttributeNotFound;
-      }
       target = &encryptionKeyStatus_;
       break;
     case kLogicalNameAttributeId:
@@ -10698,21 +10645,6 @@ CosemClockBase CosemClockObject::ClockBase() const
 
 const std::uint8_t CosemProfileGenericObject::MaxSupportedVersion;
 
-namespace {
-
-CosemCaptureObject MakeEmptyProfileGenericSortObject()
-{
-  CosemCaptureObject empty;
-  empty.object.classId = 0u;
-  empty.object.version = 0u;
-  empty.object.logicalName = CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
-  empty.attributeId = 0u;
-  empty.dataIndex = 0u;
-  return empty;
-}
-
-}  // namespace
-
 CosemProfileGenericObject::CosemProfileGenericObject(
   const CosemLogicalName& logicalName,
   const std::vector<CosemByteBuffer>& bufferRows,
@@ -10725,8 +10657,6 @@ CosemProfileGenericObject::CosemProfileGenericObject(
       captureObjects,
       capturePeriod,
       profileEntries,
-      CosemProfileGenericSortMethod::Fifo,
-      MakeEmptyProfileGenericSortObject(),
       kProfileGenericVersion)
 {
 }
@@ -10737,47 +10667,6 @@ CosemProfileGenericObject::CosemProfileGenericObject(
   const std::vector<CosemCaptureObject>& captureObjects,
   std::uint32_t capturePeriod,
   std::uint32_t profileEntries,
-  CosemProfileGenericSortMethod sortMethod,
-  const CosemCaptureObject& sortObject)
-  : CosemProfileGenericObject(
-      logicalName,
-      bufferRows,
-      captureObjects,
-      capturePeriod,
-      profileEntries,
-      sortMethod,
-      sortObject,
-      kProfileGenericVersion)
-{
-}
-
-CosemProfileGenericObject::CosemProfileGenericObject(
-  const CosemLogicalName& logicalName,
-  const std::vector<CosemByteBuffer>& bufferRows,
-  const std::vector<CosemCaptureObject>& captureObjects,
-  std::uint32_t capturePeriod,
-  std::uint32_t profileEntries,
-  std::uint8_t version)
-  : CosemProfileGenericObject(
-      logicalName,
-      bufferRows,
-      captureObjects,
-      capturePeriod,
-      profileEntries,
-      CosemProfileGenericSortMethod::Fifo,
-      MakeEmptyProfileGenericSortObject(),
-      version)
-{
-}
-
-CosemProfileGenericObject::CosemProfileGenericObject(
-  const CosemLogicalName& logicalName,
-  const std::vector<CosemByteBuffer>& bufferRows,
-  const std::vector<CosemCaptureObject>& captureObjects,
-  std::uint32_t capturePeriod,
-  std::uint32_t profileEntries,
-  CosemProfileGenericSortMethod sortMethod,
-  const CosemCaptureObject& sortObject,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
       kProfileGenericClassId,
@@ -10787,8 +10676,6 @@ CosemProfileGenericObject::CosemProfileGenericObject(
   , captureObjects_(captureObjects)
   , capturePeriod_(capturePeriod)
   , profileEntries_(profileEntries)
-  , sortMethod_(sortMethod)
-  , sortObject_(sortObject)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
@@ -10816,12 +10703,14 @@ CosemProfileGenericObject::CosemProfileGenericObject(
     AttributeAccessMode::ReadOnly);
   rights_.SetMethodAccess(kProfileResetMethodId, MethodAccessMode::Access);
   rights_.SetMethodAccess(kProfileCaptureMethodId, MethodAccessMode::Access);
-  rights_.SetMethodAccess(
-    kProfileGetBufferByRangeMethodId,
-    MethodAccessMode::Access);
-  rights_.SetMethodAccess(
-    kProfileGetBufferByIndexMethodId,
-    MethodAccessMode::Access);
+  if (descriptor_.key.version == 0u) {
+    rights_.SetMethodAccess(
+      kProfileGetBufferByRangeMethodId,
+      MethodAccessMode::Access);
+    rights_.SetMethodAccess(
+      kProfileGetBufferByIndexMethodId,
+      MethodAccessMode::Access);
+  }
 }
 
 CosemObjectDescriptor CosemProfileGenericObject::Descriptor() const
@@ -10857,11 +10746,24 @@ CosemStatus CosemProfileGenericObject::ReadAttribute(
   }
   if (attributeId == kProfileSortMethodAttributeId) {
     output.clear();
-    AppendEnum(output, static_cast<std::uint8_t>(sortMethod_));
+    AppendEnum(
+      output,
+      static_cast<std::uint8_t>(CosemProfileGenericSortMethod::Fifo));
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileSortObjectAttributeId) {
-    output = EncodeProfileGenericCaptureObject(sortObject_);
+    output.clear();
+    if (captureObjects_.empty()) {
+      CosemCaptureObject empty;
+      empty.object.classId = 0u;
+      empty.object.version = 0u;
+      empty.object.logicalName = CosemLogicalName(0u, 0u, 0u, 0u, 0u, 0u);
+      empty.attributeId = 0u;
+      empty.dataIndex = 0u;
+      output = EncodeProfileGenericCaptureObject(empty);
+    } else {
+      output = EncodeProfileGenericCaptureObject(captureObjects_[0]);
+    }
     return CosemStatus::Ok;
   }
   if (attributeId == kProfileEntriesInUseAttributeId) {
@@ -10901,9 +10803,12 @@ CosemStatus CosemProfileGenericObject::InvokeMethod(
   (void)input;
   output.clear();
   if (methodId == kProfileResetMethodId ||
-      methodId == kProfileCaptureMethodId ||
-      methodId == kProfileGetBufferByRangeMethodId ||
-      methodId == kProfileGetBufferByIndexMethodId) {
+      methodId == kProfileCaptureMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
+  if (descriptor_.key.version == 0u &&
+      methodId >= kProfileGetBufferByRangeMethodId &&
+      methodId <= kProfileGetBufferByIndexMethodId) {
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;
@@ -10919,16 +10824,6 @@ const std::vector<CosemCaptureObject>&
 CosemProfileGenericObject::CaptureObjects() const
 {
   return captureObjects_;
-}
-
-CosemProfileGenericSortMethod CosemProfileGenericObject::SortMethod() const
-{
-  return sortMethod_;
-}
-
-const CosemCaptureObject& CosemProfileGenericObject::SortObject() const
-{
-  return sortObject_;
 }
 
 const std::uint8_t CosemAssociationLnObject::MaxSupportedVersion;
@@ -11044,7 +10939,7 @@ CosemAssociationLnObject::CosemAssociationLnObject(
       kAssociationSecuritySetupReferenceAttributeId,
       AttributeAccessMode::ReadOnly);
   }
-  if (descriptor_.key.version >= 3u) {
+  if (descriptor_.key.version >= 2u) {
     rights_.SetAttributeAccess(
       kAssociationUserListAttributeId,
       AttributeAccessMode::ReadOnly);
@@ -11062,7 +10957,7 @@ CosemAssociationLnObject::CosemAssociationLnObject(
     hasSecuritySetupReference_ = false;
     securitySetupReference_ = CosemLogicalName();
   }
-  if (descriptor_.key.version < 3u) {
+  if (descriptor_.key.version < 2u) {
     users_.clear();
     currentUser_ = DefaultAssociationUser();
   }
@@ -11102,13 +10997,13 @@ CosemStatus CosemAssociationLnObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kAssociationUserListAttributeId &&
-      descriptor_.key.version >= 3u) {
+      descriptor_.key.version >= 2u) {
     output.clear();
     AppendAssociationUserList(output, users_);
     return CosemStatus::Ok;
   }
   if (attributeId == kAssociationCurrentUserAttributeId &&
-      descriptor_.key.version >= 3u) {
+      descriptor_.key.version >= 2u) {
     output.clear();
     AppendAssociationUser(output, currentUser_);
     return CosemStatus::Ok;
@@ -11137,7 +11032,7 @@ CosemStatus CosemAssociationLnObject::InvokeMethod(
       methodId <= kAssociationRemoveObjectMethodId) {
     return CosemStatus::UnsupportedFeature;
   }
-  if (descriptor_.key.version >= 3u &&
+  if (descriptor_.key.version >= 2u &&
       methodId >= kAssociationAddUserMethodId &&
       methodId <= kAssociationRemoveUserMethodId) {
     return CosemStatus::UnsupportedFeature;
@@ -11246,15 +11141,9 @@ CosemStatus CosemSapAssignmentObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
+  (void)methodId;
   (void)input;
   output.clear();
-  if (methodId == kSapAssignmentConnectLogicalDeviceMethodId) {
-    // method 1 (connect_logical_device) attaches or detaches a logical
-    // device to/from a SAP. The built-in object does not own that
-    // dispatch policy and surfaces the spec method explicitly as
-    // UnsupportedFeature instead of silently returning MethodNotFound.
-    return CosemStatus::UnsupportedFeature;
-  }
   return CosemStatus::MethodNotFound;
 }
 

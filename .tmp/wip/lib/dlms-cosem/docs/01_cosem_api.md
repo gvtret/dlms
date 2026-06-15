@@ -494,10 +494,10 @@ explicit version that is normalized to `MaxSupportedVersion` when out
 of range. Attribute `1` (logical_name) is read-only; attribute `2`
 (entries) honors the caller access mode and replaces the stored buffer
 in-place when writable. A setter exposes backend-driven refresh of
-entries regardless of access mode. Methods `1` `enable_disable`, `2`
-`insert` and `3` `delete` dispatch application-defined schedule-entry
-mutation and are surfaced as `UnsupportedFeature`; other method ids
-report `MethodNotFound`.
+entries regardless of access mode. Methods `1` `insert` and `2`
+`delete` dispatch application-defined schedule-entry mutation and are
+surfaced as `UnsupportedFeature`; other method ids report
+`MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial Special Days Table IC `11`
 (`CosemSpecialDaysTableObject`) with class version `0`. The
@@ -593,11 +593,10 @@ attributes (`2`-`10`), and an optional explicit version that is
 normalized to `MaxSupportedVersion` when out of range. Attribute `1`
 (logical_name) is read-only; the mutable attributes honor the caller
 access mode and replace the stored buffer in-place when writable.
-Methods `1` `add_mc_IP_address`, `2` `delete_mc_IP_address` and
-`3` `get_nbof_mc_IP_addresses` return `UnsupportedFeature` and clear
-method output (the built-in object does not own multicast subscription
-policy and does not expose the runtime multicast_IP_address array
-size); other method ids return `MethodNotFound`.
+Methods `1` `add_mc_IP_address` and `2` `delete_mc_IP_address`
+return `UnsupportedFeature` and clear method output (built-in object
+does not own multicast subscription policy); other method ids return
+`MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial MAC Address Setup IC
 `43` (`CosemMacAddressSetupObject`) with class version `0`. The
@@ -654,13 +653,9 @@ range. Attribute `1` (logical_name) is read-only; the mutable
 attributes honor the caller access mode and replace the stored
 buffer in-place when writable, so the backend can publish refreshed
 diagnostic snapshots over the wire when read-write is granted.
-IEC 62056-6-2 ED4 (2021) §5.6.8 and DLMS UA Blue Book Ed. 12.1
-§5.6.8 define class_id `47`, version `0` with **no** specific
-methods (the "Specific methods | m/o" column is empty in both
-editions). `InvokeMethod` therefore returns `MethodNotFound` for
-every method id and clears method output. Earlier revisions of
-this implementation surfaced a phantom `reset` method (id `1`)
-that the spec never defines; it has been removed.
+Method `1` `reset` returns `UnsupportedFeature` and clears method
+output (the built-in object does not own modem reset semantics);
+other method ids return `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial IEC twisted pair (1)
 Setup IC `24` (`CosemIecTwistedPairSetupObject`) with class version
@@ -856,50 +851,46 @@ IC `19` (`CosemIecLocalPortSetupObject`) with class version `1`.
 The constructors take the `default_mode` (enum), `default_baud`
 (enum), `proposed_baud` (enum), `response_time` (enum),
 `device_address` (octet-string with the device-address logical
-name) and `password_1` / `password_2` / `password_5` (octet-strings
-carrying the level-1, level-2 and level-5 passwords) payloads as
-encoded DLMS Data buffers prepared by the caller, the logical
-name, a caller-selected `AttributeAccessMode` shared by the
-mutable attributes (`2`-`9`), and an optional explicit version
-that is normalized to `MaxSupportedVersion` when out of range.
-Attribute `1` (logical_name) is read-only; the mutable attributes
-honor the caller access mode and replace the stored buffer
-in-place when writable, so the backend can republish refreshed
-mode, baud, response time, device address and passwords after
-configuration changes out-of-band. IC defines no methods;
-`InvokeMethod` reports `MethodNotFound` for all method ids and
-clears method output.
+name), `password_1` / `password_2` / `password_5` (octet-strings
+carrying the level-1, level-2 and level-5 passwords) and
+`port_speed` (enum, v1 only) payloads as encoded DLMS Data
+buffers prepared by the caller, the logical name, a
+caller-selected `AttributeAccessMode` shared by the mutable
+attributes (`2`-`10`), and an optional explicit version that is
+normalized to `MaxSupportedVersion` when out of range. Attribute
+`1` (logical_name) is read-only; the mutable attributes honor the
+caller access mode and replace the stored buffer in-place when
+writable, so the backend can republish refreshed mode, baud,
+response time, device address and passwords after configuration
+changes out-of-band. IC defines no methods; `InvokeMethod`
+reports `MethodNotFound` for all method ids and clears method
+output.
 
 `simple_objects.hpp` also exposes a partial Association SN IC
-`12` (`CosemAssociationSnObject`) with class version `4`. The
+`12` (`CosemAssociationSnObject`) with class version `3`. The
 constructors take the `object_list` (array of structure
 {`base_name`: long-int, `class_id`: long-unsigned, `version`:
 unsigned, `logical_name`: octet-string(6), `access_rights`:
 structure}), `access_rights_list` (array of structure),
-`security_setup_reference` (octet-string(6) LN to Security Setup,
-v2+), `user_list` (array of structure {`user_id`: unsigned,
-`user_name`: visible-string}, v3+) and `current_user` (structure
-{`user_id`: unsigned, `user_name`: visible-string}, v3+) payloads
-as encoded DLMS Data buffers prepared by the caller, the logical
+`security_setup_reference` (octet-string(6) LN to Security Setup),
+`user_list` (array of structure {`user_id`: unsigned,
+`user_name`: visible-string}) and `current_user` (structure
+{`user_id`: unsigned, `user_name`: visible-string}) payloads as
+encoded DLMS Data buffers prepared by the caller, the logical
 name, a caller-selected `AttributeAccessMode` shared by the
-mutable attributes (`2`-`3` always, `4` when v>=2, `5`-`6` when
-v>=3), and an optional explicit version that is normalized to
-`MaxSupportedVersion` when out of range. Constructing with a
-lower version clears caller-supplied buffers for attributes that
-do not exist in that version, reports `NoAccess` for them in the
-access-rights list and returns `AttributeNotFound` on reads or
-writes. Attribute `1` (logical_name) is read-only; the mutable
-attributes honor the caller access mode and replace the stored
-buffer in-place when writable, so the backend can republish
-refreshed object list, access rights list, security setup
-reference and user lists after HLS authentication, secret
-rotation or list mutations performed out-of-band. Specific
-methods `3` `read_by_logicalname`, `5` `change_secret` and `8`
-`reply_to_HLS_authentication` return `UnsupportedFeature` on
-every version; `9` `add_user` and `10` `remove_user` return
-`UnsupportedFeature` when v>=3 and `MethodNotFound` otherwise.
-Method ids `1`, `2`, `4`, `6`, `7` and `11+` are reserved or not
-defined and return `MethodNotFound`.
+mutable attributes (`2`-`6`), and an optional explicit version
+that is normalized to `MaxSupportedVersion` when out of range.
+Attribute `1` (logical_name) is read-only; the mutable attributes
+honor the caller access mode and replace the stored buffer
+in-place when writable, so the backend can republish refreshed
+object list, access rights list, security setup reference and
+user lists after HLS authentication, HLS secret rotation or list
+mutations performed out-of-band. Methods `1`
+`reply_to_HLS_authentication`, `2` `change_HLS_secret`, `3`
+`add_object`, `4` `remove_object`, `5` `add_user` and `6`
+`remove_user` return `UnsupportedFeature` and clear method output
+(the built-in object does not perform authentication or list
+mutations); other method ids return `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial M-Bus Client IC `72`
 (`CosemMBusClientObject`) with class version `1`. The constructors
@@ -921,14 +912,7 @@ normalized to `MaxSupportedVersion` when out of range. Attribute
 caller access mode and replace the stored buffer in-place when
 writable, so the backend can republish refreshed identification,
 status, alarm, configuration and key-status payloads after driving
-the M-Bus slave out-of-band. Attributes `13` (configuration) and
-`14` (encryption_key_status) are defined only for class version
-`1` (IEC 62056-6-2:2021 4.8.3); when an explicit version `0` is
-requested (Blue Book 12.1 5.7.1), the object reports `NoAccess`
-for these ids in its `CosemAccessRights`, returns
-`AttributeNotFound` for `ReadAttribute`/`WriteAttribute` against
-them, and the underlying buffers are simply ignored. Methods `1`
-`slave_install`,
+the M-Bus slave out-of-band. Methods `1` `slave_install`,
 `2` `slave_deinstall`, `3` `capture`, `4` `reset_alarm`,
 `5` `synchronise_clock`, `6` `send_data`,
 `7` `set_encryption_key` and `8` `transfer_key` return
@@ -1136,23 +1120,6 @@ public:
     const std::vector<CosemCaptureObject>& captureObjects,
     std::uint32_t capturePeriod,
     std::uint32_t profileEntries,
-    CosemProfileGenericSortMethod sortMethod,
-    const CosemCaptureObject& sortObject);
-  CosemProfileGenericObject(
-    const CosemLogicalName& logicalName,
-    const std::vector<CosemByteBuffer>& bufferRows,
-    const std::vector<CosemCaptureObject>& captureObjects,
-    std::uint32_t capturePeriod,
-    std::uint32_t profileEntries,
-    std::uint8_t version);
-  CosemProfileGenericObject(
-    const CosemLogicalName& logicalName,
-    const std::vector<CosemByteBuffer>& bufferRows,
-    const std::vector<CosemCaptureObject>& captureObjects,
-    std::uint32_t capturePeriod,
-    std::uint32_t profileEntries,
-    CosemProfileGenericSortMethod sortMethod,
-    const CosemCaptureObject& sortObject,
     std::uint8_t version);
 };
 
@@ -1206,18 +1173,10 @@ The decoder validates the allowed simple data tags, including `date-time`,
 
 Profile Generic descriptors use class version `1` by default. The explicit
 version constructor can publish version `0` when required by a specific meter
-model; values above `MaxSupportedVersion` are normalized. Both v0 and v1
-expose the full method set defined by IEC 62056-6-2 ED4 §4.3.6 / §5.2.1:
-`reset` (1), `capture` (2), `get_buffer_by_range` (3), and
-`get_buffer_by_index` (4). All four are advertised in access rights and
-currently return `UnsupportedFeature` until a capture and journal execution
-policy is added.
-
-`sort_method` (attr 5) and `sort_object` (attr 6) are explicit static
-properties of the IC. The basic constructors default to `Fifo` with an empty
-`ObjectDefinition` (`class_id = 0`, zeroed logical name, `attribute_index = 0`,
-`data_index = 0`); the `CosemProfileGenericSortMethod` / `CosemCaptureObject`
-overloads let callers publish a fully configured sorted profile.
+model; values above `MaxSupportedVersion` are normalized. Version `0` exposes
+legacy methods `3` and `4`, `get_buffer_by_range` and `get_buffer_by_index`,
+as `UnsupportedFeature`. Version `1` keeps those method ids unavailable because
+the same behavior is represented by selective access.
 
 The same header also adds minimal discovery objects:
 
@@ -1286,15 +1245,12 @@ Association LN supports caller-selected class versions up to
 `CosemAssociationLnObject::MaxSupportedVersion`, currently `3`. Attribute and
 method access rights are derived from the selected version: version `0`
 exposes attributes `1`, `2`, `8` and methods `1`-`4`; version `1+` may expose
-attribute `9`, `security_setup_reference`, when configured; version `3+`
+attribute `9`, `security_setup_reference`, when configured; version `2+`
 exposes attributes `10`, `11` and methods `5`, `6` for user-list handling.
 Unimplemented Association LN methods return `UnsupportedFeature`.
 
 SAP Assignment uses class version `0`; its explicit version constructor
-normalizes values above `MaxSupportedVersion`. Method `1`
-`connect_logical_device` (IEC 62056-6-2 ED4 §4.4.4) dispatches
-application-defined SAP/LD attachment policy and is surfaced as
-`UnsupportedFeature`; other method ids report `MethodNotFound`.
+normalizes values above `MaxSupportedVersion`.
 
 Security setup is exposed by `CosemSecuritySetupObject`:
 

@@ -1,0 +1,48 @@
+fix(cosem)!: align profile generic methods and sort surface with ED4
+
+IEC 62056-6-2 ED4 (2021) §4.3.6 / §5.2.1 and DLMS UA Blue Book Ed. 12.1
+§5.2.1 define the same method table for Profile Generic (class_id = 7)
+in both version 0 (legacy) and version 1 (current): reset (1),
+capture (2), get_buffer_by_range (3), and get_buffer_by_index (4). The
+previous CosemProfileGenericObject implementation only exposed methods
+3 and 4 when the descriptor version was 0 - which is the opposite of
+what the standard says and also wrong on its face because the standard
+does not gate any of these methods by version. v1 instances (the
+default) silently returned MethodNotFound for both selective-buffer
+methods, and access rights advertised them as NoAccess.
+
+Both versions now advertise all four method ids as Access in the
+access-rights list and return UnsupportedFeature until the capture and
+journal execution policy is added. The four ids are gated as a single
+contiguous range in InvokeMethod, and any id outside [1, 4] keeps
+returning MethodNotFound.
+
+Promoted sort_method (attribute 5) and sort_object (attribute 6) to
+explicit static properties. The previous implementation hardcoded
+attribute 5 to fifo and derived attribute 6 from the first capture
+object, which is incorrect: the standard treats them as independently
+configurable static attributes of the profile. New constructor
+overloads accept a CosemProfileGenericSortMethod and a
+CosemCaptureObject (with or without an explicit version), and new
+SortMethod() / SortObject() getters expose the published values. The
+basic constructor preserves the old default of fifo with an empty
+ObjectDefinition (class_id = 0, zeroed logical name, attribute_index
+= 0, data_index = 0).
+
+Added two regression tests
+(HonorsConfigurableSortMethodAndSortObject,
+DefaultSortMethodIsFifoWithEmptySortObject), extended
+RejectsWritesAndReportsUnsupportedMethods to assert all four method
+ids report Access / UnsupportedFeature, and rewrote
+AcceptsExplicitVersion so it exercises the corrected v0 and v1 method
+tables instead of the inverted gating. Updated the existing
+ExposesReadOnlyProfileAttributes test to assert the empty default
+sort_object encoding instead of the captureObjects_[0] derivation.
+
+BREAKING CHANGE: callers that constructed CosemProfileGenericObject
+and relied on attribute 6 returning the first capture object must now
+pass the desired sort object through the new constructor overload,
+and v1 callers relying on InvokeMethod(3|4) returning MethodNotFound
+will now observe UnsupportedFeature.
+
+Refs: docs/ic_support_matrix.md (IC 7 row), lib/dlms-cosem/docs/01_cosem_api.md (Profile Generic section).

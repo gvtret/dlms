@@ -1,0 +1,36 @@
+fix(cosem)!: align IC 42 IPv4 Setup methods and remove phantom IC 47 GSM reset
+
+* IC 42 (CosemIpv4SetupObject): InvokeMethod now dispatches the third
+  spec method, `3` `get_nbof_mc_IP_addresses`, alongside `1`
+  `add_mc_IP_address` and `2` `delete_mc_IP_address` per IEC 62056-6-2
+  ED4 (2021) §4.9.2.3. All three return UnsupportedFeature; the
+  built-in object does not own multicast subscription policy nor
+  expose the runtime multicast_IP_address array size. Previously id
+  `3` silently returned MethodNotFound, hiding the spec method.
+
+* IC 47 (CosemGsmDiagnosticObject): removed the phantom `reset`
+  method (id `1`) that the spec never defines. IEC 62056-6-2 ED4
+  (2021) §5.6.8 and DLMS UA Blue Book Ed. 12.1 §5.6.8 define
+  class_id 47, version 0 with NO specific methods (the
+  "Specific methods | m/o" column is empty in both editions).
+  InvokeMethod now returns MethodNotFound for every method id.
+  The `kGsmDiagnosticResetMethodId` constant has been removed.
+
+* Tests: updated CosemIpv4SetupObject.MulticastMethodsReturnUnsupportedFeature
+  to assert all three spec method ids return UnsupportedFeature.
+  Renamed CosemGsmDiagnosticObject.MethodsReturnUnsupportedFeature
+  to AllMethodsReturnMethodNotFound and rewrote it to assert every
+  id (including the former `1`) returns MethodNotFound.
+
+* Docs: updated docs/ic_support_matrix.md and
+  lib/dlms-cosem/docs/01_cosem_api.md with spec citations and the
+  corrected method-surface descriptions for IC 42 and IC 47.
+
+* Verified: 275/275 COSEM gtest, 936/936 full ctest.
+* VERSION 0.74.0 -> 0.75.0; CHANGELOG entry added.
+
+BREAKING CHANGE: the public constant kGsmDiagnosticResetMethodId has
+been removed. Any caller that referenced it was relying on a
+non-spec method id and must be updated; production wire callers
+that respected the InvokeMethod status set (Ok / AccessDenied /
+UnsupportedFeature / MethodNotFound) require no changes.

@@ -459,18 +459,19 @@ HDLC `device_address`. IC defines no methods; `InvokeMethod` reports
 
 `simple_objects.hpp` also exposes a partial Register Table IC `61`
 (`CosemRegisterTableObject`) with class version `0`. The constructors
-take the `table_cell_values`, `single_buffer`,
-`table_cell_definition` and `table_entries` payloads as encoded DLMS
-Data buffers prepared by the caller, the logical name, a
-caller-selected `AttributeAccessMode` shared by the mutable attributes
-(`3`-`5`), and an optional explicit version that is normalized to
-`MaxSupportedVersion` when out of range. Attribute `1` (logical_name)
-and attribute `2` (table_cell_values) are read-only; attributes `3`-`5`
-honor the caller access mode and replace the stored buffer in-place
-when writable. A setter exposes backend-driven refresh of
-`table_cell_values` from a future register-table backend. Methods `1`
-`table_entry` and `2` `update_table_entry` dispatch application-defined
-column selection and update and are surfaced as `UnsupportedFeature`;
+take the `table_cell_values`, `table_cell_definition` and
+`scaler_unit` payloads as encoded DLMS Data buffers prepared by the
+caller, the logical name, a caller-selected `AttributeAccessMode`
+shared by the mutable attributes (`3`, `4`), and an optional explicit
+version that is normalized to `MaxSupportedVersion` when out of
+range. Attribute `1` (logical_name) and attribute `2`
+(table_cell_values) are read-only; attributes `3` (table_cell_
+definition) and `4` (scaler_unit) honor the caller access mode and
+replace the stored buffer in-place when writable. A setter exposes
+backend-driven refresh of `table_cell_values` from a future
+register-table backend. Spec-defined methods `1 reset` and
+`2 capture` drive the captured payload lifecycle and are surfaced as
+`UnsupportedFeature` because that lifecycle is owned by the backend;
 other method ids report `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial TCP-UDP Setup IC `41`

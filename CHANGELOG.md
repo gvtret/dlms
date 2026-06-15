@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.81.0 - 2026-06-17
+
+- Rebuilt the Register Table IC `61` built-in object
+  (`CosemRegisterTableObject`) to match IEC 62056-6-2 ED4 (2021)
+  §4.3.8 and DLMS UA Blue Book Ed. 12.1. The spec defines four
+  attributes (`1 logical_name`, `2 table_cell_values`,
+  `3 table_cell_definition`, `4 scaler_unit`) and two specific
+  methods (`1 reset`, `2 capture`). The previous implementation had
+  five attributes with a phantom `single_buffer` (id 3) and a
+  phantom `table_entries` (id 5), no `scaler_unit`, and surfaced
+  the methods as `table_entry` / `update_table_entry` rather than
+  the spec-defined `reset` / `capture`.
+- Replaced the four-buffer constructor pair with the spec
+  three-buffer signature `(logical_name, table_cell_values,
+  table_cell_definition, scaler_unit, access[, version])` and
+  renamed accessors accordingly
+  (`SingleBuffer/TableEntries` removed, `ScalerUnit` added).
+- `InvokeMethod` now version-gates the spec-defined methods: both
+  `1 reset` and `2 capture` return `UnsupportedFeature` because the
+  captured payload lifecycle is owned by the backend. Every other
+  method id continues to report `MethodNotFound`.
+- Updated `CosemRegisterTableObject` tests to drive the new
+  three-buffer ctor, the renamed accessors, the four-attribute
+  layout (probe `5` -> `AttributeNotFound`) and the `scaler_unit`
+  round-trip; kept the existing `MethodsReturnUnsupportedFeature`
+  test for spec methods `1` / `2`.
+- Refreshed the COSEM IC support matrix, COSEM API guide and
+  COSEM test plan to describe the four-attribute spec layout,
+  the spec-defined `reset` / `capture` methods and the dropped
+  `single_buffer` / `table_entries` fields.
+
 ## 0.80.0 - 2026-06-17
 
 - Aligned the Auto Connect IC `29` built-in object

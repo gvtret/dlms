@@ -3961,11 +3961,10 @@ void CosemIecHdlcSetupObject::SetDeviceAddress(const CosemByteBuffer& value)
 namespace {
 constexpr std::uint16_t kRegisterTableClassId = 61u;
 constexpr std::uint8_t kRegisterTableTableCellValuesAttributeId = 2u;
-constexpr std::uint8_t kRegisterTableSingleBufferAttributeId = 3u;
-constexpr std::uint8_t kRegisterTableTableCellDefinitionAttributeId = 4u;
-constexpr std::uint8_t kRegisterTableTableEntriesAttributeId = 5u;
-constexpr std::uint8_t kRegisterTableTableEntryMethodId = 1u;
-constexpr std::uint8_t kRegisterTableUpdateTableEntryMethodId = 2u;
+constexpr std::uint8_t kRegisterTableTableCellDefinitionAttributeId = 3u;
+constexpr std::uint8_t kRegisterTableScalerUnitAttributeId = 4u;
+constexpr std::uint8_t kRegisterTableResetMethodId = 1u;
+constexpr std::uint8_t kRegisterTableCaptureMethodId = 2u;
 } // namespace
 
 const std::uint8_t CosemRegisterTableObject::MaxSupportedVersion;
@@ -3973,22 +3972,20 @@ const std::uint8_t CosemRegisterTableObject::MaxSupportedVersion;
 CosemRegisterTableObject::CosemRegisterTableObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& tableCellValues,
-  const CosemByteBuffer& singleBuffer,
   const CosemByteBuffer& tableCellDefinition,
-  const CosemByteBuffer& tableEntries,
+  const CosemByteBuffer& scalerUnit,
   AttributeAccessMode mutableAccess)
   : CosemRegisterTableObject(
-      logicalName, tableCellValues, singleBuffer, tableCellDefinition,
-      tableEntries, mutableAccess, kVersion0)
+      logicalName, tableCellValues, tableCellDefinition,
+      scalerUnit, mutableAccess, kVersion0)
 {
 }
 
 CosemRegisterTableObject::CosemRegisterTableObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& tableCellValues,
-  const CosemByteBuffer& singleBuffer,
   const CosemByteBuffer& tableCellDefinition,
-  const CosemByteBuffer& tableEntries,
+  const CosemByteBuffer& scalerUnit,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -3997,23 +3994,20 @@ CosemRegisterTableObject::CosemRegisterTableObject(
         version, CosemRegisterTableObject::MaxSupportedVersion),
       logicalName))
   , tableCellValues_(tableCellValues)
-  , singleBuffer_(singleBuffer)
   , tableCellDefinition_(tableCellDefinition)
-  , tableEntries_(tableEntries)
+  , scalerUnit_(scalerUnit)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
-  // table_cell_values is the measured/computed data; treat as RO and
+  // table_cell_values is the dynamic captured payload; treat as RO and
   // let the backend refresh it via SetTableCellValues.
   rights_.SetAttributeAccess(
     kRegisterTableTableCellValuesAttributeId,
     AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
-    kRegisterTableSingleBufferAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
     kRegisterTableTableCellDefinitionAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kRegisterTableTableEntriesAttributeId, mutableAccess);
+    kRegisterTableScalerUnitAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemRegisterTableObject::Descriptor() const
@@ -4037,14 +4031,11 @@ CosemStatus CosemRegisterTableObject::ReadAttribute(
     case kRegisterTableTableCellValuesAttributeId:
       output = tableCellValues_;
       return CosemStatus::Ok;
-    case kRegisterTableSingleBufferAttributeId:
-      output = singleBuffer_;
-      return CosemStatus::Ok;
     case kRegisterTableTableCellDefinitionAttributeId:
       output = tableCellDefinition_;
       return CosemStatus::Ok;
-    case kRegisterTableTableEntriesAttributeId:
-      output = tableEntries_;
+    case kRegisterTableScalerUnitAttributeId:
+      output = scalerUnit_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -4057,20 +4048,15 @@ CosemStatus CosemRegisterTableObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kRegisterTableSingleBufferAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      singleBuffer_ = input;
-      return CosemStatus::Ok;
     case kRegisterTableTableCellDefinitionAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
       tableCellDefinition_ = input;
       return CosemStatus::Ok;
-    case kRegisterTableTableEntriesAttributeId:
+    case kRegisterTableScalerUnitAttributeId:
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      tableEntries_ = input;
+      scalerUnit_ = input;
       return CosemStatus::Ok;
     case kLogicalNameAttributeId:
     case kRegisterTableTableCellValuesAttributeId:
@@ -4088,9 +4074,10 @@ CosemStatus CosemRegisterTableObject::InvokeMethod(
   (void)input;
   output.clear();
   switch (methodId) {
-    case kRegisterTableTableEntryMethodId:
-    case kRegisterTableUpdateTableEntryMethodId:
-      // Application-defined column selection / update.
+    case kRegisterTableResetMethodId:
+    case kRegisterTableCaptureMethodId:
+      // Both methods drive the captured payload lifecycle which is
+      // owned by the backend; surface as UnsupportedFeature.
       return CosemStatus::UnsupportedFeature;
     default:
       return CosemStatus::MethodNotFound;
@@ -4102,20 +4089,15 @@ const CosemByteBuffer& CosemRegisterTableObject::TableCellValues() const
   return tableCellValues_;
 }
 
-const CosemByteBuffer& CosemRegisterTableObject::SingleBuffer() const
-{
-  return singleBuffer_;
-}
-
 const CosemByteBuffer&
 CosemRegisterTableObject::TableCellDefinition() const
 {
   return tableCellDefinition_;
 }
 
-const CosemByteBuffer& CosemRegisterTableObject::TableEntries() const
+const CosemByteBuffer& CosemRegisterTableObject::ScalerUnit() const
 {
-  return tableEntries_;
+  return scalerUnit_;
 }
 
 void CosemRegisterTableObject::SetTableCellValues(

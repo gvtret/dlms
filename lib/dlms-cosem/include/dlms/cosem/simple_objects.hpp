@@ -766,16 +766,14 @@ public:
   CosemRegisterTableObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& tableCellValues,
-    const CosemByteBuffer& singleBuffer,
     const CosemByteBuffer& tableCellDefinition,
-    const CosemByteBuffer& tableEntries,
+    const CosemByteBuffer& scalerUnit,
     AttributeAccessMode mutableAccess);
   CosemRegisterTableObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& tableCellValues,
-    const CosemByteBuffer& singleBuffer,
     const CosemByteBuffer& tableCellDefinition,
-    const CosemByteBuffer& tableEntries,
+    const CosemByteBuffer& scalerUnit,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -793,18 +791,16 @@ public:
     CosemByteBuffer& output);
 
   const CosemByteBuffer& TableCellValues() const;
-  const CosemByteBuffer& SingleBuffer() const;
   const CosemByteBuffer& TableCellDefinition() const;
-  const CosemByteBuffer& TableEntries() const;
+  const CosemByteBuffer& ScalerUnit() const;
 
   void SetTableCellValues(const CosemByteBuffer& value);
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer tableCellValues_;
-  CosemByteBuffer singleBuffer_;
   CosemByteBuffer tableCellDefinition_;
-  CosemByteBuffer tableEntries_;
+  CosemByteBuffer scalerUnit_;
   CosemAccessRights rights_;
 };
 

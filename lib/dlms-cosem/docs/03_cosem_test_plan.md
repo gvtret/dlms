@@ -335,19 +335,20 @@ IEC HDLC Setup tests:
 Register Table tests:
 
 - Register Table exposes attributes `1` logical_name, `2`
-  table_cell_values, `3` single_buffer, `4` table_cell_definition and
-  `5` table_entries as the encoded DLMS Data buffers supplied by the
-  caller, and reports `AttributeNotFound` for undefined attribute ids;
-- Register Table mutable attributes (`3`-`5`) writes succeed when the
-  caller-selected access mode permits writes and replace the stored
-  buffer in-place; writes report `AccessDenied` when the access mode is
-  read-only, leaving the stored buffers unchanged;
+  table_cell_values, `3` table_cell_definition and `4` scaler_unit
+  as the encoded DLMS Data buffers supplied by the caller, and
+  reports `AttributeNotFound` for undefined attribute ids;
+- Register Table mutable attributes (`3`, `4`) writes succeed when
+  the caller-selected access mode permits writes and replace the
+  stored buffer in-place; writes report `AccessDenied` when the
+  access mode is read-only, leaving the stored buffers unchanged;
 - Register Table rejects writes to logical_name and table_cell_values
   (`1`, `2`) with `AccessDenied`, and reports `AttributeNotFound` for
   undefined attribute ids;
-- Register Table methods `1` `table_entry` and `2` `update_table_entry`
-  report `UnsupportedFeature` and clear method output; other method ids
-  report `MethodNotFound`;
+- Register Table spec-defined methods `1 reset` and `2 capture`
+  report `UnsupportedFeature` and clear method output because the
+  captured payload lifecycle is owned by the backend; other method
+  ids report `MethodNotFound`;
 - Register Table normalizes versions above `MaxSupportedVersion`.
 
 TCP-UDP Setup tests:

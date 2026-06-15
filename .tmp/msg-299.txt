@@ -1,0 +1,68 @@
+refactor(cosem)!: rebuild IC 61 Register Table to ED4 layout
+
+IEC 62056-6-2 ED4 (2021) §4.3.8 / DLMS UA Blue Book Ed. 12.1
+define the Register Table IC (class_id 61, version 0) with
+exactly four attributes:
+
+  1. logical_name      (octet-string, static, RO)
+  2. table_cell_values (compact array / array, dynamic)
+  3. table_cell_definition (structure, static)
+  4. scaler_unit       (scaler_unit type, static)
+
+and two optional specific methods `1 reset (data)` and
+`2 capture (data)`.
+
+The previous `CosemRegisterTableObject` defined FIVE attributes
+with a phantom `single_buffer` at id 3, no `scaler_unit`, and a
+phantom `table_entries` at id 5. It also exposed the two
+methods under the non-spec names `table_entry` (1) and
+`update_table_entry` (2). The attribute layout was therefore
+wire-incompatible with conformant clients and the method names
+did not match the spec.
+
+Rebuild the IC against the spec:
+
+  * drop the `single_buffer` and `table_entries` attributes and
+    their accessors;
+  * add a new spec attribute 4 `scaler_unit` exposed as an opaque
+    encoded DLMS Data buffer prepared by the caller;
+  * replace both constructors with the spec-correct three-buffer
+    signature `(logical_name, table_cell_values,
+    table_cell_definition, scaler_unit, access[, version])`;
+  * keep attribute `2 table_cell_values` read-only (the backend
+    refreshes it via `SetTableCellValues`) and let the caller
+    pick the access mode for attributes 3 and 4;
+  * surface the spec methods `1 reset` and `2 capture` as
+    `UnsupportedFeature` (the captured payload lifecycle is
+    owned by the backend), keeping `MethodNotFound` for any
+    other method id.
+
+Rewrite the IC 61 test block (`RegisterTableBuffers`,
+`MakeSampleRegisterTable`, `MakeRegisterTableObject`,
+`ExposesAllAttributes`, `MutableAttributesHonorCallerAccessMode`,
+`MethodsReturnUnsupportedFeature`, `NormalizesVersionAboveMax`)
+to use the new three-buffer ctor, the new
+`TableCellDefinition` / `ScalerUnit` accessors, the four-
+attribute layout (probe id `5` -> `AttributeNotFound`), and a
+sample `scaler_unit` structure { scaler=0, unit=Wh }.
+
+Refresh the COSEM IC support matrix, COSEM API guide and COSEM
+test plan to describe the four-attribute spec layout and the
+spec-defined `reset` / `capture` methods.
+
+Tests: dlms_cosem_tests 276/276, full ctest 937/937.
+
+BREAKING CHANGE: `CosemRegisterTableObject` constructors now
+take `(logical_name, table_cell_values, table_cell_definition,
+scaler_unit, access[, version])` instead of the previous
+five-buffer form. Accessors `SingleBuffer()` and
+`TableEntries()` are removed; a new `ScalerUnit()` accessor is
+added. The attribute layout exposed over the wire changes
+from `{1 logical_name, 2 table_cell_values, 3 single_buffer,
+4 table_cell_definition, 5 table_entries}` to the spec-correct
+`{1 logical_name, 2 table_cell_values, 3 table_cell_definition,
+4 scaler_unit}`; reads of attribute `5` now return
+`AttributeNotFound`. `InvokeMethod(1, ...)` and
+`InvokeMethod(2, ...)` still return `UnsupportedFeature` but
+now represent the spec `reset` / `capture` methods rather than
+the non-spec `table_entry` / `update_table_entry`.

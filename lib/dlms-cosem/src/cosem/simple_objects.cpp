@@ -10253,7 +10253,7 @@ CosemPrimePlcMacNetworkStatisticsObject::HandledPromotions() const
 }
 
 namespace {
-constexpr std::uint16_t kPrimePlcApplicationIdentificationClassId = 85u;
+constexpr std::uint16_t kPrimePlcApplicationIdentificationClassId = 86u;
 constexpr std::uint8_t kPrimePlcApplicationIdentificationAppIdId = 2u;
 } // namespace
 

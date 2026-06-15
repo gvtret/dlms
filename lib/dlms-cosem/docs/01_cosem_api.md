@@ -1086,9 +1086,9 @@ out-of-band. IC v0 defines a single method (`1` `reset`);
 method output.
 
 `simple_objects.hpp` also exposes a partial PRIME PLC
-Application Identification IC `85`
+Application Identification IC `86`
 (`CosemPrimePlcApplicationIdentificationObject`) with class
-version `0`. The constructors take `application_identifier`
+version `0` per IEC 62056-6-2 ED4 (2021) §4.12.11. The constructors take `application_identifier`
 (octet-string) as an encoded DLMS Data buffer prepared by the
 caller, the logical name, a caller-selected
 `AttributeAccessMode` for the mutable attribute (`2`), and an

@@ -9941,7 +9941,7 @@ TEST(CosemPrimePlcApplicationIdentificationObject, ExposesAllAttributes)
     MakePrimePlcApplicationIdentificationObject(
       name, appId, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
-  EXPECT_EQ(85u, object.Descriptor().key.classId);
+  EXPECT_EQ(86u, object.Descriptor().key.classId);
   EXPECT_EQ(0u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemPrimePlcApplicationIdentificationObject::

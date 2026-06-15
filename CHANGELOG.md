@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.92.0 - 2026-06-17
+
+- Fixed the class_id of the PRIME NB OFDM PLC Application
+  identification built-in object
+  (`CosemPrimePlcApplicationIdentificationObject`) from `85`
+  to `86` per IEC 62056-6-2 ED4 (2021) §4.12.11 and DLMS UA
+  Blue Book Ed. 12.1. Class_id `85` is reserved by the spec
+  for the unrelated `PRIME NB OFDM PLC MAC network
+  administration data` IC (already corrected in 0.90.0).
+- Refreshed unit test, COSEM IC support matrix and COSEM
+  API guide accordingly.
+
 ## 0.91.0 - 2026-06-17
 
 - Removed the duplicate `CosemPrimePlcMacAddressSetupObject`

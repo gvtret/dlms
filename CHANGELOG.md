@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.83.0 - 2026-06-17
+
+- Rebuilt the Parameter Monitor IC `65` built-in object
+  (`CosemParameterMonitorObject`) to match the current
+  IEC 62056-6-2 ED4 (2021) §4.5.10 layout: class_id `65`,
+  version `1` with eight attributes (`1 logical_name`,
+  `2 changed_parameter`, `3 capture_time`, `4 parameter_list`,
+  `5 parameter_list_name`, `6 hash_algorithm_id`,
+  `7 parameter_value_digest`, `8 parameter_values`) and two
+  specific methods (`1 add_parameter`, `2 delete_parameter`).
+  Previously the object was pinned to legacy version `0`
+  (Blue Book Ed. 12.1 §5.4.1) with only four attributes.
+- Bumped `CosemParameterMonitorObject::MaxSupportedVersion` from
+  `0` to `1`; the short constructor now defaults to version `1`.
+  The constructor signature gained four new octet-string buffer
+  parameters for attributes `5`-`8`. Passing version `0` keeps
+  the legacy behaviour: the four extended buffers are cleared at
+  construction time and attributes `5`-`8` return
+  `AttributeNotFound` on both read and write.
+- Methods `1 add_parameter` and `2 delete_parameter` continue to
+  surface as `UnsupportedFeature` (the built-in object does not
+  manage the monitored-parameters table; backend is expected to
+  republish the buffers after evaluating parameter changes
+  out-of-band).
+- Updated unit tests to cover the new attributes, the renamed
+  methods (`add_parameter`/`delete_parameter`) and the legacy
+  version-0 fallback (`LegacyVersion0RejectsExtendedAttrs`).
+- Refreshed the COSEM IC support matrix, COSEM API guide and
+  COSEM test plan to describe the ED4 Parameter Monitor layout.
+
 ## 0.82.0 - 2026-06-17
 
 - Aligned the Compact Data IC `62` built-in object

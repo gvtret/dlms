@@ -1,0 +1,38 @@
+fix(cosem)!: rebuild IC 65 Parameter Monitor for ED4 v1 layout
+
+IEC 62056-6-2 ED4 (2021) §4.5.10 redefines the Parameter Monitor
+IC as class_id 65, version 1 with eight attributes:
+  1 logical_name, 2 changed_parameter, 3 capture_time,
+  4 parameter_list, 5 parameter_list_name,
+  6 hash_algorithm_id, 7 parameter_value_digest,
+  8 parameter_values
+and two specific methods: 1 add_parameter, 2 delete_parameter.
+
+The built-in object was still pinned to the legacy Blue Book
+Ed. 12.1 §5.4.1 version-0 layout (only four attributes).
+
+- Bump CosemParameterMonitorObject::MaxSupportedVersion 0 -> 1.
+- Short constructor now defaults to version 1 (full ED4 layout).
+- Extended constructor signature with four octet-string buffer
+  parameters for attributes 5..8.
+- When the caller asks for legacy version 0 explicitly, the
+  four extended buffers are cleared at construction time and
+  attributes 5..8 return AttributeNotFound on read and write.
+- Methods 1 add_parameter / 2 delete_parameter continue to
+  surface as UnsupportedFeature; other method ids stay
+  MethodNotFound.
+- Tests updated: ExposesAllAttributes / MutableAttributesHonorAccessMode
+  cover attrs 5..8; new LegacyVersion0RejectsExtendedAttrs guards
+  the v0 fallback.
+- Docs refreshed: IC support matrix, COSEM API guide and COSEM
+  test plan now describe the ED4 layout.
+
+Tests: dlms_cosem_tests 277/277, full ctest 938/938.
+
+BREAKING CHANGE: CosemParameterMonitorObject constructors now
+take four additional octet-string buffer parameters
+(parameter_list_name, hash_algorithm_id, parameter_value_digest,
+parameter_values) before the access-mode argument, and the
+default class version is 1 instead of 0. Callers building the
+object must add the four new buffers; clients pinned to the
+old wire version 0 must pass `0` explicitly.

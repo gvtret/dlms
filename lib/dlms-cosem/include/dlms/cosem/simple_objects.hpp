@@ -1819,19 +1819,27 @@ private:
 class CosemParameterMonitorObject : public ICosemObject
 {
 public:
-  static const std::uint8_t MaxSupportedVersion = 0u;
+  static const std::uint8_t MaxSupportedVersion = 1u;
 
   CosemParameterMonitorObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& changedParameter,
     const CosemByteBuffer& captureTime,
     const CosemByteBuffer& parameters,
+    const CosemByteBuffer& parameterListName,
+    const CosemByteBuffer& hashAlgorithmId,
+    const CosemByteBuffer& parameterValueDigest,
+    const CosemByteBuffer& parameterValues,
     AttributeAccessMode mutableAccess);
   CosemParameterMonitorObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& changedParameter,
     const CosemByteBuffer& captureTime,
     const CosemByteBuffer& parameters,
+    const CosemByteBuffer& parameterListName,
+    const CosemByteBuffer& hashAlgorithmId,
+    const CosemByteBuffer& parameterValueDigest,
+    const CosemByteBuffer& parameterValues,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1851,12 +1859,20 @@ public:
   const CosemByteBuffer& ChangedParameter() const;
   const CosemByteBuffer& CaptureTime() const;
   const CosemByteBuffer& Parameters() const;
+  const CosemByteBuffer& ParameterListName() const;
+  const CosemByteBuffer& HashAlgorithmId() const;
+  const CosemByteBuffer& ParameterValueDigest() const;
+  const CosemByteBuffer& ParameterValues() const;
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer changedParameter_;
   CosemByteBuffer captureTime_;
   CosemByteBuffer parameters_;
+  CosemByteBuffer parameterListName_;
+  CosemByteBuffer hashAlgorithmId_;
+  CosemByteBuffer parameterValueDigest_;
+  CosemByteBuffer parameterValues_;
   CosemAccessRights rights_;
 };
 

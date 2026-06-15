@@ -733,10 +733,12 @@ Status Mapping tests:
 Parameter Monitor tests:
 
 - Parameter Monitor exposes attributes `1` logical_name,
-  `2` changed_parameter, `3` capture_time and `4` parameters as the
+  `2` changed_parameter, `3` capture_time, `4` parameter_list,
+  `5` parameter_list_name, `6` hash_algorithm_id,
+  `7` parameter_value_digest and `8` parameter_values as the
   encoded DLMS Data buffers supplied by the caller, and reports
   `AttributeNotFound` for undefined attribute ids;
-- Parameter Monitor mutable attributes (`2`-`4`) writes succeed
+- Parameter Monitor mutable attributes (`2`-`8`) writes succeed
   when the caller-selected access mode permits writes and replace
   the stored buffer in-place; writes report `AccessDenied` when
   the access mode is read-only, leaving the stored buffers
@@ -744,11 +746,17 @@ Parameter Monitor tests:
 - Parameter Monitor rejects writes to logical_name (`1`) with
   `AccessDenied`, and reports `AttributeNotFound` for undefined
   attribute ids;
-- Parameter Monitor `InvokeMethod` reports `UnsupportedFeature` for
-  methods `1` `insert` and `2` `delete`, and `MethodNotFound` for
-  any other method id, always clearing method output;
+- Parameter Monitor `InvokeMethod` reports `UnsupportedFeature`
+  for methods `1` `add_parameter` and `2` `delete_parameter`, and
+  `MethodNotFound` for any other method id, always clearing
+  method output;
 - Parameter Monitor normalizes versions above
-  `MaxSupportedVersion`.
+  `MaxSupportedVersion` (which is now `1` per IEC 62056-6-2 ED4
+  (2021) §4.5.10);
+- Legacy class version `0` instances clear the parameter_list_name,
+  hash_algorithm_id, parameter_value_digest and parameter_values
+  buffers at construction time, and report `AttributeNotFound`
+  on reads and writes of attributes `5`-`8`.
 
 Compact Data tests:
 

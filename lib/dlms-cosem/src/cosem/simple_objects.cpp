@@ -7481,6 +7481,14 @@ constexpr std::uint8_t
   kParameterMonitorCaptureTimeAttributeId = 3u;
 constexpr std::uint8_t
   kParameterMonitorParametersAttributeId = 4u;
+constexpr std::uint8_t
+  kParameterMonitorParameterListNameAttributeId = 5u;
+constexpr std::uint8_t
+  kParameterMonitorHashAlgorithmIdAttributeId = 6u;
+constexpr std::uint8_t
+  kParameterMonitorParameterValueDigestAttributeId = 7u;
+constexpr std::uint8_t
+  kParameterMonitorParameterValuesAttributeId = 8u;
 constexpr std::uint8_t kParameterMonitorInsertMethodId = 1u;
 constexpr std::uint8_t kParameterMonitorDeleteMethodId = 2u;
 } // namespace
@@ -7492,10 +7500,16 @@ CosemParameterMonitorObject::CosemParameterMonitorObject(
   const CosemByteBuffer& changedParameter,
   const CosemByteBuffer& captureTime,
   const CosemByteBuffer& parameters,
+  const CosemByteBuffer& parameterListName,
+  const CosemByteBuffer& hashAlgorithmId,
+  const CosemByteBuffer& parameterValueDigest,
+  const CosemByteBuffer& parameterValues,
   AttributeAccessMode mutableAccess)
   : CosemParameterMonitorObject(
       logicalName, changedParameter, captureTime, parameters,
-      mutableAccess, kVersion0)
+      parameterListName, hashAlgorithmId, parameterValueDigest,
+      parameterValues, mutableAccess,
+      CosemParameterMonitorObject::MaxSupportedVersion)
 {
 }
 
@@ -7504,6 +7518,10 @@ CosemParameterMonitorObject::CosemParameterMonitorObject(
   const CosemByteBuffer& changedParameter,
   const CosemByteBuffer& captureTime,
   const CosemByteBuffer& parameters,
+  const CosemByteBuffer& parameterListName,
+  const CosemByteBuffer& hashAlgorithmId,
+  const CosemByteBuffer& parameterValueDigest,
+  const CosemByteBuffer& parameterValues,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -7514,6 +7532,10 @@ CosemParameterMonitorObject::CosemParameterMonitorObject(
   , changedParameter_(changedParameter)
   , captureTime_(captureTime)
   , parameters_(parameters)
+  , parameterListName_(parameterListName)
+  , hashAlgorithmId_(hashAlgorithmId)
+  , parameterValueDigest_(parameterValueDigest)
+  , parameterValues_(parameterValues)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
@@ -7523,6 +7545,25 @@ CosemParameterMonitorObject::CosemParameterMonitorObject(
     kParameterMonitorCaptureTimeAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kParameterMonitorParametersAttributeId, mutableAccess);
+  // Attributes 5..8 are only defined for class_id = 65,
+  // version = 1 per IEC 62056-6-2 ED4 (2021) §4.5.10. Legacy
+  // version 0 (Blue Book 12.1 5.4.1) stops at attribute 4.
+  if (descriptor_.key.version >= 1u) {
+    rights_.SetAttributeAccess(
+      kParameterMonitorParameterListNameAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kParameterMonitorHashAlgorithmIdAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kParameterMonitorParameterValueDigestAttributeId,
+      mutableAccess);
+    rights_.SetAttributeAccess(
+      kParameterMonitorParameterValuesAttributeId, mutableAccess);
+  } else {
+    parameterListName_.clear();
+    hashAlgorithmId_.clear();
+    parameterValueDigest_.clear();
+    parameterValues_.clear();
+  }
 }
 
 CosemObjectDescriptor CosemParameterMonitorObject::Descriptor() const
@@ -7552,6 +7593,34 @@ CosemStatus CosemParameterMonitorObject::ReadAttribute(
     case kParameterMonitorParametersAttributeId:
       output = parameters_;
       return CosemStatus::Ok;
+    case kParameterMonitorParameterListNameAttributeId:
+      if (descriptor_.key.version < 1u) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
+      output = parameterListName_;
+      return CosemStatus::Ok;
+    case kParameterMonitorHashAlgorithmIdAttributeId:
+      if (descriptor_.key.version < 1u) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
+      output = hashAlgorithmId_;
+      return CosemStatus::Ok;
+    case kParameterMonitorParameterValueDigestAttributeId:
+      if (descriptor_.key.version < 1u) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
+      output = parameterValueDigest_;
+      return CosemStatus::Ok;
+    case kParameterMonitorParameterValuesAttributeId:
+      if (descriptor_.key.version < 1u) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
+      output = parameterValues_;
+      return CosemStatus::Ok;
     default:
       output.clear();
       return CosemStatus::AttributeNotFound;
@@ -7562,27 +7631,46 @@ CosemStatus CosemParameterMonitorObject::WriteAttribute(
   std::uint8_t attributeId,
   const CosemByteBuffer& input)
 {
+  CosemByteBuffer* target = nullptr;
   switch (attributeId) {
     case kParameterMonitorChangedParameterAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      changedParameter_ = input;
-      return CosemStatus::Ok;
+      target = &changedParameter_;
+      break;
     case kParameterMonitorCaptureTimeAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      captureTime_ = input;
-      return CosemStatus::Ok;
+      target = &captureTime_;
+      break;
     case kParameterMonitorParametersAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      parameters_ = input;
-      return CosemStatus::Ok;
+      target = &parameters_;
+      break;
+    case kParameterMonitorParameterListNameAttributeId:
+      if (descriptor_.key.version < 1u)
+        return CosemStatus::AttributeNotFound;
+      target = &parameterListName_;
+      break;
+    case kParameterMonitorHashAlgorithmIdAttributeId:
+      if (descriptor_.key.version < 1u)
+        return CosemStatus::AttributeNotFound;
+      target = &hashAlgorithmId_;
+      break;
+    case kParameterMonitorParameterValueDigestAttributeId:
+      if (descriptor_.key.version < 1u)
+        return CosemStatus::AttributeNotFound;
+      target = &parameterValueDigest_;
+      break;
+    case kParameterMonitorParameterValuesAttributeId:
+      if (descriptor_.key.version < 1u)
+        return CosemStatus::AttributeNotFound;
+      target = &parameterValues_;
+      break;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
       return CosemStatus::AttributeNotFound;
   }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
 }
 
 CosemStatus CosemParameterMonitorObject::InvokeMethod(
@@ -7594,10 +7682,10 @@ CosemStatus CosemParameterMonitorObject::InvokeMethod(
   output.clear();
   if (methodId == kParameterMonitorInsertMethodId ||
       methodId == kParameterMonitorDeleteMethodId) {
-    // Parameter Monitor insert / delete are not exposed by the
-    // built-in object; backend is expected to manage the
-    // monitored-parameters table out-of-band and republish the
-    // stored buffers.
+    // Parameter Monitor add_parameter / delete_parameter are not
+    // exposed by the built-in object; backend is expected to
+    // manage the monitored-parameters table out-of-band and
+    // republish the stored buffers.
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;
@@ -7619,6 +7707,30 @@ const CosemByteBuffer&
 CosemParameterMonitorObject::Parameters() const
 {
   return parameters_;
+}
+
+const CosemByteBuffer&
+CosemParameterMonitorObject::ParameterListName() const
+{
+  return parameterListName_;
+}
+
+const CosemByteBuffer&
+CosemParameterMonitorObject::HashAlgorithmId() const
+{
+  return hashAlgorithmId_;
+}
+
+const CosemByteBuffer&
+CosemParameterMonitorObject::ParameterValueDigest() const
+{
+  return parameterValueDigest_;
+}
+
+const CosemByteBuffer&
+CosemParameterMonitorObject::ParameterValues() const
+{
+  return parameterValues_;
 }
 
 namespace {

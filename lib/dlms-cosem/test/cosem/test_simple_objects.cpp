@@ -4771,7 +4771,12 @@ TEST(CosemScheduleObject, MethodsReturnUnsupportedFeature)
     name, entries, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x12u, 0x00u, 0x01u});
-  for (std::uint8_t method : {1u, 2u}) {
+  // IEC 62056-6-2 ED4 (2021) §4.5.3 / DLMS UA Blue Book Ed. 12.1 §5.1.7
+  // defines three specific methods for class_id=10:
+  //   1 = enable_disable
+  //   2 = insert
+  //   3 = delete
+  for (std::uint8_t method : {1u, 2u, 3u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
               object.InvokeMethod(
@@ -4779,7 +4784,7 @@ TEST(CosemScheduleObject, MethodsReturnUnsupportedFeature)
       << "method id " << static_cast<unsigned>(method);
     EXPECT_TRUE(out.empty());
   }
-  for (std::uint8_t method : {3u, 4u, 5u}) {
+  for (std::uint8_t method : {0u, 4u, 5u}) {
     dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
     EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
               object.InvokeMethod(

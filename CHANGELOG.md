@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.73.0 - 2026-06-17
+
+- Aligned the Schedule IC `10` built-in object (`CosemScheduleObject`)
+  method ids with IEC 62056-6-2 ED4 (2021) clause 4.5.3 and DLMS UA
+  Blue Book Ed. 12.1 clause 5.1.7. The spec defines three specific
+  methods (`1` `enable_disable`, `2` `insert`, `3` `delete`); the
+  implementation previously only recognised two methods and used the
+  wrong ids (`1` `insert`, `2` `delete`), so clients targeting the
+  spec id for `insert` actually triggered `enable_disable`, clients
+  targeting the spec id for `delete` triggered `insert`, and method
+  id `3` (`delete`) silently returned `MethodNotFound`. All three
+  spec ids now return `UnsupportedFeature` (the built-in object does
+  not own schedule-entry mutation policy); method id `0` and ids
+  `>= 4` continue to return `MethodNotFound`. This is a breaking
+  change for any caller that hardcoded the old (non-spec) method
+  ids; callers passing spec ids are unaffected (they now reach the
+  correct branch).
+- Updated the `CosemScheduleObject.MethodsReturnUnsupportedFeature`
+  regression test to cover the new id set (`{1, 2, 3}` ->
+  `UnsupportedFeature`, `{0, 4, 5}` -> `MethodNotFound`).
+- Updated `docs/ic_support_matrix.md` and
+  `lib/dlms-cosem/docs/01_cosem_api.md` to list the spec-aligned
+  method ids.
+- Bumped `VERSION` to `0.73.0`.
+
 ## 0.72.0 - 2026-06-16
 
 - Aligned the M-Bus Client IC `72` built-in object

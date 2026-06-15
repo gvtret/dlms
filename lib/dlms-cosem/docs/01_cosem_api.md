@@ -494,10 +494,10 @@ explicit version that is normalized to `MaxSupportedVersion` when out
 of range. Attribute `1` (logical_name) is read-only; attribute `2`
 (entries) honors the caller access mode and replaces the stored buffer
 in-place when writable. A setter exposes backend-driven refresh of
-entries regardless of access mode. Methods `1` `insert` and `2`
-`delete` dispatch application-defined schedule-entry mutation and are
-surfaced as `UnsupportedFeature`; other method ids report
-`MethodNotFound`.
+entries regardless of access mode. Methods `1` `enable_disable`, `2`
+`insert` and `3` `delete` dispatch application-defined schedule-entry
+mutation and are surfaced as `UnsupportedFeature`; other method ids
+report `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial Special Days Table IC `11`
 (`CosemSpecialDaysTableObject`) with class version `0`. The

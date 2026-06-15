@@ -4296,8 +4296,11 @@ const CosemByteBuffer& CosemTcpUdpSetupObject::InactivityTimeOut() const
 namespace {
 constexpr std::uint16_t kScheduleClassId = 10u;
 constexpr std::uint8_t kScheduleEntriesAttributeId = 2u;
-constexpr std::uint8_t kScheduleInsertMethodId = 1u;
-constexpr std::uint8_t kScheduleDeleteMethodId = 2u;
+// IEC 62056-6-2 ED4 (2021) §4.5.3 / DLMS UA Blue Book Ed. 12.1 §5.1.7:
+// class_id=10 defines three specific methods.
+constexpr std::uint8_t kScheduleEnableDisableMethodId = 1u;
+constexpr std::uint8_t kScheduleInsertMethodId = 2u;
+constexpr std::uint8_t kScheduleDeleteMethodId = 3u;
 } // namespace
 
 const std::uint8_t CosemScheduleObject::MaxSupportedVersion;
@@ -4380,9 +4383,13 @@ CosemStatus CosemScheduleObject::InvokeMethod(
   (void)input;
   output.clear();
   switch (methodId) {
+    case kScheduleEnableDisableMethodId:
     case kScheduleInsertMethodId:
     case kScheduleDeleteMethodId:
-      // Application-defined schedule entry mutation.
+      // Application-defined schedule entry mutation (enable_disable / insert /
+      // delete). The built-in object surfaces them explicitly as
+      // UnsupportedFeature pending a backend that can mutate the schedule
+      // entries table.
       return CosemStatus::UnsupportedFeature;
     default:
       return CosemStatus::MethodNotFound;

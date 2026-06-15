@@ -9491,7 +9491,7 @@ TEST(CosemPrimePlcMacFunctionalParametersObject,
     MakePrimePlcMacFunctionalParamsObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
-  EXPECT_EQ(81u, object.Descriptor().key.classId);
+  EXPECT_EQ(83u, object.Descriptor().key.classId);
   EXPECT_EQ(0u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemPrimePlcMacFunctionalParametersObject::

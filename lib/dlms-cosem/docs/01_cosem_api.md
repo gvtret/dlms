@@ -1033,9 +1033,9 @@ writable. IC v0 defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids and clears method output.
 
 `simple_objects.hpp` also exposes a partial PRIME PLC MAC
-Functional Parameters IC `81`
+Functional Parameters IC `83`
 (`CosemPrimePlcMacFunctionalParametersObject`) with class
-version `0`. The constructors take `lnid` (long-unsigned),
+version `0` per IEC 62056-6-2 ED4 (2021) §4.12.7. The constructors take `lnid` (long-unsigned),
 `lsid` (unsigned), `sid` (unsigned), `sna` (octet-string
 EUI-48), `state` (enum), `sct`, `scd` (long-unsigned) and
 `capabilities` (bit-string) as encoded DLMS Data buffers

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.88.0 - 2026-06-17
+
+- Fixed the class_id of the PRIME NB OFDM PLC MAC functional
+  parameters built-in object
+  (`CosemPrimePlcMacFunctionalParametersObject`) from `81`
+  to `83` per IEC 62056-6-2 ED4 (2021) §4.12.7 and DLMS UA
+  Blue Book Ed. 12.1. Class_id `81` is reserved by the spec
+  for the unrelated `PRIME NB OFDM PLC Physical layer
+  counters` IC.
+- The built-in still exposes only the legacy 8-attribute
+  surface (`mac_LNID`/`mac_LSID`/`mac_SID`/`mac_SNA`/
+  `mac_state`/`sct`/`scd`/`capabilities`). The spec defines
+  14 attributes; bringing the remaining ones online
+  (`mac_node_hierarchy_level`, `mac_beacon_*`,
+  `mac_capabilities` at id `14`) is queued for a follow-up
+  rebuild.
+- Refreshed unit test, COSEM IC support matrix and COSEM
+  API guide accordingly. The matrix now lists IC `81`
+  separately as `Application-provided`.
+
 ## 0.87.0 - 2026-06-17
 
 - Fixed the class_id of the PRIME NB OFDM PLC MAC setup

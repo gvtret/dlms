@@ -9660,7 +9660,7 @@ CosemPrimePlcMacSetupObject::MacMaxLnid() const
 }
 
 namespace {
-constexpr std::uint16_t kPrimePlcMacFunctionalParamsClassId = 81u;
+constexpr std::uint16_t kPrimePlcMacFunctionalParamsClassId = 83u;
 constexpr std::uint8_t kPrimePlcMacFunctionalParamsLnidId = 2u;
 constexpr std::uint8_t kPrimePlcMacFunctionalParamsLsidId = 3u;
 constexpr std::uint8_t kPrimePlcMacFunctionalParamsSidId = 4u;

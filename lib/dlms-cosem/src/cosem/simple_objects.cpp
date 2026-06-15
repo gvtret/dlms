@@ -6901,56 +6901,74 @@ const CosemByteBuffer& CosemUtilityTablesObject::Buffer() const
 
 namespace {
 constexpr std::uint16_t kSensorManagerClassId = 67u;
-constexpr std::uint8_t kSensorManagerStatusAttributeId = 2u;
-constexpr std::uint8_t kSensorManagerSerialNumberAttributeId = 3u;
-constexpr std::uint8_t kSensorManagerDeviceTypeAttributeId = 4u;
-constexpr std::uint8_t kSensorManagerManufacturerIdAttributeId = 5u;
-constexpr std::uint8_t kSensorManagerFirmwareVersionAttributeId = 6u;
+constexpr std::uint8_t kSensorManagerSerialNumberAttributeId = 2u;
 constexpr std::uint8_t
-  kSensorManagerMetrologyFirmwareVersionAttributeId = 7u;
-constexpr std::uint8_t kSensorManagerDriverAttributeId = 8u;
+  kSensorManagerMetrologicalIdentificationAttributeId = 3u;
+constexpr std::uint8_t kSensorManagerOutputTypeAttributeId = 4u;
 constexpr std::uint8_t
-  kSensorManagerCommunicationDescAttributeId = 9u;
-constexpr std::uint8_t kSensorManagerSetupDescAttributeId = 10u;
+  kSensorManagerAdjustmentMethodAttributeId = 5u;
+constexpr std::uint8_t kSensorManagerSealingMethodAttributeId = 6u;
+constexpr std::uint8_t kSensorManagerRawValueAttributeId = 7u;
+constexpr std::uint8_t kSensorManagerScalerUnitAttributeId = 8u;
+constexpr std::uint8_t kSensorManagerStatusAttributeId = 9u;
+constexpr std::uint8_t kSensorManagerCaptureTimeAttributeId = 10u;
 constexpr std::uint8_t
-  kSensorManagerMeasurementDescAttributeId = 11u;
+  kSensorManagerRawValueThresholdsAttributeId = 11u;
+constexpr std::uint8_t
+  kSensorManagerRawValueActionsAttributeId = 12u;
+constexpr std::uint8_t
+  kSensorManagerProcessedValueAttributeId = 13u;
+constexpr std::uint8_t
+  kSensorManagerProcessedValueThresholdsAttributeId = 14u;
+constexpr std::uint8_t
+  kSensorManagerProcessedValueActionsAttributeId = 15u;
+constexpr std::uint8_t kSensorManagerResetMethodId = 1u;
 } // namespace
 
 const std::uint8_t CosemSensorManagerObject::MaxSupportedVersion;
 
 CosemSensorManagerObject::CosemSensorManagerObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& status,
   const CosemByteBuffer& serialNumber,
-  const CosemByteBuffer& deviceType,
-  const CosemByteBuffer& manufacturerId,
-  const CosemByteBuffer& firmwareVersion,
-  const CosemByteBuffer& metrologyFirmwareVersion,
-  const CosemByteBuffer& driver,
-  const CosemByteBuffer& communicationDesc,
-  const CosemByteBuffer& setupDesc,
-  const CosemByteBuffer& measurementDesc,
+  const CosemByteBuffer& metrologicalIdentification,
+  const CosemByteBuffer& outputType,
+  const CosemByteBuffer& adjustmentMethod,
+  const CosemByteBuffer& sealingMethod,
+  const CosemByteBuffer& rawValue,
+  const CosemByteBuffer& scalerUnit,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& captureTime,
+  const CosemByteBuffer& rawValueThresholds,
+  const CosemByteBuffer& rawValueActions,
+  const CosemByteBuffer& processedValue,
+  const CosemByteBuffer& processedValueThresholds,
+  const CosemByteBuffer& processedValueActions,
   AttributeAccessMode mutableAccess)
   : CosemSensorManagerObject(
-      logicalName, status, serialNumber, deviceType, manufacturerId,
-      firmwareVersion, metrologyFirmwareVersion, driver,
-      communicationDesc, setupDesc, measurementDesc, mutableAccess,
-      kVersion0)
+      logicalName, serialNumber, metrologicalIdentification,
+      outputType, adjustmentMethod, sealingMethod, rawValue,
+      scalerUnit, status, captureTime, rawValueThresholds,
+      rawValueActions, processedValue, processedValueThresholds,
+      processedValueActions, mutableAccess, kVersion0)
 {
 }
 
 CosemSensorManagerObject::CosemSensorManagerObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& status,
   const CosemByteBuffer& serialNumber,
-  const CosemByteBuffer& deviceType,
-  const CosemByteBuffer& manufacturerId,
-  const CosemByteBuffer& firmwareVersion,
-  const CosemByteBuffer& metrologyFirmwareVersion,
-  const CosemByteBuffer& driver,
-  const CosemByteBuffer& communicationDesc,
-  const CosemByteBuffer& setupDesc,
-  const CosemByteBuffer& measurementDesc,
+  const CosemByteBuffer& metrologicalIdentification,
+  const CosemByteBuffer& outputType,
+  const CosemByteBuffer& adjustmentMethod,
+  const CosemByteBuffer& sealingMethod,
+  const CosemByteBuffer& rawValue,
+  const CosemByteBuffer& scalerUnit,
+  const CosemByteBuffer& status,
+  const CosemByteBuffer& captureTime,
+  const CosemByteBuffer& rawValueThresholds,
+  const CosemByteBuffer& rawValueActions,
+  const CosemByteBuffer& processedValue,
+  const CosemByteBuffer& processedValueThresholds,
+  const CosemByteBuffer& processedValueActions,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -6958,40 +6976,53 @@ CosemSensorManagerObject::CosemSensorManagerObject(
       NormalizeVersion(
         version, CosemSensorManagerObject::MaxSupportedVersion),
       logicalName))
-  , status_(status)
   , serialNumber_(serialNumber)
-  , deviceType_(deviceType)
-  , manufacturerId_(manufacturerId)
-  , firmwareVersion_(firmwareVersion)
-  , metrologyFirmwareVersion_(metrologyFirmwareVersion)
-  , driver_(driver)
-  , communicationDesc_(communicationDesc)
-  , setupDesc_(setupDesc)
-  , measurementDesc_(measurementDesc)
+  , metrologicalIdentification_(metrologicalIdentification)
+  , outputType_(outputType)
+  , adjustmentMethod_(adjustmentMethod)
+  , sealingMethod_(sealingMethod)
+  , rawValue_(rawValue)
+  , scalerUnit_(scalerUnit)
+  , status_(status)
+  , captureTime_(captureTime)
+  , rawValueThresholds_(rawValueThresholds)
+  , rawValueActions_(rawValueActions)
+  , processedValue_(processedValue)
+  , processedValueThresholds_(processedValueThresholds)
+  , processedValueActions_(processedValueActions)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
-    kSensorManagerStatusAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
     kSensorManagerSerialNumberAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kSensorManagerDeviceTypeAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kSensorManagerManufacturerIdAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kSensorManagerFirmwareVersionAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kSensorManagerMetrologyFirmwareVersionAttributeId,
+    kSensorManagerMetrologicalIdentificationAttributeId,
     mutableAccess);
   rights_.SetAttributeAccess(
-    kSensorManagerDriverAttributeId, mutableAccess);
+    kSensorManagerOutputTypeAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kSensorManagerCommunicationDescAttributeId, mutableAccess);
+    kSensorManagerAdjustmentMethodAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kSensorManagerSetupDescAttributeId, mutableAccess);
+    kSensorManagerSealingMethodAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
-    kSensorManagerMeasurementDescAttributeId, mutableAccess);
+    kSensorManagerRawValueAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerScalerUnitAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerStatusAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerCaptureTimeAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerRawValueThresholdsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerRawValueActionsAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerProcessedValueAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerProcessedValueThresholdsAttributeId,
+    mutableAccess);
+  rights_.SetAttributeAccess(
+    kSensorManagerProcessedValueActionsAttributeId, mutableAccess);
 }
 
 CosemObjectDescriptor CosemSensorManagerObject::Descriptor() const
@@ -7012,35 +7043,47 @@ CosemStatus CosemSensorManagerObject::ReadAttribute(
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case kSensorManagerStatusAttributeId:
-      output = status_;
-      return CosemStatus::Ok;
     case kSensorManagerSerialNumberAttributeId:
       output = serialNumber_;
       return CosemStatus::Ok;
-    case kSensorManagerDeviceTypeAttributeId:
-      output = deviceType_;
+    case kSensorManagerMetrologicalIdentificationAttributeId:
+      output = metrologicalIdentification_;
       return CosemStatus::Ok;
-    case kSensorManagerManufacturerIdAttributeId:
-      output = manufacturerId_;
+    case kSensorManagerOutputTypeAttributeId:
+      output = outputType_;
       return CosemStatus::Ok;
-    case kSensorManagerFirmwareVersionAttributeId:
-      output = firmwareVersion_;
+    case kSensorManagerAdjustmentMethodAttributeId:
+      output = adjustmentMethod_;
       return CosemStatus::Ok;
-    case kSensorManagerMetrologyFirmwareVersionAttributeId:
-      output = metrologyFirmwareVersion_;
+    case kSensorManagerSealingMethodAttributeId:
+      output = sealingMethod_;
       return CosemStatus::Ok;
-    case kSensorManagerDriverAttributeId:
-      output = driver_;
+    case kSensorManagerRawValueAttributeId:
+      output = rawValue_;
       return CosemStatus::Ok;
-    case kSensorManagerCommunicationDescAttributeId:
-      output = communicationDesc_;
+    case kSensorManagerScalerUnitAttributeId:
+      output = scalerUnit_;
       return CosemStatus::Ok;
-    case kSensorManagerSetupDescAttributeId:
-      output = setupDesc_;
+    case kSensorManagerStatusAttributeId:
+      output = status_;
       return CosemStatus::Ok;
-    case kSensorManagerMeasurementDescAttributeId:
-      output = measurementDesc_;
+    case kSensorManagerCaptureTimeAttributeId:
+      output = captureTime_;
+      return CosemStatus::Ok;
+    case kSensorManagerRawValueThresholdsAttributeId:
+      output = rawValueThresholds_;
+      return CosemStatus::Ok;
+    case kSensorManagerRawValueActionsAttributeId:
+      output = rawValueActions_;
+      return CosemStatus::Ok;
+    case kSensorManagerProcessedValueAttributeId:
+      output = processedValue_;
+      return CosemStatus::Ok;
+    case kSensorManagerProcessedValueThresholdsAttributeId:
+      output = processedValueThresholds_;
+      return CosemStatus::Ok;
+    case kSensorManagerProcessedValueActionsAttributeId:
+      output = processedValueActions_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -7052,62 +7095,59 @@ CosemStatus CosemSensorManagerObject::WriteAttribute(
   std::uint8_t attributeId,
   const CosemByteBuffer& input)
 {
+  CosemByteBuffer* target = nullptr;
   switch (attributeId) {
-    case kSensorManagerStatusAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      status_ = input;
-      return CosemStatus::Ok;
     case kSensorManagerSerialNumberAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      serialNumber_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerDeviceTypeAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      deviceType_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerManufacturerIdAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      manufacturerId_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerFirmwareVersionAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      firmwareVersion_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerMetrologyFirmwareVersionAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      metrologyFirmwareVersion_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerDriverAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      driver_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerCommunicationDescAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      communicationDesc_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerSetupDescAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      setupDesc_ = input;
-      return CosemStatus::Ok;
-    case kSensorManagerMeasurementDescAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      measurementDesc_ = input;
-      return CosemStatus::Ok;
+      target = &serialNumber_;
+      break;
+    case kSensorManagerMetrologicalIdentificationAttributeId:
+      target = &metrologicalIdentification_;
+      break;
+    case kSensorManagerOutputTypeAttributeId:
+      target = &outputType_;
+      break;
+    case kSensorManagerAdjustmentMethodAttributeId:
+      target = &adjustmentMethod_;
+      break;
+    case kSensorManagerSealingMethodAttributeId:
+      target = &sealingMethod_;
+      break;
+    case kSensorManagerRawValueAttributeId:
+      target = &rawValue_;
+      break;
+    case kSensorManagerScalerUnitAttributeId:
+      target = &scalerUnit_;
+      break;
+    case kSensorManagerStatusAttributeId:
+      target = &status_;
+      break;
+    case kSensorManagerCaptureTimeAttributeId:
+      target = &captureTime_;
+      break;
+    case kSensorManagerRawValueThresholdsAttributeId:
+      target = &rawValueThresholds_;
+      break;
+    case kSensorManagerRawValueActionsAttributeId:
+      target = &rawValueActions_;
+      break;
+    case kSensorManagerProcessedValueAttributeId:
+      target = &processedValue_;
+      break;
+    case kSensorManagerProcessedValueThresholdsAttributeId:
+      target = &processedValueThresholds_;
+      break;
+    case kSensorManagerProcessedValueActionsAttributeId:
+      target = &processedValueActions_;
+      break;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
       return CosemStatus::AttributeNotFound;
   }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
 }
 
 CosemStatus CosemSensorManagerObject::InvokeMethod(
@@ -7115,16 +7155,17 @@ CosemStatus CosemSensorManagerObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)methodId;
   (void)input;
   output.clear();
-  // Sensor Manager IC defines no methods.
+  if (methodId == kSensorManagerResetMethodId) {
+    // IEC 62056-6-2 ED4 (2021) defines the optional `reset(data)`
+    // method for the Sensor manager IC. The built-in object does
+    // not own the sensor lifecycle, so surface the request as
+    // UnsupportedFeature instead of silently reporting
+    // MethodNotFound.
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
-}
-
-const CosemByteBuffer& CosemSensorManagerObject::Status() const
-{
-  return status_;
 }
 
 const CosemByteBuffer& CosemSensorManagerObject::SerialNumber() const
@@ -7132,49 +7173,77 @@ const CosemByteBuffer& CosemSensorManagerObject::SerialNumber() const
   return serialNumber_;
 }
 
-const CosemByteBuffer& CosemSensorManagerObject::DeviceType() const
+const CosemByteBuffer&
+CosemSensorManagerObject::MetrologicalIdentification() const
 {
-  return deviceType_;
+  return metrologicalIdentification_;
+}
+
+const CosemByteBuffer& CosemSensorManagerObject::OutputType() const
+{
+  return outputType_;
 }
 
 const CosemByteBuffer&
-CosemSensorManagerObject::ManufacturerId() const
+CosemSensorManagerObject::AdjustmentMethod() const
 {
-  return manufacturerId_;
+  return adjustmentMethod_;
 }
 
 const CosemByteBuffer&
-CosemSensorManagerObject::FirmwareVersion() const
+CosemSensorManagerObject::SealingMethod() const
 {
-  return firmwareVersion_;
+  return sealingMethod_;
+}
+
+const CosemByteBuffer& CosemSensorManagerObject::RawValue() const
+{
+  return rawValue_;
+}
+
+const CosemByteBuffer& CosemSensorManagerObject::ScalerUnit() const
+{
+  return scalerUnit_;
+}
+
+const CosemByteBuffer& CosemSensorManagerObject::Status() const
+{
+  return status_;
+}
+
+const CosemByteBuffer& CosemSensorManagerObject::CaptureTime() const
+{
+  return captureTime_;
 }
 
 const CosemByteBuffer&
-CosemSensorManagerObject::MetrologyFirmwareVersion() const
+CosemSensorManagerObject::RawValueThresholds() const
 {
-  return metrologyFirmwareVersion_;
-}
-
-const CosemByteBuffer& CosemSensorManagerObject::Driver() const
-{
-  return driver_;
+  return rawValueThresholds_;
 }
 
 const CosemByteBuffer&
-CosemSensorManagerObject::CommunicationDesc() const
+CosemSensorManagerObject::RawValueActions() const
 {
-  return communicationDesc_;
-}
-
-const CosemByteBuffer& CosemSensorManagerObject::SetupDesc() const
-{
-  return setupDesc_;
+  return rawValueActions_;
 }
 
 const CosemByteBuffer&
-CosemSensorManagerObject::MeasurementDesc() const
+CosemSensorManagerObject::ProcessedValue() const
 {
-  return measurementDesc_;
+  return processedValue_;
+}
+
+const CosemByteBuffer&
+CosemSensorManagerObject::ProcessedValueThresholds() const
+{
+  return processedValueThresholds_;
+}
+
+const CosemByteBuffer&
+CosemSensorManagerObject::ProcessedValueActions() const
+{
+  return processedValueActions_;
 }
 
 namespace {

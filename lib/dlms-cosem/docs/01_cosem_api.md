@@ -756,23 +756,27 @@ stored buffer in-place when writable. IC defines no methods;
 clears method output.
 
 `simple_objects.hpp` also exposes a partial Sensor Manager IC `67`
-(`CosemSensorManagerObject`) with class version `0`. The
-constructors take the `status` (enum), `serial_number`
-(octet-string), `device_type` (octet-string), `manufacturer_id`
-(long-unsigned), `firmware_version` (octet-string),
-`metrology_firmware_version` (octet-string), `driver`
-(octet-string), `communication_desc`, `setup_desc` and
-`measurement_desc` (arrays of structure) payloads as encoded DLMS
-Data buffers prepared by the caller, the logical name, a
+(`CosemSensorManagerObject`) with class version `0` per IEC
+62056-6-2 ED4 (2021) §4.5.11. The constructors take the
+`serial_number` (octet-string), `metrological_identification`
+(octet-string), `output_type` (enum), `adjustment_method`
+(octet-string), `sealing_method` (enum), `raw_value` (CHOICE),
+`scaler_unit` (structure), `status` (CHOICE), `capture_time`
+(date-time octet-string(12)), `raw_value_thresholds` and
+`raw_value_actions` (arrays), `processed_value` (processed_value
+definition) and `processed_value_thresholds` and
+`processed_value_actions` (arrays) payloads as encoded DLMS Data
+buffers prepared by the caller, the logical name, a
 caller-selected `AttributeAccessMode` shared by the mutable
-attributes (`2`-`11`), and an optional explicit version that is
+attributes (`2`-`15`), and an optional explicit version that is
 normalized to `MaxSupportedVersion` when out of range. Attribute
 `1` (logical_name) is read-only; the mutable attributes honor the
 caller access mode and replace the stored buffer in-place when
-writable, so the backend can republish refreshed sensor metadata
-after polling the slave out-of-band. IC defines no methods;
-`InvokeMethod` reports `MethodNotFound` for all method ids and
-clears method output.
+writable, so the backend can republish refreshed sensor metadata,
+raw / processed values and thresholds after polling the slave
+out-of-band. Method `1` `reset(data)` returns
+`UnsupportedFeature` (the built-in object does not own the
+sensor lifecycle); other method ids return `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial Arbitrator IC `68`
 (`CosemArbitratorObject`) with class version `0`. The constructors

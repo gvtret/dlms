@@ -1659,29 +1659,37 @@ public:
 
   CosemSensorManagerObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& status,
     const CosemByteBuffer& serialNumber,
-    const CosemByteBuffer& deviceType,
-    const CosemByteBuffer& manufacturerId,
-    const CosemByteBuffer& firmwareVersion,
-    const CosemByteBuffer& metrologyFirmwareVersion,
-    const CosemByteBuffer& driver,
-    const CosemByteBuffer& communicationDesc,
-    const CosemByteBuffer& setupDesc,
-    const CosemByteBuffer& measurementDesc,
+    const CosemByteBuffer& metrologicalIdentification,
+    const CosemByteBuffer& outputType,
+    const CosemByteBuffer& adjustmentMethod,
+    const CosemByteBuffer& sealingMethod,
+    const CosemByteBuffer& rawValue,
+    const CosemByteBuffer& scalerUnit,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& captureTime,
+    const CosemByteBuffer& rawValueThresholds,
+    const CosemByteBuffer& rawValueActions,
+    const CosemByteBuffer& processedValue,
+    const CosemByteBuffer& processedValueThresholds,
+    const CosemByteBuffer& processedValueActions,
     AttributeAccessMode mutableAccess);
   CosemSensorManagerObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& status,
     const CosemByteBuffer& serialNumber,
-    const CosemByteBuffer& deviceType,
-    const CosemByteBuffer& manufacturerId,
-    const CosemByteBuffer& firmwareVersion,
-    const CosemByteBuffer& metrologyFirmwareVersion,
-    const CosemByteBuffer& driver,
-    const CosemByteBuffer& communicationDesc,
-    const CosemByteBuffer& setupDesc,
-    const CosemByteBuffer& measurementDesc,
+    const CosemByteBuffer& metrologicalIdentification,
+    const CosemByteBuffer& outputType,
+    const CosemByteBuffer& adjustmentMethod,
+    const CosemByteBuffer& sealingMethod,
+    const CosemByteBuffer& rawValue,
+    const CosemByteBuffer& scalerUnit,
+    const CosemByteBuffer& status,
+    const CosemByteBuffer& captureTime,
+    const CosemByteBuffer& rawValueThresholds,
+    const CosemByteBuffer& rawValueActions,
+    const CosemByteBuffer& processedValue,
+    const CosemByteBuffer& processedValueThresholds,
+    const CosemByteBuffer& processedValueActions,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1698,29 +1706,37 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Status() const;
   const CosemByteBuffer& SerialNumber() const;
-  const CosemByteBuffer& DeviceType() const;
-  const CosemByteBuffer& ManufacturerId() const;
-  const CosemByteBuffer& FirmwareVersion() const;
-  const CosemByteBuffer& MetrologyFirmwareVersion() const;
-  const CosemByteBuffer& Driver() const;
-  const CosemByteBuffer& CommunicationDesc() const;
-  const CosemByteBuffer& SetupDesc() const;
-  const CosemByteBuffer& MeasurementDesc() const;
+  const CosemByteBuffer& MetrologicalIdentification() const;
+  const CosemByteBuffer& OutputType() const;
+  const CosemByteBuffer& AdjustmentMethod() const;
+  const CosemByteBuffer& SealingMethod() const;
+  const CosemByteBuffer& RawValue() const;
+  const CosemByteBuffer& ScalerUnit() const;
+  const CosemByteBuffer& Status() const;
+  const CosemByteBuffer& CaptureTime() const;
+  const CosemByteBuffer& RawValueThresholds() const;
+  const CosemByteBuffer& RawValueActions() const;
+  const CosemByteBuffer& ProcessedValue() const;
+  const CosemByteBuffer& ProcessedValueThresholds() const;
+  const CosemByteBuffer& ProcessedValueActions() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer status_;
   CosemByteBuffer serialNumber_;
-  CosemByteBuffer deviceType_;
-  CosemByteBuffer manufacturerId_;
-  CosemByteBuffer firmwareVersion_;
-  CosemByteBuffer metrologyFirmwareVersion_;
-  CosemByteBuffer driver_;
-  CosemByteBuffer communicationDesc_;
-  CosemByteBuffer setupDesc_;
-  CosemByteBuffer measurementDesc_;
+  CosemByteBuffer metrologicalIdentification_;
+  CosemByteBuffer outputType_;
+  CosemByteBuffer adjustmentMethod_;
+  CosemByteBuffer sealingMethod_;
+  CosemByteBuffer rawValue_;
+  CosemByteBuffer scalerUnit_;
+  CosemByteBuffer status_;
+  CosemByteBuffer captureTime_;
+  CosemByteBuffer rawValueThresholds_;
+  CosemByteBuffer rawValueActions_;
+  CosemByteBuffer processedValue_;
+  CosemByteBuffer processedValueThresholds_;
+  CosemByteBuffer processedValueActions_;
   CosemAccessRights rights_;
 };
 

@@ -676,21 +676,25 @@ Utility Tables tests:
 
 Sensor Manager tests:
 
-- Sensor Manager exposes attributes `1` logical_name, `2` status,
-  `3` serial_number, `4` device_type, `5` manufacturer_id,
-  `6` firmware_version, `7` metrology_firmware_version, `8` driver,
-  `9` communication_desc, `10` setup_desc and `11` measurement_desc
-  as the encoded DLMS Data buffers supplied by the caller, and
-  reports `AttributeNotFound` for undefined attribute ids;
-- Sensor Manager mutable attributes (`2`-`11`) writes succeed when
+- Sensor Manager exposes attributes `1` logical_name,
+  `2` serial_number, `3` metrological_identification,
+  `4` output_type, `5` adjustment_method, `6` sealing_method,
+  `7` raw_value, `8` scaler_unit, `9` status, `10` capture_time,
+  `11` raw_value_thresholds, `12` raw_value_actions,
+  `13` processed_value, `14` processed_value_thresholds and
+  `15` processed_value_actions as the encoded DLMS Data buffers
+  supplied by the caller, and reports `AttributeNotFound` for
+  undefined attribute ids;
+- Sensor Manager mutable attributes (`2`-`15`) writes succeed when
   the caller-selected access mode permits writes and replace the
   stored buffer in-place; writes report `AccessDenied` when the
   access mode is read-only, leaving the stored buffers unchanged;
 - Sensor Manager rejects writes to logical_name (`1`) with
   `AccessDenied`, and reports `AttributeNotFound` for undefined
   attribute ids;
-- Sensor Manager `InvokeMethod` reports `MethodNotFound` for all
-  method ids and clears method output (IC defines no methods);
+- Sensor Manager `InvokeMethod` reports `UnsupportedFeature` for
+  method `1` `reset(data)` and `MethodNotFound` for any other
+  method id, always clearing method output;
 - Sensor Manager normalizes versions above `MaxSupportedVersion`.
 
 Arbitrator tests:

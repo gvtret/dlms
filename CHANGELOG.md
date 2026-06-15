@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.84.0 - 2026-06-17
+
+- Rebuilt the Sensor Manager IC `67` built-in object
+  (`CosemSensorManagerObject`) to match the current
+  IEC 62056-6-2 ED4 (2021) §4.5.11 layout: class_id `67`,
+  version `0` with fifteen attributes (`1 logical_name`,
+  `2 serial_number`, `3 metrological_identification`,
+  `4 output_type`, `5 adjustment_method`, `6 sealing_method`,
+  `7 raw_value`, `8 scaler_unit`, `9 status`, `10 capture_time`,
+  `11 raw_value_thresholds`, `12 raw_value_actions`,
+  `13 processed_value`, `14 processed_value_thresholds`,
+  `15 processed_value_actions`) and one optional specific method
+  (`1 reset(data)`). Previously the object exposed an ad-hoc
+  layout of eleven attributes with vendor-style names
+  (`status`, `serial_number`, `device_type`, `manufacturer_id`,
+  `firmware_version`, `metrology_firmware_version`, `driver`,
+  `communication_desc`, `setup_desc`, `measurement_desc`) that
+  did not match any DLMS UA Blue Book / IEC 62056-6-2 edition
+  and declared no methods.
+- Method `1` `reset(data)` is surfaced as `UnsupportedFeature`
+  (the built-in object does not own the sensor lifecycle); other
+  method ids remain `MethodNotFound`.
+- Constructor signature reworked to take the fourteen mutable
+  payload buffers in spec attribute order followed by the shared
+  `AttributeAccessMode` (and the optional version).
+- Renamed C++ accessors to follow the spec names
+  (`SerialNumber`, `MetrologicalIdentification`, `OutputType`,
+  `AdjustmentMethod`, `SealingMethod`, `RawValue`, `ScalerUnit`,
+  `Status`, `CaptureTime`, `RawValueThresholds`,
+  `RawValueActions`, `ProcessedValue`,
+  `ProcessedValueThresholds`, `ProcessedValueActions`); removed
+  the old `DeviceType`, `ManufacturerId`, `FirmwareVersion`,
+  `MetrologyFirmwareVersion`, `Driver`, `CommunicationDesc`,
+  `SetupDesc`, `MeasurementDesc` accessors.
+- Updated unit tests to cover the new fifteen-attribute layout,
+  the renamed accessors and the new
+  `ResetMethodIsUnsupportedFeature` expectation.
+- Refreshed the COSEM IC support matrix, COSEM API guide and
+  COSEM test plan to describe the ED4 Sensor Manager layout.
+
 ## 0.83.0 - 2026-06-17
 
 - Rebuilt the Parameter Monitor IC `65` built-in object

@@ -7645,7 +7645,8 @@ CosemCompactDataObject::CosemCompactDataObject(
   AttributeAccessMode mutableAccess)
   : CosemCompactDataObject(
       logicalName, buffer, captureObjects, templateId,
-      templateDescription, captureMethod, mutableAccess, kVersion0)
+      templateDescription, captureMethod, mutableAccess,
+      static_cast<std::uint8_t>(1u))
 {
 }
 

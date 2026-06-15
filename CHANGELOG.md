@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.82.0 - 2026-06-17
+
+- Aligned the Compact Data IC `62` built-in object
+  (`CosemCompactDataObject`) class version with
+  IEC 62056-6-2 ED4 (2021) §4.3.10 / DLMS UA Blue Book Ed. 12.1.
+  The Compact Data IC is defined as class_id `62`, version `1`
+  with five attributes (`1 logical_name`, `2 buffer`,
+  `3 capture_objects`, `4 template_id`, `5 template_description`,
+  `6 capture_method`) and two specific methods (`1 reset`,
+  `2 capture`). The attribute and method layout already matched
+  the spec; only `MaxSupportedVersion` was wrong (`0` instead of
+  `1`), so the descriptor advertised an obsolete legacy version.
+- Bumped `CosemCompactDataObject::MaxSupportedVersion` from `0`
+  to `1` and changed the default constructor to pass `1` so
+  freshly built objects advertise the spec version. Reads and
+  writes of attributes `2`-`6` and the `UnsupportedFeature`
+  dispatch for methods `1 reset` / `2 capture` are unchanged.
+- Updated `CosemCompactDataObject.ExposesAllAttributes` to
+  expect `Descriptor().key.version == 1`.
+- Refreshed the COSEM IC support matrix and COSEM API guide to
+  describe Compact Data as class version `1` per
+  IEC 62056-6-2 ED4 §4.3.10.
+
 ## 0.81.0 - 2026-06-17
 
 - Rebuilt the Register Table IC `61` built-in object

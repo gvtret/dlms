@@ -7869,7 +7869,7 @@ TEST(CosemCompactDataObject, ExposesAllAttributes)
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   EXPECT_EQ(62u, object.Descriptor().key.classId);
-  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(1u, object.Descriptor().key.version);
   EXPECT_EQ(
     dlms::cosem::CosemCompactDataObject::MaxSupportedVersion,
     object.Descriptor().key.version);

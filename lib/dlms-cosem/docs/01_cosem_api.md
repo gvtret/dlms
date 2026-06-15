@@ -832,7 +832,8 @@ monitored-parameters table); other method ids return
 `MethodNotFound`.
 
 `simple_objects.hpp` also exposes a partial Compact Data IC `62`
-(`CosemCompactDataObject`) with class version `0`. The
+(`CosemCompactDataObject`) with class version `1` per
+IEC 62056-6-2 ED4 (2021) §4.3.10. The
 constructors take the `buffer` (octet-string carrying the
 compact-encoded data), `capture_objects` (array of structure
 {`class_id`: long-unsigned, `logical_name`: octet-string(6),

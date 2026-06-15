@@ -10087,7 +10087,7 @@ CosemPrimePlcMacCountersObject::CsmaChBusyCount() const
 }
 
 namespace {
-constexpr std::uint16_t kPrimePlcMacNetStatsClassId = 83u;
+constexpr std::uint16_t kPrimePlcMacNetStatsClassId = 85u;
 constexpr std::uint8_t kPrimePlcMacNetStatsNodeRegistrationsId = 2u;
 constexpr std::uint8_t kPrimePlcMacNetStatsNodeUnregistrationsId =
   3u;

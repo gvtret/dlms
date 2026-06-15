@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.90.0 - 2026-06-17
+
+- Fixed the class_id of the PRIME NB OFDM PLC MAC network
+  administration data (a.k.a. network statistics) built-in
+  object (`CosemPrimePlcMacNetworkStatisticsObject`) from
+  `83` to `85` per IEC 62056-6-2 ED4 (2021) §4.12.9 and
+  DLMS UA Blue Book Ed. 12.1. Class_id `83` is reserved by
+  the spec for the unrelated `PRIME NB OFDM PLC MAC
+  functional parameters` IC (already corrected in 0.88.0).
+- Refreshed unit test, COSEM IC support matrix and COSEM
+  API guide accordingly.
+
 ## 0.89.0 - 2026-06-17
 
 - Fixed the class_id of the PRIME NB OFDM PLC MAC counters

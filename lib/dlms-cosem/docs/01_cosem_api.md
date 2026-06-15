@@ -1067,9 +1067,9 @@ method `1` and `MethodNotFound` for every other method id,
 always clearing method output.
 
 `simple_objects.hpp` also exposes a partial PRIME PLC MAC
-Network Statistics IC `83`
+Network Statistics IC `85`
 (`CosemPrimePlcMacNetworkStatisticsObject`) with class version
-`0`. The constructors take `node_registrations`,
+`0` per IEC 62056-6-2 ED4 (2021) §4.12.9. The constructors take `node_registrations`,
 `node_unregistrations`, `processed_alive_msgs` and
 `handled_promotions` (double-long-unsigned) as encoded DLMS
 Data buffers prepared by the caller, the logical name, a

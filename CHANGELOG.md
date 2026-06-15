@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.72.0 - 2026-06-16
+
+- Aligned the M-Bus Client IC `72` built-in object
+  (`CosemMBusClientObject`) with IEC 62056-6-2 ED4 (2021) clause
+  4.8.3 and DLMS UA Blue Book Ed. 12.1 clause 5.7.1. Attributes
+  `13` (`configuration`) and `14` (`encryption_key_status`) are now
+  exposed only when the requested class version is `>=1`; v0
+  instances (Blue Book table for class_id=72, version=0) report
+  `NoAccess` for these attribute ids in their `CosemAccessRights`
+  and return `AttributeNotFound` from `ReadAttribute` and
+  `WriteAttribute`, matching the spec which stops the v0 attribute
+  table at attribute `12`. Previously both attributes leaked onto
+  v0 instances and were freely readable and writable. The
+  constructor signatures, supported method ids (`1`..`8`) and
+  `MaxSupportedVersion = 1` are unchanged; the default constructors
+  continue to instantiate v1 objects.
+- Added a `CosemMBusClientObject.Version0DoesNotExposeConfigurationOrEncryptionKeyStatus`
+  regression test covering the new v0 gating (access rights,
+  reads, writes, and that attributes `1`..`12` remain available).
+- Bumped `VERSION` to `0.72.0`.
+
 ## 0.71.0 - 2026-06-15
 
 - Aligned the Profile Generic IC `7` built-in object

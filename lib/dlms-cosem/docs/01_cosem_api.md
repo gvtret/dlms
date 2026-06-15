@@ -916,7 +916,14 @@ normalized to `MaxSupportedVersion` when out of range. Attribute
 caller access mode and replace the stored buffer in-place when
 writable, so the backend can republish refreshed identification,
 status, alarm, configuration and key-status payloads after driving
-the M-Bus slave out-of-band. Methods `1` `slave_install`,
+the M-Bus slave out-of-band. Attributes `13` (configuration) and
+`14` (encryption_key_status) are defined only for class version
+`1` (IEC 62056-6-2:2021 4.8.3); when an explicit version `0` is
+requested (Blue Book 12.1 5.7.1), the object reports `NoAccess`
+for these ids in its `CosemAccessRights`, returns
+`AttributeNotFound` for `ReadAttribute`/`WriteAttribute` against
+them, and the underlying buffers are simply ignored. Methods `1`
+`slave_install`,
 `2` `slave_deinstall`, `3` `capture`, `4` `reset_alarm`,
 `5` `synchronise_clock`, `6` `send_data`,
 `7` `set_encryption_key` and `8` `transfer_key` return

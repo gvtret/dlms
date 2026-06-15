@@ -8708,6 +8708,48 @@ TEST(CosemMBusClientObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+TEST(CosemMBusClientObject,
+     Version0DoesNotExposeConfigurationOrEncryptionKeyStatus)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 1u, 24u, 0u, 0u, 255u);
+  const MBusClientBuffers b = MakeSampleMBusClient();
+  dlms::cosem::CosemMBusClientObject object(
+    name, b.mbusPortReference, b.captureDefinition, b.capturePeriod,
+    b.primaryAddress, b.identificationNumber, b.manufacturerId,
+    b.version, b.deviceType, b.accessNumber, b.status, b.alarm,
+    b.configuration, b.encryptionKeyStatus,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 0u);
+
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+
+  dlms::cosem::CosemAccessRights rights = object.AccessRights();
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
+            rights.AttributeAccess(13u));
+  EXPECT_EQ(dlms::cosem::AttributeAccessMode::NoAccess,
+            rights.AttributeAccess(14u));
+
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(13u, out));
+  EXPECT_TRUE(out.empty());
+  out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(14u, out));
+  EXPECT_TRUE(out.empty());
+
+  // Attributes 1..12 must still be readable on v0.
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(12u, out));
+  EXPECT_EQ(b.alarm, out);
+
+  const dlms::cosem::CosemByteBuffer replacement =
+    BytesFromList({0x11u, 0x55u});
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.WriteAttribute(13u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.WriteAttribute(14u, replacement));
+}
+
 namespace {
 
 dlms::cosem::CosemByteBuffer SampleMBusMasterCommSpeed()

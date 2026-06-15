@@ -8517,10 +8517,15 @@ CosemMBusClientObject::CosemMBusClientObject(
     kMBusClientStatusAttributeId, mutableAccess);
   rights_.SetAttributeAccess(
     kMBusClientAlarmAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kMBusClientConfigurationAttributeId, mutableAccess);
-  rights_.SetAttributeAccess(
-    kMBusClientEncryptionKeyStatusAttributeId, mutableAccess);
+  // Attributes 13 (configuration) and 14 (encryption_key_status) are
+  // only defined for class_id = 72, version = 1 per IEC 62056-6-2:2021
+  // 4.8.3. Version 0 (Blue Book 12.1 5.7.1) stops at attribute 12.
+  if (descriptor_.key.version >= 1u) {
+    rights_.SetAttributeAccess(
+      kMBusClientConfigurationAttributeId, mutableAccess);
+    rights_.SetAttributeAccess(
+      kMBusClientEncryptionKeyStatusAttributeId, mutableAccess);
+  }
 }
 
 CosemObjectDescriptor CosemMBusClientObject::Descriptor() const
@@ -8575,9 +8580,17 @@ CosemStatus CosemMBusClientObject::ReadAttribute(
       output = alarm_;
       return CosemStatus::Ok;
     case kMBusClientConfigurationAttributeId:
+      if (descriptor_.key.version < 1u) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
       output = configuration_;
       return CosemStatus::Ok;
     case kMBusClientEncryptionKeyStatusAttributeId:
+      if (descriptor_.key.version < 1u) {
+        output.clear();
+        return CosemStatus::AttributeNotFound;
+      }
       output = encryptionKeyStatus_;
       return CosemStatus::Ok;
     default:
@@ -8626,9 +8639,15 @@ CosemStatus CosemMBusClientObject::WriteAttribute(
       target = &alarm_;
       break;
     case kMBusClientConfigurationAttributeId:
+      if (descriptor_.key.version < 1u) {
+        return CosemStatus::AttributeNotFound;
+      }
       target = &configuration_;
       break;
     case kMBusClientEncryptionKeyStatusAttributeId:
+      if (descriptor_.key.version < 1u) {
+        return CosemStatus::AttributeNotFound;
+      }
       target = &encryptionKeyStatus_;
       break;
     case kLogicalNameAttributeId:

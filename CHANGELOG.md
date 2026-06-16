@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.105.1 - 2026-06-17
+
+- Test harness fix (`cmake/PackageInstallSmoke.cmake`): the install
+  smoke check used to hard-require
+  `DLMSFrameworkTargets-noconfig.cmake`, which is only emitted by
+  multi-config generators (Visual Studio, Xcode) when no build type
+  is selected. Single-config generators (Make, Ninja) emit a per-
+  config file instead — `DLMSFrameworkTargets-debug.cmake` for Debug,
+  `-release.cmake` for Release, etc. The harness now globs for
+  `DLMSFrameworkTargets-*.cmake` and accepts the first per-config
+  file it finds, asserting only that the produced CMake package
+  contains the documented files (`Config`, `Targets`, and at least
+  one per-config Targets file). This unblocks `dlms_package_install_smoke`
+  on MinGW + Ninja Debug builds without weakening the contract.
+- Full ctest: 976/976 passing (first fully green run).
+
 ## 0.105.0 - 2026-06-17
 
 - Feature (P1 §7 commit 3c — end-to-end `conversationId` on the

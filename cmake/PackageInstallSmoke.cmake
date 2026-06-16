@@ -34,16 +34,29 @@ endif()
 
 set(CONFIG_FILE "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkConfig.cmake")
 set(TARGETS_FILE "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkTargets.cmake")
-set(TARGETS_NOCONFIG_FILE "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkTargets-noconfig.cmake")
 
 foreach(required_file
     "${CONFIG_FILE}"
-    "${TARGETS_FILE}"
-    "${TARGETS_NOCONFIG_FILE}")
+    "${TARGETS_FILE}")
   if(NOT EXISTS "${required_file}")
     message(FATAL_ERROR "DLMSFramework install smoke missing CMake file: ${required_file}")
   endif()
 endforeach()
+
+# CMake emits per-config target files named after the build type:
+#   single-config (Make/Ninja, Debug)      -> DLMSFrameworkTargets-debug.cmake
+#   single-config (Make/Ninja, Release)    -> DLMSFrameworkTargets-release.cmake
+#   multi-config (VS/Xcode), no config set -> DLMSFrameworkTargets-noconfig.cmake
+# The smoke contract is "at least one per-config targets file is installed";
+# pick whichever the current build produced.
+file(GLOB TARGETS_PER_CONFIG_FILES
+  "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkTargets-*.cmake")
+if(NOT TARGETS_PER_CONFIG_FILES)
+  message(FATAL_ERROR
+    "DLMSFramework install smoke missing per-config CMake file: "
+    "${INSTALL_PREFIX}/lib/cmake/DLMSFramework/DLMSFrameworkTargets-*.cmake")
+endif()
+list(GET TARGETS_PER_CONFIG_FILES 0 TARGETS_NOCONFIG_FILE)
 
 file(READ "${CONFIG_FILE}" config_contents)
 if(NOT config_contents MATCHES "find_dependency\\(OpenSSL\\)")

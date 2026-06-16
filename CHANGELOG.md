@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.99.7 - 2026-06-17
+
+- Docs (P1 §7 design phase): `docs/xdlms_server_trace_design.md`
+  fixes the contracts for two new opt-in trace sinks that close the
+  visibility gap called out by `docs/trace_contracts.md`:
+  `IXdlmsTraceSink` (xDLMS layer, client + server) and
+  `IServerDispatchTraceSink` (server-side dispatch). Two sinks, not
+  one, so `dlms-xdlms` doesn't take a dependency on `dlms-server`
+  types. Events publish only sizes and identifiers (class id,
+  attribute/method id, OBIS LN, invoke id, sizes), never raw APDU or
+  payload bytes — no new redaction obligation on consumers. Same
+  lifecycle / no-throw / no-reentry / span-validity discipline as the
+  4 existing sinks. Both events carry `conversationId` so events
+  stitch with the §2 correlation work. 3-commit implementation plan
+  laid out. No production code in this commit.
+
 ## 0.99.6 - 2026-06-17
 
 - Feature (P1 §2 commit 3/3): `WrapperTcpProfileChannel` and

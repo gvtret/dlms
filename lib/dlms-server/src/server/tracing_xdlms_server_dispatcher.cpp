@@ -26,6 +26,7 @@ TracingXdlmsServerDispatcher::TracingXdlmsServerDispatcher(
   IServerDispatchTraceSink* sink)
   : inner_(inner)
   , sink_(sink)
+  , channel_(0)
 {
 }
 
@@ -46,7 +47,8 @@ dlms::xdlms::XdlmsStatus TracingXdlmsServerDispatcher::DispatchGet(
     FillLogicalName(event.logicalName, indication.descriptor.instanceId);
     event.requestPayloadSize = 0u;
     event.responsePayloadSize = result.hasData ? result.data.size() : 0u;
-    event.conversationId = kNoConversationId;
+    event.conversationId =
+      channel_ != 0 ? channel_->CurrentConversationId() : kNoConversationId;
     sink_->OnServerDispatchTrace(event);
   }
 
@@ -70,7 +72,8 @@ dlms::xdlms::XdlmsStatus TracingXdlmsServerDispatcher::DispatchSet(
     FillLogicalName(event.logicalName, indication.descriptor.instanceId);
     event.requestPayloadSize = indication.data.size();
     event.responsePayloadSize = 0u;
-    event.conversationId = kNoConversationId;
+    event.conversationId =
+      channel_ != 0 ? channel_->CurrentConversationId() : kNoConversationId;
     sink_->OnServerDispatchTrace(event);
   }
 
@@ -94,7 +97,8 @@ dlms::xdlms::XdlmsStatus TracingXdlmsServerDispatcher::DispatchAction(
     FillLogicalName(event.logicalName, indication.descriptor.instanceId);
     event.requestPayloadSize = indication.parameter.size();
     event.responsePayloadSize = result.hasData ? result.data.size() : 0u;
-    event.conversationId = kNoConversationId;
+    event.conversationId =
+      channel_ != 0 ? channel_->CurrentConversationId() : kNoConversationId;
     sink_->OnServerDispatchTrace(event);
   }
 

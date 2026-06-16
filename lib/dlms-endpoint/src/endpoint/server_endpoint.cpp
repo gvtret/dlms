@@ -529,10 +529,12 @@ void ServerEndpoint::ConfigureXdlmsProcessor()
     new dlms::server::TracingXdlmsServerDispatcher(
       *owned_->dispatcher,
       options_.serverDispatchTraceSink));
+  owned_->tracingDispatcher->SetCorrelationChannel(&channel_);
 
   if (!options_.security.cipheredApdu) {
     owned_->processor.reset(
       new dlms::xdlms::XdlmsServerApduProcessor(*owned_->tracingDispatcher));
+    owned_->processor->SetApduChannel(&channel_);
     owned_->processor->SetTraceSink(options_.xdlmsTraceSink);
     return;
   }
@@ -588,6 +590,7 @@ void ServerEndpoint::ConfigureXdlmsProcessor()
     new dlms::xdlms::XdlmsServerApduProcessor(
       *owned_->tracingDispatcher,
       *owned_->security));
+  owned_->processor->SetApduChannel(&channel_);
   owned_->processor->SetTraceSink(options_.xdlmsTraceSink);
 }
 

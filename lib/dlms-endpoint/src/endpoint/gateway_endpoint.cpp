@@ -234,6 +234,8 @@ GatewayEndpoint::GatewayEndpoint(
       options_.downstream.serverDispatchTraceSink))
   , open_(false)
 {
+  owned_->tracingDispatcher.SetCorrelationChannel(&downstreamChannel_);
+  owned_->processor.SetApduChannel(&downstreamChannel_);
   owned_->processor.SetTraceSink(options_.downstream.xdlmsTraceSink);
 }
 
@@ -253,6 +255,8 @@ GatewayEndpoint::GatewayEndpoint(
       options_.downstream.serverDispatchTraceSink))
   , open_(false)
 {
+  owned_->tracingDispatcher.SetCorrelationChannel(&downstreamChannel_);
+  owned_->processor.SetApduChannel(&downstreamChannel_);
   owned_->processor.SetTraceSink(options_.downstream.xdlmsTraceSink);
 }
 

@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.105.0 - 2026-06-17
+
+- Feature (P1 §7 commit 3c — end-to-end `conversationId` on the
+  server-dispatch trace):
+  - `TracingXdlmsServerDispatcher` gained an optional back-reference
+    to an `dlms::profile::IApduChannel` via
+    `SetCorrelationChannel(IApduChannel*)` /
+    `CorrelationChannel()`. When set, emitted
+    `ServerDispatchTraceEvent`s carry the `conversationId` currently
+    latched on the channel (read via `IApduChannel::CurrentConversationId()`
+    added in 0.103.0). When unset (default), events keep using
+    `kNoConversationId == 0`. The decorator only ever reads the id —
+    it never sends or receives APDUs through the channel reference.
+  - `ServerEndpoint::ConfigureXdlmsProcessor` and both
+    `GatewayEndpoint` constructors now install the inbound APDU
+    channel both on the `XdlmsServerApduProcessor` (via
+    `SetApduChannel`) and on the `TracingXdlmsServerDispatcher`
+    (via `SetCorrelationChannel`). This closes the gap left by
+    0.102.0/0.104.0: the GET/SET/ACTION dispatch event now publishes
+    the same conversation id that the xDLMS request/response trace
+    and the transport-layer trace already see.
+- Tests: new integration test
+  `test/integration/test_endpoint_trace_correlation.cpp`
+  (`dlms_endpoint_trace_correlation_tests`) drives one GET through
+  `ServerEndpoint` with a fake `IApduChannel` and asserts that the
+  same non-zero `conversationId` appears on:
+  - the channel (`SetCorrelation` + `CorrelationAtSend`),
+  - both `IXdlmsTraceSink` events (`RequestReceived` + `ResponseSent`),
+  - the single `IServerDispatchTraceSink` `GetDispatched` event.
+- Full ctest: 975/976 passing (the lone failure,
+  `dlms_package_install_smoke`, is a pre-existing MinGW-only
+  multi-config artefact unrelated to this commit).
+
 ## 0.104.0 - 2026-06-17
 
 - Feature (P1 §7 commit 3b — end-to-end `conversationId` propagation

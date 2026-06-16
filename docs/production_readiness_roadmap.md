@@ -456,7 +456,7 @@ library may be described as an extensible DLMS/COSEM framework with partial
    single canonical contract document covering totality, `"Unknown"`
    fallback, lifetime, thread-safety, no-allocation, ABI stability, and
    the catalogue of 13 helpers + matching coverage test files.
-7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3 → v0.101.0 commit 2/3 → v0.102.0 commit 3a → v0.104.0 commit 3b):
+7. ✅ DONE (v0.99.7 design → v0.100.0 commit 1/3 → v0.101.0 commit 2/3 → v0.102.0 commit 3a → v0.104.0 commit 3b → v0.105.0 commit 3c):
    публичный xDLMS-layer trace sink и server-side trace sink. v0.99.7
    зафиксировал дизайн в `docs/xdlms_server_trace_design.md` (два sink-а:
    `IXdlmsTraceSink` в `dlms-xdlms` для xDLMS слоя, client + server;
@@ -530,16 +530,27 @@ library may be described as an extensible DLMS/COSEM framework with partial
    ctest: 974/975 зелёные (pre-existing MinGW multi-config артефакт
    `dlms_package_install_smoke` остаётся единственным красным —
    независимо от §7).
-   Остаётся: dispatch-events (`ServerDispatchTraceEvent`) сейчас
-   всё ещё несут `kNoConversationId`, потому что декоратор
-   `TracingXdlmsServerDispatcher` не имеет доступа ни к processor-у,
-   ни к channel-у. Это будет закрыто отдельным минорным follow-up-ом
-   (`IApduChannel::CurrentConversationId()` уже опубликован для этого
-   через ABI-safe append; декоратор просто должен будет читать
-   id с канала по pointer-у, который endpoint composition уже
-   умеет ему передать). End-to-end integration test через
-   `MakeServerEndpoint`, который замыкает channel ↔ xDLMS sink на
-   одном request-роундтрипе, также отложен на тот follow-up.
+   v0.105.0 — commit 3c (end-to-end `conversationId` на dispatch
+   sink + integration test): `TracingXdlmsServerDispatcher` получил
+   опциональный back-reference на `IApduChannel` через
+   `SetCorrelationChannel(IApduChannel*)` / `CorrelationChannel()`.
+   При установленном channel декоратор читает
+   `channel->CurrentConversationId()` (опубликован в 0.103.0) и
+   стампит его на каждое `ServerDispatchTraceEvent` (Get/Set/Action);
+   при `channel == nullptr` — `kNoConversationId`, zero-cost.
+   Endpoint composition: `ServerEndpoint::ConfigureXdlmsProcessor`
+   и оба конструктора `GatewayEndpoint` ставят `&channel_` и на
+   processor (`SetApduChannel`), и на декоратор
+   (`SetCorrelationChannel`). End-to-end integration test
+   `test/integration/test_endpoint_trace_correlation.cpp`
+   (`dlms_endpoint_trace_correlation_tests`) гоняет один GET через
+   `ServerEndpoint` и pin-ит, что один и тот же non-zero
+   `conversationId` приходит на channel (`SetCorrelation` +
+   `CorrelationAtSend`), оба xDLMS event-а (`RequestReceived` +
+   `ResponseSent`) и единственный dispatch event (`GetDispatched`).
+   §7 закрыт полностью. Полный ctest: 975/976 зелёные (тот же
+   pre-existing `dlms_package_install_smoke` остаётся единственным
+   красным, независимо от §7).
 
 ## P2. Надежность и оптимизация
 

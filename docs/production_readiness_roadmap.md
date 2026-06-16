@@ -103,6 +103,21 @@
      coverage добавлен в `0.3.30`; remaining cleanup coverage теперь
      отслеживается в listener runtime и Security Setup задачах.
 3. Добавить regression tests для cleanup при неуспешном open/association.
+   - **Частично закрыто в `0.98.0`** на client-endpoint стороне:
+     добавлены 4 regression-теста в `test_client_endpoint.cpp`
+     (`OpenAfterFailedOpenIsIdempotentAndRetries`,
+     `CloseAfterFailedOpenLeavesNoStateBehind`,
+     `OpenIsIdempotentAfterValidationFailure`,
+     `DestructorClosesAfterFailedOpenWithoutLeak`), и исправлен
+     real-bug в `ClientEndpoint::Close()` — при non-Ok `client->Close()`
+     инстанс оставался привязанным к endpoint'у, что приводило
+     к leak'у через move-assignment при следующем `Open()`. Теперь
+     инстанс всегда сбрасывается после `Close()`, статус
+     сохраняется и возвращается каллеру.
+   - Осталось: аналогичное покрытие для `ServerEndpoint`,
+     `PushListenerEndpoint`, `GatewayEndpoint` (их close-failure
+     пути уже покрыты в `0.3.26-27`, но идемпотентность
+     `Open()` после сбоя не проверена).
 4. Проверить, что bounded loops не скрывают `Timeout`, `Closed`, `InvalidState`.
    - Аудит пройден в `0.97.3`: проверены все `for(;;)` и
      `while(...)` циклы в `lib/dlms-*` источниках. Каждый цикл

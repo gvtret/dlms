@@ -211,9 +211,13 @@ EndpointStatus ClientEndpoint::Close()
   const EndpointStatus releaseStatus =
     MapClientStatus(owned_->client->ReleaseAssociation());
   const EndpointStatus closeStatus = MapClientStatus(owned_->client->Close());
-  if (closeStatus == EndpointStatus::Ok) {
-    owned_->client.reset();
-  }
+  // Always drop the client instance after Close(), even if the underlying
+  // client reported a non-Ok status. Keeping a client that already refused
+  // to close around just papers over the failure: the next Open() would
+  // either short-circuit on stale IsAssociated() or silently leak the old
+  // instance via move-assignment in CreateClient(). The caller still sees
+  // the failure via the returned status.
+  owned_->client.reset();
   return releaseStatus == EndpointStatus::Ok ? closeStatus : releaseStatus;
 }
 

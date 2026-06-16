@@ -147,6 +147,83 @@ TEST(ClientEndpoint, GmacRequiresDedicatedKeyPhase)
   EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed, ciphered.Open());
 }
 
+TEST(ClientEndpoint, OpenAfterFailedOpenIsIdempotentAndRetries)
+{
+  // Reuse port=1 (connect refused) options.
+  dlms::endpoint::ClientEndpoint endpoint(WrapperTcpOptions());
+
+  // First open: connect refused -> ProfileFailed, endpoint stays closed.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Close after failed open is a no-op and returns Ok (no stale state).
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Second open retries the underlying connect; same failure surfaces again.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+}
+
+TEST(ClientEndpoint, CloseAfterFailedOpenLeavesNoStateBehind)
+{
+  dlms::endpoint::ClientEndpoint endpoint(WrapperTcpOptions());
+
+  // Failed open at the connect stage.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Multiple Close()s are all no-ops and never return non-Ok.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Services still fail with InvalidState, not InternalError.
+  std::vector<std::uint8_t> output;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidState,
+            endpoint.Get(AttributeDescriptor(), output));
+  EXPECT_TRUE(output.empty());
+}
+
+TEST(ClientEndpoint, OpenIsIdempotentAfterValidationFailure)
+{
+  // Bad host -> validation failure before any network use.
+  dlms::endpoint::ClientEndpointOptions options = WrapperTcpOptions();
+  options.transport.host = "";
+  dlms::endpoint::ClientEndpoint endpoint(options);
+
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Same failure on the second Open(); no state was created.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::InvalidArgument,
+            endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Close stays a no-op.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_FALSE(endpoint.IsOpen());
+}
+
+TEST(ClientEndpoint, DestructorClosesAfterFailedOpenWithoutLeak)
+{
+  // No state-assertions here beyond the open failure; the test is that
+  // destruction does not throw / abort / leak after a failed open. Under
+  // ASan a leak in the failed-Open path would surface as a regression.
+  for (int i = 0; i < 3; ++i) {
+    dlms::endpoint::ClientEndpoint endpoint(WrapperTcpOptions());
+    EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed,
+              endpoint.Open());
+    EXPECT_FALSE(endpoint.IsOpen());
+    // Endpoint goes out of scope here.
+  }
+}
+
 TEST(ClientEndpoint, MapsClientStatusesToEndpointStatuses)
 {
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok,

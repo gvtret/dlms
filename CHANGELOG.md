@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.98.0 - 2026-06-17 (BREAKING bugfix)
+
+- BREAKING fix / endpoint: `ClientEndpoint::Close()` now always
+  drops the owned `DlmsClient` instance, even when the underlying
+  `client->Close()` returned a non-`Ok` status. Previously a failed
+  close left the stale instance attached to the endpoint, which
+  meant the next `Open()` could either short-circuit on stale
+  `IsAssociated()` or silently leak the old instance via
+  `move`-assignment inside `CreateClient()`. The status returned by
+  `Close()` is unchanged; only the post-condition is stricter.
+  The behaviour change is observable, hence the minor bump.
+- Tests / endpoint: added four regression tests in
+  `lib/dlms-endpoint/test/endpoint/test_client_endpoint.cpp`
+  covering the cleanup contract for failed `Open()` /
+  `Associate()` paths:
+  - `OpenAfterFailedOpenIsIdempotentAndRetries` - a failed open
+    leaves no stale state and a second open retries.
+  - `CloseAfterFailedOpenLeavesNoStateBehind` - repeated
+    `Close()` after a failed open is always `Ok`, and services
+    return `InvalidState`, not `InternalError`.
+  - `OpenIsIdempotentAfterValidationFailure` - validation
+    failures (bad host) before any network use are repeatable
+    and leave the endpoint closed.
+  - `DestructorClosesAfterFailedOpenWithoutLeak` - destructor
+    must not throw / abort after a failed open; loop-runs the
+    pattern three times for ASan to catch leaks if rerun there.
+  Closes the first half of P0 §2.3 "regression tests для
+  cleanup при неуспешном open/association".
+
 ## 0.97.7 - 2026-06-17
 
 - Docs / client: added §1.1 “Facade Status Mapping Policy”

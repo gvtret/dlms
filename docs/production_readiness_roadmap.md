@@ -381,7 +381,17 @@ library may be described as an extensible DLMS/COSEM framework with partial
    consumer responsibilities (redaction, thread safety, backpressure,
    filtering) сведена в `docs/trace_contracts.md`. Endpoint reuse паттерн
    задокументирован.
-2. Добавить correlation metadata для multi-layer traces без раскрытия секретов.
+2. 📐 IN PROGRESS (v0.99.3 — design accepted): correlation metadata
+   для multi-layer traces без раскрытия секретов. Дизайн в
+   `docs/trace_correlation_design.md`: единый опакный 64-битный
+   `conversationId` добавляется последним полем во все 4 trace
+   event structs (POD append — не ломает ABI в 0.x), формируется в
+   xDLMS из (association-seed XOR invoke-id), распространяется вниз
+   через новый `IApduChannel::SetCorrelation()` (default no-op).
+   3 commit-а plan: (1) `MakeConversationId` + unit-test; (2) поле в
+   structs + default no-op virtual; (3) wiring + integration test.
+   Секреты не используются: seed — логгинг-соль, не system-title и
+   не HLS challenge.
 3. ✅ DONE (v0.98.3 + v0.99.0): status-to-string полнота во всех публичных
    status enum. Все 11 публичных status enum (`ApduStatus`,
    `AssociationStatus`, `ClientStatus`, `CosemStatus`, `EndpointStatus`,

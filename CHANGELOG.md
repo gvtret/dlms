@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.99.3 - 2026-06-17
+
+- Docs (P1 «Диагностика» §2 design phase): added
+  `docs/trace_correlation_design.md` — accepted design for cross-layer
+  trace correlation. Introduces a single opaque non-secret 64-bit
+  `conversationId` carried by every trace event in all four sinks
+  (`TransportTraceEvent`, `WrapperTcpTraceEvent`,
+  `HdlcProfileTraceEvent`, `AssociationTraceEvent`). The id originates
+  in the xDLMS layer (as `(association_seed & ~0x0F) | invoke_id`,
+  preserving the low nibble for human readability) and propagates down
+  to the profile/transport sinks through a new no-op
+  `IApduChannel::SetCorrelation()` virtual. The seed is a per-association
+  logging salt with no security role; nothing about correlation appears
+  on the wire. Design respects the existing ABI rules (POD append
+  at end of struct, virtual default no-op, zero-init = no correlation
+  context). Three follow-up commits planned: primitive +
+  `MakeConversationId`; struct extension + default virtual; wiring +
+  integration test. Docs-only; no code change in this version.
+
 ## 0.99.2 - 2026-06-17
 
 - Docs (P1 «Диагностика» §6 closed): added

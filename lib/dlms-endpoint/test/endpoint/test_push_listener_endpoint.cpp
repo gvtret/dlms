@@ -26,7 +26,7 @@ public:
   dlms::profile::ProfileStatus Open()
   {
     ++openCalls;
-    open = true;
+    open = (openStatus == dlms::profile::ProfileStatus::Ok);
     return openStatus;
   }
 
@@ -242,6 +242,34 @@ TEST(PushListenerEndpoint, OpenIsIdempotentWhenAlreadyOpen)
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
   EXPECT_TRUE(endpoint.IsOpen());
   EXPECT_EQ(1u, channel.openCalls);
+}
+
+TEST(PushListenerEndpoint, OpenAfterFailedOpenIsIdempotentAndRetries)
+{
+  FakeApduChannel channel;
+  RecordingPushHandler handler;
+  dlms::endpoint::PushListenerEndpoint endpoint(channel, handler);
+
+  // Channel refuses to open on the first try.
+  channel.openStatus = dlms::profile::ProfileStatus::WriteFailed;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed, endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.openCalls);
+
+  // Close after failed open is a no-op.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Second open with failure still set must re-invoke the channel.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed, endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_EQ(2u, channel.openCalls);
+
+  // Clearing the failure allows the next open to succeed cleanly.
+  channel.openStatus = dlms::profile::ProfileStatus::Ok;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(3u, channel.openCalls);
 }
 
 TEST(PushListenerEndpoint, CloseFailureKeepsEndpointOpen)

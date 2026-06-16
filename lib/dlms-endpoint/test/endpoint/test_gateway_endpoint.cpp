@@ -31,7 +31,7 @@ public:
   dlms::profile::ProfileStatus Open()
   {
     ++openCalls;
-    open = true;
+    open = (openStatus == dlms::profile::ProfileStatus::Ok);
     return openStatus;
   }
 
@@ -452,6 +452,39 @@ TEST(GatewayEndpoint, OpenIsIdempotentWhenAlreadyOpen)
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
   EXPECT_TRUE(endpoint.IsOpen());
   EXPECT_EQ(1u, channel.openCalls);
+  EXPECT_EQ(1u, upstream.openCalls);
+}
+
+TEST(GatewayEndpoint, OpenAfterFailedDownstreamOpenIsIdempotentAndRetries)
+{
+  FakeApduChannel channel;
+  FakeGatewayUpstream upstream;
+  FakeGatewayPolicy policy;
+  dlms::endpoint::GatewayEndpoint endpoint(channel, upstream, policy);
+
+  // Downstream refuses to open on the first try.
+  channel.openStatus = dlms::profile::ProfileStatus::WriteFailed;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed, endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.openCalls);
+  // Upstream must not have been opened when downstream failed first.
+  EXPECT_EQ(0u, upstream.openCalls);
+
+  // Close after failed open is a no-op.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // Second open must re-invoke downstream, not short-circuit.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed, endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_EQ(2u, channel.openCalls);
+  EXPECT_EQ(0u, upstream.openCalls);
+
+  // Clearing the failure allows a clean open of both sides.
+  channel.openStatus = dlms::profile::ProfileStatus::Ok;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(3u, channel.openCalls);
   EXPECT_EQ(1u, upstream.openCalls);
 }
 

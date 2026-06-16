@@ -36,7 +36,7 @@ public:
   dlms::profile::ProfileStatus Open()
   {
     ++openCalls;
-    open = true;
+    open = (openStatus == dlms::profile::ProfileStatus::Ok);
     return openStatus;
   }
 
@@ -588,6 +588,36 @@ TEST(ServerEndpoint, OpenIsIdempotentWhenAlreadyOpen)
   EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
   EXPECT_TRUE(endpoint.IsOpen());
   EXPECT_EQ(1u, channel.openCalls);
+}
+
+TEST(ServerEndpoint, OpenAfterFailedOpenIsIdempotentAndRetries)
+{
+  FakeApduChannel channel;
+  dlms::cosem::LogicalDevice logicalDevice(1u, "ld-1");
+  dlms::endpoint::ServerEndpoint endpoint(channel, logicalDevice);
+
+  // Channel refuses to open on the first try (e.g. bind failed).
+  channel.openStatus = dlms::profile::ProfileStatus::WriteFailed;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed, endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_EQ(1u, channel.openCalls);
+
+  // Close after a failed open is a no-op (endpoint never reached open_=true).
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Close());
+  EXPECT_FALSE(endpoint.IsOpen());
+
+  // A second open with the failure still set must re-invoke the channel,
+  // not short-circuit on stale state.
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::ProfileFailed, endpoint.Open());
+  EXPECT_FALSE(endpoint.IsOpen());
+  EXPECT_EQ(2u, channel.openCalls);
+
+  // Clearing the channel failure allows the next open to succeed; the
+  // endpoint must not be stuck in any partial state from the prior failures.
+  channel.openStatus = dlms::profile::ProfileStatus::Ok;
+  EXPECT_EQ(dlms::endpoint::EndpointStatus::Ok, endpoint.Open());
+  EXPECT_TRUE(endpoint.IsOpen());
+  EXPECT_EQ(3u, channel.openCalls);
 }
 
 TEST(ServerEndpoint, CloseFailureKeepsEndpointOpen)

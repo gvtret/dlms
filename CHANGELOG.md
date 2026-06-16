@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.98.1 - 2026-06-17
+
+- Tests / endpoint: added three idempotency regression tests
+  covering `Open()` after a failed `Open()` for the remaining
+  server-side endpoints, closing the second half of P0 §2.3
+  "regression tests для cleanup при неуспешном
+  open/association":
+  - `ServerEndpoint::OpenAfterFailedOpenIsIdempotentAndRetries`
+  - `PushListenerEndpoint::OpenAfterFailedOpenIsIdempotentAndRetries`
+  - `GatewayEndpoint::OpenAfterFailedDownstreamOpenIsIdempotentAndRetries`
+
+  Each test pins: a failed channel `Open()` returns the mapped
+  status and leaves the endpoint closed; `Close()` after a failed
+  open is a no-op; a second `Open()` actually re-invokes the
+  channel (no stale short-circuit); clearing the failure lets the
+  next open succeed without any residual state. The gateway test
+  additionally pins that the upstream is *not* opened when the
+  downstream fails first.
+- Test hygiene / endpoint: the three test-only `FakeApduChannel`
+  fixtures in `test_server_endpoint.cpp`,
+  `test_push_listener_endpoint.cpp`, `test_gateway_endpoint.cpp`
+  were setting `open = true` unconditionally in `Open()`, even
+  when `openStatus` was non-`Ok`. Now they set
+  `open = (openStatus == Ok)` to match real channel semantics,
+  aligning with how `test_listener_runtime.cpp`'s fake already
+  behaved. Test-only change, no library-side impact; full ctest
+  936/936 confirms no existing test depended on the broken
+  behaviour.
+
 ## 0.98.0 - 2026-06-17 (BREAKING bugfix)
 
 - BREAKING fix / endpoint: `ClientEndpoint::Close()` now always

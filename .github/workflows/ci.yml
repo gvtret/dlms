@@ -54,3 +54,23 @@ jobs:
           files: build-release-mingw64/DLMSFramework-*.zip
           fail_on_unmatched_files: true
           generate_release_notes: true
+
+  linux-sanitizers:
+    name: Linux clang AddressSanitizer + UndefinedBehaviorSanitizer
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            clang \
+            cmake \
+            ninja-build \
+            libssl-dev
+
+      - name: Run sanitizer verification
+        run: scripts/verify_sanitizers_linux.sh

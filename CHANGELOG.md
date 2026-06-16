@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.106.0 - 2026-06-17
+
+- P2 «Надежность и оптимизация» §2: sanitizers в CI.
+  - New CMake option `DLMS_SANITIZE` (`none` | `address` | `undefined` |
+    `address,undefined`, default `none`). When set, applies
+    `-fsanitize=<list>` and `-fno-omit-frame-pointer` to every
+    compile and link in the build tree; validates that the compiler is
+    Clang/AppleClang/GCC and fails early with a readable
+    `FATAL_ERROR` otherwise. Default `none` keeps existing builds
+    untouched (verified locally on MinGW64: 976/976 ctest still green).
+  - New `scripts/verify_sanitizers_linux.sh`: Linux clang, Debug,
+    `DLMS_SANITIZE=address,undefined`, `DLMS_INSTALL=OFF`. Sets
+    `ASAN_OPTIONS`/`UBSAN_OPTIONS`/`LSAN_OPTIONS` for symbolized
+    halt-on-error and runs the full ctest excluding
+    `dlms_package_(install|artifact)_smoke` (those configure a separate
+    consumer build that does not inherit sanitizer flags; install/
+    artifact paths are still validated by the existing MinGW64 release
+    job).
+  - New GitHub Actions job `linux-sanitizers` (ubuntu-latest, clang +
+    cmake + ninja-build + libssl-dev) runs the script on every push
+    and pull request. The existing MinGW64 release job is untouched
+    and remains responsible for package install/artifact verification
+    and tag-driven release publishing.
+  - Pure additive: no public API or runtime behavior changes when
+    `DLMS_SANITIZE=none` (the default). Minor bump because the public
+    CMake option surface gained a new toggle.
+  - `docs/production_readiness_roadmap.md`: P2 §2 marked ✅ DONE.
+
 ## 0.105.2 - 2026-06-17
 
 - Docs-only: new `docs/package_consumer_minimum.md` documents the

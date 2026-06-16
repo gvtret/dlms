@@ -15,6 +15,28 @@ option(DLMS_BUILD_LIVE_TESTS "Build opt-in live meter smoke tests" OFF)
 option(DLMS_BUILD_EXAMPLES "Build example programs" ON)
 option(DLMS_INSTALL "Install the DLMS framework CMake package" ON)
 
+# Opt-in sanitizers. Accepted values: "none" (default), "address",
+# "undefined", or a comma-separated combination like "address,undefined".
+# Applies -fsanitize=<list> to all compiled targets in this build tree;
+# untouched when DLMS_SANITIZE is "none".
+set(DLMS_SANITIZE "none" CACHE STRING
+  "Sanitizers to enable: none, address, undefined, or comma-separated combination")
+set_property(CACHE DLMS_SANITIZE PROPERTY STRINGS
+  none address undefined address,undefined)
+
+if(NOT DLMS_SANITIZE STREQUAL "none")
+  if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
+          CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" OR
+          CMAKE_CXX_COMPILER_ID STREQUAL "GNU"))
+    message(FATAL_ERROR
+      "DLMS_SANITIZE=${DLMS_SANITIZE} requires Clang or GCC; "
+      "current compiler is ${CMAKE_CXX_COMPILER_ID}")
+  endif()
+  message(STATUS "DLMS sanitizers enabled: ${DLMS_SANITIZE}")
+  add_compile_options(-fsanitize=${DLMS_SANITIZE} -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=${DLMS_SANITIZE})
+endif()
+
 if(DLMS_BUILD_INTEGRATION_TESTS AND NOT DLMS_USE_SYSTEM_GTEST)
   set(INSTALL_GTEST OFF CACHE BOOL "Install GoogleTest with the framework package" FORCE)
 endif()

@@ -564,7 +564,34 @@ library may be described as an extensible DLMS/COSEM framework with partial
 ## P2. Надежность и оптимизация
 
 1. Добавить fuzz/property tests для HDLC, LLC, Wrapper, BER/A-XDR decoders.
-2. Добавить sanitizers в CI для поддерживаемых платформ.
+2. ✅ DONE (v0.106.0): sanitizers в CI.
+   - Новая CMake-опция `DLMS_SANITIZE` (`none` | `address` |
+     `undefined` | `address,undefined`, дефолт `none`) применяет
+     `-fsanitize=<list>` + `-fno-omit-frame-pointer` ко всем
+     compile/link операциям в билд-дереве; проверяет Clang/GCC
+     compiler-id и фейлит рано с понятным FATAL_ERROR на других
+     компиляторах.
+   - Новый `scripts/verify_sanitizers_linux.sh`: Linux clang, Debug
+     + `DLMS_SANITIZE=address,undefined`, `DLMS_INSTALL=OFF`, выставляет
+     `ASAN_OPTIONS`/`UBSAN_OPTIONS`/`LSAN_OPTIONS` для symbolized
+     halt-on-error, гоняет полный ctest исключая
+     `dlms_package_(install|artifact)_smoke` (они конфигурируют
+     отдельный consumer-билд, который не наследует sanitize
+     flags — режим с install-tree проверяется отдельным MinGW64
+     release job).
+   - Новый GitHub Actions job `linux-sanitizers` в `.github/workflows/
+     ci.yml` (ubuntu-latest, clang + ninja + libssl-dev) запускает
+     этот скрипт на каждый push/PR. MinGW64 release job
+     остаётся ответственным за install/artifact-путь и release
+     publishing.
+   - Live tests (`DLMS_BUILD_LIVE_TESTS`) остаются opt-in и под
+     sanitizer-сборкой тоже не включаются — это отдельный
+     опт-выбор потребителя.
+   - Локальная проверка на MinGW64: default-сборка
+     (`DLMS_SANITIZE=none`) без sanitizer flags, ctest 976/976 зелёные.
+     Полный выход на `address,undefined` проверяется в CI
+     (локально невозможно: MinGW GCC под Windows не поставляет
+     ASan/UBSan runtime).
 3. Добавить microbenchmarks для codecs и profile frame paths.
 4. Уменьшить allocation churn в APDU/xDLMS/profile paths.
 5. Проверить overflow guards для всех size calculations.

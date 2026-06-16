@@ -245,6 +245,17 @@ bool EnvTraceEnabled()
   return trace != 0 && std::strcmp(trace, "1") == 0;
 }
 
+// Wire-byte dumping is OFF by default so that running
+// LiveMeterSmoke against a real meter does not spill HLS
+// challenges, GMAC tags, or ciphered/plaintext APDU payloads
+// onto an operator console. Set DLMS_LIVE_TRACE_WIRE_BYTES=1
+// to opt back in for a hands-on diagnostic run.
+bool EnvWireBytesTraceEnabled()
+{
+  const char* trace = Env("DLMS_LIVE_TRACE_WIRE_BYTES");
+  return trace != 0 && std::strcmp(trace, "1") == 0;
+}
+
 const char* ProfileName(dlms::client::ClientProfile profile)
 {
   switch (profile) {
@@ -689,7 +700,8 @@ public:
               << " byteSize=" << event.byteSize;
     if ((event.kind == dlms::profile::WrapperTcpTraceKind::WireWrite ||
          event.kind == dlms::profile::WrapperTcpTraceKind::WireRead) &&
-        event.bytes != 0 && event.byteSize != 0u) {
+        event.bytes != 0 && event.byteSize != 0u &&
+        EnvWireBytesTraceEnabled()) {
       std::cout << " bytes=";
       PrintHexBytes(event.bytes, event.byteSize);
     }
@@ -724,7 +736,8 @@ public:
               << " byteSize=" << event.byteSize;
     if ((event.kind == dlms::profile::HdlcProfileTraceKind::WireWrite ||
          event.kind == dlms::profile::HdlcProfileTraceKind::WireRead) &&
-        event.bytes != 0 && event.byteSize != 0u) {
+        event.bytes != 0 && event.byteSize != 0u &&
+        EnvWireBytesTraceEnabled()) {
       std::cout << " bytes=";
       PrintHexBytes(event.bytes, event.byteSize);
     }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.97.4 - 2026-06-17
+
+- Tools / security: `tools/live_meter_smoke` no longer dumps
+  on-wire bytes from `OnWrapperTcpTrace` / `OnHdlcProfileTrace`
+  unless the operator explicitly sets
+  `DLMS_LIVE_TRACE_WIRE_BYTES=1`. Previously the smoke tool
+  printed raw `event.bytes` as hex whenever
+  `DLMS_LIVE_TRACE=1`, which leaked HLS challenges, GMAC tags,
+  and any ciphered/clear protected APDU payload to the
+  operator console. Trace metadata (kind, direction,
+  status, ports, encoded/apdu sizes, byte count) is still
+  printed under `DLMS_LIVE_TRACE=1`; only the byte payload
+  itself is gated. Closes P0 §3.6 trace-redaction concern for
+  the live smoke tool.
+
 ## 0.97.3 - 2026-06-17
 
 - Docs / audit: P0 §2.4 “bounded loops do not swallow Timeout /

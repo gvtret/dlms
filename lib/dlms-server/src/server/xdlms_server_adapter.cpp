@@ -208,6 +208,11 @@ dlms::xdlms::XdlmsStatus MapServerStatusToXdlmsStatus(ServerStatus status)
       return dlms::xdlms::XdlmsStatus::InvalidState;
     case ServerStatus::UnsupportedFeature:
       return dlms::xdlms::XdlmsStatus::UnsupportedFeature;
+    // The remaining COSEM-specific outcomes are reported to the peer
+    // through the xDLMS service response itself (GET-Response / SET-
+    // Response / ACTION-Response access-result fields), not through
+    // `XdlmsStatus`. If they reach this mapper the adapter contract
+    // has been broken upstream, so collapse them to `InternalError`.
     case ServerStatus::EncodeRequired:
     case ServerStatus::ObjectNotFound:
     case ServerStatus::AccessDenied:
@@ -215,9 +220,13 @@ dlms::xdlms::XdlmsStatus MapServerStatusToXdlmsStatus(ServerStatus status)
     case ServerStatus::MethodNotFound:
     case ServerStatus::ObjectError:
     case ServerStatus::InternalError:
-    default:
       return dlms::xdlms::XdlmsStatus::InternalError;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  // No `default:` above so `-Wswitch` warns when `ServerStatus` is
+  // extended.
+  return dlms::xdlms::XdlmsStatus::InternalError;
 }
 
 } // namespace server

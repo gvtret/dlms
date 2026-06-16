@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.97.1 - 2026-06-17
+
+- Hygiene (status mapping): Removed `default:` arms from six
+  status-enum mappers so future additions to the source enum
+  trip `-Wswitch` at compile time instead of silently falling
+  into `InternalError`. No observable runtime behaviour
+  changes for any known input. Touched mappers:
+  - `dlms-endpoint/client_endpoint.cpp` `MapClientStatus`
+    (added explicit arms for `BlockTransferRequired`,
+    `InvokeIdMismatch`, `CodecFailed` collapsing to
+    `ServiceFailed`; the endpoint facade keeps coarse
+    service-layer granularity by design).
+  - `dlms-endpoint/endpoint_factories.cpp` `MapTransportStatus`.
+  - `dlms-endpoint/gateway_endpoint.cpp`
+    `MapEndpointStatusToXdlmsStatus`.
+  - `dlms-endpoint/server_endpoint.cpp` `MapProfileStatus` and
+    `MapXdlmsStatus`.
+  - `dlms-server/xdlms_server_adapter.cpp`
+    `MapServerStatusToXdlmsStatus`.
+  Each mapper now ends with a defensive `return InternalError`
+  outside the switch to keep ABI-drift behaviour for unknown
+  integer values.
+- Deferred: extending `dlms::endpoint::EndpointStatus` with
+  finer categories (`BlockTransferRequired`, `CodecFailed`,
+  `InvokeIdMismatch`) is intentionally not done in this patch.
+  Callers that need that granularity should consume
+  `dlms::client::DlmsClient` directly; lifting the categories
+  to the endpoint layer is a separate BREAKING change.
+
 ## 0.97.0 - 2026-06-17
 
 - BREAKING (C++ API): Extended `dlms::client::ClientStatus` with

@@ -103,9 +103,13 @@ dlms::endpoint::EndpointStatus MapTransportStatus(
     case dlms::transport::TransportStatus::OutputBufferTooSmall:
       return dlms::endpoint::EndpointStatus::TransportFailed;
     case dlms::transport::TransportStatus::InternalError:
-    default:
       return dlms::endpoint::EndpointStatus::InternalError;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  // No `default:` above so `-Wswitch` warns when `TransportStatus` is
+  // extended.
+  return dlms::endpoint::EndpointStatus::InternalError;
 }
 
 dlms::endpoint::EndpointStatus ValidateEndpointListenerTransportOptions(

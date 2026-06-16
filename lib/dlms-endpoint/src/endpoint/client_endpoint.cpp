@@ -280,15 +280,27 @@ EndpointStatus MapClientStatus(dlms::client::ClientStatus status)
     case dlms::client::ClientStatus::SendFailed:
     case dlms::client::ClientStatus::ReceiveFailed:
     case dlms::client::ClientStatus::ServiceRejected:
+    // BlockTransferRequired / InvokeIdMismatch / CodecFailed are
+    // service-layer outcomes too. The endpoint layer is a thin
+    // facade and intentionally collapses every service-side
+    // failure into `ServiceFailed`; callers that need the finer
+    // distinction should consume `DlmsClient` directly.
+    case dlms::client::ClientStatus::BlockTransferRequired:
+    case dlms::client::ClientStatus::InvokeIdMismatch:
+    case dlms::client::ClientStatus::CodecFailed:
       return EndpointStatus::ServiceFailed;
     case dlms::client::ClientStatus::SecurityFailed:
       return EndpointStatus::SecurityFailed;
     case dlms::client::ClientStatus::UnsupportedFeature:
       return EndpointStatus::UnsupportedProfile;
     case dlms::client::ClientStatus::InternalError:
-    default:
       return EndpointStatus::InternalError;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  // Reachable code (no `default:` above) so `-Wswitch` will warn
+  // when `ClientStatus` is extended.
+  return EndpointStatus::InternalError;
 }
 
 } // namespace endpoint

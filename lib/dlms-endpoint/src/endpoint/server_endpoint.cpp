@@ -922,9 +922,11 @@ EndpointStatus MapProfileStatus(dlms::profile::ProfileStatus status)
     case dlms::profile::ProfileStatus::PayloadTooLarge:
       return EndpointStatus::ProfileFailed;
     case dlms::profile::ProfileStatus::InternalError:
-    default:
       return EndpointStatus::InternalError;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  return EndpointStatus::InternalError;
 }
 
 EndpointStatus MapXdlmsStatus(dlms::xdlms::XdlmsStatus status)
@@ -950,9 +952,15 @@ EndpointStatus MapXdlmsStatus(dlms::xdlms::XdlmsStatus status)
     case dlms::xdlms::XdlmsStatus::DecodeFailed:
     case dlms::xdlms::XdlmsStatus::InvokeIdMismatch:
     case dlms::xdlms::XdlmsStatus::InternalError:
-    default:
       return EndpointStatus::InternalError;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  // The server-side `EndpointStatus` is intentionally coarser than
+  // `ClientStatus`; promoting EncodeFailed/DecodeFailed/InvokeIdMismatch
+  // to dedicated categories would require extending the public
+  // `EndpointStatus` enum and is deferred.
+  return EndpointStatus::InternalError;
 }
 
 } // namespace endpoint

@@ -425,9 +425,13 @@ dlms::xdlms::XdlmsStatus MapEndpointStatusToXdlmsStatus(
     case EndpointStatus::Closed:
       return dlms::xdlms::XdlmsStatus::ServiceRejected;
     case EndpointStatus::InternalError:
-    default:
       return dlms::xdlms::XdlmsStatus::InternalError;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  // No `default:` above so `-Wswitch` warns when `EndpointStatus` is
+  // extended.
+  return dlms::xdlms::XdlmsStatus::InternalError;
 }
 
 } // namespace endpoint

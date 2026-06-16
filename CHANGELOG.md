@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.105.2 - 2026-06-17
+
+- Docs-only: new `docs/package_consumer_minimum.md` documents the
+  minimum CMake snippet and `#include` set for every public
+  aggregate target (`dlms::codec`, `dlms::io`, `dlms::protocol`,
+  `dlms::cosem_server`, `dlms::runtime`, `dlms::framework`). For each
+  aggregate the document lists the transitive components, the
+  OpenSSL dependency status, a minimum compilable `main.cpp`, and a
+  link to the runnable example under `examples/package-consumers/`.
+  The snippets are pinned to reality by `dlms_package_install_smoke`,
+  which already builds all six aggregate examples on every CI run.
+- `docs/production_readiness_roadmap.md`: P1 «Package и consumer
+  experience» §3 marked ✅ DONE.
+
 ## 0.105.1 - 2026-06-17
 
 - Test harness fix (`cmake/PackageInstallSmoke.cmake`): the install

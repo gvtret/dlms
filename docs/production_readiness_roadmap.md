@@ -367,7 +367,16 @@ library may be described as an extensible DLMS/COSEM framework with partial
    - Include dirs, transitive deps, OpenSSL dependency, отсутствие test deps.
    - Aggregate target `INTERFACE_LINK_LIBRARIES` проверяются install smoke
      начиная с `0.4.10`.
-3. Документировать минимальные include примеры для каждого aggregate target.
+3. ✅ DONE (v0.105.2): минимальные include примеры для каждого aggregate
+   target сведены в `docs/package_consumer_minimum.md`. Для всех 6 публичных
+   `dlms::*` aggregates (`codec`, `io`, `protocol`, `cosem_server`,
+   `runtime`, `framework`) задокументированы: CMake-snippet с
+   `find_package` + `target_link_libraries`, минимальный compilable
+   `main.cpp`, что несёт каждый aggregate (transitive components),
+   OpenSSL-зависимость, ссылки на runnable `examples/package-consumers/`.
+   Привязка к verification: `cmake/PackageInstallSmoke.cmake` уже строит
+   все 6 примеров, поэтому документ автоматически синхронизирован с
+   рабочими сборками.
 4. Проверить package artifact на Windows/MSYS2 и Linux CI, если Linux runner
    доступен.
 

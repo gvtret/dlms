@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.99.4 - 2026-06-17
+
+- Feature (P1 §2 commit 1/3): added `dlms/xdlms/xdlms_correlation.hpp` —
+  header-only `constexpr noexcept MakeConversationId(seed, invokeId)`
+  primitive plus `kNoConversationId` sentinel. Formula:
+  `(seed & ~0x0F) | (invokeId & 0x0F)` — the low nibble preserves the
+  human-readable invoke-id; the high 60 bits separate associations.
+  Zero-impact addition: no existing code calls it yet, no ABI change,
+  pure header. New test fixture `test_xdlms_correlation.cpp` (9 cases)
+  pins the invariants: low-nibble round-trip, high-bits = seed high
+  bits, invoke-id high nibble ignored, distinct seeds → distinct ids,
+  distinct invoke-ids → distinct ids, seed low nibble cleared not
+  mixed, constexpr + noexcept, sentinel = 0, seed=0/invoke=0 collapses
+  to sentinel (documented edge case). ctest 958 → 967.
+
 ## 0.99.3 - 2026-06-17
 
 - Docs (P1 «Диагностика» §2 design phase): added

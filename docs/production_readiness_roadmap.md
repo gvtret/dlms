@@ -403,13 +403,30 @@ library may be described as an extensible DLMS/COSEM framework with partial
      `FakeByteStream`, флипают `SetCorrelation` on/off и пинят stamping
      по всем событиям в окне. Test fixture total: 9 cases. Full ctest:
      967/967.
+   - `v0.100.0` (wiring closure): `XdlmsClient::Get/Set/Action` теперь
+     сами вызывают `channel_.SetCorrelation(MakeConversationId(seed,
+     invokeId))` сразу после выделения invoke id и до первого
+     `SendApdu`, используя seed из нового virtual
+     `IXdlmsAssociationState::ConversationSeed() const noexcept`
+     (default = 0, ABI-safe). Канальные sink'и (см. v0.99.6) видят
+     тот же `conversationId`, что и xDLMS sink (`IXdlmsTraceSink`,
+     §7 commit 1/3 в той же версии), для одного service call —
+     без ручного prop'а в потребительском коде. 3 новых
+     integration-теста в `test/integration/test_cross_layer_correlation.cpp`
+     (`GetEmitsMatchingConversationIdOnBothLayers`,
+     `ZeroSeedYieldsZeroConversationId`,
+     `NoTraceSinkStillCallsSetCorrelation`) пинят инвариант end-to-end
+     через custom `IApduChannel`, который захватывает `SetCorrelation`
+     и стампит `WrapperTcpTraceEvent` с этим id. Full ctest: 970/970.
    Секреты не используются: seed — opaque логгинг-соль, не system-title
    и не HLS challenge.
-   Follow-up (отдельная задача, не блокер §2): `AssociationClient` пока
-   не генерирует seed/conversationId — когда это появится (вероятно
-   через новое `AssociationOptions` поле или xDLMS-owned seed),
-   stamping уже работающий через `SetCorrelation` подхватит id вниз
-   по стеку без дальнейших изменений в каналах.
+   Follow-up (отдельная задача, не блокер §2): production-ассоциации
+   (`AssociationClient`) пока возвращают `ConversationSeed() == 0`, то
+   есть `conversationId == kNoConversationId` для всех реальных
+   деплоев — поведение sink'ов не меняется. Когда `AssociationClient`
+   начнёт публиковать ненулевой seed (через `AssociationOptions` или
+   на основе context info), вся propagation-цепочка от xDLMS до
+   каналов уже работает и подхватит id без изменений в самих каналах.
 3. ✅ DONE (v0.98.3 + v0.99.0): status-to-string полнота во всех публичных
    status enum. Все 11 публичных status enum (`ApduStatus`,
    `AssociationStatus`, `ClientStatus`, `CosemStatus`, `EndpointStatus`,
@@ -439,10 +456,25 @@ library may be described as an extensible DLMS/COSEM framework with partial
    single canonical contract document covering totality, `"Unknown"`
    fallback, lifetime, thread-safety, no-allocation, ABI stability, and
    the catalogue of 13 helpers + matching coverage test files.
-7. Добавить публичный xDLMS-layer и server-side trace sink (asymmetry
-   выявлена в `docs/trace_contracts.md`: APDU-level и server-side
-   visibility сейчас доступны только косвенно через byte-carrying
-   profile sinks).
+7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3): публичный
+   xDLMS-layer trace sink и server-side trace sink. v0.99.7 зафиксировал
+   дизайн в `docs/xdlms_server_trace_design.md` (два sink-а:
+   `IXdlmsTraceSink` в `dlms-xdlms` для xDLMS слоя, client + server;
+   `IServerDispatchTraceSink` в `dlms-server` для dispatcher-ровня;
+   12 event kinds; sizes и identifiers только, never raw bytes;
+   все events несут `conversationId`).
+   v0.100.0 — commit 1/3 (client side): `IXdlmsTraceSink`,
+   `XdlmsTraceEvent`, `XdlmsTraceKind` (12 kinds) опубликованы в
+   `lib/dlms-xdlms/include/dlms/xdlms/xdlms_trace.hpp`. `XdlmsClient`
+   получил opt-in `SetTraceSink`/`TraceSink` (без новых ctor
+   overloads, ABI-safe) и эмитирует Request/Response/DecodeFailed/
+   SecurityFailed из единого `SendAndReceive` сайта, плюс
+   BlockTransferStep в блочных циклах Get/Set/Action и
+   InvokeIdRejected при invoke-id mismatch. Остаётся: server-side
+   `IXdlmsTraceSink` emission через `XdlmsServerApduProcessor`
+   (commit 2/3), `IServerDispatchTraceSink` и `XdlmsServerDispatcher`
+   wiring (commit 3/3), endpoint composition (`EndpointOptions::
+   xdlmsTraceSink` + `serverDispatchTraceSink` pass-through).
 
 ## P2. Надежность и оптимизация
 

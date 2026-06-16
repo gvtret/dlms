@@ -15,6 +15,7 @@ add_library(dlms_xdlms
   src/xdlms/xdlms_security_processor.cpp
   src/xdlms/xdlms_server.cpp
   src/xdlms/xdlms_status.cpp
+  src/xdlms/xdlms_trace.cpp
   src/xdlms/xdlms_types.cpp)
 
 if(NOT TARGET dlms_association AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../dlms-association/CMakeLists.txt")

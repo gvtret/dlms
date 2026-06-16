@@ -9,11 +9,109 @@
 #include "dlms/association/association_client.hpp"
 #include "dlms/security/ciphered_apdu_processor.hpp"
 #include "dlms/xdlms/xdlms_association_state.hpp"
+#include "dlms/xdlms/xdlms_correlation.hpp"
 #include "dlms/xdlms/xdlms_security_processor.hpp"
+#include "dlms/xdlms/xdlms_trace.hpp"
 
 namespace dlms {
 namespace xdlms {
 namespace {
+
+// Trace emission context shared between SendAndReceive and its
+// callers. Holds the structured fields the caller already knows
+// (kind, invokeId, options, descriptor) so the trace path does not
+// re-derive them from the APDU.
+struct XdlmsTraceContext
+{
+  IXdlmsTraceSink* sink;
+  std::uint64_t conversationId;
+  XdlmsTraceKind requestKind;
+  XdlmsTraceKind responseKind;
+  std::uint8_t invokeId;
+  ServiceOptions options;
+  std::uint16_t classId;
+  std::uint8_t attributeOrMethodId;
+  std::uint8_t logicalName[6];
+  bool hasBlockNumber;
+  std::uint32_t blockNumber;
+};
+
+XdlmsTraceContext MakeTraceContext(
+  IXdlmsTraceSink* sink,
+  std::uint64_t conversationId,
+  XdlmsTraceKind requestKind,
+  XdlmsTraceKind responseKind,
+  std::uint8_t invokeId,
+  const ServiceOptions& options)
+{
+  XdlmsTraceContext ctx;
+  ctx.sink = sink;
+  ctx.conversationId = conversationId;
+  ctx.requestKind = requestKind;
+  ctx.responseKind = responseKind;
+  ctx.invokeId = invokeId;
+  ctx.options = options;
+  ctx.classId = 0u;
+  ctx.attributeOrMethodId = 0u;
+  for (std::size_t i = 0; i < 6u; ++i) {
+    ctx.logicalName[i] = 0u;
+  }
+  ctx.hasBlockNumber = false;
+  ctx.blockNumber = 0u;
+  return ctx;
+}
+
+void FillDescriptor(
+  XdlmsTraceContext& ctx,
+  const CosemAttributeDescriptor& descriptor)
+{
+  ctx.classId = descriptor.classId;
+  ctx.attributeOrMethodId = descriptor.attributeId;
+  for (std::size_t i = 0; i < descriptor.instanceId.Size(); ++i) {
+    ctx.logicalName[i] = descriptor.instanceId[i];
+  }
+}
+
+void FillDescriptor(
+  XdlmsTraceContext& ctx,
+  const CosemMethodDescriptor& descriptor)
+{
+  ctx.classId = descriptor.classId;
+  ctx.attributeOrMethodId = descriptor.methodId;
+  for (std::size_t i = 0; i < descriptor.instanceId.Size(); ++i) {
+    ctx.logicalName[i] = descriptor.instanceId[i];
+  }
+}
+
+void EmitTrace(
+  const XdlmsTraceContext& ctx,
+  XdlmsTraceKind kind,
+  XdlmsTraceDirection direction,
+  XdlmsStatus status,
+  std::size_t apduSize,
+  std::size_t payloadSize)
+{
+  if (ctx.sink == 0) {
+    return;
+  }
+  XdlmsTraceEvent event = EmptyXdlmsTraceEvent();
+  event.kind = kind;
+  event.direction = direction;
+  event.status = status;
+  event.invokeId = ctx.invokeId;
+  event.options = ctx.options;
+  event.classId = ctx.classId;
+  event.attributeOrMethodId = ctx.attributeOrMethodId;
+  for (std::size_t i = 0; i < 6u; ++i) {
+    event.logicalName[i] = ctx.logicalName[i];
+  }
+  event.hasBlockNumber = ctx.hasBlockNumber;
+  event.blockNumber = ctx.blockNumber;
+  event.apduSize = apduSize;
+  event.payloadSize = payloadSize;
+  event.conversationId = ctx.conversationId;
+  ctx.sink->OnXdlmsTrace(event);
+}
 
 std::uint8_t MakeInvokeIdAndPriority(
   std::uint8_t invokeId,
@@ -121,13 +219,21 @@ XdlmsStatus SendAndReceive(
   IXdlmsSecurityProcessor* security,
   const dlms::apdu::XdlmsApdu& request,
   std::vector<std::uint8_t>& decodedResponseBytes,
-  dlms::apdu::XdlmsApdu& response)
+  dlms::apdu::XdlmsApdu& response,
+  const XdlmsTraceContext& trace)
 {
   decodedResponseBytes.clear();
 
   std::vector<std::uint8_t> encodedRequest;
   if (dlms::apdu::EncodeXdlmsApdu(request, encodedRequest) !=
       dlms::apdu::ApduStatus::Ok) {
+    EmitTrace(
+      trace,
+      XdlmsTraceKind::DecodeFailed,
+      XdlmsTraceDirection::Outbound,
+      XdlmsStatus::EncodeFailed,
+      0u,
+      0u);
     return XdlmsStatus::EncodeFailed;
   }
 
@@ -139,9 +245,24 @@ XdlmsStatus SendAndReceive(
     const dlms::security::SecurityStatus status =
       security->Protect(plain, outboundRequest);
     if (status != dlms::security::SecurityStatus::Ok) {
+      EmitTrace(
+        trace,
+        XdlmsTraceKind::SecurityFailed,
+        XdlmsTraceDirection::Outbound,
+        XdlmsStatus::SecurityFailed,
+        encodedRequest.size(),
+        0u);
       return XdlmsStatus::SecurityFailed;
     }
   }
+
+  EmitTrace(
+    trace,
+    trace.requestKind,
+    XdlmsTraceDirection::Outbound,
+    XdlmsStatus::Ok,
+    outboundRequest.size(),
+    encodedRequest.size());
 
   dlms::profile::ProfileByteView view = {};
   view.data = outboundRequest.empty() ? 0 : &outboundRequest[0];
@@ -163,17 +284,41 @@ XdlmsStatus SendAndReceive(
     const dlms::security::SecurityStatus status =
       security->Unprotect(protectedApdu, inboundResponse);
     if (status != dlms::security::SecurityStatus::Ok) {
+      EmitTrace(
+        trace,
+        XdlmsTraceKind::SecurityFailed,
+        XdlmsTraceDirection::Inbound,
+        XdlmsStatus::SecurityFailed,
+        encodedResponse.size(),
+        0u);
       return XdlmsStatus::SecurityFailed;
     }
   }
 
   decodedResponseBytes = inboundResponse;
-  return dlms::apdu::DecodeXdlmsApdu(
+  const dlms::apdu::ApduStatus decodeStatus = dlms::apdu::DecodeXdlmsApdu(
       decodedResponseBytes.empty() ? 0 : &decodedResponseBytes[0],
       decodedResponseBytes.size(),
-      response) == dlms::apdu::ApduStatus::Ok
-    ? XdlmsStatus::Ok
-    : XdlmsStatus::DecodeFailed;
+      response);
+  if (decodeStatus != dlms::apdu::ApduStatus::Ok) {
+    EmitTrace(
+      trace,
+      XdlmsTraceKind::DecodeFailed,
+      XdlmsTraceDirection::Inbound,
+      XdlmsStatus::DecodeFailed,
+      encodedResponse.size(),
+      inboundResponse.size());
+    return XdlmsStatus::DecodeFailed;
+  }
+
+  EmitTrace(
+    trace,
+    trace.responseKind,
+    XdlmsTraceDirection::Inbound,
+    XdlmsStatus::Ok,
+    encodedResponse.size(),
+    inboundResponse.size());
+  return XdlmsStatus::Ok;
 }
 
 class BlockTransferManager
@@ -302,7 +447,8 @@ XdlmsStatus ReceiveGetResponse(
   IXdlmsSecurityProcessor* security,
   const dlms::apdu::XdlmsApdu& request,
   std::vector<std::uint8_t>& decodedResponseBytes,
-  dlms::apdu::XdlmsApdu& response)
+  dlms::apdu::XdlmsApdu& response,
+  const XdlmsTraceContext& trace)
 {
   const XdlmsStatus status =
     SendAndReceive(
@@ -310,7 +456,8 @@ XdlmsStatus ReceiveGetResponse(
       security,
       request,
       decodedResponseBytes,
-      response);
+      response,
+      trace);
   if (status != XdlmsStatus::Ok) {
     return status;
   }
@@ -324,7 +471,8 @@ XdlmsStatus ReceiveActionResponse(
   IXdlmsSecurityProcessor* security,
   const dlms::apdu::XdlmsApdu& request,
   std::vector<std::uint8_t>& decodedResponseBytes,
-  dlms::apdu::XdlmsApdu& response)
+  dlms::apdu::XdlmsApdu& response,
+  const XdlmsTraceContext& trace)
 {
   const XdlmsStatus status =
     SendAndReceive(
@@ -332,7 +480,8 @@ XdlmsStatus ReceiveActionResponse(
       security,
       request,
       decodedResponseBytes,
-      response);
+      response,
+      trace);
   if (status != XdlmsStatus::Ok) {
     return status;
   }
@@ -469,7 +618,8 @@ XdlmsStatus CopyFinalActionResponse(
   std::uint8_t invokeIdAndPriority,
   const ServiceOptions& options,
   dlms::apdu::XdlmsApdu& response,
-  ActionResult& result)
+  ActionResult& result,
+  const XdlmsTraceContext& trace)
 {
   if (response.actionResponseAny.choice !=
       dlms::apdu::ActionResponseChoice::Normal) {
@@ -485,6 +635,13 @@ XdlmsStatus CopyFinalActionResponse(
     std::vector<std::uint8_t> decodedResponseBytes;
     for (;;) {
       if ((response.actionResponseAny.invokeIdAndPriority & 0x0Fu) != invokeId) {
+        EmitTrace(
+          trace,
+          XdlmsTraceKind::InvokeIdRejected,
+          XdlmsTraceDirection::Inbound,
+          XdlmsStatus::InvokeIdMismatch,
+          0u,
+          0u);
         return XdlmsStatus::InvokeIdMismatch;
       }
 
@@ -492,6 +649,18 @@ XdlmsStatus CopyFinalActionResponse(
       if (status != XdlmsStatus::Ok) {
         return status;
       }
+
+      XdlmsTraceContext blockTrace = trace;
+      blockTrace.hasBlockNumber = true;
+      blockTrace.blockNumber = response.actionResponseAny.dataBlock.blockNumber;
+      EmitTrace(
+        blockTrace,
+        XdlmsTraceKind::BlockTransferStep,
+        XdlmsTraceDirection::Inbound,
+        XdlmsStatus::Ok,
+        0u,
+        response.actionResponseAny.dataBlock.rawData.size);
+
       if (response.actionResponseAny.dataBlock.lastBlock) {
         response = dlms::apdu::XdlmsApdu();
         status = DecodeActionBlockPayload(
@@ -513,7 +682,8 @@ XdlmsStatus CopyFinalActionResponse(
         security,
         MakeActionRequestNextPblock(invokeIdAndPriority, acknowledgedBlock),
         decodedResponseBytes,
-        response);
+        response,
+        trace);
       if (status != XdlmsStatus::Ok) {
         return status;
       }
@@ -540,6 +710,7 @@ XdlmsClient::XdlmsClient(
   , ownedSecurity_()
   , security_(0)
   , invokeIds_()
+  , traceSink_(0)
 {
 }
 
@@ -553,6 +724,7 @@ XdlmsClient::XdlmsClient(
   , ownedSecurity_()
   , security_(&security)
   , invokeIds_()
+  , traceSink_(0)
 {
 }
 
@@ -574,6 +746,7 @@ XdlmsClient::XdlmsClient(
   , ownedSecurity_()
   , security_(0)
   , invokeIds_()
+  , traceSink_(0)
 {
 }
 
@@ -598,6 +771,7 @@ XdlmsClient::XdlmsClient(
   , ownedSecurity_()
   , security_(&security)
   , invokeIds_()
+  , traceSink_(0)
 {
 }
 
@@ -613,7 +787,18 @@ XdlmsClient::XdlmsClient(
   , ownedSecurity_(new CipheredXdlmsSecurityProcessor(security))
   , security_(ownedSecurity_.get())
   , invokeIds_()
+  , traceSink_(0)
 {
+}
+
+void XdlmsClient::SetTraceSink(IXdlmsTraceSink* sink)
+{
+  traceSink_ = sink;
+}
+
+IXdlmsTraceSink* XdlmsClient::TraceSink() const
+{
+  return traceSink_;
 }
 
 XdlmsStatus XdlmsClient::Get(
@@ -675,6 +860,16 @@ XdlmsStatus XdlmsClient::Get(
   const std::uint8_t invokeIdAndPriority =
     MakeInvokeIdAndPriority(invokeId, options);
 
+  XdlmsTraceContext trace = MakeTraceContext(
+    traceSink_,
+    MakeConversationId(association_->ConversationSeed(), invokeId),
+    XdlmsTraceKind::GetRequest,
+    XdlmsTraceKind::GetResponse,
+    invokeId,
+    options);
+  FillDescriptor(trace, descriptor);
+  channel_.SetCorrelation(trace.conversationId);
+
   dlms::apdu::XdlmsApdu request;
   status = MakeGetRequestNormal(
     invokeIdAndPriority,
@@ -692,7 +887,8 @@ XdlmsStatus XdlmsClient::Get(
     security_,
     request,
     decodedResponseBytes,
-    response);
+    response,
+    trace);
   if (status != XdlmsStatus::Ok) {
     return status;
   }
@@ -709,6 +905,13 @@ XdlmsStatus XdlmsClient::Get(
     BlockTransferManager blocks(options.maxBlockTransferBytes);
     for (;;) {
       if ((response.getResponseAny.invokeIdAndPriority & 0x0Fu) != invokeId) {
+        EmitTrace(
+          trace,
+          XdlmsTraceKind::InvokeIdRejected,
+          XdlmsTraceDirection::Inbound,
+          XdlmsStatus::InvokeIdMismatch,
+          0u,
+          0u);
         return XdlmsStatus::InvokeIdMismatch;
       }
 
@@ -716,6 +919,18 @@ XdlmsStatus XdlmsClient::Get(
       if (status != XdlmsStatus::Ok) {
         return status;
       }
+
+      XdlmsTraceContext blockTrace = trace;
+      blockTrace.hasBlockNumber = true;
+      blockTrace.blockNumber = response.getResponseAny.dataBlock.blockNumber;
+      EmitTrace(
+        blockTrace,
+        XdlmsTraceKind::BlockTransferStep,
+        XdlmsTraceDirection::Inbound,
+        XdlmsStatus::Ok,
+        0u,
+        response.getResponseAny.dataBlock.rawData.size);
+
       if (response.getResponseAny.dataBlock.lastBlock) {
         result.invokeId = invokeId;
         result.data = blocks.Data();
@@ -732,7 +947,8 @@ XdlmsStatus XdlmsClient::Get(
         security_,
         MakeGetRequestNext(invokeIdAndPriority, acknowledgedBlock),
         decodedResponseBytes,
-        response);
+        response,
+        trace);
       if (status != XdlmsStatus::Ok) {
         return status;
       }
@@ -744,6 +960,13 @@ XdlmsStatus XdlmsClient::Get(
   }
 
   if ((response.getResponse.invokeIdAndPriority & 0x0Fu) != invokeId) {
+    EmitTrace(
+      trace,
+      XdlmsTraceKind::InvokeIdRejected,
+      XdlmsTraceDirection::Inbound,
+      XdlmsStatus::InvokeIdMismatch,
+      0u,
+      0u);
     return XdlmsStatus::InvokeIdMismatch;
   }
 
@@ -796,6 +1019,16 @@ XdlmsStatus XdlmsClient::Set(
     const std::uint8_t invokeIdAndPriority =
       MakeInvokeIdAndPriority(invokeId, options);
 
+    XdlmsTraceContext trace = MakeTraceContext(
+      traceSink_,
+      MakeConversationId(association_->ConversationSeed(), invokeId),
+      XdlmsTraceKind::SetRequest,
+      XdlmsTraceKind::SetResponse,
+      invokeId,
+      options);
+    FillDescriptor(trace, descriptor);
+    channel_.SetCorrelation(trace.conversationId);
+
     dlms::apdu::XdlmsApdu request;
     request.kind = dlms::apdu::XdlmsApduKind::SetRequest;
     request.setRequestAny.choice = dlms::apdu::SetRequestChoice::Normal;
@@ -811,7 +1044,8 @@ XdlmsStatus XdlmsClient::Set(
       security_,
       request,
       decodedResponseBytes,
-      response);
+      response,
+      trace);
     if (status != XdlmsStatus::Ok) {
       return status;
     }
@@ -831,6 +1065,13 @@ XdlmsStatus XdlmsClient::Set(
     }
 
     if ((response.setResponseAny.invokeIdAndPriority & 0x0Fu) != invokeId) {
+      EmitTrace(
+        trace,
+        XdlmsTraceKind::InvokeIdRejected,
+        XdlmsTraceDirection::Inbound,
+        XdlmsStatus::InvokeIdMismatch,
+        0u,
+        0u);
       return XdlmsStatus::InvokeIdMismatch;
     }
 
@@ -854,6 +1095,15 @@ XdlmsStatus XdlmsClient::Set(
   const std::uint8_t invokeId = invokeIds_.Next();
   const std::uint8_t invokeIdAndPriority =
     MakeInvokeIdAndPriority(invokeId, options);
+  XdlmsTraceContext trace = MakeTraceContext(
+    traceSink_,
+    MakeConversationId(association_->ConversationSeed(), invokeId),
+    XdlmsTraceKind::SetRequest,
+    XdlmsTraceKind::SetResponse,
+    invokeId,
+    options);
+  FillDescriptor(trace, descriptor);
+  channel_.SetCorrelation(trace.conversationId);
   std::size_t offset = 0u;
   std::uint32_t blockNumber = 1u;
   while (offset < encodedData.size()) {
@@ -877,15 +1127,27 @@ XdlmsStatus XdlmsClient::Set(
 
     dlms::apdu::XdlmsApdu response;
     std::vector<std::uint8_t> decodedResponseBytes;
+    XdlmsTraceContext blockTrace = trace;
+    blockTrace.hasBlockNumber = true;
+    blockTrace.blockNumber = blockNumber;
     status = SendAndReceive(
       channel_,
       security_,
       request,
       decodedResponseBytes,
-      response);
+      response,
+      blockTrace);
     if (status != XdlmsStatus::Ok) {
       return status;
     }
+
+    EmitTrace(
+      blockTrace,
+      XdlmsTraceKind::BlockTransferStep,
+      XdlmsTraceDirection::Outbound,
+      XdlmsStatus::Ok,
+      0u,
+      blockSize);
 
     status = ValidateSetBlockResponse(
       response,
@@ -893,6 +1155,15 @@ XdlmsStatus XdlmsClient::Set(
       blockNumber,
       finalBlock,
       result);
+    if (status == XdlmsStatus::InvokeIdMismatch) {
+      EmitTrace(
+        trace,
+        XdlmsTraceKind::InvokeIdRejected,
+        XdlmsTraceDirection::Inbound,
+        XdlmsStatus::InvokeIdMismatch,
+        0u,
+        0u);
+    }
     if (status != XdlmsStatus::Ok) {
       return status;
     }
@@ -961,6 +1232,16 @@ XdlmsStatus XdlmsClient::Action(
   const std::uint8_t invokeIdAndPriority =
     MakeInvokeIdAndPriority(invokeId, options);
 
+  XdlmsTraceContext trace = MakeTraceContext(
+    traceSink_,
+    MakeConversationId(association_->ConversationSeed(), invokeId),
+    XdlmsTraceKind::ActionRequest,
+    XdlmsTraceKind::ActionResponse,
+    invokeId,
+    options);
+  FillDescriptor(trace, descriptor);
+  channel_.SetCorrelation(trace.conversationId);
+
   if (useBlocks) {
     std::size_t offset = 0u;
     std::uint32_t blockNumber = 1u;
@@ -985,15 +1266,27 @@ XdlmsStatus XdlmsClient::Action(
 
       dlms::apdu::XdlmsApdu response;
       std::vector<std::uint8_t> decodedResponseBytes;
+      XdlmsTraceContext blockTrace = trace;
+      blockTrace.hasBlockNumber = true;
+      blockTrace.blockNumber = blockNumber;
       status = ReceiveActionResponse(
         channel_,
         security_,
         requestBlock,
         decodedResponseBytes,
-        response);
+        response,
+        blockTrace);
       if (status != XdlmsStatus::Ok) {
         return status;
       }
+
+      EmitTrace(
+        blockTrace,
+        XdlmsTraceKind::BlockTransferStep,
+        XdlmsTraceDirection::Outbound,
+        XdlmsStatus::Ok,
+        0u,
+        blockSize);
 
       if (finalBlock) {
         return CopyFinalActionResponse(
@@ -1003,13 +1296,23 @@ XdlmsStatus XdlmsClient::Action(
           invokeIdAndPriority,
           options,
           response,
-          result);
+          result,
+          trace);
       }
 
       status = ValidateActionNextPblockResponse(
         response,
         invokeId,
         blockNumber);
+      if (status == XdlmsStatus::InvokeIdMismatch) {
+        EmitTrace(
+          trace,
+          XdlmsTraceKind::InvokeIdRejected,
+          XdlmsTraceDirection::Inbound,
+          XdlmsStatus::InvokeIdMismatch,
+          0u,
+          0u);
+      }
       if (status != XdlmsStatus::Ok) {
         return status;
       }
@@ -1034,7 +1337,8 @@ XdlmsStatus XdlmsClient::Action(
     security_,
     request,
     decodedResponseBytes,
-    response);
+    response,
+    trace);
   if (status != XdlmsStatus::Ok) {
     return status;
   }
@@ -1046,7 +1350,8 @@ XdlmsStatus XdlmsClient::Action(
     invokeIdAndPriority,
     options,
     response,
-    result);
+    result,
+    trace);
 }
 
 } // namespace xdlms

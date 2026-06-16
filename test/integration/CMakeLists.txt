@@ -159,6 +159,25 @@ else()
   message(STATUS "Skipping xDLMS integration tests: dlms-xdlms stack is not available")
 endif()
 
+if(TARGET dlms_xdlms AND TARGET dlms_profile AND TARGET dlms_apdu)
+  add_executable(dlms_cross_layer_correlation_tests
+    test_cross_layer_correlation.cpp)
+
+  target_compile_features(
+    dlms_cross_layer_correlation_tests PRIVATE cxx_std_11)
+
+  target_link_libraries(dlms_cross_layer_correlation_tests
+    PRIVATE
+      dlms_xdlms
+      dlms_profile
+      dlms_apdu
+      GTest::gtest_main)
+
+  gtest_discover_tests(dlms_cross_layer_correlation_tests)
+else()
+  message(STATUS "Skipping cross-layer correlation tests: dlms-xdlms stack is not available")
+endif()
+
 if(TARGET dlms_xdlms AND TARGET dlms_server AND
    TARGET dlms_cosem AND TARGET dlms_apdu)
   add_executable(dlms_server_get_apdu_integration_tests

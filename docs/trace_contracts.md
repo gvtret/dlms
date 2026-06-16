@@ -1,6 +1,6 @@
 # Trace contracts (audit map)
 
-Status: living document. Last revised: VERSION 0.99.1 (P1 «Диагностика» §1).
+Status: living document. Last revised: VERSION 0.100.0 (P1 «Диагностика» §2 wiring closed end-to-end).
 
 ## Scope
 
@@ -27,6 +27,7 @@ If you are wiring traces for the first time, the short version is:
 | `IWrapperTcpTraceSink`  | profile     | `lib/dlms-profile/include/dlms/profile/profile_types.hpp` | `WrapperTcpTraceEvent`    | **yes** (raw WPDU) |
 | `IHdlcProfileTraceSink` | profile     | `lib/dlms-profile/include/dlms/profile/profile_types.hpp` | `HdlcProfileTraceEvent`   | **yes** (raw HDLC) |
 | `IAssociationTraceSink` | association | `lib/dlms-association/include/dlms/association/association_types.hpp` | `AssociationTraceEvent` | no (size only)    |
+| `IXdlmsTraceSink`       | xDLMS       | `lib/dlms-xdlms/include/dlms/xdlms/xdlms_trace.hpp`       | `XdlmsTraceEvent`         | no (sizes + ids)   |
 
 There is intentionally **no** xDLMS-layer or COSEM-layer trace sink today;
 APDU-level visibility is provided by the byte-carrying profile sinks above
@@ -127,14 +128,38 @@ For every sink interface:
 4. **Filtering**: every event is emitted unconditionally. Filter on `kind`
    or `status` inside the sink if you only want a subset.
 
+## Cross-layer correlation (P1 §2, closed in 0.100.0)
+
+- Every profile-layer trace event (`WrapperTcpTraceEvent`,
+  `HdlcProfileTraceEvent`), every association-layer event
+  (`AssociationTraceEvent`), and every xDLMS-layer event
+  (`XdlmsTraceEvent`) carries an opaque `std::uint64_t conversationId`.
+- The id is computed by `MakeConversationId(seed, invokeId)`
+  (`lib/dlms-xdlms/include/dlms/xdlms/xdlms_correlation.hpp`) from an
+  association-supplied logging seed and the current xDLMS invoke id.
+  `seed == 0` ⇒ `conversationId == kNoConversationId == 0`, which is the
+  default for any consumer that has not opted in.
+- The seed is **logging salt only**: it is not a system title, not the HLS
+  challenge, has no role in authentication or ciphering, and is never put on
+  the wire. It only exists to make events from the same invocation cluster
+  in logs.
+- Propagation is automatic: `XdlmsClient::Get/Set/Action` calls
+  `IApduChannel::SetCorrelation(conversationId)` on its bound channel just
+  after allocating the invoke id. `WrapperTcpProfileChannel` and
+  `HdlcProfileChannel` stamp every subsequent trace event with that id.
+  Consumers do **not** need to thread the id manually.
+- `IApduChannel::SetCorrelation` defaults to a no-op virtual, so custom
+  channel implementations that don't care about correlation continue to
+  compile and link unchanged.
+- See `docs/trace_correlation_design.md` for the full contract.
+
 ## Known gaps and follow-ups
 
 | Item                                                                                         | Tracked in                                                       |
 | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Correlation metadata across layers (e.g. invoke-id, association-id) without leaking secrets. | P1 «Диагностика» §2.                                             |
-| No public xDLMS-layer trace sink — APDU-level diagnostics are only available indirectly via the byte-carrying profile sinks. | P1 «Диагностика» §7 (added in 0.99.1). |
-| No public server-side trace sink — server-side observability mirrors the client-side gap above. | P1 «Диагностика» §7.                                             |
-| `*StatusName` naming inconsistency (`EndpointStatus::ToString` vs `*StatusName`).            | P1 «Диагностика» §5.                                             |
+| No public server-side xDLMS trace sink — client-side `IXdlmsTraceSink` shipped in 0.100.0, server-side `IXdlmsTraceSink` emission through `XdlmsServerApduProcessor` is the next deliverable. | P1 «Диагностика» §7 commit 2/3. |
+| No public server-dispatch trace sink — dispatcher-level visibility (object lookup, access-rights, registry routing).                                                                       | P1 «Диагностика» §7 commit 3/3. |
+| `*StatusName` naming inconsistency (`EndpointStatus::ToString` vs `*StatusName`).            | P1 «Диагностика» §5 (deferred; BREAKING).                        |
 
 ## See also
 

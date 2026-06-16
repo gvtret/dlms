@@ -4,6 +4,7 @@
 #include "dlms/profile/apdu_channel.hpp"
 #include "dlms/xdlms/xdlms_association_state_interface.hpp"
 #include "dlms/xdlms/xdlms_security_processor_interface.hpp"
+#include "dlms/xdlms/xdlms_trace.hpp"
 #include "dlms/xdlms/xdlms_types.hpp"
 
 #include <memory>
@@ -96,6 +97,12 @@ public:
     const ServiceOptions& options,
     ActionResult& result);
 
+  // Opt-in xDLMS trace sink (P1 §7). Default null; setting a null
+  // pointer disables emission. The sink is not owned and must
+  // outlive this XdlmsClient.
+  void SetTraceSink(IXdlmsTraceSink* sink);
+  IXdlmsTraceSink* TraceSink() const;
+
 private:
   XdlmsClient(const XdlmsClient&);
   XdlmsClient& operator=(const XdlmsClient&);
@@ -112,6 +119,7 @@ private:
   std::unique_ptr<IXdlmsSecurityProcessor> ownedSecurity_;
   IXdlmsSecurityProcessor* security_;
   InvokeIdAllocator invokeIds_;
+  IXdlmsTraceSink* traceSink_;
 };
 
 } // namespace xdlms

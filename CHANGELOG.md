@@ -1,5 +1,68 @@
 # Changelog
 
+## 0.100.0 - 2026-06-17
+
+- Feature (P1 §7 commit 1/3 — xDLMS client trace + §2 wiring closure):
+  new public xDLMS-layer trace surface plus end-to-end cross-layer
+  correlation propagation. Two changes that share infrastructure and
+  ship together:
+
+  **xDLMS trace sink (§7, client side).** New header
+  `lib/dlms-xdlms/include/dlms/xdlms/xdlms_trace.hpp` defines
+  `IXdlmsTraceSink`, `XdlmsTraceEvent` (kind, direction, status, invoke
+  id, options, class id, attribute/method id, OBIS LN, optional block
+  number, APDU size, payload size, `conversationId`), `XdlmsTraceKind`
+  (12 kinds covering Get/Set/Action request/response, block transfer
+  step, request received, response sent, decode failure, invoke-id
+  mismatch, security failure) and `XdlmsTraceDirection`. Events publish
+  only sizes and identifiers — never raw APDU bytes, keys, system
+  titles, GMAC tags, or HLS challenges. Same lifecycle / re-entrancy /
+  no-throw / span-validity contract as the 4 existing sinks (see
+  `docs/trace_contracts.md`). `XdlmsClient` gains opt-in
+  `SetTraceSink(IXdlmsTraceSink*) noexcept` /
+  `TraceSink() const noexcept` (additive, no new ctor overloads); when
+  unset, behaviour is identical to before. Client-side emission is wired
+  through `Get`, `Set` (normal + block-transfer), `Action` (normal +
+  block-transfer): per-service `Request`/`Response`/`DecodeFailed`/
+  `SecurityFailed` events from a single `SendAndReceive` site, plus
+  `BlockTransferStep` events in the per-service block loops and
+  `InvokeIdRejected` events on every invoke-id mismatch check.
+
+  **Cross-layer correlation wiring (§2 closure).** `XdlmsClient::Get/
+  Set/Action` now also call
+  `channel_.SetCorrelation(MakeConversationId(seed, invokeId))` on the
+  bound `IApduChannel` immediately after allocating the invoke id and
+  before the first `SendApdu`. The seed comes from a new
+  `IXdlmsAssociationState::ConversationSeed() const noexcept` virtual
+  whose default returns `0` (ABI-safe: existing association
+  implementations continue to return `0`, which yields
+  `conversationId == kNoConversationId`, which is exactly the pre-0.99.6
+  channel behaviour). Together with the channel-side stamping shipped
+  in 0.99.6, this means xDLMS sink and channel sinks see bit-identical
+  `conversationId` for the same service call — no manual plumbing in
+  consumer code, no "who owns the id" coordination across layers.
+
+  **Tests.** New integration fixture
+  `test/integration/test_cross_layer_correlation.cpp` adds 3 cases
+  (`GetEmitsMatchingConversationIdOnBothLayers`,
+  `ZeroSeedYieldsZeroConversationId`,
+  `NoTraceSinkStillCallsSetCorrelation`) that pin the invariant
+  end-to-end through a custom `IApduChannel` capturing `SetCorrelation`
+  and stamping a `WrapperTcpTraceEvent` with the captured id, alongside
+  an `IXdlmsTraceSink` that captures the xDLMS-side events. Full ctest:
+  967 → 970.
+
+  Out of scope here (deferred to follow-up commits): server-side xDLMS
+  trace emission through `XdlmsServerApduProcessor` (§7 commit 2/3),
+  the `IServerDispatchTraceSink` and dispatcher wiring (§7 commit 3/3),
+  and endpoint composition (`EndpointOptions::xdlmsTraceSink` +
+  `serverDispatchTraceSink` pass-through). Also out of scope:
+  `AssociationClient` still returns `ConversationSeed() == 0`, so real
+  deployments still see `kNoConversationId` until a future change
+  publishes a non-zero seed — at which point the wiring above will
+  automatically carry it through every sink without further channel or
+  client changes.
+
 ## 0.99.7 - 2026-06-17
 
 - Docs (P1 §7 design phase): `docs/xdlms_server_trace_design.md`

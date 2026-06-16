@@ -10,6 +10,15 @@
 #include <vector>
 
 namespace dlms {
+namespace profile {
+class IApduChannel;
+}
+namespace xdlms {
+class IXdlmsAssociationState;
+}
+}
+
+namespace dlms {
 namespace security {
 class CipheredApduProcessor;
 }
@@ -155,6 +164,19 @@ public:
   void SetTraceSink(IXdlmsTraceSink* sink) noexcept { traceSink_ = sink; }
   IXdlmsTraceSink* TraceSink() const noexcept { return traceSink_; }
 
+  // Optional: pin the inbound APDU channel and the conversation seed
+  // source so that ProcessRequest can publish a correlation id matching
+  // the one the client used. After successful decode of an APDU, the
+  // processor computes `MakeConversationId(seed, invokeId)` and calls
+  // `channel->SetCorrelation(...)` so that any trace events emitted on
+  // the outbound response (SendApdu) carry the same id. The same id is
+  // stamped on every server-side `IXdlmsTraceSink` event. Both setters
+  // accept `nullptr` to clear (default state). ABI-safe append.
+  void SetApduChannel(dlms::profile::IApduChannel* channel) noexcept { channel_ = channel; }
+  dlms::profile::IApduChannel* ApduChannel() const noexcept { return channel_; }
+  void SetConversationSeedSource(const IXdlmsAssociationState* state) noexcept { seedSource_ = state; }
+  const IXdlmsAssociationState* ConversationSeedSource() const noexcept { return seedSource_; }
+
 private:
   IXdlmsServerDispatcher& dispatcher_;
   std::unique_ptr<IXdlmsSecurityProcessor> ownedSecurity_;
@@ -164,6 +186,8 @@ private:
   SetRequestBlockState setBlocks_;
   ActionRequestBlockState actionBlocks_;
   IXdlmsTraceSink* traceSink_;
+  dlms::profile::IApduChannel* channel_;
+  const IXdlmsAssociationState* seedSource_;
 };
 
 GetIndication EmptyGetIndication();

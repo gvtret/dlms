@@ -456,7 +456,7 @@ library may be described as an extensible DLMS/COSEM framework with partial
    single canonical contract document covering totality, `"Unknown"`
    fallback, lifetime, thread-safety, no-allocation, ABI stability, and
    the catalogue of 13 helpers + matching coverage test files.
-7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3 → v0.101.0 commit 2/3 → v0.102.0 commit 3a):
+7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3 → v0.101.0 commit 2/3 → v0.102.0 commit 3a → v0.104.0 commit 3b):
    публичный xDLMS-layer trace sink и server-side trace sink. v0.99.7
    зафиксировал дизайн в `docs/xdlms_server_trace_design.md` (два sink-а:
    `IXdlmsTraceSink` в `dlms-xdlms` для xDLMS слоя, client + server;
@@ -501,13 +501,45 @@ library may be described as an extensible DLMS/COSEM framework with partial
    не запускает диспетчер; client-side доступен через прямой
    `XdlmsClient::SetTraceSink` для embedded-кода — без реального
    потребителя добавлять speculative API нарушило бы AGENTS.md §2).
-   Серверные dispatch-events пока ставят `conversationId =
-   kNoConversationId`; end-to-end correlation на серверной стороне
-   и integration test — commit 3b.
-   Остаётся: end-to-end correlation на серверной стороне (commit 3b)
-   плюс integration test, который проверит, что один и тот же
-   `conversationId` появляется в одном request-роундтрипе на
-   channel-уровне, xDLMS-уровне сервера и dispatch-уровне.
+   v0.104.0 — commit 3b (end-to-end `conversationId` на серверной
+   стороне xDLMS): `XdlmsServerApduProcessor` после `DecodeXdlmsApdu`
+   считает `conversationId = MakeConversationId(seedSource_->
+   ConversationSeed(), invokeId)` и стампит его на каждое emit-нутое
+   `IXdlmsTraceSink` event-а для этого запроса (`RequestReceived`,
+   `ResponseSent`, inner `InvokeIdRejected` / `BlockTransferStep` из
+   `ProcessGetRequest`/`ProcessSetRequest`/`ProcessActionRequest`,
+   post-decode `SecurityFailed` от Protect). События, эмитируемые
+   до того, как invokeId известен (Unprotect-failure `SecurityFailed`,
+   `DecodeFailed`), по-прежнему несут `kNoConversationId`. Если у
+   processor-а установлен `IApduChannel*` через `SetApduChannel(...)`,
+   тот же id одновременно ставится на канал через
+   `channel_->SetCorrelation(conversationId)` — это даёт
+   transport-layer trace sink-ам (`HdlcProfileChannel`,
+   `WrapperTcpProfileChannel`) стабильный id для всех outbound
+   response APDU в этом lifecycle. Helpers `EmitServerTrace` /
+   `EmitServerSimpleTrace` и три `Process*Request` получили внутренний
+   trailing `conversationId` параметр (private, без публичного API
+   impact-а). Тесты: два новых case-а в
+   `lib/dlms-xdlms/test/xdlms/test_xdlms_server_trace.cpp` —
+   `ServerStampsConversationIdOnEventsAndChannel` (pin: и channel,
+   и оба event-а получают `MakeConversationId(seed, invokeId)`) и
+   `ServerZeroSeedYieldsInvokeIdAsConversationId` (pin документ-
+   ированного свойства `MakeConversationId(0, invokeId) ==
+   invokeId & 0x0F`, mirror клиентского
+   `CrossLayerCorrelation.ZeroSeedYieldsZeroConversationId`). Полный
+   ctest: 974/975 зелёные (pre-existing MinGW multi-config артефакт
+   `dlms_package_install_smoke` остаётся единственным красным —
+   независимо от §7).
+   Остаётся: dispatch-events (`ServerDispatchTraceEvent`) сейчас
+   всё ещё несут `kNoConversationId`, потому что декоратор
+   `TracingXdlmsServerDispatcher` не имеет доступа ни к processor-у,
+   ни к channel-у. Это будет закрыто отдельным минорным follow-up-ом
+   (`IApduChannel::CurrentConversationId()` уже опубликован для этого
+   через ABI-safe append; декоратор просто должен будет читать
+   id с канала по pointer-у, который endpoint composition уже
+   умеет ему передать). End-to-end integration test через
+   `MakeServerEndpoint`, который замыкает channel ↔ xDLMS sink на
+   одном request-роундтрипе, также отложен на тот follow-up.
 
 ## P2. Надежность и оптимизация
 

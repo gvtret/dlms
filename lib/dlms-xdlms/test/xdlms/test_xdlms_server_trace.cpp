@@ -9,6 +9,10 @@
 #include "dlms/apdu/get.hpp"
 #include "dlms/apdu/set.hpp"
 #include "dlms/apdu/xdlms.hpp"
+#include "dlms/profile/apdu_channel.hpp"
+#include "dlms/profile/profile_types.hpp"
+#include "dlms/xdlms/xdlms_association_state_interface.hpp"
+#include "dlms/xdlms/xdlms_correlation.hpp"
 #include "dlms/xdlms/xdlms_server.hpp"
 #include "dlms/xdlms/xdlms_trace.hpp"
 
@@ -148,6 +152,137 @@ TEST(XdlmsServerTrace, ServerWithoutSinkProcessesNormally)
   EXPECT_FALSE(response.empty());
   EXPECT_EQ(static_cast<dlms::xdlms::IXdlmsTraceSink*>(nullptr),
             processor.TraceSink());
+}
+
+// FixedSeedAssociation: minimal IXdlmsAssociationState stub exposing a
+// fixed ConversationSeed() value so the processor can compute a stable
+// non-zero conversation id from (seed, invokeId).
+class FixedSeedAssociation : public dlms::xdlms::IXdlmsAssociationState
+{
+public:
+  explicit FixedSeedAssociation(std::uint64_t seed) : seed_(seed) {}
+
+  bool IsAssociated() const override { return true; }
+  std::uint64_t ConversationSeed() const noexcept override { return seed_; }
+
+private:
+  std::uint64_t seed_;
+};
+
+// CorrelationCapturingChannel: minimal IApduChannel stub that records the
+// last conversation id set via SetCorrelation. SendApdu/ReceiveApdu are
+// not exercised by these tests; the channel only participates in
+// correlation propagation.
+class CorrelationCapturingChannel : public dlms::profile::IApduChannel
+{
+public:
+  CorrelationCapturingChannel()
+    : lastSetCorrelation(0u), setCorrelationCallCount(0u) {}
+
+  dlms::profile::ProfileStatus Open() override
+  {
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  dlms::profile::ProfileStatus Close() override
+  {
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  bool IsOpen() const override { return true; }
+
+  dlms::profile::ProfileStatus SendApdu(
+    dlms::profile::ProfileByteView /*apdu*/) override
+  {
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  dlms::profile::ProfileStatus ReceiveApdu(
+    std::vector<std::uint8_t>& /*apdu*/) override
+  {
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  dlms::profile::ProfileStatus ReceiveApdu(
+    dlms::profile::ProfileMutableBuffer /*output*/) override
+  {
+    return dlms::profile::ProfileStatus::Ok;
+  }
+
+  void SetCorrelation(std::uint64_t conversationId) noexcept override
+  {
+    lastSetCorrelation = conversationId;
+    ++setCorrelationCallCount;
+  }
+
+  std::uint64_t CurrentConversationId() const noexcept override
+  {
+    return lastSetCorrelation;
+  }
+
+  std::uint64_t lastSetCorrelation;
+  std::size_t setCorrelationCallCount;
+};
+
+TEST(XdlmsServerTrace, ServerStampsConversationIdOnEventsAndChannel)
+{
+  EchoGetDispatcher dispatcher;
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  CapturingTraceSink sink;
+  FixedSeedAssociation seedSource(0xA5A5A5A5A5A5A5A5ULL);
+  CorrelationCapturingChannel channel;
+
+  processor.SetTraceSink(&sink);
+  processor.SetConversationSeedSource(&seedSource);
+  processor.SetApduChannel(&channel);
+
+  // invokeIdAndPriority = 0xC1 -> invokeId = 0x01.
+  std::vector<std::uint8_t> response;
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            processor.ProcessRequest(MakeGetRequest(0xC1u), response));
+
+  const std::uint64_t expectedId = dlms::xdlms::MakeConversationId(
+    seedSource.ConversationSeed(), static_cast<std::uint8_t>(0x01u));
+  ASSERT_NE(0u, expectedId);
+
+  // The processor must have pinned the channel exactly once with the
+  // computed conversation id before sending any response APDU.
+  EXPECT_EQ(1u, channel.setCorrelationCallCount);
+  EXPECT_EQ(expectedId, channel.lastSetCorrelation);
+
+  // Every emitted server-side event must carry the same conversation id.
+  ASSERT_EQ(2u, sink.events.size());
+  EXPECT_EQ(expectedId, sink.events[0].conversationId);
+  EXPECT_EQ(expectedId, sink.events[1].conversationId);
+}
+
+TEST(XdlmsServerTrace, ServerZeroSeedYieldsInvokeIdAsConversationId)
+{
+  // seed=0 ⇒ MakeConversationId(0, invokeId) == invokeId & 0x0F, which
+  // is non-zero for invokeId>=1. This mirrors the client-side property
+  // pinned by CrossLayerCorrelation.ZeroSeedYieldsZeroConversationId.
+  EchoGetDispatcher dispatcher;
+  dlms::xdlms::XdlmsServerApduProcessor processor(dispatcher);
+  CapturingTraceSink sink;
+  FixedSeedAssociation seedSource(0u);
+  CorrelationCapturingChannel channel;
+
+  processor.SetTraceSink(&sink);
+  processor.SetConversationSeedSource(&seedSource);
+  processor.SetApduChannel(&channel);
+
+  std::vector<std::uint8_t> response;
+  ASSERT_EQ(dlms::xdlms::XdlmsStatus::Ok,
+            processor.ProcessRequest(MakeGetRequest(0xC1u), response));
+
+  const std::uint64_t expectedId = dlms::xdlms::MakeConversationId(
+    0u, static_cast<std::uint8_t>(0x01u));
+  EXPECT_EQ(static_cast<std::uint64_t>(0x01u), expectedId);
+
+  EXPECT_EQ(expectedId, channel.lastSetCorrelation);
+  ASSERT_EQ(2u, sink.events.size());
+  EXPECT_EQ(expectedId, sink.events[0].conversationId);
+  EXPECT_EQ(expectedId, sink.events[1].conversationId);
 }
 
 }  // namespace

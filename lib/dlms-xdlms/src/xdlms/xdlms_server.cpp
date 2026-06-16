@@ -1,4 +1,7 @@
 #include "dlms/xdlms/xdlms_server.hpp"
+#include "dlms/profile/apdu_channel.hpp"
+#include "dlms/xdlms/xdlms_association_state_interface.hpp"
+#include "dlms/xdlms/xdlms_correlation.hpp"
 
 #include "dlms/apdu/action.hpp"
 #include "dlms/apdu/data.hpp"
@@ -25,7 +28,8 @@ void EmitServerTrace(
   bool hasBlockNumber,
   std::uint32_t blockNumber,
   std::size_t apduSize,
-  std::size_t payloadSize)
+  std::size_t payloadSize,
+  std::uint64_t conversationId)
 {
   if (sink == 0) {
     return;
@@ -45,7 +49,7 @@ void EmitServerTrace(
   event.blockNumber = blockNumber;
   event.apduSize = apduSize;
   event.payloadSize = payloadSize;
-  event.conversationId = 0u;
+  event.conversationId = conversationId;
   sink->OnXdlmsTrace(event);
 }
 
@@ -55,7 +59,8 @@ void EmitServerSimpleTrace(
   XdlmsStatus status,
   std::uint8_t invokeId,
   const ServiceOptions& options,
-  std::size_t apduSize)
+  std::size_t apduSize,
+  std::uint64_t conversationId)
 {
   if (sink == 0) {
     return;
@@ -67,6 +72,7 @@ void EmitServerSimpleTrace(
   event.invokeId = invokeId;
   event.options = options;
   event.apduSize = apduSize;
+  event.conversationId = conversationId;
   sink->OnXdlmsTrace(event);
 }
 
@@ -426,7 +432,8 @@ XdlmsStatus ProcessGetRequest(
   const ServiceOptions& processorOptions,
   GetResponseBlockState& getBlocks,
   std::vector<std::uint8_t>& responseApdu,
-  IXdlmsTraceSink* traceSink)
+  IXdlmsTraceSink* traceSink,
+  std::uint64_t conversationId)
 {
   if (request.getRequestAny.choice == dlms::apdu::GetRequestChoice::Next) {
     if (!getBlocks.active) {
@@ -442,7 +449,8 @@ XdlmsStatus ProcessGetRequest(
         XdlmsStatus::InvokeIdMismatch,
         invokeId,
         getBlocks.options,
-        0u);
+        0u,
+        conversationId);
       getBlocks = EmptyGetResponseBlockState();
       return XdlmsStatus::InvokeIdMismatch;
     }
@@ -468,6 +476,7 @@ XdlmsStatus ProcessGetRequest(
       event.hasBlockNumber = true;
       event.blockNumber = blockNumber;
       event.apduSize = responseApdu.size();
+      event.conversationId = conversationId;
       traceSink->OnXdlmsTrace(event);
     }
     return blockStatus;
@@ -521,7 +530,8 @@ XdlmsStatus ProcessSetRequest(
   const ServiceOptions& processorOptions,
   SetRequestBlockState& setBlocks,
   std::vector<std::uint8_t>& responseApdu,
-  IXdlmsTraceSink* traceSink)
+  IXdlmsTraceSink* traceSink,
+  std::uint64_t conversationId)
 {
   if (request.setRequestAny.choice ==
       dlms::apdu::SetRequestChoice::WithFirstDataBlock) {
@@ -584,7 +594,8 @@ XdlmsStatus ProcessSetRequest(
         event.hasBlockNumber = true;
         event.blockNumber = 1u;
         event.apduSize = responseApdu.size();
-        traceSink->OnXdlmsTrace(event);
+        event.conversationId = conversationId;
+      traceSink->OnXdlmsTrace(event);
       }
       return ackStatus;
     }
@@ -625,7 +636,8 @@ XdlmsStatus ProcessSetRequest(
         static_cast<std::uint8_t>(
           request.setRequestAny.invokeIdAndPriority & 0x0Fu),
         setBlocks.options,
-        0u);
+        0u,
+        conversationId);
       setBlocks = EmptySetRequestBlockState();
       return XdlmsStatus::InvokeIdMismatch;
     }
@@ -674,7 +686,8 @@ XdlmsStatus ProcessSetRequest(
         event.hasBlockNumber = true;
         event.blockNumber = acceptedBlock;
         event.apduSize = responseApdu.size();
-        traceSink->OnXdlmsTrace(event);
+        event.conversationId = conversationId;
+      traceSink->OnXdlmsTrace(event);
       }
       return ackStatus;
     }
@@ -744,7 +757,8 @@ XdlmsStatus ProcessActionRequest(
   const ServiceOptions& processorOptions,
   ActionRequestBlockState& actionBlocks,
   std::vector<std::uint8_t>& responseApdu,
-  IXdlmsTraceSink* traceSink)
+  IXdlmsTraceSink* traceSink,
+  std::uint64_t conversationId)
 {
   if (request.actionRequestAny.choice ==
       dlms::apdu::ActionRequestChoice::WithFirstPblock) {
@@ -805,7 +819,8 @@ XdlmsStatus ProcessActionRequest(
         event.hasBlockNumber = true;
         event.blockNumber = 1u;
         event.apduSize = responseApdu.size();
-        traceSink->OnXdlmsTrace(event);
+        event.conversationId = conversationId;
+      traceSink->OnXdlmsTrace(event);
       }
       return ackStatus;
     }
@@ -848,7 +863,8 @@ XdlmsStatus ProcessActionRequest(
         static_cast<std::uint8_t>(
           request.actionRequestAny.invokeIdAndPriority & 0x0Fu),
         actionBlocks.options,
-        0u);
+        0u,
+        conversationId);
       actionBlocks = EmptyActionRequestBlockState();
       return XdlmsStatus::InvokeIdMismatch;
     }
@@ -897,7 +913,8 @@ XdlmsStatus ProcessActionRequest(
         event.hasBlockNumber = true;
         event.blockNumber = acceptedBlock;
         event.apduSize = responseApdu.size();
-        traceSink->OnXdlmsTrace(event);
+        event.conversationId = conversationId;
+      traceSink->OnXdlmsTrace(event);
       }
       return ackStatus;
     }
@@ -1106,6 +1123,8 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
   , setBlocks_(EmptySetRequestBlockState())
   , actionBlocks_(EmptyActionRequestBlockState())
   , traceSink_(0)
+  , channel_(0)
+  , seedSource_(0)
 {
 }
 
@@ -1120,6 +1139,8 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
   , setBlocks_(EmptySetRequestBlockState())
   , actionBlocks_(EmptyActionRequestBlockState())
   , traceSink_(0)
+  , channel_(0)
+  , seedSource_(0)
 {
 }
 
@@ -1134,6 +1155,8 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
   , setBlocks_(EmptySetRequestBlockState())
   , actionBlocks_(EmptyActionRequestBlockState())
   , traceSink_(0)
+  , channel_(0)
+  , seedSource_(0)
 {
 }
 
@@ -1149,6 +1172,8 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
   , setBlocks_(EmptySetRequestBlockState())
   , actionBlocks_(EmptyActionRequestBlockState())
   , traceSink_(0)
+  , channel_(0)
+  , seedSource_(0)
 {
 }
 
@@ -1163,6 +1188,8 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
   , setBlocks_(EmptySetRequestBlockState())
   , actionBlocks_(EmptyActionRequestBlockState())
   , traceSink_(0)
+  , channel_(0)
+  , seedSource_(0)
 {
 }
 
@@ -1178,6 +1205,8 @@ XdlmsServerApduProcessor::XdlmsServerApduProcessor(
   , setBlocks_(EmptySetRequestBlockState())
   , actionBlocks_(EmptyActionRequestBlockState())
   , traceSink_(0)
+  , channel_(0)
+  , seedSource_(0)
 {
 }
 
@@ -1201,7 +1230,8 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
         XdlmsStatus::SecurityFailed,
         0u,
         options_,
-        requestApdu.size());
+        requestApdu.size(),
+        0u);
       return XdlmsStatus::SecurityFailed;
     }
   }
@@ -1217,8 +1247,34 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
       XdlmsStatus::DecodeFailed,
       0u,
       options_,
-      plainRequest.size());
+      plainRequest.size(),
+        0u);
     return XdlmsStatus::DecodeFailed;
+  }
+
+  std::uint8_t requestInvokeId = 0u;
+  switch (request.kind) {
+    case dlms::apdu::XdlmsApduKind::GetRequest:
+      requestInvokeId = static_cast<std::uint8_t>(
+        request.getRequest.invokeIdAndPriority & 0x0Fu);
+      break;
+    case dlms::apdu::XdlmsApduKind::SetRequest:
+      requestInvokeId = static_cast<std::uint8_t>(
+        request.setRequest.invokeIdAndPriority & 0x0Fu);
+      break;
+    case dlms::apdu::XdlmsApduKind::ActionRequest:
+      requestInvokeId = static_cast<std::uint8_t>(
+        request.actionRequest.invokeIdAndPriority & 0x0Fu);
+      break;
+    default:
+      break;
+  }
+  const std::uint64_t conversationSeed =
+    seedSource_ != 0 ? seedSource_->ConversationSeed() : 0u;
+  const std::uint64_t conversationId =
+    MakeConversationId(conversationSeed, requestInvokeId);
+  if (channel_ != 0) {
+    channel_->SetCorrelation(conversationId);
   }
 
   if (traceSink_ != 0) {
@@ -1270,6 +1326,7 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
       default:
         break;
     }
+    event.conversationId = conversationId;
     traceSink_->OnXdlmsTrace(event);
   }
 
@@ -1282,7 +1339,8 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
         options_,
         getBlocks_,
         responseApdu,
-        traceSink_);
+        traceSink_,
+        conversationId);
       break;
 
     case dlms::apdu::XdlmsApduKind::SetRequest:
@@ -1292,7 +1350,8 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
         options_,
         setBlocks_,
         responseApdu,
-        traceSink_);
+        traceSink_,
+        conversationId);
       break;
 
     case dlms::apdu::XdlmsApduKind::ActionRequest:
@@ -1302,7 +1361,8 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
         options_,
         actionBlocks_,
         responseApdu,
-        traceSink_);
+        traceSink_,
+        conversationId);
       break;
 
     default:
@@ -1328,7 +1388,8 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
         XdlmsStatus::SecurityFailed,
         0u,
         options_,
-        plainResponse.size());
+        plainResponse.size(),
+        conversationId);
       return XdlmsStatus::SecurityFailed;
     }
   }
@@ -1339,7 +1400,8 @@ XdlmsStatus XdlmsServerApduProcessor::ProcessRequest(
     XdlmsStatus::Ok,
     0u,
     options_,
-    responseApdu.size());
+    responseApdu.size(),
+        conversationId);
 
   return XdlmsStatus::Ok;
 }

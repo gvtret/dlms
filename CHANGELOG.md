@@ -1,5 +1,50 @@
 # Changelog
 
+## 0.104.0 - 2026-06-17
+
+- Feature (P1 §7 commit 3b — end-to-end `conversationId` propagation
+  through the server-side xDLMS stack):
+  - `XdlmsServerApduProcessor` now computes a `conversationId` per
+    inbound request from `MakeConversationId(seedSource_->ConversationSeed(),
+    invokeId)` immediately after `DecodeXdlmsApdu` succeeds, and stamps
+    it on every emitted `IXdlmsTraceSink` event for that request:
+    `RequestReceived`, `ResponseSent`, the inner `InvokeIdRejected` /
+    `BlockTransferStep` events emitted from `ProcessGetRequest` /
+    `ProcessSetRequest` / `ProcessActionRequest`, and the post-decode
+    `SecurityFailed` (Protect failure). Events emitted before the
+    request invoke id is known (Unprotect-failure `SecurityFailed`,
+    `DecodeFailed`) continue to carry `kNoConversationId` (0).
+  - When an `IApduChannel*` has been installed via
+    `SetApduChannel(...)`, the processor calls
+    `channel_->SetCorrelation(conversationId)` right after the id is
+    computed, mirroring `XdlmsClient`'s pattern. This gives the
+    transport-layer trace sinks (`HdlcProfileChannel`,
+    `WrapperTcpProfileChannel`) a stable id to stamp on every
+    outbound response APDU emitted later in the request lifecycle.
+  - Helper signatures `EmitServerTrace` / `EmitServerSimpleTrace`
+    gained a trailing `std::uint64_t conversationId` parameter and the
+    three `Process*Request` helpers gained a trailing
+    `std::uint64_t conversationId` parameter — both are internal-only,
+    no public API impact beyond `XdlmsServerApduProcessor`'s ctor
+    initializers (which already shipped in 0.102.0).
+- Tests: extended `lib/dlms-xdlms/test/xdlms/test_xdlms_server_trace.cpp`
+  with two new cases:
+  - `ServerStampsConversationIdOnEventsAndChannel`: installs a
+    `FixedSeedAssociation` (seed=0xA5A5…) and a
+    `CorrelationCapturingChannel`, sends a Get request with
+    `invokeId=0x01`, and asserts that both emitted trace events plus
+    the channel's last `SetCorrelation` value all equal
+    `MakeConversationId(seed, 0x01)`.
+  - `ServerZeroSeedYieldsInvokeIdAsConversationId`: pins the
+    documented `MakeConversationId(0, invokeId) == invokeId & 0x0F`
+    property for the server path (matching the client-side
+    `CrossLayerCorrelation.ZeroSeedYieldsZeroConversationId` test).
+  - `lib/dlms-xdlms/test/CMakeLists.txt` now links `dlms_xdlms_tests`
+    against `dlms_profile` so the `IApduChannel` stub compiles.
+  - Full ctest: 974/975 passing (the lone failure,
+    `dlms_package_install_smoke`, is a pre-existing MinGW-only
+    multi-config artefact unrelated to this commit).
+
 ## 0.103.0 - 2026-06-17
 
 - Feature (P1 §7 follow-up enabler — `IApduChannel::CurrentConversationId()`):

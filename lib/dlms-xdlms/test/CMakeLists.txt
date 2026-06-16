@@ -22,6 +22,7 @@ add_executable(dlms_xdlms_tests
 target_link_libraries(dlms_xdlms_tests
   PRIVATE
     dlms_xdlms
+    dlms_profile
     GTest::gtest_main)
 
 include(GoogleTest)

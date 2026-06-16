@@ -1,5 +1,6 @@
 #include "dlms/client/client.hpp"
 #include "dlms/xdlms/xdlms_client.hpp"
+#include "live_meter_smoke_byte_emit.hpp"
 
 #include <cstdlib>
 #include <cstring>
@@ -245,17 +246,6 @@ bool EnvTraceEnabled()
   return trace != 0 && std::strcmp(trace, "1") == 0;
 }
 
-// Wire-byte dumping is OFF by default so that running
-// LiveMeterSmoke against a real meter does not spill HLS
-// challenges, GMAC tags, or ciphered/plaintext APDU payloads
-// onto an operator console. Set DLMS_LIVE_TRACE_WIRE_BYTES=1
-// to opt back in for a hands-on diagnostic run.
-bool EnvWireBytesTraceEnabled()
-{
-  const char* trace = Env("DLMS_LIVE_TRACE_WIRE_BYTES");
-  return trace != 0 && std::strcmp(trace, "1") == 0;
-}
-
 const char* ProfileName(dlms::client::ClientProfile profile)
 {
   switch (profile) {
@@ -440,25 +430,6 @@ void PrintObis(const dlms::xdlms::CosemLogicalName& name)
     }
     std::cout << static_cast<unsigned>(name[i]);
   }
-}
-
-void PrintHexBytes(const std::uint8_t* bytes, std::size_t size)
-{
-  if (bytes == 0 || size == 0u) {
-    return;
-  }
-
-  std::ios::fmtflags flags = std::cout.flags();
-  const char fill = std::cout.fill();
-  std::cout << std::hex << std::setfill('0');
-  for (std::size_t i = 0u; i < size; ++i) {
-    if (i != 0u) {
-      std::cout << ' ';
-    }
-    std::cout << std::setw(2) << static_cast<unsigned>(bytes[i]);
-  }
-  std::cout.flags(flags);
-  std::cout.fill(fill);
 }
 
 class TraceClock
@@ -698,13 +669,7 @@ public:
               << " encodedSize=" << event.encodedSize
               << " apduSize=" << event.apduSize
               << " byteSize=" << event.byteSize;
-    if ((event.kind == dlms::profile::WrapperTcpTraceKind::WireWrite ||
-         event.kind == dlms::profile::WrapperTcpTraceKind::WireRead) &&
-        event.bytes != 0 && event.byteSize != 0u &&
-        EnvWireBytesTraceEnabled()) {
-      std::cout << " bytes=";
-      PrintHexBytes(event.bytes, event.byteSize);
-    }
+    dlms_live_smoke::EmitWrapperBytesIfEnabled(std::cout, event);
     std::cout << "\n";
   }
 
@@ -734,13 +699,7 @@ public:
               << " encodedSize=" << event.encodedSize
               << " apduSize=" << event.apduSize
               << " byteSize=" << event.byteSize;
-    if ((event.kind == dlms::profile::HdlcProfileTraceKind::WireWrite ||
-         event.kind == dlms::profile::HdlcProfileTraceKind::WireRead) &&
-        event.bytes != 0 && event.byteSize != 0u &&
-        EnvWireBytesTraceEnabled()) {
-      std::cout << " bytes=";
-      PrintHexBytes(event.bytes, event.byteSize);
-    }
+    dlms_live_smoke::EmitHdlcBytesIfEnabled(std::cout, event);
     std::cout << "\n";
   }
 

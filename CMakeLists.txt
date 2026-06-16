@@ -292,6 +292,36 @@ if(DLMS_BUILD_INTEGRATION_TESTS)
           dlms_client)
 
       add_test(NAME LiveMeterSmoke COMMAND dlms_live_meter_smoke)
+
+      # Redaction policy regression test for the live smoke
+      # tool. Pins P0 §3.6 trace-secrets behaviour without
+      # needing a real meter.
+      add_executable(dlms_live_meter_smoke_redaction_tests
+        tools/test/test_live_meter_smoke_redaction.cpp)
+
+      target_compile_features(dlms_live_meter_smoke_redaction_tests
+        PRIVATE cxx_std_11)
+
+      target_include_directories(dlms_live_meter_smoke_redaction_tests
+        PRIVATE
+          ${CMAKE_CURRENT_SOURCE_DIR}/tools)
+
+      target_link_libraries(dlms_live_meter_smoke_redaction_tests
+        PRIVATE
+          dlms_profile
+          GTest::gtest_main)
+
+      include(GoogleTest)
+      if(WIN32)
+        get_filename_component(DLMS_MINGW_BIN_DIR
+          "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        add_test(NAME dlms_live_meter_smoke_redaction_tests
+          COMMAND ${CMAKE_COMMAND} -E env
+            "PATH=${DLMS_MINGW_BIN_DIR}"
+            $<TARGET_FILE:dlms_live_meter_smoke_redaction_tests>)
+      else()
+        gtest_discover_tests(dlms_live_meter_smoke_redaction_tests)
+      endif()
     endif()
 
     if(DLMS_LLC_HAS_CODEC_API)

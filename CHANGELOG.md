@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.97.5 - 2026-06-17
+
+- Tools / security: extracted the wire-byte hex dump policy
+  for `tools/live_meter_smoke` into
+  `tools/live_meter_smoke_byte_emit.hpp` so the redaction
+  rule (default off, opt-in via
+  `DLMS_LIVE_TRACE_WIRE_BYTES=1`) lives in one inline header
+  used by both the tool and the new test target.
+- Added `dlms_live_meter_smoke_redaction_tests` (10 cases)
+  pinning the policy: wire payload omitted by default, only
+  emitted on the explicit env flag, non-wire trace kinds and
+  empty byte spans stay silent regardless. Test target is
+  gated behind `DLMS_BUILD_LIVE_TESTS=ON` to match the
+  existing `LiveMeterSmoke` opt-in. Closes the
+  belt-and-braces follow-up promised in `0.97.4`.
+
 ## 0.97.4 - 2026-06-17
 
 - Tools / security: `tools/live_meter_smoke` no longer dumps

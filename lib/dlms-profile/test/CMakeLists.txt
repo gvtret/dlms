@@ -30,3 +30,21 @@ if(WIN32)
 else()
   gtest_discover_tests(dlms_profile_tests)
 endif()
+
+add_executable(dlms_profile_c_header_smoke
+  profile/test_profile_c_header.c
+  profile/test_profile_c_header_main.c)
+
+target_link_libraries(dlms_profile_c_header_smoke
+  PRIVATE
+    dlms_profile)
+
+if(WIN32)
+  add_test(NAME ProfileCApi.CHeaderCompilesAsC
+    COMMAND ${CMAKE_COMMAND} -E env
+      "PATH=${DLMS_MINGW_BIN_DIR}"
+      $<TARGET_FILE:dlms_profile_c_header_smoke>)
+else()
+  add_test(NAME ProfileCApi.CHeaderCompilesAsC
+    COMMAND dlms_profile_c_header_smoke)
+endif()

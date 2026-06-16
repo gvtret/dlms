@@ -32,3 +32,15 @@ target_link_libraries(dlms_apdu_tests
 
 include(GoogleTest)
 gtest_discover_tests(dlms_apdu_tests)
+
+add_executable(dlms_apdu_c_header_smoke
+  apdu/test_apdu_c_header.c
+  apdu/test_apdu_c_header_main.c)
+
+target_link_libraries(dlms_apdu_c_header_smoke
+  PRIVATE
+    dlms_apdu)
+
+add_test(
+  NAME ApduCApi.CHeaderCompilesAsC
+  COMMAND dlms_apdu_c_header_smoke)

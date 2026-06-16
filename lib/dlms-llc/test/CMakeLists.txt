@@ -23,3 +23,15 @@ target_link_libraries(dlms_llc_tests
 
 include(GoogleTest)
 gtest_discover_tests(dlms_llc_tests)
+
+add_executable(dlms_llc_c_header_smoke
+  llc/test_llc_c_header.c
+  llc/test_llc_c_header_main.c)
+
+target_link_libraries(dlms_llc_c_header_smoke
+  PRIVATE
+    dlms_llc)
+
+add_test(
+  NAME LlcCApi.CHeaderCompilesAsC
+  COMMAND dlms_llc_c_header_smoke)

@@ -30,3 +30,15 @@ target_link_libraries(dlms_hdlc_tests
 
 include(GoogleTest)
 gtest_discover_tests(dlms_hdlc_tests)
+
+add_executable(dlms_hdlc_c_header_smoke
+  hdlc/test_hdlc_c_header.c
+  hdlc/test_hdlc_c_header_main.c)
+
+target_link_libraries(dlms_hdlc_c_header_smoke
+  PRIVATE
+    dlms_hdlc)
+
+add_test(
+  NAME HdlcCApi.CHeaderCompilesAsC
+  COMMAND dlms_hdlc_c_header_smoke)

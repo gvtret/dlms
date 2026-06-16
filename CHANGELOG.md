@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.98.2 - 2026-06-17
+
+- Tests / C ABI: every public `*_c_api.h` header now has a
+  dedicated C-only smoke executable that links and runs from a
+  pure-C TU, closing P0 §1.4 "Проверить все C headers smoke
+  tests". Previously six of the seven `test_*_c_header.c` files
+  were just compiled into their C++ gtest binary (compile-only
+  canary, never invoked); only `dlms_association_c_header_smoke`
+  ran as a real C-only executable. Now each of the seven
+  modules (`apdu`, `association`, `hdlc`, `llc`, `profile`,
+  `transport`, `wrapper`) gets `dlms_<mod>_c_header_smoke`,
+  registered as `<Module>CApi.CHeaderCompilesAsC` in ctest, that
+  actually calls the C smoke function at runtime.
+  The existing `test_*_c_header.c` files keep their original
+  function signatures so the corresponding C++ gtest cases that
+  already linked against them continue to work unchanged; a
+  thin `test_*_c_header_main.c` companion supplies the `main()`
+  for the smoke executable. Test-only change, no library-side
+  impact; full ctest 942/942 (936 → 942).
+
 ## 0.98.1 - 2026-06-17
 
 - Tests / endpoint: added three idempotency regression tests

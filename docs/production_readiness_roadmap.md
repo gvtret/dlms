@@ -78,6 +78,14 @@
    - Stable enum numeric checks должны быть только там, где ABI это требует.
    - Wrapper C API stream decoder получил публичный push/drain entry point
      начиная с `0.4.0`.
+   - **Закрыто в `0.98.2`**: каждый из 7 public `*_c_api.h` (apdu,
+     association, hdlc, llc, profile, transport, wrapper) теперь
+     имеет отдельный C-only smoke executable
+     (`dlms_<mod>_c_header_smoke`) с собственным `main()`, который
+     реально вызывает соответствующую функцию из чистого-C TU и
+     зарегистрирован в ctest как `<Module>CApi.CHeaderCompilesAsC`.
+     До этого 6 из 7 `test_*_c_header.c` файлов были compile-only
+     canary внутри C++ gtest binary, без link-from-C-TU верификации.
 5. Проверить install-tree export hygiene.
    - Concrete CMake targets экспортируют package include directory без
      дублирования начиная с `0.4.2`.

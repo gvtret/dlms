@@ -49,3 +49,23 @@ if(WIN32)
 else()
   gtest_discover_tests(dlms_transport_tests)
 endif()
+
+if(DLMS_BUILD_C_API)
+  add_executable(dlms_transport_c_header_smoke
+    transport/test_transport_c_header.c
+    transport/test_transport_c_header_main.c)
+
+  target_link_libraries(dlms_transport_c_header_smoke
+    PRIVATE
+      dlms_transport)
+
+  if(WIN32)
+    add_test(NAME TransportCApi.CHeaderCompilesAsC
+      COMMAND ${CMAKE_COMMAND} -E env
+        "PATH=${DLMS_MINGW_BIN_DIR}"
+        $<TARGET_FILE:dlms_transport_c_header_smoke>)
+  else()
+    add_test(NAME TransportCApi.CHeaderCompilesAsC
+      COMMAND dlms_transport_c_header_smoke)
+  endif()
+endif()

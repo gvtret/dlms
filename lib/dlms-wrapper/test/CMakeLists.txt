@@ -25,3 +25,15 @@ target_link_libraries(dlms_wrapper_tests
 
 include(GoogleTest)
 gtest_discover_tests(dlms_wrapper_tests)
+
+add_executable(dlms_wrapper_c_header_smoke
+  wrapper/test_wrapper_c_header.c
+  wrapper/test_wrapper_c_header_main.c)
+
+target_link_libraries(dlms_wrapper_c_header_smoke
+  PRIVATE
+    dlms_wrapper)
+
+add_test(
+  NAME WrapperCApi.CHeaderCompilesAsC
+  COMMAND dlms_wrapper_c_header_smoke)

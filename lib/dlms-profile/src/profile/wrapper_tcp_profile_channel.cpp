@@ -95,6 +95,11 @@ void WrapperTcpProfileChannel::SetCorrelation(std::uint64_t conversationId) noex
   conversationId_ = conversationId;
 }
 
+std::uint64_t WrapperTcpProfileChannel::CurrentConversationId() const noexcept
+{
+  return conversationId_;
+}
+
 ProfileStatus WrapperTcpProfileChannel::SendApdu(ProfileByteView apdu)
 {
   if (!IsValidByteView(apdu)) {

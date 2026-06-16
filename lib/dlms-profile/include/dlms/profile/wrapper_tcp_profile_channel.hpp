@@ -27,6 +27,7 @@ public:
   ProfileStatus ReceiveApdu(ProfileMutableBuffer output);
 
   void SetCorrelation(std::uint64_t conversationId) noexcept;
+  std::uint64_t CurrentConversationId() const noexcept;
 
 private:
   ProfileStatus ReceiveNextFrame();

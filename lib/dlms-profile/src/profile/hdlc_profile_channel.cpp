@@ -158,6 +158,11 @@ void HdlcProfileChannel::SetCorrelation(std::uint64_t conversationId) noexcept
   conversationId_ = conversationId;
 }
 
+std::uint64_t HdlcProfileChannel::CurrentConversationId() const noexcept
+{
+  return conversationId_;
+}
+
 ProfileStatus HdlcProfileChannel::ConnectDataLink()
 {
   if (!options_.hdlcUseSession) {

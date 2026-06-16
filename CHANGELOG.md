@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.103.0 - 2026-06-17
+
+- Feature (P1 §7 follow-up enabler — `IApduChannel::CurrentConversationId()`):
+  - New `virtual std::uint64_t CurrentConversationId() const noexcept`
+    on `dlms::profile::IApduChannel`, appended at the end of the
+    interface (ABI-safe addition, default returns `0u`). Reads back the
+    correlation id most recently installed via `SetCorrelation(...)`,
+    so server-side trace decorators (notably
+    `TracingXdlmsServerDispatcher`, to be wired in a later commit) can
+    publish the conversation id that the xDLMS processor seeded for the
+    current request without having to thread the id through the
+    dispatcher API.
+  - Implemented in `HdlcProfileChannel` and `WrapperTcpProfileChannel`
+    (returns the stored `conversationId_`). Other channels inherit the
+    default `0u` and keep working unchanged.
+  - No behavioural change to any existing code path; this is purely a
+    new read-only accessor.
+
 ## 0.102.0 - 2026-06-17
 
 - Feature (P1 §7 commit 3a — server-side dispatch trace sink in

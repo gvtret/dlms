@@ -26,6 +26,15 @@ public:
   // Default no-op — channels without trace sinks need not implement.
   // See docs/trace_correlation_design.md.
   virtual void SetCorrelation(std::uint64_t /*conversationId*/) noexcept {}
+
+  // Optional: read the correlation id currently stamped on this channel.
+  // Returns 0 when no correlation has been set (or for channels that do
+  // not participate in trace correlation). Used by server-side trace
+  // sinks to publish the conversation id seeded by the xDLMS processor
+  // after it has decoded the inbound invoke id. ABI-safe append (new
+  // virtual at the end of the interface). See
+  // docs/trace_correlation_design.md.
+  virtual std::uint64_t CurrentConversationId() const noexcept { return 0u; }
 };
 
 } // namespace profile

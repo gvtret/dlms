@@ -65,7 +65,8 @@ bool IsRetriableReceiveStatus(ProfileStatus status)
 HdlcProfileTraceEvent MakeHdlcTraceEvent(
   const HdlcProfileTraceKind kind,
   const HdlcProfileTraceDirection direction,
-  const ProfileStatus status)
+  const ProfileStatus status,
+  const std::uint64_t conversationId)
 {
   HdlcProfileTraceEvent event;
   event.kind = kind;
@@ -75,6 +76,7 @@ HdlcProfileTraceEvent MakeHdlcTraceEvent(
   event.apduSize = 0u;
   event.bytes = 0;
   event.byteSize = 0u;
+  event.conversationId = conversationId;
   return event;
 }
 
@@ -149,6 +151,11 @@ ProfileStatus HdlcProfileChannel::Close()
 bool HdlcProfileChannel::IsOpen() const
 {
   return stream_.IsOpen();
+}
+
+void HdlcProfileChannel::SetCorrelation(std::uint64_t conversationId) noexcept
+{
+  conversationId_ = conversationId;
 }
 
 ProfileStatus HdlcProfileChannel::ConnectDataLink()
@@ -398,7 +405,8 @@ ProfileStatus HdlcProfileChannel::WriteFrameBytes(
   HdlcProfileTraceEvent event =
     MakeHdlcTraceEvent(HdlcProfileTraceKind::WireWrite,
                        HdlcProfileTraceDirection::Outbound,
-                       ProfileStatus::Ok);
+                       ProfileStatus::Ok,
+                       conversationId_);
   event.encodedSize = frameBytes.size();
   event.bytes = data;
   event.byteSize = frameBytes.size();
@@ -613,7 +621,8 @@ ProfileStatus HdlcProfileChannel::ReceiveDecodedFrame(
       HdlcProfileTraceEvent event =
         MakeHdlcTraceEvent(HdlcProfileTraceKind::ReadStatus,
                            HdlcProfileTraceDirection::Inbound,
-                           readStatus);
+                           readStatus,
+                           conversationId_);
       EmitHdlcTrace(options_.hdlcProfileTraceSink, event);
       return readStatus;
     }
@@ -625,7 +634,8 @@ ProfileStatus HdlcProfileChannel::ReceiveDecodedFrame(
       HdlcProfileTraceEvent wireEvent =
         MakeHdlcTraceEvent(HdlcProfileTraceKind::WireRead,
                            HdlcProfileTraceDirection::Inbound,
-                           ProfileStatus::Ok);
+                           ProfileStatus::Ok,
+                           conversationId_);
       wireEvent.bytes = &readBuffer_[0];
       wireEvent.byteSize = bytesRead;
       EmitHdlcTrace(options_.hdlcProfileTraceSink, wireEvent);
@@ -649,7 +659,8 @@ ProfileStatus HdlcProfileChannel::ReceiveDecodedFrame(
       HdlcProfileTraceEvent event =
         MakeHdlcTraceEvent(HdlcProfileTraceKind::DecodeStatus,
                            HdlcProfileTraceDirection::Inbound,
-                           decodeStatus);
+                           decodeStatus,
+                           conversationId_);
       event.bytes = &readBuffer_[0];
       event.byteSize = bytesRead;
       EmitHdlcTrace(options_.hdlcProfileTraceSink, event);

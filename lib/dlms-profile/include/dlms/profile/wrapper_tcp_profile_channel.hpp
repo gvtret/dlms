@@ -26,6 +26,8 @@ public:
   ProfileStatus ReceiveApdu(std::vector<std::uint8_t>& apdu);
   ProfileStatus ReceiveApdu(ProfileMutableBuffer output);
 
+  void SetCorrelation(std::uint64_t conversationId) noexcept;
+
 private:
   ProfileStatus ReceiveNextFrame();
   ProfileStatus CopyFirstPendingFrame(ProfileMutableBuffer output, bool consume);
@@ -36,6 +38,7 @@ private:
   dlms::wrapper::WrapperStreamDecoder decoder_;
   std::vector<std::uint8_t> readBuffer_;
   std::vector<dlms::wrapper::WrapperFrameBuffer> pendingFrames_;
+  std::uint64_t conversationId_ = 0;
 };
 
 } // namespace profile

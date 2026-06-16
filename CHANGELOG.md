@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.99.6 - 2026-06-17
+
+- Feature (P1 §2 commit 3/3): `WrapperTcpProfileChannel` and
+  `HdlcProfileChannel` now override `SetCorrelation(uint64_t)` and
+  stamp the active `conversationId` onto every emitted trace event
+  (`WireWrite`, `WireRead`, `ReadStatus`, `DecodeStatus` for both
+  channels). Default conversation id stays `kNoConversationId = 0`, so
+  consumers that never call `SetCorrelation` see exactly the same
+  events as before. End-to-end test fixture extended with 2 new cases
+  (`WrapperTcpChannelStampsSendAndReceiveEvents`,
+  `HdlcChannelStampsWireWriteEvents`) that drive the channels through
+  `FakeByteStream`, flip `SetCorrelation` on and off, and pin every
+  event in the capture window to the expected id. Test fixture total:
+  9 cases; full ctest unchanged at 967/967.
+
+  Out of scope for this commit (intentionally deferred to a follow-up):
+  AssociationClient does not yet generate or propagate a conversation
+  id — once it does, the same `SetCorrelation` plumbing will carry it
+  into trace consumers without any additional channel changes.
+
 ## 0.99.5 - 2026-06-17
 
 - Feature (P1 §2 commit 2/3): wired the cross-layer correlation field

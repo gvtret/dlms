@@ -43,7 +43,8 @@ void EmitTrace(
 WrapperTcpTraceEvent MakeTraceEvent(
   WrapperTcpTraceKind kind,
   WrapperTcpTraceDirection direction,
-  ProfileStatus status)
+  ProfileStatus status,
+  std::uint64_t conversationId)
 {
   WrapperTcpTraceEvent event;
   event.kind = kind;
@@ -55,6 +56,7 @@ WrapperTcpTraceEvent MakeTraceEvent(
   event.apduSize = 0u;
   event.bytes = 0;
   event.byteSize = 0u;
+  event.conversationId = conversationId;
   return event;
 }
 
@@ -88,6 +90,11 @@ bool WrapperTcpProfileChannel::IsOpen() const
   return stream_.IsOpen();
 }
 
+void WrapperTcpProfileChannel::SetCorrelation(std::uint64_t conversationId) noexcept
+{
+  conversationId_ = conversationId;
+}
+
 ProfileStatus WrapperTcpProfileChannel::SendApdu(ProfileByteView apdu)
 {
   if (!IsValidByteView(apdu)) {
@@ -114,7 +121,8 @@ ProfileStatus WrapperTcpProfileChannel::SendApdu(ProfileByteView apdu)
   WrapperTcpTraceEvent event =
     MakeTraceEvent(WrapperTcpTraceKind::WireWrite,
                    WrapperTcpTraceDirection::Outbound,
-                   ProfileStatus::Ok);
+                   ProfileStatus::Ok,
+                   conversationId_);
   event.sourcePort = frame.sourcePort;
   event.destinationPort = frame.destinationPort;
   event.encodedSize = wpdu.size();
@@ -182,7 +190,8 @@ ProfileStatus WrapperTcpProfileChannel::ReceiveNextFrame()
       WrapperTcpTraceEvent event =
         MakeTraceEvent(WrapperTcpTraceKind::ReadStatus,
                        WrapperTcpTraceDirection::Inbound,
-                       readStatus);
+                       readStatus,
+                       conversationId_);
       EmitTrace(options_.wrapperTcpTraceSink, event);
       return readStatus;
     }
@@ -194,7 +203,8 @@ ProfileStatus WrapperTcpProfileChannel::ReceiveNextFrame()
       WrapperTcpTraceEvent wireEvent =
         MakeTraceEvent(WrapperTcpTraceKind::WireRead,
                        WrapperTcpTraceDirection::Inbound,
-                       ProfileStatus::Ok);
+                       ProfileStatus::Ok,
+                       conversationId_);
       wireEvent.bytes = &readBuffer_[0];
       wireEvent.byteSize = bytesRead;
       EmitTrace(options_.wrapperTcpTraceSink, wireEvent);
@@ -219,7 +229,8 @@ ProfileStatus WrapperTcpProfileChannel::ReceiveNextFrame()
       WrapperTcpTraceEvent event =
         MakeTraceEvent(WrapperTcpTraceKind::DecodeStatus,
                        WrapperTcpTraceDirection::Inbound,
-                       decodeStatus);
+                       decodeStatus,
+                       conversationId_);
       event.bytes = &readBuffer_[0];
       event.byteSize = bytesRead;
       EmitTrace(options_.wrapperTcpTraceSink, event);

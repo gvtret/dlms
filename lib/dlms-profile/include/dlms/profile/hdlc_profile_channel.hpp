@@ -40,6 +40,8 @@ public:
   ProfileStatus ReceiveApdu(std::vector<std::uint8_t>& apdu);
   ProfileStatus ReceiveApdu(ProfileMutableBuffer output);
 
+  void SetCorrelation(std::uint64_t conversationId) noexcept;
+
 private:
   ProfileStatus MakeHdlcSessionOptions(
     dlms::hdlc::HdlcSessionOptions& sessionOptions) const;
@@ -80,6 +82,7 @@ private:
   std::vector<std::uint8_t> readBuffer_;
   std::deque<dlms::hdlc::HdlcFrameBuffer> pendingHdlcFrames_;
   std::vector<std::vector<std::uint8_t> > pendingApdus_;
+  std::uint64_t conversationId_ = 0;
 };
 
 } // namespace profile

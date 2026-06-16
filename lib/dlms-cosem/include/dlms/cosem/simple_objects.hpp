@@ -2500,19 +2500,19 @@ private:
   CosemAccessRights rights_;
 };
 
-class CosemPrimePlcMacNetworkStatisticsObject : public ICosemObject
+class CosemPrimePlcMacNetworkAdminDataObject : public ICosemObject
 {
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
-  CosemPrimePlcMacNetworkStatisticsObject(
+  CosemPrimePlcMacNetworkAdminDataObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& nodeRegistrations,
     const CosemByteBuffer& nodeUnregistrations,
     const CosemByteBuffer& processedAliveMsgs,
     const CosemByteBuffer& handledPromotions,
     AttributeAccessMode mutableAccess);
-  CosemPrimePlcMacNetworkStatisticsObject(
+  CosemPrimePlcMacNetworkAdminDataObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& nodeRegistrations,
     const CosemByteBuffer& nodeUnregistrations,

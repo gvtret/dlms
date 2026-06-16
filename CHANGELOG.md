@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.93.0 - 2026-06-17
+
+- BREAKING (C++ API): Renamed the PRIME PLC MAC Network
+  Statistics built-in object from
+  `CosemPrimePlcMacNetworkStatisticsObject` to
+  `CosemPrimePlcMacNetworkAdminDataObject` to match the
+  IEC 62056-6-2 ED4 (2021) §4.12.9 / DLMS UA Blue Book Ed. 12.1
+  spec name `PRIME NB OFDM PLC MAC network administration data`
+  (class_id `85`, version `0`). The class id, attribute layout,
+  access semantics and method behavior are unchanged; only the
+  C++ type name and its internal constant identifiers
+  (`kPrimePlcMacNetworkAdminData*`) were renamed. Public
+  attribute accessors (`NodeRegistrations()`,
+  `NodeUnregistrations()`, `ProcessedAliveMsgs()`,
+  `HandledPromotions()`) are unchanged.
+- Downstream code referencing the old type name must rename to
+  the new one; no header path or include changes are required.
+- Refreshed unit tests, COSEM API guide and COSEM IC support
+  matrix accordingly. The support matrix row `85` now reads
+  `PRIME PLC MAC Network Administration Data` and notes the
+  rename.
+
 ## 0.92.0 - 2026-06-17
 
 - Fixed the class_id of the PRIME NB OFDM PLC Application

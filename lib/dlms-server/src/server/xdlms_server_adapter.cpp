@@ -173,11 +173,23 @@ std::uint8_t MapServerStatusToDataAccessResult(ServerStatus status)
     case ServerStatus::ObjectNotFound:
     case ServerStatus::AttributeNotFound:
       return 4u;
+    // All other ServerStatus values lack a dedicated
+    // Data-Access-Result code in IEC 62056-5-3 and collapse to
+    // `other-reason` (250) as required by the spec.
+    case ServerStatus::Ok:
+    case ServerStatus::InvalidArgument:
+    case ServerStatus::NotAssociated:
+    case ServerStatus::NoLogicalDevice:
+    case ServerStatus::MethodNotFound:
     case ServerStatus::ObjectError:
-      return 250u;
-    default:
+    case ServerStatus::UnsupportedFeature:
+    case ServerStatus::EncodeRequired:
+    case ServerStatus::InternalError:
       return 250u;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  return 250u;
 }
 
 std::uint8_t MapServerStatusToActionResult(ServerStatus status)
@@ -188,11 +200,23 @@ std::uint8_t MapServerStatusToActionResult(ServerStatus status)
     case ServerStatus::ObjectNotFound:
     case ServerStatus::MethodNotFound:
       return 4u;
+    // All other ServerStatus values lack a dedicated Action-Result
+    // code in IEC 62056-5-3 and collapse to `other-reason` (250) as
+    // required by the spec.
+    case ServerStatus::Ok:
+    case ServerStatus::InvalidArgument:
+    case ServerStatus::NotAssociated:
+    case ServerStatus::NoLogicalDevice:
+    case ServerStatus::AttributeNotFound:
     case ServerStatus::ObjectError:
-      return 250u;
-    default:
+    case ServerStatus::UnsupportedFeature:
+    case ServerStatus::EncodeRequired:
+    case ServerStatus::InternalError:
       return 250u;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  return 250u;
 }
 
 dlms::xdlms::XdlmsStatus MapServerStatusToXdlmsStatus(ServerStatus status)

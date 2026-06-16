@@ -50,9 +50,13 @@ dlms::endpoint::EndpointStatus MapAssociationStatus(
     case dlms::association::AssociationStatus::ChannelCloseFailed:
     case dlms::association::AssociationStatus::AlreadyAssociated:
     case dlms::association::AssociationStatus::InternalError:
-    default:
       return dlms::endpoint::EndpointStatus::AssociationFailed;
   }
+
+  // Defensive fall-through for ABI drift / unknown integer values.
+  // No `default:` above so `-Wswitch` warns when `AssociationStatus`
+  // is extended.
+  return dlms::endpoint::EndpointStatus::AssociationFailed;
 }
 
 } // namespace

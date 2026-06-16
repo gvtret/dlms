@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.97.2 - 2026-06-17
+
+- Hygiene (status mapping, continued): Removed remaining
+  `default:` arms from five more status mappers so future
+  enum extensions trip `-Wswitch` at compile time. No
+  observable runtime behaviour changes for any known input.
+  Touched mappers:
+  - `dlms-server/xdlms_server_adapter.cpp`
+    `MapServerStatusToDataAccessResult` and
+    `MapServerStatusToActionResult` (now list every
+    `ServerStatus` value explicitly; values without a
+    dedicated wire code still collapse to `other-reason`
+    (250) per IEC 62056-5-3).
+  - `dlms-endpoint/gateway_endpoint.cpp`
+    `MapAssociationStatus`.
+  - `dlms-endpoint/push_listener_endpoint.cpp`
+    `MapAssociationStatus`.
+  - `dlms-endpoint/server_endpoint.cpp`
+    `MapAssociationStatus`.
+- Known cleanup target: `MapAssociationStatus` is now
+  duplicated across three endpoint files. Extracting it into
+  a shared helper is intentionally deferred to keep this
+  change surgical; tracked as a future refactor.
+
 ## 0.97.1 - 2026-06-17
 
 - Hygiene (status mapping): Removed `default:` arms from six

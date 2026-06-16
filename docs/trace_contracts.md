@@ -1,6 +1,6 @@
 # Trace contracts (audit map)
 
-Status: living document. Last revised: VERSION 0.100.0 (P1 «Диагностика» §2 wiring closed end-to-end).
+Status: living document. Last revised: VERSION 0.101.0 (P1 «Диагностика» §7 commit 2/3: server-side xDLMS trace emission).
 
 ## Scope
 
@@ -157,7 +157,7 @@ For every sink interface:
 
 | Item                                                                                         | Tracked in                                                       |
 | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| No public server-side xDLMS trace sink — client-side `IXdlmsTraceSink` shipped in 0.100.0, server-side `IXdlmsTraceSink` emission through `XdlmsServerApduProcessor` is the next deliverable. | P1 «Диагностика» §7 commit 2/3. |
+| Server-side xDLMS trace emission through `XdlmsServerApduProcessor` (`SetTraceSink`/`TraceSink`) shipped in 0.101.0; events currently carry `conversationId == kNoConversationId` until endpoint composition publishes the listening-side correlation id. | P1 «Диагностика» §7 commit 3/3 (endpoint composition + dispatcher-level sink). |
 | No public server-dispatch trace sink — dispatcher-level visibility (object lookup, access-rights, registry routing).                                                                       | P1 «Диагностика» §7 commit 3/3. |
 | `*StatusName` naming inconsistency (`EndpointStatus::ToString` vs `*StatusName`).            | P1 «Диагностика» §5 (deferred; BREAKING).                        |
 

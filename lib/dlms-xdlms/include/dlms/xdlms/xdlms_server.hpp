@@ -2,6 +2,7 @@
 
 #include "dlms/xdlms/xdlms_status.hpp"
 #include "dlms/xdlms/xdlms_security_processor_interface.hpp"
+#include "dlms/xdlms/xdlms_trace.hpp"
 #include "dlms/xdlms/xdlms_types.hpp"
 
 #include <cstdint>
@@ -151,6 +152,9 @@ public:
     const std::vector<std::uint8_t>& requestApdu,
     std::vector<std::uint8_t>& responseApdu);
 
+  void SetTraceSink(IXdlmsTraceSink* sink) noexcept { traceSink_ = sink; }
+  IXdlmsTraceSink* TraceSink() const noexcept { return traceSink_; }
+
 private:
   IXdlmsServerDispatcher& dispatcher_;
   std::unique_ptr<IXdlmsSecurityProcessor> ownedSecurity_;
@@ -159,6 +163,7 @@ private:
   GetResponseBlockState getBlocks_;
   SetRequestBlockState setBlocks_;
   ActionRequestBlockState actionBlocks_;
+  IXdlmsTraceSink* traceSink_;
 };
 
 GetIndication EmptyGetIndication();

@@ -1,5 +1,63 @@
 # Changelog
 
+## 0.101.0 - 2026-06-17
+
+- Feature (P1 §7 commit 2/3 — xDLMS server trace emission):
+  `XdlmsServerApduProcessor` gains opt-in
+  `SetTraceSink(IXdlmsTraceSink*) noexcept` /
+  `TraceSink() const noexcept`, mirroring the client-side surface
+  shipped in 0.100.0. The processor reuses the same
+  `IXdlmsTraceSink` interface defined in
+  `lib/dlms-xdlms/include/dlms/xdlms/xdlms_trace.hpp`, with
+  `XdlmsTraceDirection::Inbound` on every server-emitted event. When
+  the sink is unset (default), no event object is constructed and no
+  virtual call is made — zero-cost on the hot path.
+
+  **Emission sites in `XdlmsServerApduProcessor::ProcessRequest`:**
+  - `SecurityFailed` — when `IXdlmsSecurityProcessor::Unprotect` of
+    the request or `Protect` of the response returns non-Ok.
+  - `DecodeFailed` — when `DecodeXdlmsApdu` rejects the plain
+    request.
+  - `RequestReceived` — once per successfully decoded APDU, carrying
+    invoke id, parsed `ServiceOptions`, class id, attribute or method
+    id, and 6-byte OBIS LN for Get / Set / Action.
+  - `ResponseSent` — once per successful response, carrying the
+    final (post-`Protect`, if ciphered) `apduSize`.
+  - `InvokeIdRejected` — emitted from the per-service block
+    transfer helpers (Get-next, Set continuation, Action
+    continuation) when the inbound APDU's invoke id does not match
+    the active block state.
+  - `BlockTransferStep` — emitted after each successful encode of
+    `SendNextGetResponseBlock` / `EncodeSetBlockAckResponse` /
+    `EncodeActionNextPblockResponse`, carrying the block number and
+    response APDU size.
+
+  Events publish only sizes and identifiers — never raw APDU bytes,
+  plaintext payload, keys, system titles, GMAC tags, or HLS
+  challenges, matching the 0.100.0 redaction contract. The
+  `conversationId` field on server-side events is currently always
+  `kNoConversationId` (0); endpoint composition in §7 commit 3/3
+  will publish the correlation id from the listening side.
+
+  **Tests.** New `lib/dlms-xdlms/test/xdlms/test_xdlms_server_trace.cpp`
+  adds 3 cases (`ServerEmitsRequestReceivedAndResponseSentForGet`,
+  `ServerEmitsDecodeFailedOnGarbageInput`,
+  `ServerWithoutSinkProcessesNormally`) that pin the happy-path
+  Request/Response pairing, the malformed-input early-emit, and the
+  zero-cost null-sink contract. Full ctest: 970 → 973.
+
+  **Minor bump** (0.100.0 → 0.101.0) because two new public members
+  (`SetTraceSink`, `TraceSink`) are added to a non-final class. ABI
+  is preserved: no virtuals, no member reorder, no removed symbol —
+  the new `IXdlmsTraceSink* traceSink_` field is appended last and
+  initialized to `0` in all six constructors. Pre-existing callers
+  that never touch the sink see no behavioural change.
+
+  Out of scope (deferred to §7 commit 3/3): `IServerDispatchTraceSink`
+  for `XdlmsServerDispatcher` and endpoint-level pass-through
+  (`EndpointOptions::xdlmsTraceSink` and
+  `serverDispatchTraceSink`).
+
 ## 0.100.0 - 2026-06-17
 
 - Feature (P1 §7 commit 1/3 — xDLMS client trace + §2 wiring closure):

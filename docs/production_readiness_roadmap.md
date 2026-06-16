@@ -456,9 +456,9 @@ library may be described as an extensible DLMS/COSEM framework with partial
    single canonical contract document covering totality, `"Unknown"`
    fallback, lifetime, thread-safety, no-allocation, ABI stability, and
    the catalogue of 13 helpers + matching coverage test files.
-7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3): публичный
-   xDLMS-layer trace sink и server-side trace sink. v0.99.7 зафиксировал
-   дизайн в `docs/xdlms_server_trace_design.md` (два sink-а:
+7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3 → v0.101.0 commit 2/3):
+   публичный xDLMS-layer trace sink и server-side trace sink. v0.99.7
+   зафиксировал дизайн в `docs/xdlms_server_trace_design.md` (два sink-а:
    `IXdlmsTraceSink` в `dlms-xdlms` для xDLMS слоя, client + server;
    `IServerDispatchTraceSink` в `dlms-server` для dispatcher-ровня;
    12 event kinds; sizes и identifiers только, never raw bytes;
@@ -470,9 +470,21 @@ library may be described as an extensible DLMS/COSEM framework with partial
    overloads, ABI-safe) и эмитирует Request/Response/DecodeFailed/
    SecurityFailed из единого `SendAndReceive` сайта, плюс
    BlockTransferStep в блочных циклах Get/Set/Action и
-   InvokeIdRejected при invoke-id mismatch. Остаётся: server-side
-   `IXdlmsTraceSink` emission через `XdlmsServerApduProcessor`
-   (commit 2/3), `IServerDispatchTraceSink` и `XdlmsServerDispatcher`
+   InvokeIdRejected при invoke-id mismatch.
+   v0.101.0 — commit 2/3 (server side): `XdlmsServerApduProcessor`
+   получил тот же opt-in `SetTraceSink`/`TraceSink` (ABI-safe:
+   `traceSink_` поле добавлено в конец, инициализируется в `0` во
+   всех 6 конструкторах). Эмитирует с `XdlmsTraceDirection::Inbound`:
+   `SecurityFailed` (Unprotect/Protect fail), `DecodeFailed`
+   (`DecodeXdlmsApdu` fail), `RequestReceived` (после успешного
+   decode, с invokeId/options/classId/attribute or method id/OBIS LN
+   для Get/Set/Action), `ResponseSent` (после успешного encode и
+   возможного `Protect`), `InvokeIdRejected` и `BlockTransferStep` —
+   из per-service block-transfer helpers. Серверная сторона пока
+   ставит `conversationId = kNoConversationId`; endpoint composition
+   опубликует id в commit 3/3. Новый тест-файл
+   `lib/dlms-xdlms/test/xdlms/test_xdlms_server_trace.cpp` (3 cases).
+   Остаётся: `IServerDispatchTraceSink` и `XdlmsServerDispatcher`
    wiring (commit 3/3), endpoint composition (`EndpointOptions::
    xdlmsTraceSink` + `serverDispatchTraceSink` pass-through).
 

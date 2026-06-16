@@ -373,7 +373,14 @@ library may be described as an extensible DLMS/COSEM framework with partial
 
 ## P1. Диагностика
 
-1. Упорядочить trace contracts по transport/profile/association/endpoint.
+1. ✅ DONE (v0.99.1): trace contracts упорядочены. Карта 4 публичных sink-ов
+   (`ITransportTraceSink`, `IWrapperTcpTraceSink`, `IHdlcProfileTraceSink`,
+   `IAssociationTraceSink`) с per-sink контрактом, security-семантикой
+   (что несёт raw bytes, что — только размеры), framework guarantees
+   (lifecycle, re-entrancy, span-validity, no-exception-escape) и
+   consumer responsibilities (redaction, thread safety, backpressure,
+   filtering) сведена в `docs/trace_contracts.md`. Endpoint reuse паттерн
+   задокументирован.
 2. Добавить correlation metadata для multi-layer traces без раскрытия секретов.
 3. ✅ DONE (v0.98.3 + v0.99.0): status-to-string полнота во всех публичных
    status enum. Все 11 публичных status enum (`ApduStatus`,
@@ -399,6 +406,10 @@ library may be described as an extensible DLMS/COSEM framework with partial
    следующий major bump или ввести alias).
 6. Документировать в API docs каждого слоя factor of `*StatusName()` как
    стабильный диагностический контракт (не для парсинга).
+7. Добавить публичный xDLMS-layer и server-side trace sink (asymmetry
+   выявлена в `docs/trace_contracts.md`: APDU-level и server-side
+   visibility сейчас доступны только косвенно через byte-carrying
+   profile sinks).
 
 ## P2. Надежность и оптимизация
 

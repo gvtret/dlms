@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.99.1 - 2026-06-17
+
+- Docs (P1 «Диагностика» §1 closed): added `docs/trace_contracts.md`,
+  the audit map of every public trace sink in the stack
+  (`ITransportTraceSink`, `IWrapperTcpTraceSink`, `IHdlcProfileTraceSink`,
+  `IAssociationTraceSink`). For each sink the doc records the layer,
+  defining header, event struct, whether raw bytes are carried, the
+  security semantics (wrapper/hdlc carry the literal protected APDU —
+  treat as secret; association carries only sizes), framework guarantees
+  (lifecycle, re-entrancy, byte-span validity, no-exception-escape), and
+  consumer responsibilities (redaction, thread safety, backpressure,
+  filtering). Also makes the endpoint pass-through pattern explicit and
+  records two known gaps (no public xDLMS-layer or server-side trace
+  sink) as roadmap §7 follow-ups. No code change; audit-only.
+
 ## 0.99.0 - 2026-06-17
 
 - API / diagnostics (P1 “Диагностика” §3 status-to-string

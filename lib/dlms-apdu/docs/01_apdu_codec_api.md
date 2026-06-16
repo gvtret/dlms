@@ -151,3 +151,14 @@ The current public API exposes per-call depth limits for DATA decoding. BER and
 A-XDR primitive readers validate malformed length encodings and buffer
 boundaries. Larger policy limits, such as maximum APDU size or session block
 transfer policy, belong to future higher-level client/session code.
+
+## Diagnostic helpers
+
+This module exposes `apdu::ApduStatusName(s)` for mapping its status enum to a stable,
+static-storage C string (`"Ok"`, `"InvalidArgument"`, ...). The full
+contract — totality, `"Unknown"` fallback, lifetime, thread-safety,
+no-allocation, ABI stability — is documented once in
+[`docs/status_to_string_contract.md`](../../../docs/status_to_string_contract.md).
+
+Use the helper for logs, error propagation, and test assertions. Do not
+parse the result; it is not a wire format.

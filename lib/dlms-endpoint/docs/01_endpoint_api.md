@@ -664,3 +664,14 @@ profiles expose an optional `IHdlcDataLinkSession*` when explicit data-link
 session control is available. `EndpointListenerBundle` owns only an
 `IApduChannelListener`. Concrete default transports and profile channels are
 created in the endpoint factory implementation, not exposed as bundle fields.
+
+## Diagnostic helpers
+
+This module exposes `endpoint::ToString(s)` for mapping its status enum to a stable,
+static-storage C string (`"Ok"`, `"InvalidArgument"`, ...). The full
+contract — totality, `"Unknown"` fallback, lifetime, thread-safety,
+no-allocation, ABI stability — is documented once in
+[`docs/status_to_string_contract.md`](../../../docs/status_to_string_contract.md).
+
+Use the helper for logs, error propagation, and test assertions. Do not
+parse the result; it is not a wire format.

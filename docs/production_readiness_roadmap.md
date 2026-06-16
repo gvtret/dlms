@@ -404,8 +404,13 @@ library may be described as an extensible DLMS/COSEM framework with partial
    `EndpointStatus` использует `ToString()` вместо `EndpointStatusName()` —
    это inconsistency, но переименование = BREAKING; запланировать на
    следующий major bump или ввести alias).
-6. Документировать в API docs каждого слоя factor of `*StatusName()` как
-   стабильный диагностический контракт (не для парсинга).
+6. ✅ DONE (v0.99.2): API docs of every layer reference `*StatusName()`
+   as a stable diagnostic contract (not for parsing). Per-module
+   `01_*_api.md` now ends with a "Diagnostic helpers" section that names
+   the helper and links to `docs/status_to_string_contract.md`, the
+   single canonical contract document covering totality, `"Unknown"`
+   fallback, lifetime, thread-safety, no-allocation, ABI stability, and
+   the catalogue of 13 helpers + matching coverage test files.
 7. Добавить публичный xDLMS-layer и server-side trace sink (asymmetry
    выявлена в `docs/trace_contracts.md`: APDU-level и server-side
    visibility сейчас доступны только косвенно через byte-carrying

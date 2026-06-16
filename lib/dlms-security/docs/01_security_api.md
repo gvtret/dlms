@@ -357,3 +357,14 @@ counter only after the GMAC tag has been verified.
 
 C ABI is explicitly deferred. The first implementation shall stabilize the C++
 API and test vectors before adding C wrappers.
+
+## Diagnostic helpers
+
+This module exposes `security::SecurityStatusName(s)` for mapping its status enum to a stable,
+static-storage C string (`"Ok"`, `"InvalidArgument"`, ...). The full
+contract — totality, `"Unknown"` fallback, lifetime, thread-safety,
+no-allocation, ABI stability — is documented once in
+[`docs/status_to_string_contract.md`](../../../docs/status_to_string_contract.md).
+
+Use the helper for logs, error propagation, and test assertions. Do not
+parse the result; it is not a wire format.

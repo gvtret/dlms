@@ -148,3 +148,14 @@ components.
 Applications can implement `IByteStream` or `IDatagramTransport` directly when
 they own the socket, serial driver, embedded link, test harness, or custom
 non-blocking runtime.
+
+## Diagnostic helpers
+
+This module exposes `transport::ToString(s)` for mapping its status enum to a stable,
+static-storage C string (`"Ok"`, `"InvalidArgument"`, ...). The full
+contract — totality, `"Unknown"` fallback, lifetime, thread-safety,
+no-allocation, ABI stability — is documented once in
+[`docs/status_to_string_contract.md`](../../../docs/status_to_string_contract.md).
+
+Use the helper for logs, error propagation, and test assertions. Do not
+parse the result; it is not a wire format.

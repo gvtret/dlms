@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.99.2 - 2026-06-17
+
+- Docs (P1 «Диагностика» §6 closed): added
+  `docs/status_to_string_contract.md` — the single canonical contract
+  for every `*StatusName` / `ToString` helper in the stack (13 status
+  enum across 13 modules). Documents totality, `"Unknown"` fallback,
+  lifetime (static storage), thread-safety, no-allocation, and ABI
+  stability guarantees, plus the full catalogue of helpers and the
+  matching exhaustive-coverage test files. Each per-module
+  `01_*_api.md` now ends with a short "Diagnostic helpers" section
+  that names the module’s helper and links back to the central
+  contract. Also records the `EndpointStatus::ToString` /
+  `TransportStatus::ToString` naming inconsistency (vs the
+  `*StatusName` form everywhere else) as P1 §5 follow-up; both names
+  will continue to work until a major bump introduces an
+  alias-and-deprecate. No code change; docs-only.
+
 ## 0.99.1 - 2026-06-17
 
 - Docs (P1 «Диагностика» §1 closed): added `docs/trace_contracts.md`,

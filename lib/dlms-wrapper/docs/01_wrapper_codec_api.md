@@ -88,3 +88,14 @@ WrapperStatus DecodeWpduView(
 
 The decoder requires the input to contain exactly one complete WPDU unless a
 future API explicitly states that trailing datagram bytes are allowed.
+
+## Diagnostic helpers
+
+This module exposes `wrapper::WrapperStatusName(s)` for mapping its status enum to a stable,
+static-storage C string (`"Ok"`, `"InvalidArgument"`, ...). The full
+contract — totality, `"Unknown"` fallback, lifetime, thread-safety,
+no-allocation, ABI stability — is documented once in
+[`docs/status_to_string_contract.md`](../../../docs/status_to_string_contract.md).
+
+Use the helper for logs, error propagation, and test assertions. Do not
+parse the result; it is not a wire format.

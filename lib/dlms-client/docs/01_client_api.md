@@ -578,3 +578,14 @@ The facade maps these fields into a `dlms::security::SecurityContext`,
 `InMemoryKeyStore`, `InMemoryInvocationCounterStore`, and
 `CipheredApduProcessor`. It does not own persistent key storage and does not
 derive LLS/HLS authentication material.
+
+## Diagnostic helpers
+
+This module exposes `client::ClientStatusName(s)` for mapping its status enum to a stable,
+static-storage C string (`"Ok"`, `"InvalidArgument"`, ...). The full
+contract — totality, `"Unknown"` fallback, lifetime, thread-safety,
+no-allocation, ABI stability — is documented once in
+[`docs/status_to_string_contract.md`](../../../docs/status_to_string_contract.md).
+
+Use the helper for logs, error propagation, and test assertions. Do not
+parse the result; it is not a wire format.

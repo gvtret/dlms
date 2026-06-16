@@ -267,3 +267,14 @@ The C API exposes the same boundary through option fields:
 - HLS user context pointer
 
 The C API does not take ownership of credential memory or callback state.
+
+## Diagnostic helpers
+
+This module exposes `association::AssociationStatusName(s)` for mapping its status enum to a stable,
+static-storage C string (`"Ok"`, `"InvalidArgument"`, ...). The full
+contract — totality, `"Unknown"` fallback, lifetime, thread-safety,
+no-allocation, ABI stability — is documented once in
+[`docs/status_to_string_contract.md`](../../../docs/status_to_string_contract.md).
+
+Use the helper for logs, error propagation, and test assertions. Do not
+parse the result; it is not a wire format.

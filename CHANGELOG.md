@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.96.0 - 2026-06-17
+
+- Fix (status mapping): `DlmsClient::Close()` and
+  `DlmsClient::ReleaseAssociation()` no longer collapse every
+  HDLC DataLink `DisconnectDataLink()` failure into
+  `ClientStatus::InternalError`. The previous mapper used a
+  catch-all `default` branch that hid `Timeout`,
+  `ConnectionClosed`, malformed UA frames and IO errors behind a
+  generic library-bug status, contradicting the production
+  readiness roadmap rule P0 §1.3 ("don't collapse useful errors
+  to InternalError when a more specific public status exists").
+  The mapper now enumerates every `ProfileStatus` explicitly so
+  drift in the source enum becomes a compile error and surfaces
+  the most actionable category to callers:
+  - `Ok`, `NotOpen` → `Ok` (idempotent disconnect).
+  - `InvalidArgument` → `InvalidArgument`.
+  - `AlreadyOpen` → `InvalidState`.
+  - `OpenFailed`, `WriteFailed` → `SendFailed` (DISC could not
+    be transmitted to the meter).
+  - `ReadFailed`, `Timeout`, `ConnectionClosed`, `WouldBlock`,
+    `NeedMoreData`, `OutputBufferTooSmall`, `InvalidFrame`,
+    `InvalidLength`, `InvalidAddress`, `PayloadTooLarge` →
+    `ReceiveFailed` (no usable UA response from the meter).
+  - `UnsupportedFeature` → `UnsupportedFeature`.
+  - `InternalError` → `InternalError`.
+- Added `lib/dlms-client/src/client/client_internal.hpp` to
+  expose `internal::MapDataLinkDisconnectStatus` for unit
+  testing without spinning up a real `HdlcProfileChannel`. The
+  header is source-tree-only and not part of the install
+  surface.
+- Added `test_client_internal.cpp` with 8 cases pinning every
+  `ProfileStatus` value (including a defensive fall-through for
+  unknown integer values).
+
 ## 0.95.0 - 2026-06-17
 
 - Fix (C++ API semantics): `CosemRegisterObject::InvokeMethod` now

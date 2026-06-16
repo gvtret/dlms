@@ -245,14 +245,35 @@ ClientStatus MapDataLinkDisconnectStatus(
   switch (status) {
   case dlms::profile::ProfileStatus::Ok:
   case dlms::profile::ProfileStatus::NotOpen:
+    // Channel already torn down: idempotent disconnect succeeds.
     return ClientStatus::Ok;
   case dlms::profile::ProfileStatus::InvalidArgument:
     return ClientStatus::InvalidArgument;
+  case dlms::profile::ProfileStatus::AlreadyOpen:
+    return ClientStatus::InvalidState;
+  case dlms::profile::ProfileStatus::OpenFailed:
+  case dlms::profile::ProfileStatus::WriteFailed:
+    // DISC frame could not be transmitted to the meter.
+    return ClientStatus::SendFailed;
+  case dlms::profile::ProfileStatus::ReadFailed:
+  case dlms::profile::ProfileStatus::Timeout:
+  case dlms::profile::ProfileStatus::ConnectionClosed:
+  case dlms::profile::ProfileStatus::WouldBlock:
+  case dlms::profile::ProfileStatus::NeedMoreData:
+  case dlms::profile::ProfileStatus::OutputBufferTooSmall:
+  case dlms::profile::ProfileStatus::InvalidFrame:
+  case dlms::profile::ProfileStatus::InvalidLength:
+  case dlms::profile::ProfileStatus::InvalidAddress:
+  case dlms::profile::ProfileStatus::PayloadTooLarge:
+    // No usable UA response from the meter for the DISC handshake.
+    return ClientStatus::ReceiveFailed;
   case dlms::profile::ProfileStatus::UnsupportedFeature:
     return ClientStatus::UnsupportedFeature;
-  default:
+  case dlms::profile::ProfileStatus::InternalError:
     return ClientStatus::InternalError;
   }
+
+  return ClientStatus::InternalError;
 }
 
 dlms::transport::TcpStreamTransportOptions MakeTcpOptions(
@@ -1348,6 +1369,18 @@ const char* ClientStateName(ClientState state)
 
   return "Unknown";
 }
+
+namespace internal {
+
+ClientStatus MapDataLinkDisconnectStatus(
+  dlms::profile::ProfileStatus status)
+{
+  // Delegates to the anonymous-namespace mapper above so the test surface
+  // and production codepath share a single implementation.
+  return ::dlms::client::MapDataLinkDisconnectStatus(status);
+}
+
+} // namespace internal
 
 } // namespace client
 } // namespace dlms

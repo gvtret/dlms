@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.97.3 - 2026-06-17
+
+- Docs / audit: P0 §2.4 “bounded loops do not swallow Timeout /
+  Closed / InvalidState” marked as audited. Every `for(;;)` and
+  `while(...)` loop in `lib/dlms-*` was reviewed:
+  - Transport-facing loops in `dlms-profile` (HDLC and Wrapper TCP
+    channel `Receive*` paths) propagate any non-`Ok` `ProfileStatus`
+    immediately, including `Timeout`, `ConnectionClosed`, and
+    `InvalidState`.
+  - xDLMS client block-transfer loops (`Get`, `Set`, `Action`) return
+    the underlying `XdlmsStatus` from `SendAndReceive` /
+    `ReceiveGetResponse` / `ReceiveActionResponse` verbatim.
+  - Stream / decoder loops (`hdlc_stream_decoder`,
+    `wrapper_stream_decoder`) surface `NeedMoreData` only when no
+    bytes were read; `ReadSome` failures fall through unchanged.
+  - Remaining loops are pure buffer/grow / parser loops with no
+    transport interaction (`client_data.cpp EncodeData`, BER/AXDR,
+    HDLC segmentation, AXDR length decoder).
+  No code change; the roadmap entry now records the audit and
+  cites the verification scope.
+
 ## 0.97.2 - 2026-06-17
 
 - Hygiene (status mapping, continued): Removed remaining

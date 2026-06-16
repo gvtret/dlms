@@ -93,6 +93,15 @@
      отслеживается в listener runtime и Security Setup задачах.
 3. Добавить regression tests для cleanup при неуспешном open/association.
 4. Проверить, что bounded loops не скрывают `Timeout`, `Closed`, `InvalidState`.
+   - Аудит пройден в `0.97.3`: проверены все `for(;;)` и
+     `while(...)` циклы в `lib/dlms-*` источниках. Каждый цикл
+     либо проводит receive-статус наверх как есть (через
+     `if (status != Ok) return status;`), либо не связан с
+     транспортом вовсе (`EncodeData` grow loop в client,
+     ber/axdr decode loops в apdu, segmentation loops в hdlc).
+     `for(;;)` в xDLMS клиенте на блочной передаче (Get/Set/
+     Action) пробрасывают любой не-`Ok` от `SendAndReceive` /
+     `ReceiveGetResponse` / `ReceiveActionResponse` без потерь.
 
 ## P0. Security и секреты
 

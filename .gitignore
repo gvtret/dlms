@@ -2,6 +2,7 @@ build-mingw64/
 build-release-mingw64/
 .idea/
 .openclaw/
+.tmp/
 handoff.md
 HEARTBEAT.md
 IDENTITY.md

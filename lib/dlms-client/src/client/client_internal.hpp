@@ -6,6 +6,7 @@
 
 #include "dlms/client/client_status.hpp"
 #include "dlms/profile/profile_types.hpp"
+#include "dlms/xdlms/xdlms_status.hpp"
 
 namespace dlms {
 namespace client {
@@ -22,6 +23,14 @@ namespace internal {
 // genuine library bugs.
 ClientStatus MapDataLinkDisconnectStatus(
   dlms::profile::ProfileStatus status);
+
+// Maps an XdlmsStatus returned by the xDLMS layer into the public
+// `ClientStatus` reported by `DlmsClient` request methods. Distinct
+// categories are preserved for `BlockTransferRequired`,
+// `EncodeFailed/DecodeFailed` (collapsed to `CodecFailed`) and
+// `InvokeIdMismatch`, rather than the previous catch-all collapse to
+// `UnsupportedFeature` or `InternalError`.
+ClientStatus MapXdlmsStatus(dlms::xdlms::XdlmsStatus status);
 
 } // namespace internal
 } // namespace client

@@ -23,6 +23,18 @@ TEST(ClientStatus, NamesStableValues)
     dlms::client::ClientStatusName(
       dlms::client::ClientStatus::SecurityFailed));
   EXPECT_STREQ(
+    "BlockTransferRequired",
+    dlms::client::ClientStatusName(
+      dlms::client::ClientStatus::BlockTransferRequired));
+  EXPECT_STREQ(
+    "InvokeIdMismatch",
+    dlms::client::ClientStatusName(
+      dlms::client::ClientStatus::InvokeIdMismatch));
+  EXPECT_STREQ(
+    "CodecFailed",
+    dlms::client::ClientStatusName(
+      dlms::client::ClientStatus::CodecFailed));
+  EXPECT_STREQ(
     "Unknown",
     dlms::client::ClientStatusName(
       static_cast<dlms::client::ClientStatus>(255)));

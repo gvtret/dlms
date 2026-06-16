@@ -709,7 +709,7 @@ TEST(DlmsClient, GetMapsRealMalformedResponseAndKeepsAssociated)
   std::vector<std::uint8_t> output;
   output.push_back(0xAAu);
 
-  EXPECT_EQ(dlms::client::ClientStatus::InternalError,
+  EXPECT_EQ(dlms::client::ClientStatus::CodecFailed,
             client.Get(MakeDescriptor(), output));
   EXPECT_TRUE(output.empty());
   EXPECT_EQ(dlms::client::ClientState::Associated, client.State());
@@ -729,7 +729,7 @@ TEST(DlmsClient, GetMapsRealInvokeIdMismatchAndKeepsAssociated)
   std::vector<std::uint8_t> output;
   output.push_back(0xAAu);
 
-  EXPECT_EQ(dlms::client::ClientStatus::InternalError,
+  EXPECT_EQ(dlms::client::ClientStatus::InvokeIdMismatch,
             client.Get(MakeDescriptor(), output));
   EXPECT_TRUE(output.empty());
   EXPECT_EQ(dlms::client::ClientState::Associated, client.State());

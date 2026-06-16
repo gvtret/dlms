@@ -227,11 +227,19 @@ ClientStatus MapXdlmsStatus(dlms::xdlms::XdlmsStatus status)
   case dlms::xdlms::XdlmsStatus::SecurityFailed:
     return ClientStatus::SecurityFailed;
   case dlms::xdlms::XdlmsStatus::BlockTransferRequired:
+    // Peer asked us to use block transfer; the simple non-block client
+    // path cannot satisfy that on its own. Distinct from
+    // UnsupportedFeature because the protocol feature exists.
+    return ClientStatus::BlockTransferRequired;
   case dlms::xdlms::XdlmsStatus::UnsupportedFeature:
     return ClientStatus::UnsupportedFeature;
   case dlms::xdlms::XdlmsStatus::EncodeFailed:
   case dlms::xdlms::XdlmsStatus::DecodeFailed:
+    // Wire-level corruption / spec mismatch with the peer, not a
+    // library bug.
+    return ClientStatus::CodecFailed;
   case dlms::xdlms::XdlmsStatus::InvokeIdMismatch:
+    return ClientStatus::InvokeIdMismatch;
   case dlms::xdlms::XdlmsStatus::InternalError:
     return ClientStatus::InternalError;
   }
@@ -1378,6 +1386,11 @@ ClientStatus MapDataLinkDisconnectStatus(
   // Delegates to the anonymous-namespace mapper above so the test surface
   // and production codepath share a single implementation.
   return ::dlms::client::MapDataLinkDisconnectStatus(status);
+}
+
+ClientStatus MapXdlmsStatus(dlms::xdlms::XdlmsStatus status)
+{
+  return ::dlms::client::MapXdlmsStatus(status);
 }
 
 } // namespace internal

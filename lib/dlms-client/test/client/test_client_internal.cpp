@@ -84,4 +84,66 @@ TEST(MapDataLinkDisconnectStatus, UnknownEnumValueFallsThroughToInternalError)
             MapDataLinkDisconnectStatus(static_cast<ProfileStatus>(0x7Fu)));
 }
 
+using dlms::client::internal::MapXdlmsStatus;
+using dlms::xdlms::XdlmsStatus;
+
+TEST(MapXdlmsStatus, OkPassesThrough)
+{
+  EXPECT_EQ(ClientStatus::Ok, MapXdlmsStatus(XdlmsStatus::Ok));
+}
+
+TEST(MapXdlmsStatus, DirectCategoriesPassThrough)
+{
+  EXPECT_EQ(ClientStatus::InvalidArgument,
+            MapXdlmsStatus(XdlmsStatus::InvalidArgument));
+  EXPECT_EQ(ClientStatus::InvalidState,
+            MapXdlmsStatus(XdlmsStatus::InvalidState));
+  EXPECT_EQ(ClientStatus::NotAssociated,
+            MapXdlmsStatus(XdlmsStatus::NotAssociated));
+  EXPECT_EQ(ClientStatus::SendFailed,
+            MapXdlmsStatus(XdlmsStatus::SendFailed));
+  EXPECT_EQ(ClientStatus::ReceiveFailed,
+            MapXdlmsStatus(XdlmsStatus::ReceiveFailed));
+  EXPECT_EQ(ClientStatus::ServiceRejected,
+            MapXdlmsStatus(XdlmsStatus::ServiceRejected));
+  EXPECT_EQ(ClientStatus::SecurityFailed,
+            MapXdlmsStatus(XdlmsStatus::SecurityFailed));
+  EXPECT_EQ(ClientStatus::UnsupportedFeature,
+            MapXdlmsStatus(XdlmsStatus::UnsupportedFeature));
+  EXPECT_EQ(ClientStatus::InternalError,
+            MapXdlmsStatus(XdlmsStatus::InternalError));
+}
+
+TEST(MapXdlmsStatus, BlockTransferRequiredIsDistinct)
+{
+  // Previously collapsed into UnsupportedFeature; the protocol feature
+  // exists but the simple non-block client path did not engage it.
+  EXPECT_EQ(ClientStatus::BlockTransferRequired,
+            MapXdlmsStatus(XdlmsStatus::BlockTransferRequired));
+}
+
+TEST(MapXdlmsStatus, EncodeAndDecodeFailuresMapToCodecFailed)
+{
+  // Previously collapsed into InternalError; both signal wire-level
+  // corruption or a spec mismatch with the peer, not a library bug.
+  EXPECT_EQ(ClientStatus::CodecFailed,
+            MapXdlmsStatus(XdlmsStatus::EncodeFailed));
+  EXPECT_EQ(ClientStatus::CodecFailed,
+            MapXdlmsStatus(XdlmsStatus::DecodeFailed));
+}
+
+TEST(MapXdlmsStatus, InvokeIdMismatchIsDistinct)
+{
+  // Previously collapsed into InternalError; the response was framed
+  // and decoded fine, the correlation id is the problem.
+  EXPECT_EQ(ClientStatus::InvokeIdMismatch,
+            MapXdlmsStatus(XdlmsStatus::InvokeIdMismatch));
+}
+
+TEST(MapXdlmsStatus, UnknownEnumValueFallsThroughToInternalError)
+{
+  EXPECT_EQ(ClientStatus::InternalError,
+            MapXdlmsStatus(static_cast<XdlmsStatus>(0x7Fu)));
+}
+
 } // namespace

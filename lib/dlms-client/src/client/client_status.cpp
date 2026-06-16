@@ -30,6 +30,12 @@ const char* ClientStatusName(ClientStatus status)
     return "SecurityFailed";
   case ClientStatus::UnsupportedFeature:
     return "UnsupportedFeature";
+  case ClientStatus::BlockTransferRequired:
+    return "BlockTransferRequired";
+  case ClientStatus::InvokeIdMismatch:
+    return "InvokeIdMismatch";
+  case ClientStatus::CodecFailed:
+    return "CodecFailed";
   case ClientStatus::InternalError:
     return "InternalError";
   }

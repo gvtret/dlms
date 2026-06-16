@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.97.0 - 2026-06-17
+
+- BREAKING (C++ API): Extended `dlms::client::ClientStatus` with
+  three new values that were previously collapsed into other
+  categories. Existing switches with `default` branches keep
+  building; exhaustive switches over `ClientStatus` need a new
+  arm per value. The full list of added values:
+  - `BlockTransferRequired` — the peer asked the client to
+    switch to block transfer; the simple non-block path cannot
+    complete the request. Distinct from `UnsupportedFeature`
+    because the protocol feature exists, the client just did
+    not engage it.
+  - `InvokeIdMismatch` — the response was framed and decoded
+    fine, but its invoke-id does not match the outstanding
+    request. Distinct from `ReceiveFailed`.
+  - `CodecFailed` — APDU encode or decode failed inside the
+    xDLMS layer. Distinct from `InternalError` because it
+    implies wire-level corruption or a spec mismatch with the
+    peer, not a library bug.
+- Fix (status mapping): `MapXdlmsStatus()` no longer collapses
+  `XdlmsStatus::BlockTransferRequired` into
+  `ClientStatus::UnsupportedFeature` and no longer collapses
+  `EncodeFailed`, `DecodeFailed`, and `InvokeIdMismatch` into
+  `ClientStatus::InternalError`. The mapper now routes each to
+  its dedicated public category (P0 §1.3 from
+  `docs/production_readiness_roadmap.md`).
+- Updated `ClientStatusName()` and `test_client_status.cpp` to
+  recognise the three new values.
+- Updated two existing regression tests in `test_client.cpp`
+  (`GetMapsRealMalformedResponseAndKeepsAssociated`,
+  `GetMapsRealInvokeIdMismatchAndKeepsAssociated`) to expect
+  the new specific statuses instead of `InternalError`.
+- Exposed `internal::MapXdlmsStatus()` via
+  `client_internal.hpp` and added 7 unit tests in
+  `test_client_internal.cpp` pinning the full mapping table,
+  including a defensive fall-through for unknown enum values.
+
 ## 0.96.0 - 2026-06-17
 
 - Fix (status mapping): `DlmsClient::Close()` and

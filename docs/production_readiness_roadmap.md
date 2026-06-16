@@ -381,17 +381,35 @@ library may be described as an extensible DLMS/COSEM framework with partial
    consumer responsibilities (redaction, thread safety, backpressure,
    filtering) сведена в `docs/trace_contracts.md`. Endpoint reuse паттерн
    задокументирован.
-2. 📐 IN PROGRESS (v0.99.3 — design accepted): correlation metadata
-   для multi-layer traces без раскрытия секретов. Дизайн в
-   `docs/trace_correlation_design.md`: единый опакный 64-битный
-   `conversationId` добавляется последним полем во все 4 trace
-   event structs (POD append — не ломает ABI в 0.x), формируется в
-   xDLMS из (association-seed XOR invoke-id), распространяется вниз
-   через новый `IApduChannel::SetCorrelation()` (default no-op).
-   3 commit-а plan: (1) `MakeConversationId` + unit-test; (2) поле в
-   structs + default no-op virtual; (3) wiring + integration test.
-   Секреты не используются: seed — логгинг-соль, не system-title и
-   не HLS challenge.
+2. ✅ DONE (v0.99.3 design → v0.99.4 / v0.99.5 / v0.99.6): correlation
+   metadata для multi-layer traces без раскрытия секретов.
+   - `v0.99.3`: дизайн в `docs/trace_correlation_design.md`.
+   - `v0.99.4` (commit 1/3): `MakeConversationId(seed, invokeId)`
+     primitive в `dlms-xdlms` + 6 unit-тестов
+     (`test_xdlms_correlation.cpp`) фиксируют детерминированность,
+     устойчивость к коллизиям и опакность.
+   - `v0.99.5` (commit 2/3): `conversationId` (uint64) добавлен
+     последним полем во все 4 trace event structs (`TransportTraceEvent`,
+     `AssociationTraceEvent`, `WrapperTcpTraceEvent`,
+     `HdlcProfileTraceEvent`) с default-init `= 0` (kNoConversationId),
+     plus `IApduChannel::SetCorrelation(uint64_t) noexcept` default
+     no-op. POD append — не ломает ABI в 0.x. 7 регрессионных тестов
+     в новом `test_trace_correlation.cpp` пинят contract.
+   - `v0.99.6` (commit 3/3): `WrapperTcpProfileChannel` и
+     `HdlcProfileChannel` override-ят `SetCorrelation()` и стампят
+     `conversationId` на каждое emit'нутое событие (4 sites в каждом
+     cpp). Integration-тесты `WrapperTcpChannelStampsSendAndReceiveEvents`
+     и `HdlcChannelStampsWireWriteEvents` гоняют каналы через
+     `FakeByteStream`, флипают `SetCorrelation` on/off и пинят stamping
+     по всем событиям в окне. Test fixture total: 9 cases. Full ctest:
+     967/967.
+   Секреты не используются: seed — opaque логгинг-соль, не system-title
+   и не HLS challenge.
+   Follow-up (отдельная задача, не блокер §2): `AssociationClient` пока
+   не генерирует seed/conversationId — когда это появится (вероятно
+   через новое `AssociationOptions` поле или xDLMS-owned seed),
+   stamping уже работающий через `SetCorrelation` подхватит id вниз
+   по стеку без дальнейших изменений в каналах.
 3. ✅ DONE (v0.98.3 + v0.99.0): status-to-string полнота во всех публичных
    status enum. Все 11 публичных status enum (`ApduStatus`,
    `AssociationStatus`, `ClientStatus`, `CosemStatus`, `EndpointStatus`,

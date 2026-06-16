@@ -375,8 +375,30 @@ library may be described as an extensible DLMS/COSEM framework with partial
 
 1. Упорядочить trace contracts по transport/profile/association/endpoint.
 2. Добавить correlation metadata для multi-layer traces без раскрытия секретов.
-3. Проверить status-to-string полноту во всех публичных status enum.
-4. Сделать live smoke output пригодным для поддержки, но безопасным.
+3. ✅ DONE (v0.98.3 + v0.99.0): status-to-string полнота во всех публичных
+   status enum. Все 11 публичных status enum (`ApduStatus`,
+   `AssociationStatus`, `ClientStatus`, `CosemStatus`, `EndpointStatus`,
+   `HdlcStatus`, `LlcStatus`, `ProfileStatus`, `SecurityStatus`,
+   `ServerStatus`, `TransportStatus`, `WrapperStatus`, `XdlmsStatus`) теперь
+   имеют публичный `*StatusName()` (или `ToString()`) helper с exhaustive
+   switch без `default:` arm (`-Wswitch` гарантирует, что новые enum value
+   не забудут строку) и gtest-покрытием каждого enum value + `Unknown`
+   fallback. v0.98.3 — exhaustive coverage tests для 6 уже существующих
+   helper-ов (ApduStatus/AssociationStatus/CosemStatus/ServerStatus/
+   XdlmsStatus/EndpointStatus, +10 тестов). v0.99.0 — добавлены 4 новых
+   публичных helper-а для wire-layer enum (HdlcStatus/LlcStatus/
+   WrapperStatus/ProfileStatus, +8 тестов). Дубликат `ProfileStatusName` из
+   `tools/live_meter_smoke.cpp` удалён.
+4. ✅ DONE (v0.97.4 + v0.97.5): live smoke output safe by default. Wire-byte
+   hex dump в `tools/live_meter_smoke.cpp` теперь gated env-флагом
+   `DLMS_LIVE_TRACE_WIRE_BYTES` (off by default); 10 regression-тестов
+   зафиксировали политику redaction.
+5. Привести `*StatusName` к единообразному именованию (сейчас
+   `EndpointStatus` использует `ToString()` вместо `EndpointStatusName()` —
+   это inconsistency, но переименование = BREAKING; запланировать на
+   следующий major bump или ввести alias).
+6. Документировать в API docs каждого слоя factor of `*StatusName()` как
+   стабильный диагностический контракт (не для парсинга).
 
 ## P2. Надежность и оптимизация
 

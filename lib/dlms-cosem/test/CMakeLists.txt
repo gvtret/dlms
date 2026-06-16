@@ -10,6 +10,7 @@ elseif(NOT TARGET GTest::gtest_main)
 endif()
 
 add_executable(dlms_cosem_tests
+  cosem/test_cosem_status.cpp
   cosem/test_logical_device.cpp
   cosem/test_object_registry.cpp
   cosem/test_simple_objects.cpp)

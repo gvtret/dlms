@@ -13,6 +13,7 @@ add_executable(dlms_association_tests
   association/test_association_client.cpp
   association/test_association_server.cpp
   association/test_association_c_api.cpp
+  association/test_association_status.cpp
   association/test_association_types.cpp)
 
 target_link_libraries(dlms_association_tests

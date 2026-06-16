@@ -11,6 +11,7 @@ endif()
 
 add_executable(dlms_server_tests
   server/test_dlms_server.cpp
+  server/test_server_status.cpp
   server/test_service_dispatcher.cpp
   server/test_server_context.cpp
   server/test_server_types.cpp

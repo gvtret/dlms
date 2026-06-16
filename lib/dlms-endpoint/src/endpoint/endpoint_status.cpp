@@ -30,9 +30,9 @@ const char* ToString(EndpointStatus status)
       return "Closed";
     case EndpointStatus::InternalError:
       return "InternalError";
-    default:
-      return "Unknown";
   }
+
+  return "Unknown";
 }
 
 } // namespace endpoint

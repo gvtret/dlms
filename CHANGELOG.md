@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.98.3 - 2026-06-17
+
+- Tests / status hygiene (P1 "Диагностика" §3 status-to-string
+  completeness, etap 1): added exhaustive `*StatusName` /
+  `ToString` coverage tests for `ApduStatus`, `AssociationStatus`,
+  `CosemStatus`, `ServerStatus`, `XdlmsStatus`, and brought
+  `EndpointStatus` test up to exhaustive (covered 12/12 values
+  instead of the previous 4/12). Each new test pins the stable
+  string form for every enum value plus the `Unknown` fallback.
+  Also dropped a stale `default: return "Unknown";` from
+  `endpoint_status.cpp` so `-Wswitch` will fire if a future
+  `EndpointStatus` value forgets a `ToString` arm (consistent
+  with the same hygiene applied to status mappers in 0.97.1 /
+  0.97.2). Test-only behavioural change is a single warning-on-
+  miss surface; full ctest 952/952 (942 → 952, +10 new cases).
+
 ## 0.98.2 - 2026-06-17
 
 - Tests / C ABI: every public `*_c_api.h` header now has a

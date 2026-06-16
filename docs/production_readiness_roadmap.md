@@ -60,8 +60,19 @@
      нулю для non-OK backend statuses начиная с `0.4.8`.
 3. Закрепить status mapping между слоями.
    - Не сводить полезные ошибки к `InternalError`, если есть более точный
-     публичный статус.
+     публичный статус. **Done** через серию `0.96.0`–`0.97.3`: facade
+     mappers стали `switch`-exhaustive (`MapDataLinkDisconnectStatus`,
+     `MapXdlmsStatus`, `MapAssociationStatus`, `MapClientStatus`,
+     `MapProfileStatus`, `MapCosemStatus`); добавлены `ClientStatus`
+     значения `BlockTransferRequired`, `InvokeIdMismatch`, `CodecFailed`.
    - Документировать намеренные потери детализации на facade уровнях.
+     **Done в `0.97.7`**: новый раздел §1.1 “Facade Status Mapping Policy”
+     в `lib/dlms-client/docs/01_client_api.md` фиксирует, что facade
+     сохраняет (per-direction send/receive split, xDLMS block/invoke-id/
+     codec failures как first-class), что осознанно сворачивает (per-layer
+     transport detail, service-rejected reasons, security sub-classifi-
+     cation, COSEM access-result vs. transport failure) и где живут
+     mapper'ы.
 4. Проверить все C headers smoke tests.
    - Каждый C ABI header должен компилироваться как C.
    - Stable enum numeric checks должны быть только там, где ABI это требует.

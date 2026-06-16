@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.97.7 - 2026-06-17
+
+- Docs / client: added §1.1 “Facade Status Mapping Policy”
+  to `lib/dlms-client/docs/01_client_api.md` that pins what
+  the public `ClientStatus` enum preserves vs. what it
+  intentionally drops, after the `0.96.0`–`0.97.3`
+  exhaustive-`switch` audit. Documents the
+  per-direction send/receive split, the new first-class
+  `BlockTransferRequired` / `InvokeIdMismatch` /
+  `CodecFailed` values, the deliberate collapse of
+  per-layer transport detail / service-rejected reasons /
+  security sub-classification / COSEM access-result, and
+  reserves `InternalError` for facade-owned invariants only.
+  Also lists every mapper site (`client.cpp`,
+  `client_data.cpp`, `client_endpoint.cpp`,
+  `server_status.cpp`) and the testing entry point in
+  `test_client_internal.cpp`. Closes the second bullet of
+  P0 §1.3 “status mapping”. Also refreshed the enum listing
+  in the same doc to include the three values added in
+  `0.97.0`.
+
 ## 0.97.6 - 2026-06-17
 
 - Docs / security: added §5.1 “Storage, Ownership and

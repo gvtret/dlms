@@ -20,7 +20,7 @@ Applications that implement only the GET/SET/ACTION backend can include
 
 `ClientStatus` is the public status enum for the facade.
 
-Initial values:
+Current values:
 
 ```cpp
 enum class ClientStatus
@@ -37,12 +37,134 @@ enum class ClientStatus
   ServiceRejected,
   SecurityFailed,
   UnsupportedFeature,
+  BlockTransferRequired,
+  InvokeIdMismatch,
+  CodecFailed,
   InternalError
 };
 ```
 
 The implementation maps lower-layer statuses into `ClientStatus`; applications
 should not need to include lower-layer status enums for basic client usage.
+
+### 1.1 Facade Status Mapping Policy
+
+The facade owns a small public enum on purpose. Lower
+layers (`dlms-transport`, `dlms-wrapper`, `dlms-hdlc`,
+`dlms-llc`, `dlms-apdu`, `dlms-xdlms`, `dlms-association`,
+`dlms-security`) each have a richer status enum, and the
+facade collapses them so callers do not have to depend on
+eight different headers to handle one Get/Set/Action call.
+This section documents what the facade keeps and what it
+intentionally drops.
+
+#### What the facade preserves
+
+Whenever a more specific public `ClientStatus` exists, the
+mapper preserves it instead of folding the failure into
+`InternalError`:
+
+- `InvalidArgument`, `InvalidState`, `UnsupportedFeature` are
+  preserved verbatim across every layer that exposes them.
+- `SendFailed` / `ReceiveFailed` split the data-link / wrapper
+  failure modes: open / write-side failures map to
+  `SendFailed`; read / decode / timeout / would-block /
+  need-more-data / output-buffer-too-small / invalid-frame /
+  invalid-length / invalid-address / payload-too-large /
+  connection-closed all map to `ReceiveFailed`. Both keep
+  the caller informed about which direction failed without
+  forcing them to pull in `ProfileStatus`.
+- xDLMS-layer mismatches that used to be opaque are now
+  first-class facade values:
+  - `BlockTransferRequired` for `XdlmsStatus::BlockTransferRequired`,
+  - `InvokeIdMismatch` for `XdlmsStatus::InvokeIdMismatch`,
+  - `CodecFailed` for `XdlmsStatus::EncodeFailed` and
+    `XdlmsStatus::DecodeFailed`.
+  Before `0.97.0` these were silently collapsed to
+  `InternalError` / `UnsupportedFeature`; callers can now
+  decide whether to retry with a different block size, abort
+  the association, or escalate the codec failure for
+  debugging.
+- `SecurityFailed` is preserved for every authentication,
+  ciphering, replay, or key-store error from `dlms-security`.
+  The narrower distinction (bad GMAC tag vs. wrong key role
+  vs. counter rejected) is intentionally dropped at this
+  boundary; see below.
+- `AssociationFailed` / `NotAssociated` cover the entire
+  ACSE/release/abort surface of `dlms-association`.
+  Sub-states (AARQ vs. AARE vs. RLRQ vs. abort code) are
+  intentionally dropped here.
+
+#### What the facade intentionally drops
+
+These collapses are deliberate; do not "fix" them by widening
+`ClientStatus`:
+
+- **Per-layer transport detail.** `TransportStatus::Timeout`,
+  `WrapperStatus::InvalidFrame`, `HdlcStatus::InvalidLength`,
+  and `LlcStatus::InvalidControl` all surface as
+  `ReceiveFailed`. Distinguishing them at the public facade
+  would leak the data-link choice (HDLC vs. WRAPPER vs.
+  future profiles) into application code; profile selection
+  is supposed to be transparent to facade consumers. Tools
+  that need the underlying status should subscribe to the
+  trace sinks (`IWrapperTcpTraceSink`, `IHdlcProfileTraceSink`)
+  instead of fishing for it in the return value.
+- **xDLMS service-rejected reasons.** The server can reject a
+  service with any of the Blue Book confirmed-service-error
+  codes (initiate-error, read-error, get-status, ...). The
+  facade collapses every server-side rejection to
+  `ServiceRejected`. Applications that need the raw reason
+  should decode the result object that the facade returns
+  alongside the status (for example, `GetResult.cosemStatus`
+  carries the data-access result intact).
+- **Security sub-classification.** `dlms-security`
+  distinguishes "bad GMAC tag" from "replay counter rejected"
+  from "missing key for role". The facade folds all of them
+  to `SecurityFailed` so that an attacker observing return
+  codes cannot distinguish the failure mode. The traces and
+  the security layer's own log API keep the detail for the
+  operator.
+- **COSEM access-result vs. transport-level failure.** A
+  successful round-trip that ends in `data-access-result =
+  read-write-denied` is reported as `ClientStatus::Ok` with a
+  non-`Ok` `cosemStatus` field inside the result object. The
+  facade reserves its own status for "did the round-trip
+  itself succeed"; the per-attribute access result lives in
+  the result object. Mixing the two layers into one enum was
+  considered and rejected because callers almost always need
+  to branch on them separately.
+- **`InternalError` as a last resort.** After the `0.97.x`
+  audit, every `ClientStatus`-returning mapper in the facade
+  is `switch`-exhaustive on its source enum and has no silent
+  `default` arm. `InternalError` is therefore reserved for
+  invariants the facade itself owns (null internal pointers,
+  reached-unreachable assertions, internal state machine
+  desync). It is not a catch-all for unmapped lower-layer
+  statuses; if a new lower-layer status appears, the compiler
+  forces the mapper to handle it explicitly.
+
+#### Where the mapping lives
+
+- `lib/dlms-client/src/client/client.cpp` -
+  `MapDataLinkDisconnectStatus`, `MapXdlmsStatus`,
+  `MapAssociationStatus`. Exposed for testing via
+  `lib/dlms-client/src/client/client_internal.hpp`
+  (`internal::` namespace; not installed).
+- `lib/dlms-client/src/client/client_data.cpp` -
+  `MapDataStatus` for the APDU codec helpers.
+- `lib/dlms-endpoint/src/endpoint/client_endpoint.cpp` -
+  `MapClientStatus` lifts `ClientStatus` into
+  `EndpointStatus` with the same policy applied one layer up.
+- `lib/dlms-server/src/server/server_status.cpp` -
+  `MapCosemStatus` lifts COSEM access results into
+  `ServerStatus` symmetrically.
+
+If you add a new public facade status, update both this
+section and the relevant mapper, and add a test in
+`lib/dlms-client/test/client/test_client_internal.cpp` that
+asserts the new mapping. Do not bypass the mapper by
+returning a lower-layer status directly from the facade.
 
 ## 2. Options
 

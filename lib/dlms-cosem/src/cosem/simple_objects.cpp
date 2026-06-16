@@ -9666,10 +9666,18 @@ constexpr std::uint8_t kPrimePlcMacFunctionalParamsLsidId = 3u;
 constexpr std::uint8_t kPrimePlcMacFunctionalParamsSidId = 4u;
 constexpr std::uint8_t kPrimePlcMacFunctionalParamsSnaId = 5u;
 constexpr std::uint8_t kPrimePlcMacFunctionalParamsStateId = 6u;
-constexpr std::uint8_t kPrimePlcMacFunctionalParamsSctId = 7u;
-constexpr std::uint8_t kPrimePlcMacFunctionalParamsScdId = 8u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsScpLengthId = 7u;
 constexpr std::uint8_t
-  kPrimePlcMacFunctionalParamsCapabilitiesId = 9u;
+  kPrimePlcMacFunctionalParamsNodeHierarchyLevelId = 8u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsBeaconSlotCountId = 9u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsBeaconRxSlotId = 10u;
+constexpr std::uint8_t kPrimePlcMacFunctionalParamsBeaconTxSlotId = 11u;
+constexpr std::uint8_t
+  kPrimePlcMacFunctionalParamsBeaconRxFrequencyId = 12u;
+constexpr std::uint8_t
+  kPrimePlcMacFunctionalParamsBeaconTxFrequencyId = 13u;
+constexpr std::uint8_t
+  kPrimePlcMacFunctionalParamsCapabilitiesId = 14u;
 } // namespace
 
 const std::uint8_t
@@ -9683,12 +9691,19 @@ CosemPrimePlcMacFunctionalParametersObject::
     const CosemByteBuffer& sid,
     const CosemByteBuffer& sna,
     const CosemByteBuffer& state,
-    const CosemByteBuffer& sct,
-    const CosemByteBuffer& scd,
+    const CosemByteBuffer& scpLength,
+    const CosemByteBuffer& nodeHierarchyLevel,
+    const CosemByteBuffer& beaconSlotCount,
+    const CosemByteBuffer& beaconRxSlot,
+    const CosemByteBuffer& beaconTxSlot,
+    const CosemByteBuffer& beaconRxFrequency,
+    const CosemByteBuffer& beaconTxFrequency,
     const CosemByteBuffer& capabilities,
     AttributeAccessMode mutableAccess)
   : CosemPrimePlcMacFunctionalParametersObject(
-      logicalName, lnid, lsid, sid, sna, state, sct, scd,
+      logicalName, lnid, lsid, sid, sna, state, scpLength,
+      nodeHierarchyLevel, beaconSlotCount, beaconRxSlot,
+      beaconTxSlot, beaconRxFrequency, beaconTxFrequency,
       capabilities, mutableAccess,
       CosemPrimePlcMacFunctionalParametersObject::
         MaxSupportedVersion)
@@ -9703,8 +9718,13 @@ CosemPrimePlcMacFunctionalParametersObject::
     const CosemByteBuffer& sid,
     const CosemByteBuffer& sna,
     const CosemByteBuffer& state,
-    const CosemByteBuffer& sct,
-    const CosemByteBuffer& scd,
+    const CosemByteBuffer& scpLength,
+    const CosemByteBuffer& nodeHierarchyLevel,
+    const CosemByteBuffer& beaconSlotCount,
+    const CosemByteBuffer& beaconRxSlot,
+    const CosemByteBuffer& beaconTxSlot,
+    const CosemByteBuffer& beaconRxFrequency,
+    const CosemByteBuffer& beaconTxFrequency,
     const CosemByteBuffer& capabilities,
     AttributeAccessMode mutableAccess,
     std::uint8_t version)
@@ -9720,8 +9740,13 @@ CosemPrimePlcMacFunctionalParametersObject::
   , sid_(sid)
   , sna_(sna)
   , state_(state)
-  , sct_(sct)
-  , scd_(scd)
+  , scpLength_(scpLength)
+  , nodeHierarchyLevel_(nodeHierarchyLevel)
+  , beaconSlotCount_(beaconSlotCount)
+  , beaconRxSlot_(beaconRxSlot)
+  , beaconTxSlot_(beaconTxSlot)
+  , beaconRxFrequency_(beaconRxFrequency)
+  , beaconTxFrequency_(beaconTxFrequency)
   , capabilities_(capabilities)
 {
   rights_.SetAttributeAccess(
@@ -9732,8 +9757,13 @@ CosemPrimePlcMacFunctionalParametersObject::
         kPrimePlcMacFunctionalParamsSidId,
         kPrimePlcMacFunctionalParamsSnaId,
         kPrimePlcMacFunctionalParamsStateId,
-        kPrimePlcMacFunctionalParamsSctId,
-        kPrimePlcMacFunctionalParamsScdId,
+        kPrimePlcMacFunctionalParamsScpLengthId,
+        kPrimePlcMacFunctionalParamsNodeHierarchyLevelId,
+        kPrimePlcMacFunctionalParamsBeaconSlotCountId,
+        kPrimePlcMacFunctionalParamsBeaconRxSlotId,
+        kPrimePlcMacFunctionalParamsBeaconTxSlotId,
+        kPrimePlcMacFunctionalParamsBeaconRxFrequencyId,
+        kPrimePlcMacFunctionalParamsBeaconTxFrequencyId,
         kPrimePlcMacFunctionalParamsCapabilitiesId}) {
     rights_.SetAttributeAccess(attr, mutableAccess);
   }
@@ -9775,11 +9805,26 @@ CosemPrimePlcMacFunctionalParametersObject::ReadAttribute(
     case kPrimePlcMacFunctionalParamsStateId:
       output = state_;
       return CosemStatus::Ok;
-    case kPrimePlcMacFunctionalParamsSctId:
-      output = sct_;
+    case kPrimePlcMacFunctionalParamsScpLengthId:
+      output = scpLength_;
       return CosemStatus::Ok;
-    case kPrimePlcMacFunctionalParamsScdId:
-      output = scd_;
+    case kPrimePlcMacFunctionalParamsNodeHierarchyLevelId:
+      output = nodeHierarchyLevel_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsBeaconSlotCountId:
+      output = beaconSlotCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsBeaconRxSlotId:
+      output = beaconRxSlot_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsBeaconTxSlotId:
+      output = beaconTxSlot_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsBeaconRxFrequencyId:
+      output = beaconRxFrequency_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacFunctionalParamsBeaconTxFrequencyId:
+      output = beaconTxFrequency_;
       return CosemStatus::Ok;
     case kPrimePlcMacFunctionalParamsCapabilitiesId:
       output = capabilities_;
@@ -9812,11 +9857,26 @@ CosemPrimePlcMacFunctionalParametersObject::WriteAttribute(
     case kPrimePlcMacFunctionalParamsStateId:
       target = &state_;
       break;
-    case kPrimePlcMacFunctionalParamsSctId:
-      target = &sct_;
+    case kPrimePlcMacFunctionalParamsScpLengthId:
+      target = &scpLength_;
       break;
-    case kPrimePlcMacFunctionalParamsScdId:
-      target = &scd_;
+    case kPrimePlcMacFunctionalParamsNodeHierarchyLevelId:
+      target = &nodeHierarchyLevel_;
+      break;
+    case kPrimePlcMacFunctionalParamsBeaconSlotCountId:
+      target = &beaconSlotCount_;
+      break;
+    case kPrimePlcMacFunctionalParamsBeaconRxSlotId:
+      target = &beaconRxSlot_;
+      break;
+    case kPrimePlcMacFunctionalParamsBeaconTxSlotId:
+      target = &beaconTxSlot_;
+      break;
+    case kPrimePlcMacFunctionalParamsBeaconRxFrequencyId:
+      target = &beaconRxFrequency_;
+      break;
+    case kPrimePlcMacFunctionalParamsBeaconTxFrequencyId:
+      target = &beaconTxFrequency_;
       break;
     case kPrimePlcMacFunctionalParamsCapabilitiesId:
       target = &capabilities_;
@@ -9876,15 +9936,45 @@ CosemPrimePlcMacFunctionalParametersObject::State() const
 }
 
 const CosemByteBuffer&
-CosemPrimePlcMacFunctionalParametersObject::Sct() const
+CosemPrimePlcMacFunctionalParametersObject::ScpLength() const
 {
-  return sct_;
+  return scpLength_;
 }
 
 const CosemByteBuffer&
-CosemPrimePlcMacFunctionalParametersObject::Scd() const
+CosemPrimePlcMacFunctionalParametersObject::NodeHierarchyLevel() const
 {
-  return scd_;
+  return nodeHierarchyLevel_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::BeaconSlotCount() const
+{
+  return beaconSlotCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::BeaconRxSlot() const
+{
+  return beaconRxSlot_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::BeaconTxSlot() const
+{
+  return beaconTxSlot_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::BeaconRxFrequency() const
+{
+  return beaconRxFrequency_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacFunctionalParametersObject::BeaconTxFrequency() const
+{
+  return beaconTxFrequency_;
 }
 
 const CosemByteBuffer&

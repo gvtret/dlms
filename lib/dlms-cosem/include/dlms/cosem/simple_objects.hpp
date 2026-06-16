@@ -2392,8 +2392,13 @@ public:
     const CosemByteBuffer& sid,
     const CosemByteBuffer& sna,
     const CosemByteBuffer& state,
-    const CosemByteBuffer& sct,
-    const CosemByteBuffer& scd,
+    const CosemByteBuffer& scpLength,
+    const CosemByteBuffer& nodeHierarchyLevel,
+    const CosemByteBuffer& beaconSlotCount,
+    const CosemByteBuffer& beaconRxSlot,
+    const CosemByteBuffer& beaconTxSlot,
+    const CosemByteBuffer& beaconRxFrequency,
+    const CosemByteBuffer& beaconTxFrequency,
     const CosemByteBuffer& capabilities,
     AttributeAccessMode mutableAccess);
   CosemPrimePlcMacFunctionalParametersObject(
@@ -2403,8 +2408,13 @@ public:
     const CosemByteBuffer& sid,
     const CosemByteBuffer& sna,
     const CosemByteBuffer& state,
-    const CosemByteBuffer& sct,
-    const CosemByteBuffer& scd,
+    const CosemByteBuffer& scpLength,
+    const CosemByteBuffer& nodeHierarchyLevel,
+    const CosemByteBuffer& beaconSlotCount,
+    const CosemByteBuffer& beaconRxSlot,
+    const CosemByteBuffer& beaconTxSlot,
+    const CosemByteBuffer& beaconRxFrequency,
+    const CosemByteBuffer& beaconTxFrequency,
     const CosemByteBuffer& capabilities,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
@@ -2427,8 +2437,13 @@ public:
   const CosemByteBuffer& Sid() const;
   const CosemByteBuffer& Sna() const;
   const CosemByteBuffer& State() const;
-  const CosemByteBuffer& Sct() const;
-  const CosemByteBuffer& Scd() const;
+  const CosemByteBuffer& ScpLength() const;
+  const CosemByteBuffer& NodeHierarchyLevel() const;
+  const CosemByteBuffer& BeaconSlotCount() const;
+  const CosemByteBuffer& BeaconRxSlot() const;
+  const CosemByteBuffer& BeaconTxSlot() const;
+  const CosemByteBuffer& BeaconRxFrequency() const;
+  const CosemByteBuffer& BeaconTxFrequency() const;
   const CosemByteBuffer& Capabilities() const;
 
 private:
@@ -2438,8 +2453,13 @@ private:
   CosemByteBuffer sid_;
   CosemByteBuffer sna_;
   CosemByteBuffer state_;
-  CosemByteBuffer sct_;
-  CosemByteBuffer scd_;
+  CosemByteBuffer scpLength_;
+  CosemByteBuffer nodeHierarchyLevel_;
+  CosemByteBuffer beaconSlotCount_;
+  CosemByteBuffer beaconRxSlot_;
+  CosemByteBuffer beaconTxSlot_;
+  CosemByteBuffer beaconRxFrequency_;
+  CosemByteBuffer beaconTxFrequency_;
   CosemByteBuffer capabilities_;
   CosemAccessRights rights_;
 };

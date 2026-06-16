@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.94.0 - 2026-06-17
+
+- BREAKING (C++ API and wire semantics): Completed the
+  `CosemPrimePlcMacFunctionalParametersObject` (PRIME NB OFDM PLC
+  MAC functional parameters, class_id `83`, version `0`) to the
+  full 14-attribute spec form per IEC 62056-6-2 ED4 (2021)
+  §4.12.7 / DLMS UA Blue Book Ed. 12.1. Previously the object
+  exposed only 9 attributes with `mac_capabilities` placed on
+  attribute id `9`; per spec `mac_capabilities` lives on
+  attribute id `14` and ids `9..13` belong to the beacon family.
+  The constructor signature has been replaced and now takes 13
+  buffers in spec order: `lnid, lsid, sid, sna, state,
+  scpLength, nodeHierarchyLevel, beaconSlotCount, beaconRxSlot,
+  beaconTxSlot, beaconRxFrequency, beaconTxFrequency,
+  capabilities`. The previous parameters `sct` and `scd` have
+  been renamed to `scpLength` (attribute `7`,
+  `mac_scp_length`, type `long`) and `nodeHierarchyLevel`
+  (attribute `8`, `mac_node_hierarchy_level`, type `unsigned`,
+  range `0..63`). Five new attributes were added:
+  `mac_beacon_slot_count` (`9`, `unsigned`, `0..7`),
+  `mac_beacon_rx_slot` (`10`, `unsigned`, `0..7`),
+  `mac_beacon_tx_slot` (`11`, `unsigned`, `0..7`),
+  `mac_beacon_rx_frequency` (`12`, `unsigned`, `0..31`),
+  `mac_beacon_tx_frequency` (`13`, `unsigned`, `0..31`).
+  Internal constant identifiers `kPrimePlcMacFunctionalParamsSctId`
+  and `kPrimePlcMacFunctionalParamsScdId` have been renamed to
+  `kPrimePlcMacFunctionalParamsScpLengthId` and
+  `kPrimePlcMacFunctionalParamsNodeHierarchyLevelId`, the value of
+  `kPrimePlcMacFunctionalParamsCapabilitiesId` moved from `9` to
+  `14`, and new identifiers were added for the beacon block.
+  Public attribute accessors `Sct()` / `Scd()` were renamed to
+  `ScpLength()` / `NodeHierarchyLevel()` and accessors
+  `BeaconSlotCount()`, `BeaconRxSlot()`, `BeaconTxSlot()`,
+  `BeaconRxFrequency()`, `BeaconTxFrequency()` were added.
+  Downstream callers must update their constructor argument
+  lists and any direct attribute-id reads.
+- Refreshed unit tests, COSEM API guide and COSEM IC support
+  matrix accordingly. The support matrix row `83` now lists 14
+  attributes and notes that the beacon block was completed.
+
 ## 0.93.0 - 2026-06-17
 
 - BREAKING (C++ API): Renamed the PRIME PLC MAC Network

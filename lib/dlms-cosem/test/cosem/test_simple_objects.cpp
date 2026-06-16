@@ -9438,8 +9438,13 @@ struct PrimePlcMacFunctionalParamsBuffers
   dlms::cosem::CosemByteBuffer sid;
   dlms::cosem::CosemByteBuffer sna;
   dlms::cosem::CosemByteBuffer state;
-  dlms::cosem::CosemByteBuffer sct;
-  dlms::cosem::CosemByteBuffer scd;
+  dlms::cosem::CosemByteBuffer scpLength;
+  dlms::cosem::CosemByteBuffer nodeHierarchyLevel;
+  dlms::cosem::CosemByteBuffer beaconSlotCount;
+  dlms::cosem::CosemByteBuffer beaconRxSlot;
+  dlms::cosem::CosemByteBuffer beaconTxSlot;
+  dlms::cosem::CosemByteBuffer beaconRxFrequency;
+  dlms::cosem::CosemByteBuffer beaconTxFrequency;
   dlms::cosem::CosemByteBuffer capabilities;
 };
 
@@ -9458,12 +9463,22 @@ MakeSamplePrimePlcMacFunctionalParams()
     {0x09u, 0x06u, 0x12u, 0x34u, 0x56u, 0x78u, 0x9Au, 0xBCu});
   // enum 3 (Terminal connected)
   b.state = BytesFromList({0x16u, 0x03u});
-  // long-unsigned 0x0007
-  b.sct = BytesFromList({0x12u, 0x00u, 0x07u});
-  // long-unsigned 0x0005
-  b.scd = BytesFromList({0x12u, 0x00u, 0x05u});
-  // bit-string(8) 0b10100101
-  b.capabilities = BytesFromList({0x04u, 0x08u, 0xA5u});
+  // long 0x00000007 (mac_scp_length)
+  b.scpLength = BytesFromList({0x10u, 0x00u, 0x07u});
+  // unsigned 5 (mac_node_hierarchy_level, 0..63)
+  b.nodeHierarchyLevel = BytesFromList({0x11u, 0x05u});
+  // unsigned 3 (mac_beacon_slot_count, 0..7)
+  b.beaconSlotCount = BytesFromList({0x11u, 0x03u});
+  // unsigned 1 (mac_beacon_rx_slot, 0..7)
+  b.beaconRxSlot = BytesFromList({0x11u, 0x01u});
+  // unsigned 2 (mac_beacon_tx_slot, 0..7)
+  b.beaconTxSlot = BytesFromList({0x11u, 0x02u});
+  // unsigned 12 (mac_beacon_rx_frequency, 0..31)
+  b.beaconRxFrequency = BytesFromList({0x11u, 0x0Cu});
+  // unsigned 14 (mac_beacon_tx_frequency, 0..31)
+  b.beaconTxFrequency = BytesFromList({0x11u, 0x0Eu});
+  // long-unsigned 0x00A5 (mac_capabilities)
+  b.capabilities = BytesFromList({0x12u, 0x00u, 0xA5u});
   return b;
 }
 
@@ -9474,7 +9489,9 @@ MakePrimePlcMacFunctionalParamsObject(
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemPrimePlcMacFunctionalParametersObject(
-    name, b.lnid, b.lsid, b.sid, b.sna, b.state, b.sct, b.scd,
+    name, b.lnid, b.lsid, b.sid, b.sna, b.state, b.scpLength,
+    b.nodeHierarchyLevel, b.beaconSlotCount, b.beaconRxSlot,
+    b.beaconTxSlot, b.beaconRxFrequency, b.beaconTxFrequency,
     b.capabilities, access);
 }
 
@@ -9503,8 +9520,11 @@ TEST(CosemPrimePlcMacFunctionalParametersObject,
             object.ReadAttribute(1u, out));
   EXPECT_EQ(EncodedLogicalName(name), out);
   const dlms::cosem::CosemByteBuffer* expected[] = {
-    &b.lnid, &b.lsid, &b.sid, &b.sna, &b.state, &b.sct, &b.scd,
-    &b.capabilities};
+    &b.lnid,            &b.lsid,            &b.sid,
+    &b.sna,             &b.state,           &b.scpLength,
+    &b.nodeHierarchyLevel, &b.beaconSlotCount,
+    &b.beaconRxSlot,    &b.beaconTxSlot,    &b.beaconRxFrequency,
+    &b.beaconTxFrequency, &b.capabilities};
   std::uint8_t attrId = 2u;
   for (const auto* exp : expected) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
@@ -9515,7 +9535,7 @@ TEST(CosemPrimePlcMacFunctionalParametersObject,
     ++attrId;
   }
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(10u, out));
+            object.ReadAttribute(15u, out));
 }
 
 TEST(CosemPrimePlcMacFunctionalParametersObject,
@@ -9531,7 +9551,8 @@ TEST(CosemPrimePlcMacFunctionalParametersObject,
   dlms::cosem::CosemPrimePlcMacFunctionalParametersObject writable =
     MakePrimePlcMacFunctionalParamsObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u}) {
+  for (std::uint8_t attr :
+       {2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u, 11u, 12u, 13u, 14u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(attr, replacement))
       << "attr " << static_cast<unsigned>(attr);
@@ -9541,8 +9562,13 @@ TEST(CosemPrimePlcMacFunctionalParametersObject,
   EXPECT_EQ(replacement, writable.Sid());
   EXPECT_EQ(replacement, writable.Sna());
   EXPECT_EQ(replacement, writable.State());
-  EXPECT_EQ(replacement, writable.Sct());
-  EXPECT_EQ(replacement, writable.Scd());
+  EXPECT_EQ(replacement, writable.ScpLength());
+  EXPECT_EQ(replacement, writable.NodeHierarchyLevel());
+  EXPECT_EQ(replacement, writable.BeaconSlotCount());
+  EXPECT_EQ(replacement, writable.BeaconRxSlot());
+  EXPECT_EQ(replacement, writable.BeaconTxSlot());
+  EXPECT_EQ(replacement, writable.BeaconRxFrequency());
+  EXPECT_EQ(replacement, writable.BeaconTxFrequency());
   EXPECT_EQ(replacement, writable.Capabilities());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
@@ -9585,7 +9611,9 @@ TEST(CosemPrimePlcMacFunctionalParametersObject,
   const PrimePlcMacFunctionalParamsBuffers b =
     MakeSamplePrimePlcMacFunctionalParams();
   dlms::cosem::CosemPrimePlcMacFunctionalParametersObject object(
-    name, b.lnid, b.lsid, b.sid, b.sna, b.state, b.sct, b.scd,
+    name, b.lnid, b.lsid, b.sid, b.sna, b.state, b.scpLength,
+    b.nodeHierarchyLevel, b.beaconSlotCount, b.beaconRxSlot,
+    b.beaconTxSlot, b.beaconRxFrequency, b.beaconTxFrequency,
     b.capabilities,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(

@@ -1032,16 +1032,22 @@ caller access mode and replace the stored buffer in-place when
 writable. IC v0 defines no methods; `InvokeMethod` reports
 `MethodNotFound` for all method ids and clears method output.
 
-`simple_objects.hpp` also exposes a partial PRIME PLC MAC
+`simple_objects.hpp` also exposes the PRIME PLC MAC
 Functional Parameters IC `83`
 (`CosemPrimePlcMacFunctionalParametersObject`) with class
-version `0` per IEC 62056-6-2 ED4 (2021) §4.12.7. The constructors take `lnid` (long-unsigned),
-`lsid` (unsigned), `sid` (unsigned), `sna` (octet-string
-EUI-48), `state` (enum), `sct`, `scd` (long-unsigned) and
-`capabilities` (bit-string) as encoded DLMS Data buffers
-prepared by the caller, the logical name, a caller-selected
+version `0` per IEC 62056-6-2 ED4 (2021) §4.12.7. The
+constructors take all 13 read-only static parameters in spec
+order: `lnid` (long-unsigned), `lsid` (unsigned), `sid`
+(unsigned), `sna` (octet-string EUI-48), `state` (enum),
+`scp_length` (long), `node_hierarchy_level` (unsigned, `0..63`),
+`beacon_slot_count` (unsigned, `0..7`), `beacon_rx_slot`
+(unsigned, `0..7`), `beacon_tx_slot` (unsigned, `0..7`),
+`beacon_rx_frequency` (unsigned, `0..31`),
+`beacon_tx_frequency` (unsigned, `0..31`) and `capabilities`
+(long-unsigned) as encoded DLMS Data buffers prepared by the
+caller, the logical name, a caller-selected
 `AttributeAccessMode` shared by the mutable attributes
-(`2`-`9`), and an optional explicit version that is normalized
+(`2`-`14`), and an optional explicit version that is normalized
 to `MaxSupportedVersion` when out of range. Attribute `1`
 (logical_name) is read-only; the mutable attributes honor the
 caller access mode and replace the stored buffer in-place when

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.99.5 - 2026-06-17
+
+- Feature (P1 §2 commit 2/3): wired the cross-layer correlation field
+  through the four trace event structs and the apdu channel interface.
+  Append-only changes, default `0` everywhere, no ABI break in 0.x:
+  - `TransportTraceEvent`: new `conversationId` member, initialised to
+    `0` in the existing user-defined default ctor.
+  - `WrapperTcpTraceEvent`, `HdlcProfileTraceEvent`,
+    `AssociationTraceEvent`: new `conversationId` member as the last
+    field, default member initialiser `= 0` so aggregate `Event{}` and
+    `Event ev; ev = {};` keep producing zero-context events.
+  - `IApduChannel::SetCorrelation(uint64_t) noexcept`: new virtual
+    method with default no-op body. Channels that do not emit traces
+    do not need to override.
+  New test fixture `test_trace_correlation.cpp` (7 cases, lives in
+  `dlms-profile/test`) pins: every event default-inits its
+  `conversationId` to `kNoConversationId = 0`; assigning the field
+  round-trips; default `SetCorrelation` is reachable through the base
+  interface, accepts any `uint64_t`, is `noexcept`; overriding channels
+  receive the value verbatim. Per-test enumeration: 7 new gtest cases
+  inside `dlms_profile_tests.exe` (ctest still sees one aggregate
+  entry); ctest summary unchanged at 967/967.
+
 ## 0.99.4 - 2026-06-17
 
 - Feature (P1 §2 commit 1/3): added `dlms/xdlms/xdlms_correlation.hpp` —

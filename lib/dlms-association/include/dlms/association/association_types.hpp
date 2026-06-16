@@ -103,6 +103,10 @@ struct AssociationTraceEvent
   std::size_t callingAuthenticationValueSize;
   const AssociationTraceField* fields;
   std::size_t fieldCount;
+  // Diagnostic correlator stitching this event to peer events on
+  // adjacent layers (transport / wrapper / hdlc / xDLMS). 0 = no
+  // correlation context. See docs/trace_correlation_design.md.
+  std::uint64_t conversationId = 0;
 };
 
 class IAssociationTraceSink

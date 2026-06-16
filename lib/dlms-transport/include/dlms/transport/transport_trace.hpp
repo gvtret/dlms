@@ -35,6 +35,10 @@ struct TransportTraceEvent
   std::string endpoint;
   std::size_t byteCount;
   std::uint64_t timestampMilliseconds;
+  // Diagnostic correlator stitching this event to peer events on other
+  // layers (wrapper / hdlc / association). 0 = no correlation context.
+  // See docs/trace_correlation_design.md.
+  std::uint64_t conversationId;
 
   TransportTraceEvent()
     : kind(TransportTraceEventKind::Open)
@@ -42,6 +46,7 @@ struct TransportTraceEvent
     , status(TransportStatus::Ok)
     , byteCount(0)
     , timestampMilliseconds(0)
+    , conversationId(0)
   {
   }
 };

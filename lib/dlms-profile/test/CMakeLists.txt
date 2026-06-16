@@ -13,11 +13,13 @@ add_executable(dlms_profile_tests
   profile/test_profile_c_api.cpp
   profile/test_profile_c_header.c
   profile/test_profile_channels.cpp
-  profile/test_profile_status.cpp)
+  profile/test_profile_status.cpp
+  profile/test_trace_correlation.cpp)
 
 target_link_libraries(dlms_profile_tests
   PRIVATE
     dlms_profile
+    dlms_xdlms
     GTest::gtest_main)
 
 include(GoogleTest)

@@ -84,6 +84,10 @@ struct WrapperTcpTraceEvent
   std::size_t apduSize;
   const std::uint8_t* bytes;
   std::size_t byteSize;
+  // Diagnostic correlator stitching this event to peer events on
+  // adjacent layers (transport / xDLMS / association). 0 = no
+  // correlation context. See docs/trace_correlation_design.md.
+  std::uint64_t conversationId = 0;
 };
 
 class IWrapperTcpTraceSink
@@ -116,6 +120,10 @@ struct HdlcProfileTraceEvent
   std::size_t apduSize;
   const std::uint8_t* bytes;
   std::size_t byteSize;
+  // Diagnostic correlator stitching this event to peer events on
+  // adjacent layers (transport / xDLMS / association). 0 = no
+  // correlation context. See docs/trace_correlation_design.md.
+  std::uint64_t conversationId = 0;
 };
 
 class IHdlcProfileTraceSink

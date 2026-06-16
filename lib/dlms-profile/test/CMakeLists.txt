@@ -12,7 +12,8 @@ endif()
 add_executable(dlms_profile_tests
   profile/test_profile_c_api.cpp
   profile/test_profile_c_header.c
-  profile/test_profile_channels.cpp)
+  profile/test_profile_channels.cpp
+  profile/test_profile_status.cpp)
 
 target_link_libraries(dlms_profile_tests
   PRIVATE

@@ -182,5 +182,49 @@ ProfileStatus MapHdlcStatus(dlms::hdlc::HdlcStatus status)
   return ProfileStatus::InternalError;
 }
 
+const char* ProfileStatusName(ProfileStatus status)
+{
+  switch (status) {
+  case ProfileStatus::Ok:
+    return "Ok";
+  case ProfileStatus::NeedMoreData:
+    return "NeedMoreData";
+  case ProfileStatus::OutputBufferTooSmall:
+    return "OutputBufferTooSmall";
+  case ProfileStatus::InvalidArgument:
+    return "InvalidArgument";
+  case ProfileStatus::NotOpen:
+    return "NotOpen";
+  case ProfileStatus::AlreadyOpen:
+    return "AlreadyOpen";
+  case ProfileStatus::OpenFailed:
+    return "OpenFailed";
+  case ProfileStatus::ReadFailed:
+    return "ReadFailed";
+  case ProfileStatus::WriteFailed:
+    return "WriteFailed";
+  case ProfileStatus::Timeout:
+    return "Timeout";
+  case ProfileStatus::ConnectionClosed:
+    return "ConnectionClosed";
+  case ProfileStatus::WouldBlock:
+    return "WouldBlock";
+  case ProfileStatus::InvalidFrame:
+    return "InvalidFrame";
+  case ProfileStatus::InvalidLength:
+    return "InvalidLength";
+  case ProfileStatus::InvalidAddress:
+    return "InvalidAddress";
+  case ProfileStatus::PayloadTooLarge:
+    return "PayloadTooLarge";
+  case ProfileStatus::UnsupportedFeature:
+    return "UnsupportedFeature";
+  case ProfileStatus::InternalError:
+    return "InternalError";
+  }
+
+  return "Unknown";
+}
+
 } // namespace profile
 } // namespace dlms

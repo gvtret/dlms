@@ -64,5 +64,15 @@ enum class HdlcStatus
   InternalError
 };
 
+/**
+ * @brief Stable, enum-name-matching string for an `HdlcStatus` value.
+ *
+ * Returns a `static`-storage C string equal to the enum value identifier
+ * (`"Ok"`, `"NeedMoreData"`, ...). Returns `"Unknown"` for values outside
+ * the defined enumerators. Intended for diagnostics, logs and error
+ * propagation across layers; do not parse the result.
+ */
+const char* HdlcStatusName(HdlcStatus status);
+
 } // namespace hdlc
 } // namespace dlms

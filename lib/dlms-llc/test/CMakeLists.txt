@@ -14,6 +14,7 @@ add_executable(dlms_llc_tests
   llc/test_llc_c_header.c
   llc/test_llc_codec.cpp
   llc/test_llc_header.cpp
+  llc/test_llc_status.cpp
   llc/test_llc_vectors.cpp)
 
 target_link_libraries(dlms_llc_tests

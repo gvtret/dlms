@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.99.0 - 2026-06-17
+
+- API / diagnostics (P1 “Диагностика” §3 status-to-string
+  completeness, etap 2): added public `HdlcStatusName(HdlcStatus)`,
+  `LlcStatusName(LlcStatus)`, `WrapperStatusName(WrapperStatus)`, and
+  `ProfileStatusName(ProfileStatus)` helpers that return the enum-value
+  identifier as a `static`-storage C string (`"Ok"`, `"NeedMoreData"`,
+  ...) or `"Unknown"` for out-of-range casts. With this every public
+  status enum in `dlms::*` now exposes a stable, exhaustive `Name()`
+  helper for diagnostics, logs, and cross-layer error propagation. Each
+  implementation is a plain switch with no `default:` arm so future enum
+  additions will fire `-Wswitch` until a string is wired. Adds 8 new
+  `*StatusName` coverage tests (2 per module) covering every enum value
+  plus the Unknown fallback; full ctest 958/958.
+- Internal cleanup: `tools/live_meter_smoke.cpp` had a private
+  `ProfileStatusName` copy from before the public helper existed; it has
+  been removed and the two call sites now use the public
+  `dlms::profile::ProfileStatusName`.
+
 ## 0.98.3 - 2026-06-17
 
 - Tests / status hygiene (P1 "Диагностика" §3 status-to-string

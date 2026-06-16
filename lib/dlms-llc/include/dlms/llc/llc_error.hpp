@@ -49,5 +49,14 @@ enum class LlcStatus
   InternalError
 };
 
+/**
+ * @brief Stable, enum-name-matching string for an `LlcStatus` value.
+ *
+ * Returns a `static`-storage C string equal to the enum value identifier.
+ * Returns `"Unknown"` for values outside the defined enumerators. Intended
+ * for diagnostics; do not parse the result.
+ */
+const char* LlcStatusName(LlcStatus status);
+
 } // namespace llc
 } // namespace dlms

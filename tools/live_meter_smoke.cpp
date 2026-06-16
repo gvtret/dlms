@@ -379,48 +379,8 @@ const char* HlsMechanismName(
   return "unknown";
 }
 
-const char* ProfileStatusName(dlms::profile::ProfileStatus status)
-{
-  switch (status) {
-  case dlms::profile::ProfileStatus::Ok:
-    return "Ok";
-  case dlms::profile::ProfileStatus::NeedMoreData:
-    return "NeedMoreData";
-  case dlms::profile::ProfileStatus::OutputBufferTooSmall:
-    return "OutputBufferTooSmall";
-  case dlms::profile::ProfileStatus::InvalidArgument:
-    return "InvalidArgument";
-  case dlms::profile::ProfileStatus::NotOpen:
-    return "NotOpen";
-  case dlms::profile::ProfileStatus::AlreadyOpen:
-    return "AlreadyOpen";
-  case dlms::profile::ProfileStatus::OpenFailed:
-    return "OpenFailed";
-  case dlms::profile::ProfileStatus::ReadFailed:
-    return "ReadFailed";
-  case dlms::profile::ProfileStatus::WriteFailed:
-    return "WriteFailed";
-  case dlms::profile::ProfileStatus::Timeout:
-    return "Timeout";
-  case dlms::profile::ProfileStatus::ConnectionClosed:
-    return "ConnectionClosed";
-  case dlms::profile::ProfileStatus::WouldBlock:
-    return "WouldBlock";
-  case dlms::profile::ProfileStatus::InvalidFrame:
-    return "InvalidFrame";
-  case dlms::profile::ProfileStatus::InvalidLength:
-    return "InvalidLength";
-  case dlms::profile::ProfileStatus::InvalidAddress:
-    return "InvalidAddress";
-  case dlms::profile::ProfileStatus::PayloadTooLarge:
-    return "PayloadTooLarge";
-  case dlms::profile::ProfileStatus::UnsupportedFeature:
-    return "UnsupportedFeature";
-  case dlms::profile::ProfileStatus::InternalError:
-    return "InternalError";
-  }
-  return "Unknown";
-}
+// ProfileStatusName() is now provided by lib/dlms-profile
+// (see profile_types.hpp). Use the public helper instead of a local copy.
 
 void PrintObis(const dlms::xdlms::CosemLogicalName& name)
 {
@@ -663,7 +623,7 @@ public:
               << " direction="
               << WrapperTraceDirectionName(event.direction)
               << " status="
-              << ProfileStatusName(event.status)
+              << dlms::profile::ProfileStatusName(event.status)
               << " sourceWPort=" << event.sourcePort
               << " destWPort=" << event.destinationPort
               << " encodedSize=" << event.encodedSize
@@ -695,7 +655,7 @@ public:
               << " direction="
               << HdlcTraceDirectionName(event.direction)
               << " status="
-              << ProfileStatusName(event.status)
+              << dlms::profile::ProfileStatusName(event.status)
               << " encodedSize=" << event.encodedSize
               << " apduSize=" << event.apduSize
               << " byteSize=" << event.byteSize;

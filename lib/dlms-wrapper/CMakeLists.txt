@@ -13,7 +13,8 @@ option(DLMS_USE_SYSTEM_GTEST "Use system-installed GoogleTest" OFF)
 add_library(dlms_wrapper
   src/wrapper/wrapper_codec.cpp
   src/wrapper/wrapper_ports.cpp
-  src/wrapper/wrapper_stream_decoder.cpp)
+  src/wrapper/wrapper_stream_decoder.cpp
+  src/wrapper/wrapper_error.cpp)
 
 if(DLMS_BUILD_C_API)
   target_sources(dlms_wrapper

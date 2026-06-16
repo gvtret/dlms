@@ -159,5 +159,14 @@ ProfileStatus MapWrapperStatus(dlms::wrapper::WrapperStatus status);
 ProfileStatus MapLlcStatus(dlms::llc::LlcStatus status);
 ProfileStatus MapHdlcStatus(dlms::hdlc::HdlcStatus status);
 
+/**
+ * @brief Stable, enum-name-matching string for a `ProfileStatus` value.
+ *
+ * Returns a `static`-storage C string equal to the enum value identifier.
+ * Returns `"Unknown"` for values outside the defined enumerators. Intended
+ * for diagnostics; do not parse the result.
+ */
+const char* ProfileStatusName(ProfileStatus status);
+
 } // namespace profile
 } // namespace dlms

@@ -43,5 +43,14 @@ enum class WrapperStatus
   InternalError = 11
 };
 
+/**
+ * @brief Stable, enum-name-matching string for a `WrapperStatus` value.
+ *
+ * Returns a `static`-storage C string equal to the enum value identifier.
+ * Returns `"Unknown"` for values outside the defined enumerators. Intended
+ * for diagnostics; do not parse the result.
+ */
+const char* WrapperStatusName(WrapperStatus status);
+
 } // namespace wrapper
 } // namespace dlms

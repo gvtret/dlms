@@ -169,10 +169,22 @@ HLS password/GMAC, AES-GCM ciphered APDU и локальные key/counter store
 6. Secret handling.
    - Trace/log paths must not output keys, passwords, challenges, GMAC input,
      wrapped keys or plaintext protected APDU unless explicitly requested for a
-     test-only diagnostic build.
+     test-only diagnostic build. **Done in `0.97.4`** for the live smoke tool:
+     wire-byte hex dumps in `tools/live_meter_smoke` are now gated behind
+     `DLMS_LIVE_TRACE_WIRE_BYTES=1`. `AssociationTraceEvent` was reviewed and
+     already publishes only the calling-authentication-value size, never the
+     bytes themselves. `lib/` trace sink interfaces intentionally hand the
+     application raw bytes via hooks; redaction is the consumer’s job.
    - Add redaction tests for endpoint/client live-smoke diagnostics.
+     **Done in `0.97.5`**: extracted the wire-byte policy to
+     `tools/live_meter_smoke_byte_emit.hpp` and added
+     `dlms_live_meter_smoke_redaction_tests` (10 cases) under the existing
+     `DLMS_BUILD_LIVE_TESTS` guard. The test pins default-off,
+     opt-in-only, non-wire-events-silent, and empty-byte-span-silent.
    - Document storage, ownership and lifetime for key stores and invocation
-     counter stores.
+     counter stores. **Done in `0.97.6`**: see new section §5.1
+     “Storage, Ownership and Lifetime” in
+     `lib/dlms-security/docs/01_security_api.md`.
 
 ## P0. COSEM IC и СПОДЭС/СПОДУС model coverage
 

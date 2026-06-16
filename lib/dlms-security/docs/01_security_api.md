@@ -94,6 +94,138 @@ public:
 };
 ```
 
+## 5.1 Storage, Ownership and Lifetime
+
+This section pins the contract the layer expects from any
+production implementation of `IKeyStore`, `IMutableKeyStore`
+and `IInvocationCounterStore`. It also constrains what the
+bundled `InMemoryInvocationCounterStore` and any future
+in-memory key store are allowed to do, so that callers can
+reason about loss of secrets across process restarts and
+about replay safety across power cuts.
+
+### Ownership
+
+- The caller (typically the endpoint or application wiring)
+  owns every store instance. `dlms-security` never
+  `new`s or `delete`s a store, never wraps it in a smart
+  pointer, and never copies the bytes the store returns into
+  any longer-lived global.
+- `CipheredApduProcessor` and `HlsGmacAuthenticator` hold a
+  `const IKeyStore&` and a non-const
+  `IInvocationCounterStore&` for their entire lifetime. The
+  store **must outlive** every processor / authenticator
+  that was constructed with it.
+- Stores are not transferred across threads by the security
+  layer. Cross-thread sharing, if any, is the caller's
+  responsibility and must be backed by the thread-safety
+  guarantee declared below.
+
+### Lifetime
+
+- A store may be created at process startup and reused for
+  the full process lifetime. Nothing in the security layer
+  forces a per-association store.
+- A store may also be created per-association if the caller
+  wants strict isolation between associations; the layer
+  does not depend on identity comparison of store pointers.
+- When the caller tears down an association, the store may
+  outlive it. The security layer issues no "final"
+  notification to the store at association release; the
+  store is therefore free to keep buffered counters / keys.
+- During the destructor of any processor / authenticator,
+  the store reference is read at most once for a graceful
+  shutdown and never after the destructor returns.
+
+### Storage
+
+- `IKeyStore` is purely a lookup. It does not have to be
+  backed by RAM. Production deployments are expected to back
+  it with one of:
+  - a hardware-backed key vault (TPM, HSM, secure element),
+    where `GetKey` returns a wrapped handle plus key bytes
+    only for the brief moment the security layer needs them;
+  - an OS keyring (DPAPI, libsecret, macOS Keychain);
+  - an encrypted on-disk blob unlocked at process start.
+- The in-tree code provides no "in-memory key store" for
+  production. A bare in-RAM key store, if one is added for
+  tests, must be named so that it cannot be mistaken for a
+  production component (for example,
+  `TestOnlyInMemoryKeyStore`).
+- `IMutableKeyStore::SetKey` is the only path through which
+  the security layer mutates a key store. Any persistence,
+  wrapping, audit log or replication is the implementer's
+  job; the security layer treats `SetKey` as a fire-and-
+  forget request and only inspects the returned
+  `SecurityStatus`.
+
+### Invocation counter persistence
+
+- The local invocation counter `IInvocationCounterStore::
+  NextLocal` returns must be **monotonically increasing
+  across the entire lifetime of the client's system title /
+  key combination**, including across process restarts and
+  power cuts. The Blue Book treats counter reuse with the
+  same key as a hard cryptographic failure; production
+  stores must therefore persist the counter to non-volatile
+  storage with safe-restart semantics.
+- The bundled `InMemoryInvocationCounterStore` is a
+  development and test helper only. It loses its state on
+  destruction, so it must not be wired into a deployment
+  that exchanges ciphered or HLS-GMAC traffic with a real
+  meter that retains its own counter state.
+- A safe persistence pattern is "reserve a window, commit
+  the high-water mark before use":
+  1. On startup, read the persisted high-water mark `H`.
+  2. Reserve a window `[H + 1, H + W]` by writing `H + W`
+     back to non-volatile storage before serving any
+     `NextLocal` call.
+  3. Serve `NextLocal` values out of the window.
+  4. When the window is exhausted, reserve the next window
+     before issuing more counters.
+  5. On graceful shutdown, persist the actual last issued
+     value so the next window is tight.
+  This wastes at most `W - 1` counters on a crash and never
+  reissues a counter that was already handed out.
+- The remote high-water mark, if tracked per system title
+  (`ValidateRemoteForSystemTitle`), should be persisted on
+  the same schedule. Without persistence, a freshly
+  restarted client cannot reject replays of frames it had
+  already seen before the restart.
+
+### Reset semantics
+
+- `IInvocationCounterResetPolicy::ResetAfterKeyRotation` is
+  the only sanctioned way to roll the local counter back to
+  zero. It must be invoked as part of an atomic
+  rotate-and-reset operation, where no `NextLocal` call can
+  observe the new key paired with an old counter or the new
+  counter paired with an old key.
+- The in-tree global-key-transfer path in `simple_objects`
+  satisfies the requirement by calling
+  `ResetAfterKeyRotation` and `IMutableKeyStore::SetKey`
+  back-to-back from the same synchronous COSEM action, with
+  no `NextLocal` call interleaved. Either order inside that
+  window is acceptable; mixing the two operations with any
+  concurrent counter consumer is not.
+- A reset that drops the counter without rotating the key
+  violates the Blue Book replay rules and the security
+  layer will not detect that misuse: it is the caller's
+  responsibility to keep reset and rotation paired.
+
+### Thread safety
+
+- All store methods may be called from any thread, but the
+  security layer does not serialise calls on the caller's
+  behalf. Implementations that serve more than one
+  processor / authenticator concurrently **must** be
+  internally thread-safe, in particular `NextLocal` must
+  be linearisable so that two threads never observe the
+  same counter.
+- `InMemoryInvocationCounterStore` is **not** internally
+  synchronised. It is safe only when each instance is used
+  by a single thread or guarded by an external mutex.
+
 ## 6. Random Source
 
 ```cpp

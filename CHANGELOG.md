@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.97.6 - 2026-06-17
+
+- Docs / security: added §5.1 “Storage, Ownership and
+  Lifetime” to `lib/dlms-security/docs/01_security_api.md`,
+  pinning the contract callers must honour for `IKeyStore`,
+  `IMutableKeyStore` and `IInvocationCounterStore`. Covers
+  ownership (caller owns, store outlives every processor /
+  authenticator), lifetime (per-process or per-association
+  both acceptable), storage backends (TPM/HSM/keyring/
+  encrypted blob; no in-tree production in-RAM key store),
+  invocation-counter persistence (monotonic across restarts;
+  reserve-window pattern; remote high-water mark per system
+  title), reset semantics (`ResetAfterKeyRotation` atomic
+  with `SetKey` from the caller’s perspective; matches the
+  in-tree `simple_objects` global-key-transfer path), and
+  thread safety (caller-side responsibility;
+  `InMemoryInvocationCounterStore` is not internally
+  synchronised). Closes the last open bullet of P0 §3.6.
+
 ## 0.97.5 - 2026-06-17
 
 - Tools / security: extracted the wire-byte hex dump policy

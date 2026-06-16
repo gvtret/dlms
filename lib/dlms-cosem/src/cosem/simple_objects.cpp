@@ -7,6 +7,9 @@ namespace {
 
 constexpr std::uint16_t kDataClassId = 1u;
 constexpr std::uint16_t kRegisterClassId = 3u;
+// IEC 62056-6-2 ED4 (2021) §4.3.2 / DLMS UA Blue Book Ed. 12.1 §4.3.2:
+// class_id=3 defines a single specific method `reset` (data ::= integer(0)).
+constexpr std::uint8_t kRegisterResetMethodId = 1u;
 constexpr std::uint16_t kClockClassId = 8u;
 constexpr std::uint16_t kProfileGenericClassId = 7u;
 constexpr std::uint16_t kAssociationLnClassId = 15u;
@@ -1499,9 +1502,14 @@ CosemStatus CosemRegisterObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)methodId;
   (void)input;
   output.clear();
+  // method 1 = reset. Built-in object exposes it explicitly as
+  // UnsupportedFeature: application-defined semantics decide what reset means
+  // for a register, and the COSEM object does not own that policy.
+  if (methodId == kRegisterResetMethodId) {
+    return CosemStatus::UnsupportedFeature;
+  }
   return CosemStatus::MethodNotFound;
 }
 

@@ -365,7 +365,31 @@ TEST(CosemRegisterObject, WritesValueAndRejectsUnsupportedMembers)
   EXPECT_TRUE(output.empty());
   output = Bytes(0xAAu, 0xBBu);
   EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(1u, updated, output));
+            object.InvokeMethod(2u, updated, output));
+  EXPECT_TRUE(output.empty());
+}
+
+TEST(CosemRegisterObject, ResetMethodIsUnsupportedAndOtherIdsNotFound)
+{
+  dlms::cosem::CosemRegisterObject object(
+    MakeName(5u),
+    Bytes(0x01u, 0x02u),
+    Bytes(0x03u, 0x04u),
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+
+  dlms::cosem::CosemByteBuffer input = Bytes(0x00u, 0x00u);
+  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, input, output));
+  EXPECT_TRUE(output.empty());
+
+  output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(0u, input, output));
+  EXPECT_TRUE(output.empty());
+  output = Bytes(0xAAu, 0xBBu);
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            object.InvokeMethod(99u, input, output));
   EXPECT_TRUE(output.empty());
 }
 

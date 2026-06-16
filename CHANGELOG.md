@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.95.0 - 2026-06-17
+
+- Fix (C++ API semantics): `CosemRegisterObject::InvokeMethod` now
+  recognises method `1` `reset` (data ::= integer(0)) per IEC
+  62056-6-2 ED4 (2021) §4.3.2 / DLMS UA Blue Book Ed. 12.1 and
+  surfaces it as `CosemStatus::UnsupportedFeature`. Previously
+  all method ids returned `CosemStatus::MethodNotFound`, which
+  hid `reset` from clients enumerating IC 3 methods. Other
+  method ids still report `MethodNotFound`. The built-in object
+  remains application-agnostic: reset semantics are decided by
+  the backend that owns the underlying register storage.
+- Added `kRegisterResetMethodId` to `simple_objects.cpp` and a
+  dedicated `CosemRegisterObject, ResetMethodIsUnsupportedAndOtherIdsNotFound`
+  unit test. Adjusted the existing `WritesValueAndRejectsUnsupportedMembers`
+  test to probe an unrelated method id for the `MethodNotFound`
+  branch.
+- Refreshed the COSEM IC support matrix row `3` to document the
+  new method status mapping.
+
 ## 0.94.0 - 2026-06-17
 
 - BREAKING (C++ API and wire semantics): Completed the

@@ -11,6 +11,7 @@
 #include "dlms/security/in_memory_key_store.hpp"
 #include "dlms/security/random_source.hpp"
 #include "dlms/server/dlms_server.hpp"
+#include "dlms/server/tracing_xdlms_server_dispatcher.hpp"
 #include "dlms/server/xdlms_server_adapter.hpp"
 
 #include <limits>
@@ -402,6 +403,7 @@ public:
   std::unique_ptr<ServerEndpointHlsHighStrategy> hlsHigh;
   std::unique_ptr<ServerEndpointHlsGmacStrategy> hlsGmac;
   std::unique_ptr<dlms::xdlms::XdlmsServerDispatcher> dispatcher;
+  std::unique_ptr<dlms::server::TracingXdlmsServerDispatcher> tracingDispatcher;
   std::unique_ptr<dlms::security::SecurityContext> securityContext;
   std::unique_ptr<dlms::security::InMemoryKeyStore> keys;
   std::unique_ptr<dlms::security::InMemoryInvocationCounterStore> counters;
@@ -416,6 +418,7 @@ ServerEndpointOwnedState::ServerEndpointOwnedState(
   , hlsHigh()
   , hlsGmac()
   , dispatcher()
+  , tracingDispatcher()
   , securityContext()
   , keys()
   , counters()
@@ -519,12 +522,18 @@ void ServerEndpoint::ConfigureXdlmsProcessor()
   owned_->counters.reset();
   owned_->keys.reset();
   owned_->securityContext.reset();
+  owned_->tracingDispatcher.reset();
   owned_->dispatcher.reset(
     new dlms::xdlms::XdlmsServerDispatcher(*owned_->adapter));
+  owned_->tracingDispatcher.reset(
+    new dlms::server::TracingXdlmsServerDispatcher(
+      *owned_->dispatcher,
+      options_.serverDispatchTraceSink));
 
   if (!options_.security.cipheredApdu) {
     owned_->processor.reset(
-      new dlms::xdlms::XdlmsServerApduProcessor(*owned_->dispatcher));
+      new dlms::xdlms::XdlmsServerApduProcessor(*owned_->tracingDispatcher));
+    owned_->processor->SetTraceSink(options_.xdlmsTraceSink);
     return;
   }
 
@@ -577,8 +586,9 @@ void ServerEndpoint::ConfigureXdlmsProcessor()
       *owned_->counters));
   owned_->processor.reset(
     new dlms::xdlms::XdlmsServerApduProcessor(
-      *owned_->dispatcher,
+      *owned_->tracingDispatcher,
       *owned_->security));
+  owned_->processor->SetTraceSink(options_.xdlmsTraceSink);
 }
 
 EndpointStatus ServerEndpoint::ApplyCipheredAssociationContext()

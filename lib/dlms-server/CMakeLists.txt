@@ -13,8 +13,10 @@ add_library(dlms_server
   src/server/dlms_server.cpp
   src/server/server_context.cpp
   src/server/service_dispatcher.cpp
+  src/server/server_dispatch_trace.cpp
   src/server/server_status.cpp
   src/server/server_types.cpp
+  src/server/tracing_xdlms_server_dispatcher.cpp
   src/server/xdlms_server_adapter.cpp)
 
 if(NOT TARGET dlms_cosem AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../dlms-cosem/CMakeLists.txt")

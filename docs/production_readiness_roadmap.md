@@ -456,7 +456,7 @@ library may be described as an extensible DLMS/COSEM framework with partial
    single canonical contract document covering totality, `"Unknown"`
    fallback, lifetime, thread-safety, no-allocation, ABI stability, and
    the catalogue of 13 helpers + matching coverage test files.
-7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3 → v0.101.0 commit 2/3):
+7. Частично DONE (v0.99.7 design → v0.100.0 commit 1/3 → v0.101.0 commit 2/3 → v0.102.0 commit 3a):
    публичный xDLMS-layer trace sink и server-side trace sink. v0.99.7
    зафиксировал дизайн в `docs/xdlms_server_trace_design.md` (два sink-а:
    `IXdlmsTraceSink` в `dlms-xdlms` для xDLMS слоя, client + server;
@@ -484,9 +484,30 @@ library may be described as an extensible DLMS/COSEM framework with partial
    ставит `conversationId = kNoConversationId`; endpoint composition
    опубликует id в commit 3/3. Новый тест-файл
    `lib/dlms-xdlms/test/xdlms/test_xdlms_server_trace.cpp` (3 cases).
-   Остаётся: `IServerDispatchTraceSink` и `XdlmsServerDispatcher`
-   wiring (commit 3/3), endpoint composition (`EndpointOptions::
-   xdlmsTraceSink` + `serverDispatchTraceSink` pass-through).
+   v0.102.0 — commit 3a (server-dispatch sink + endpoint wiring):
+   `IServerDispatchTraceSink` и `ServerDispatchTraceEvent` опубликованы
+   в `lib/dlms-server/include/dlms/server/server_dispatch_trace.hpp`
+   (три kind-а: `GetDispatched`, `SetDispatched`, `ActionDispatched`).
+   Pass-through декоратор `TracingXdlmsServerDispatcher` (в
+   `dlms/server/tracing_xdlms_server_dispatcher.hpp`) оборачивает
+   любой `IXdlmsServerDispatcher` и эмитирует ровно одно событие на
+   каждый Dispatch*; при `sink == nullptr` zero-cost. Endpoint
+   composition: `ServerEndpointOptions` (и `GatewayEndpointOptions::
+   downstream` через него) получили два опциональных pointer-поля
+   `xdlmsTraceSink` и `serverDispatchTraceSink`, которые
+   пробрасываются в `ServerEndpoint::ConfigureXdlmsProcessor` и
+   `GatewayEndpoint`. `PushListenerEndpointOptions` и
+   `ClientEndpointOptions` намеренно НЕ расширены (push-listener
+   не запускает диспетчер; client-side доступен через прямой
+   `XdlmsClient::SetTraceSink` для embedded-кода — без реального
+   потребителя добавлять speculative API нарушило бы AGENTS.md §2).
+   Серверные dispatch-events пока ставят `conversationId =
+   kNoConversationId`; end-to-end correlation на серверной стороне
+   и integration test — commit 3b.
+   Остаётся: end-to-end correlation на серверной стороне (commit 3b)
+   плюс integration test, который проверит, что один и тот же
+   `conversationId` появляется в одном request-роундтрипе на
+   channel-уровне, xDLMS-уровне сервера и dispatch-уровне.
 
 ## P2. Надежность и оптимизация
 

@@ -16,6 +16,14 @@ class IHdlcProfileTraceSink;
 class IWrapperTcpTraceSink;
 }
 
+namespace xdlms {
+class IXdlmsTraceSink;
+}
+
+namespace server {
+class IServerDispatchTraceSink;
+}
+
 namespace endpoint {
 
 enum class EndpointTransportKind
@@ -94,6 +102,11 @@ struct ServerEndpointOptions
   EndpointProfileOptions profile;
   EndpointSecurityOptions security;
   bool negotiateAssociation;
+  profile::IWrapperTcpTraceSink* wrapperTcpTraceSink = nullptr;
+  profile::IHdlcProfileTraceSink* hdlcProfileTraceSink = nullptr;
+  association::IAssociationTraceSink* associationTraceSink = nullptr;
+  xdlms::IXdlmsTraceSink* xdlmsTraceSink = nullptr;
+  server::IServerDispatchTraceSink* serverDispatchTraceSink = nullptr;
 };
 
 struct PushListenerEndpointOptions
@@ -102,6 +115,9 @@ struct PushListenerEndpointOptions
   EndpointProfileOptions profile;
   EndpointSecurityOptions security;
   bool negotiateAssociation;
+  profile::IWrapperTcpTraceSink* wrapperTcpTraceSink = nullptr;
+  profile::IHdlcProfileTraceSink* hdlcProfileTraceSink = nullptr;
+  association::IAssociationTraceSink* associationTraceSink = nullptr;
 };
 
 struct GatewayEndpointOptions

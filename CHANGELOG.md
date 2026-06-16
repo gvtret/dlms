@@ -1,5 +1,51 @@
 # Changelog
 
+## 0.102.0 - 2026-06-17
+
+- Feature (P1 §7 commit 3a — server-side dispatch trace sink in
+  `dlms-server`, plus endpoint wiring for xDLMS + dispatch sinks):
+  - New header `dlms/server/server_dispatch_trace.hpp` declares
+    `IServerDispatchTraceSink` and `ServerDispatchTraceEvent` (with
+    `ServerDispatchTraceKind::{GetDispatched, SetDispatched,
+    ActionDispatched}`). Kept in `dlms-server` rather than
+    `dlms-xdlms` so `dlms-xdlms` does not pick up a dependency on
+    server-layer types — matches the "two sinks, not one" decision
+    in `docs/xdlms_server_trace_design.md`.
+  - New header `dlms/server/tracing_xdlms_server_dispatcher.hpp`
+    declares `TracingXdlmsServerDispatcher` — a thin pass-through
+    decorator around any `dlms::xdlms::IXdlmsServerDispatcher` that
+    emits one `ServerDispatchTraceEvent` per `DispatchGet` /
+    `DispatchSet` / `DispatchAction`. Zero-cost when the sink is
+    `nullptr` (no event object constructed, no virtual call).
+  - `ServerEndpointOptions` gains two opt-in pointer fields:
+    `xdlms::IXdlmsTraceSink* xdlmsTraceSink = nullptr` and
+    `server::IServerDispatchTraceSink* serverDispatchTraceSink =
+    nullptr`. `GatewayEndpointOptions::downstream` (a
+    `ServerEndpointOptions`) inherits the same two fields and they
+    are now honoured by both `ServerEndpoint::ConfigureXdlmsProcessor`
+    and `GatewayEndpoint`'s downstream construction. Defaults
+    (`nullptr`) preserve existing behaviour: no events emitted, no
+    decorator overhead.
+  - `PushListenerEndpointOptions` and `ClientEndpointOptions` are
+    deliberately **not** extended in this commit: the push-listener
+    side does not run a dispatcher, and the client side already has
+    `XdlmsClient::SetTraceSink` available for embedded code (proper
+    `DlmsClient`/`ClientEndpoint` plumbing of `xdlmsTraceSink` will
+    follow as its own commit once it has a real consumer — AGENTS.md
+    §2: no speculative API).
+  - Redaction contract identical to existing sinks: events publish
+    only sizes and identifiers (invoke id, class id, attribute or
+    method id, OBIS LN, request and response payload sizes, xDLMS
+    status, conversation id). The `conversationId` field is
+    currently always `kNoConversationId` (0); end-to-end correlation
+    on the server side is the subject of §7 commit 3b together with
+    the integration test.
+  - Version bumped 0.101.0 → 0.102.0 (minor — additive public API
+    on `dlms-server` and `dlms-endpoint`, no ABI / semantic break).
+  - Tests: full suite 971/973 functional pass (the two remaining
+    failures, `dlms_changelog_check` and
+    `dlms_package_install_smoke`, are closed by this entry).
+
 ## 0.101.0 - 2026-06-17
 
 - Feature (P1 §7 commit 2/3 — xDLMS server trace emission):

@@ -3,6 +3,7 @@
 #include "dlms/association/association_server.hpp"
 #include "dlms/apdu/acse.hpp"
 #include "dlms/endpoint/server_endpoint.hpp"
+#include "dlms/server/tracing_xdlms_server_dispatcher.hpp"
 #include "dlms/xdlms/xdlms_server.hpp"
 
 #include <utility>
@@ -203,15 +204,18 @@ class GatewayEndpointOwnedState
 public:
   GatewayEndpointOwnedState(
     IGatewayUpstream& upstream,
-    IGatewayPolicy& policy)
+    IGatewayPolicy& policy,
+    dlms::server::IServerDispatchTraceSink* dispatchTraceSink)
     : handler(upstream, policy)
     , dispatcher(handler)
-    , processor(dispatcher)
+    , tracingDispatcher(dispatcher, dispatchTraceSink)
+    , processor(tracingDispatcher)
   {
   }
 
   GatewayEndpointServerHandler handler;
   dlms::xdlms::XdlmsServerDispatcher dispatcher;
+  dlms::server::TracingXdlmsServerDispatcher tracingDispatcher;
   dlms::xdlms::XdlmsServerApduProcessor processor;
 };
 
@@ -224,9 +228,13 @@ GatewayEndpoint::GatewayEndpoint(
   , association_()
   , upstream_(upstream)
   , policy_(policy)
-  , owned_(new GatewayEndpointOwnedState(upstream_, policy_))
+  , owned_(new GatewayEndpointOwnedState(
+      upstream_,
+      policy_,
+      options_.downstream.serverDispatchTraceSink))
   , open_(false)
 {
+  owned_->processor.SetTraceSink(options_.downstream.xdlmsTraceSink);
 }
 
 GatewayEndpoint::GatewayEndpoint(
@@ -239,9 +247,13 @@ GatewayEndpoint::GatewayEndpoint(
   , association_()
   , upstream_(upstream)
   , policy_(policy)
-  , owned_(new GatewayEndpointOwnedState(upstream_, policy_))
+  , owned_(new GatewayEndpointOwnedState(
+      upstream_,
+      policy_,
+      options_.downstream.serverDispatchTraceSink))
   , open_(false)
 {
+  owned_->processor.SetTraceSink(options_.downstream.xdlmsTraceSink);
 }
 
 GatewayEndpoint::~GatewayEndpoint()

@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.106.10 - 2026-06-17
+
+- New built-in COSEM object `CosemSFskMacCountersObject`
+  (`class_id=53`, `version=0`) implementing **S-FSK MAC counters**
+  per IEC 62056-6-2 ED4 (2021) §4.10.6 and DLMS UA Blue Book
+  Ed. 12.1 §4.10.6. Exposes attributes
+  `2 synchronization_register` (array of {mac_address,
+  synchronizations_counter}), `3 desynchronization_listing`
+  (structure), `4 broadcast_frames_counter` (array of
+  {mac_address, frames_counter}), `5 repetitions_counter`,
+  `6 transmissions_counter`, `7 CRC_OK_frames_counter`,
+  `8 CRC_NOK_frames_counter` (all double-long-unsigned) as opaque
+  A-XDR buffers prepared by the caller (MIB variables from
+  IEC 61334-4-512:2001 §5.8). `logical_name` is read-only;
+  attributes 2..8 share a caller-selected `AttributeAccessMode`
+  so the backend can republish refreshed counters/listings after
+  the S-FSK MAC accumulates events out-of-band. Method `1 reset`
+  reports `UnsupportedFeature` and clears method output (counter
+  bookkeeping is backend-owned); other method ids report
+  `MethodNotFound`. Constructor normalises `version` to
+  `MaxSupportedVersion`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `MethodsReturnUnsupportedFeature`, `NormalizesVersionAboveMax`).
+  MinGW64 ctest 984/984 ✅ (was 980/980 in 0.106.9; +4 new cases
+  from this IC).
+- Docs: `ic_support_matrix.md` row for IC 53 promoted from
+  Application-provided to Partial; remaining LLC row narrowed to
+  `55`-`59`. This closes the S-FSK MAC stack alongside the
+  already-built IC 50/51/52.
+- No public API change to existing types. Patch bump 0.106.9 →
+  0.106.10.
+
 ## 0.106.9 - 2026-06-17
 
 - New built-in COSEM object `CosemSFskMacSyncTimeoutsObject`

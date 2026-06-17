@@ -10855,6 +10855,236 @@ CosemSFskMacSyncTimeoutsObject::TimeOutFrameNotOk() const
   return timeOutFrameNotOk_;
 }
 
+namespace {
+constexpr std::uint16_t kSFskMacCountersClassId = 53u;
+constexpr std::uint8_t kSFskMacCountersSynchronizationRegisterAttributeId = 2u;
+constexpr std::uint8_t kSFskMacCountersDesynchronizationListingAttributeId = 3u;
+constexpr std::uint8_t kSFskMacCountersBroadcastFramesCounterAttributeId = 4u;
+constexpr std::uint8_t kSFskMacCountersRepetitionsCounterAttributeId = 5u;
+constexpr std::uint8_t kSFskMacCountersTransmissionsCounterAttributeId = 6u;
+constexpr std::uint8_t kSFskMacCountersCrcOkFramesCounterAttributeId = 7u;
+constexpr std::uint8_t kSFskMacCountersCrcNokFramesCounterAttributeId = 8u;
+constexpr std::uint8_t kSFskMacCountersResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemSFskMacCountersObject::MaxSupportedVersion;
+
+CosemSFskMacCountersObject::CosemSFskMacCountersObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& synchronizationRegister,
+  const CosemByteBuffer& desynchronizationListing,
+  const CosemByteBuffer& broadcastFramesCounter,
+  const CosemByteBuffer& repetitionsCounter,
+  const CosemByteBuffer& transmissionsCounter,
+  const CosemByteBuffer& crcOkFramesCounter,
+  const CosemByteBuffer& crcNokFramesCounter,
+  AttributeAccessMode mutableAccess)
+  : CosemSFskMacCountersObject(
+      logicalName,
+      synchronizationRegister,
+      desynchronizationListing,
+      broadcastFramesCounter,
+      repetitionsCounter,
+      transmissionsCounter,
+      crcOkFramesCounter,
+      crcNokFramesCounter,
+      mutableAccess,
+      CosemSFskMacCountersObject::MaxSupportedVersion)
+{
+}
+
+CosemSFskMacCountersObject::CosemSFskMacCountersObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& synchronizationRegister,
+  const CosemByteBuffer& desynchronizationListing,
+  const CosemByteBuffer& broadcastFramesCounter,
+  const CosemByteBuffer& repetitionsCounter,
+  const CosemByteBuffer& transmissionsCounter,
+  const CosemByteBuffer& crcOkFramesCounter,
+  const CosemByteBuffer& crcNokFramesCounter,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSFskMacCountersClassId,
+      NormalizeVersion(
+        version, CosemSFskMacCountersObject::MaxSupportedVersion),
+      logicalName))
+  , synchronizationRegister_(synchronizationRegister)
+  , desynchronizationListing_(desynchronizationListing)
+  , broadcastFramesCounter_(broadcastFramesCounter)
+  , repetitionsCounter_(repetitionsCounter)
+  , transmissionsCounter_(transmissionsCounter)
+  , crcOkFramesCounter_(crcOkFramesCounter)
+  , crcNokFramesCounter_(crcNokFramesCounter)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSFskMacCountersSynchronizationRegisterAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacCountersDesynchronizationListingAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacCountersBroadcastFramesCounterAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacCountersRepetitionsCounterAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacCountersTransmissionsCounterAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacCountersCrcOkFramesCounterAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacCountersCrcNokFramesCounterAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemSFskMacCountersObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSFskMacCountersObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSFskMacCountersObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kSFskMacCountersSynchronizationRegisterAttributeId:
+      output = synchronizationRegister_;
+      return CosemStatus::Ok;
+    case kSFskMacCountersDesynchronizationListingAttributeId:
+      output = desynchronizationListing_;
+      return CosemStatus::Ok;
+    case kSFskMacCountersBroadcastFramesCounterAttributeId:
+      output = broadcastFramesCounter_;
+      return CosemStatus::Ok;
+    case kSFskMacCountersRepetitionsCounterAttributeId:
+      output = repetitionsCounter_;
+      return CosemStatus::Ok;
+    case kSFskMacCountersTransmissionsCounterAttributeId:
+      output = transmissionsCounter_;
+      return CosemStatus::Ok;
+    case kSFskMacCountersCrcOkFramesCounterAttributeId:
+      output = crcOkFramesCounter_;
+      return CosemStatus::Ok;
+    case kSFskMacCountersCrcNokFramesCounterAttributeId:
+      output = crcNokFramesCounter_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskMacCountersObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kSFskMacCountersSynchronizationRegisterAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      synchronizationRegister_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacCountersDesynchronizationListingAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      desynchronizationListing_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacCountersBroadcastFramesCounterAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      broadcastFramesCounter_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacCountersRepetitionsCounterAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      repetitionsCounter_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacCountersTransmissionsCounterAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      transmissionsCounter_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacCountersCrcOkFramesCounterAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      crcOkFramesCounter_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacCountersCrcNokFramesCounterAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      crcNokFramesCounter_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskMacCountersObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // IEC 62056-6-2 ED4 (2021) §4.10.6 / DLMS UA Blue Book Ed. 12.1
+  // §4.10.6 define method 1 reset(data) which clears the dynamic
+  // counters. Counter bookkeeping is backend-owned, so the built-in
+  // object surfaces it as UnsupportedFeature.
+  if (methodId == kSFskMacCountersResetMethodId)
+    return CosemStatus::UnsupportedFeature;
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemSFskMacCountersObject::SynchronizationRegister() const
+{
+  return synchronizationRegister_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacCountersObject::DesynchronizationListing() const
+{
+  return desynchronizationListing_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacCountersObject::BroadcastFramesCounter() const
+{
+  return broadcastFramesCounter_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacCountersObject::RepetitionsCounter() const
+{
+  return repetitionsCounter_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacCountersObject::TransmissionsCounter() const
+{
+  return transmissionsCounter_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacCountersObject::CrcOkFramesCounter() const
+{
+  return crcOkFramesCounter_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacCountersObject::CrcNokFramesCounter() const
+{
+  return crcNokFramesCounter_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

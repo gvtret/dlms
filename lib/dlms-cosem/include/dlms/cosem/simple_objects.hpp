@@ -2768,6 +2768,79 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemSFskMacCountersObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.10.6 and DLMS UA Blue Book Ed. 12.1
+  // §4.10.6 define class_id 53, version 0 with eight attributes:
+  // 1 logical_name, 2 synchronization_register (array of
+  // synchronization_couples), 3 desynchronization_listing
+  // (structure), 4 broadcast_frames_counter (array of
+  // broadcast_frame_counter structures), 5 repetitions_counter
+  // (double-long-unsigned), 6 transmissions_counter, 7
+  // CRC_OK_frames_counter, 8 CRC_NOK_frames_counter. Attributes
+  // 2..8 are dynamic counters/MIB variables from IEC 61334-4-512
+  // and IEC 61334-5-1. The class defines one specific method:
+  // 1 reset(data) which clears the dynamic counters; the built-in
+  // object surfaces it as UnsupportedFeature because counter
+  // bookkeeping is backend-owned.
+  CosemSFskMacCountersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& synchronizationRegister,
+    const CosemByteBuffer& desynchronizationListing,
+    const CosemByteBuffer& broadcastFramesCounter,
+    const CosemByteBuffer& repetitionsCounter,
+    const CosemByteBuffer& transmissionsCounter,
+    const CosemByteBuffer& crcOkFramesCounter,
+    const CosemByteBuffer& crcNokFramesCounter,
+    AttributeAccessMode mutableAccess);
+  CosemSFskMacCountersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& synchronizationRegister,
+    const CosemByteBuffer& desynchronizationListing,
+    const CosemByteBuffer& broadcastFramesCounter,
+    const CosemByteBuffer& repetitionsCounter,
+    const CosemByteBuffer& transmissionsCounter,
+    const CosemByteBuffer& crcOkFramesCounter,
+    const CosemByteBuffer& crcNokFramesCounter,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& SynchronizationRegister() const;
+  const CosemByteBuffer& DesynchronizationListing() const;
+  const CosemByteBuffer& BroadcastFramesCounter() const;
+  const CosemByteBuffer& RepetitionsCounter() const;
+  const CosemByteBuffer& TransmissionsCounter() const;
+  const CosemByteBuffer& CrcOkFramesCounter() const;
+  const CosemByteBuffer& CrcNokFramesCounter() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer synchronizationRegister_;
+  CosemByteBuffer desynchronizationListing_;
+  CosemByteBuffer broadcastFramesCounter_;
+  CosemByteBuffer repetitionsCounter_;
+  CosemByteBuffer transmissionsCounter_;
+  CosemByteBuffer crcOkFramesCounter_;
+  CosemByteBuffer crcNokFramesCounter_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

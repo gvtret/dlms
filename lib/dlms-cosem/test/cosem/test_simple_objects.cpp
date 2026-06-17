@@ -10501,4 +10501,215 @@ TEST(CosemSFskMacSyncTimeoutsObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+// IEC 62056-6-2 ED4 (2021) §4.10.6.2: attributes 5..8 are
+// double-long-unsigned counters. A-XDR tag 0x06 = double-long-
+// unsigned, four bytes network order.
+dlms::cosem::CosemByteBuffer DoubleLongUnsigned(std::uint32_t value)
+{
+  return BytesFromList({
+    0x06u,
+    static_cast<std::uint8_t>((value >> 24) & 0xFFu),
+    static_cast<std::uint8_t>((value >> 16) & 0xFFu),
+    static_cast<std::uint8_t>((value >> 8) & 0xFFu),
+    static_cast<std::uint8_t>(value & 0xFFu)});
+}
+
+// array { structure { mac_address: long-unsigned,
+//                     synchronizations_counter: double-long-unsigned } }
+// containing two synchronization_couples per IEC 62056-6-2 ED4
+// §4.10.6.2.2.
+dlms::cosem::CosemByteBuffer SampleSynchronizationRegister()
+{
+  return BytesFromList({
+    0x01u, 0x02u,
+      0x02u, 0x02u,
+        0x12u, 0x01u, 0xF4u,
+        0x06u, 0x00u, 0x00u, 0x00u, 0x07u,
+      0x02u, 0x02u,
+        0x12u, 0x07u, 0xD0u,
+        0x06u, 0x00u, 0x00u, 0x00u, 0x03u});
+}
+
+// structure { mac_address: long-unsigned,
+//             desynchronization_counter: long-unsigned }
+// per IEC 62056-6-2 ED4 §4.10.6.2.3.
+dlms::cosem::CosemByteBuffer SampleDesynchronizationListing()
+{
+  return BytesFromList({
+    0x02u, 0x02u,
+      0x12u, 0x01u, 0xF4u,
+      0x12u, 0x00u, 0x05u});
+}
+
+// array { structure { mac_address: long-unsigned,
+//                     frames_counter: double-long-unsigned } }
+// per IEC 62056-6-2 ED4 §4.10.6.2.4.
+dlms::cosem::CosemByteBuffer SampleBroadcastFramesCounter()
+{
+  return BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x12u, 0x01u, 0xF4u,
+        0x06u, 0x00u, 0x00u, 0x00u, 0x2Au});
+}
+
+dlms::cosem::CosemSFskMacCountersObject
+MakeSFskMacCountersObject(
+  const dlms::cosem::CosemLogicalName& name,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemSFskMacCountersObject(
+    name,
+    SampleSynchronizationRegister(),
+    SampleDesynchronizationListing(),
+    SampleBroadcastFramesCounter(),
+    DoubleLongUnsigned(11u),     // repetitions_counter
+    DoubleLongUnsigned(123u),    // transmissions_counter
+    DoubleLongUnsigned(120u),    // CRC_OK_frames_counter
+    DoubleLongUnsigned(3u),      // CRC_NOK_frames_counter
+    access);
+}
+
+} // namespace
+
+TEST(CosemSFskMacCountersObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 3u, 0u, 255u);
+  dlms::cosem::CosemSFskMacCountersObject object =
+    MakeSFskMacCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(53u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskMacCountersObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(SampleSynchronizationRegister(), out);
+  EXPECT_EQ(SampleSynchronizationRegister(),
+            object.SynchronizationRegister());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, out));
+  EXPECT_EQ(SampleDesynchronizationListing(), out);
+  EXPECT_EQ(SampleDesynchronizationListing(),
+            object.DesynchronizationListing());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(SampleBroadcastFramesCounter(), out);
+  EXPECT_EQ(SampleBroadcastFramesCounter(),
+            object.BroadcastFramesCounter());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, out));
+  EXPECT_EQ(DoubleLongUnsigned(11u), out);
+  EXPECT_EQ(DoubleLongUnsigned(11u), object.RepetitionsCounter());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, out));
+  EXPECT_EQ(DoubleLongUnsigned(123u), out);
+  EXPECT_EQ(DoubleLongUnsigned(123u), object.TransmissionsCounter());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(7u, out));
+  EXPECT_EQ(DoubleLongUnsigned(120u), out);
+  EXPECT_EQ(DoubleLongUnsigned(120u), object.CrcOkFramesCounter());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(8u, out));
+  EXPECT_EQ(DoubleLongUnsigned(3u), out);
+  EXPECT_EQ(DoubleLongUnsigned(3u), object.CrcNokFramesCounter());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(9u, out));
+}
+
+TEST(CosemSFskMacCountersObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 3u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer replacement =
+    DoubleLongUnsigned(0u);
+
+  dlms::cosem::CosemSFskMacCountersObject writable =
+    MakeSFskMacCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u, 8u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(attr), replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement, writable.SynchronizationRegister());
+  EXPECT_EQ(replacement, writable.DesynchronizationListing());
+  EXPECT_EQ(replacement, writable.BroadcastFramesCounter());
+  EXPECT_EQ(replacement, writable.RepetitionsCounter());
+  EXPECT_EQ(replacement, writable.TransmissionsCounter());
+  EXPECT_EQ(replacement, writable.CrcOkFramesCounter());
+  EXPECT_EQ(replacement, writable.CrcNokFramesCounter());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemSFskMacCountersObject readOnly =
+    MakeSFskMacCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u, 7u, 8u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(attr), replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(SampleSynchronizationRegister(),
+            readOnly.SynchronizationRegister());
+  EXPECT_EQ(DoubleLongUnsigned(11u), readOnly.RepetitionsCounter());
+}
+
+TEST(CosemSFskMacCountersObject, MethodsReturnUnsupportedFeature)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 3u, 0u, 255u);
+  dlms::cosem::CosemSFskMacCountersObject object =
+    MakeSFskMacCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, in, out));
+  EXPECT_TRUE(out.empty());
+  for (std::uint8_t method : {0u, 2u, 99u, 255u}) {
+    out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemSFskMacCountersObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 3u, 0u, 255u);
+  dlms::cosem::CosemSFskMacCountersObject object(
+    name,
+    SampleSynchronizationRegister(),
+    SampleDesynchronizationListing(),
+    SampleBroadcastFramesCounter(),
+    DoubleLongUnsigned(11u),
+    DoubleLongUnsigned(123u),
+    DoubleLongUnsigned(120u),
+    DoubleLongUnsigned(3u),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskMacCountersObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

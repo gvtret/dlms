@@ -12,6 +12,10 @@ namespace security {
 class CipheredApduProcessor
 {
 public:
+  // NOTE: `context` is stored by reference and must outlive this object.
+  // The referenced SecurityContext may be mutated between calls (e.g. by the
+  // endpoint when it learns the peer system title); the processor reads the
+  // live values per call.
   CipheredApduProcessor(
     const SecurityContext& context,
     const IKeyStore& keys,

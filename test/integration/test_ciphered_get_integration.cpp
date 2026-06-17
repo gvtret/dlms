@@ -308,12 +308,16 @@ TEST(CipheredGetIntegration, CipheredGetRoundTripProtectsClientAndServerApdus)
   clientCounters.SetLocalCounter(1u);
   serverCounters.SetLocalCounter(1u);
 
+  const dlms::security::SecurityContext clientSecurityContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverSecurityContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::CipheredApduProcessor clientSecurity(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientSecurityContext,
     keys,
     clientCounters);
   dlms::security::CipheredApduProcessor serverSecurity(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverSecurityContext,
     keys,
     serverCounters);
 

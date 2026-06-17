@@ -16,6 +16,10 @@ public:
   static const std::size_t kChallengeSize = 16u;
   static const std::size_t kResponseTagSize = 16u;
 
+  // NOTE: `context` is stored by reference and must outlive this object.
+  // Callers may mutate the referenced SecurityContext between calls (e.g.
+  // ServerEndpoint updates `remoteSystemTitle` when it receives the calling
+  // AP-title in an AARQ); the authenticator reads the live values per call.
   HlsGmacAuthenticator(
     const SecurityContext& context,
     const IKeyStore& keys,

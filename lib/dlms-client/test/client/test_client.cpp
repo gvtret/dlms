@@ -1060,12 +1060,16 @@ TEST(DlmsClient, InjectedSecurityProtectsGetRequest)
   clientCounters.SetLocalCounter(1u);
   serverCounters.SetLocalCounter(1u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeSecurityContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverContext =
+    MakeSecurityContext(dlms::security::SecurityRole::Server);
   dlms::security::CipheredApduProcessor clientSecurity(
-    MakeSecurityContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     clientCounters);
   dlms::security::CipheredApduProcessor serverSecurity(
-    MakeSecurityContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     serverCounters);
 
@@ -1131,8 +1135,10 @@ TEST(DlmsClient, MapsInjectedSecurityFailure)
   InstallKeys(keys);
   dlms::security::InMemoryInvocationCounterStore counters;
   counters.SetLocalCounter(1u);
+  const dlms::security::SecurityContext mapsInjectedSecurityFailureContext =
+    MakeSecurityContext(dlms::security::SecurityRole::Client);
   dlms::security::CipheredApduProcessor security(
-    MakeSecurityContext(dlms::security::SecurityRole::Client),
+    mapsInjectedSecurityFailureContext,
     keys,
     counters);
 

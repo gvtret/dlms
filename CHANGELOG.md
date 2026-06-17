@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.106.5 - 2026-06-17
+
+- Fix latent UB in security unit/integration tests where
+  `SecurityContext` was passed as an rvalue temporary to constructors
+  that store it by reference (`HlsGmacAuthenticator`,
+  `CipheredApduProcessor`). Linux/Clang made the issue visible (9
+  fails across `dlms-security`, `dlms-xdlms`, `dlms-client`, and the
+  ciphered-get integration); MinGW happened to keep the spilled stack
+  slot valid long enough to mask it. The fix is mechanical: hoist
+  every `MakeContext(...)` / `MakeSecurityContext(...)` rvalue into a
+  named `const SecurityContext` local before passing it to the ctor.
+  - Touched test files only: `test_hls_gmac_authenticator.cpp`,
+    `test_ciphered_apdu_processor.cpp`, `test_xdlms_security.cpp`,
+    `test_client.cpp` (`DlmsClient.InjectedSecurityProtectsGetRequest`
+    + `DlmsClient.MapsInjectedSecurityFailure`), and
+    `test_ciphered_get_integration.cpp`.
+  - Public headers `hls_gmac_authenticator.hpp` and
+    `ciphered_apdu_processor.hpp` gain a doc comment on the ctor
+    explicitly stating that `context` is stored by reference and
+    must outlive the object — and that callers may mutate it
+    between calls. This pins the existing endpoint contract
+    (`ServerEndpoint` updates `remoteSystemTitle` from the
+    incoming AARQ calling-AP-title after the authenticator is
+    constructed; the authenticator must observe that update).
+  - No ABI change: constructor signatures, member layout, and
+    storage-by-reference semantics are unchanged. This is purely
+    a test-correctness fix plus a contract clarification.
+  - Result: MinGW64 stays 976/976 green; Linux goes from 1381/1390
+    to 1389/1390 (the remaining `TcpServerTransport.CloseUnblocksAccept`
+    is a pre-existing Linux-only transport issue, unrelated).
+  - Patch bump: tests + doc comments only.
+
 ## 0.106.4 - 2026-06-17
 
 - P1 «Transport и runtime» §1: TLS-статус зафиксирован как

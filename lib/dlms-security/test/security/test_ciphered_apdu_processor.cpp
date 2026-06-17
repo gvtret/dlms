@@ -136,12 +136,16 @@ TEST(CipheredApduProcessor, RejectsReplayAfterSuccessfulUnprotect)
   clientCounters.SetLocalCounter(7u);
   dlms::security::InMemoryInvocationCounterStore serverCounters;
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::CipheredApduProcessor client(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     clientCounters);
   dlms::security::CipheredApduProcessor server(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     serverCounters);
 
@@ -237,12 +241,16 @@ TEST(CipheredApduProcessor, RejectsTamperedTagWithoutAdvancingReplayState)
   clientCounters.SetLocalCounter(9u);
   dlms::security::InMemoryInvocationCounterStore serverCounters;
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::CipheredApduProcessor client(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     clientCounters);
   dlms::security::CipheredApduProcessor server(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     serverCounters);
 
@@ -325,8 +333,10 @@ TEST(CipheredApduProcessor, RefusesProtectWhenInvocationCounterIsExhausted)
 
   dlms::security::InMemoryInvocationCounterStore counters;
   counters.SetLocalCounter(std::numeric_limits<std::uint32_t>::max());
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
   dlms::security::CipheredApduProcessor processor(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     counters);
 
@@ -347,8 +357,10 @@ TEST(CipheredApduProcessor, RejectsMalformedProtectedApdu)
   dlms::security::InMemoryKeyStore keys;
   InstallKeys(keys);
   dlms::security::InMemoryInvocationCounterStore counters;
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::CipheredApduProcessor processor(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     counters);
 

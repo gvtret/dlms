@@ -437,8 +437,10 @@ TEST(XdlmsSecurity, ClientMapsResponseAuthenticationFailure)
   InstallKeys(keys);
   dlms::security::InMemoryInvocationCounterStore counters;
   counters.SetLocalCounter(1u);
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
   dlms::security::CipheredApduProcessor security(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     counters);
 
@@ -465,12 +467,16 @@ TEST(XdlmsSecurity, ServerUnprotectsRequestAndProtectsResponse)
   clientCounters.SetLocalCounter(1u);
   serverCounters.SetLocalCounter(1u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::CipheredApduProcessor clientSecurity(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     clientCounters);
   dlms::security::CipheredApduProcessor serverSecurity(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     serverCounters);
 
@@ -514,8 +520,10 @@ TEST(XdlmsSecurity, ServerMapsMalformedProtectedRequest)
   dlms::security::InMemoryKeyStore keys;
   InstallKeys(keys);
   dlms::security::InMemoryInvocationCounterStore counters;
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::CipheredApduProcessor security(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     counters);
 

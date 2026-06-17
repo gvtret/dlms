@@ -99,8 +99,10 @@ TEST(HlsGmacAuthenticator, BuildsDeterministicChallenge)
   dlms::security::InMemoryInvocationCounterStore counters;
   FixedRandomSource random(0x20u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
   dlms::security::HlsGmacAuthenticator hls(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     counters,
     random);
@@ -125,13 +127,17 @@ TEST(HlsGmacAuthenticator, BuildsAndVerifiesResponse)
   dlms::security::InMemoryInvocationCounterStore serverCounters;
   FixedRandomSource random(0x30u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::HlsGmacAuthenticator client(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     clientCounters,
     random);
   dlms::security::HlsGmacAuthenticator server(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     serverCounters,
     random);
@@ -168,13 +174,17 @@ TEST(HlsGmacAuthenticator, RejectsTamperedResponse)
   dlms::security::InMemoryInvocationCounterStore serverCounters;
   FixedRandomSource random(0x40u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::HlsGmacAuthenticator client(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     clientCounters,
     random);
   dlms::security::HlsGmacAuthenticator server(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     serverCounters,
     random);
@@ -205,13 +215,17 @@ TEST(HlsGmacAuthenticator, RejectsReplayAfterSuccessfulVerify)
   dlms::security::InMemoryInvocationCounterStore serverCounters;
   FixedRandomSource random(0x50u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
+  const dlms::security::SecurityContext serverContext =
+    MakeContext(dlms::security::SecurityRole::Server);
   dlms::security::HlsGmacAuthenticator client(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     clientCounters,
     random);
   dlms::security::HlsGmacAuthenticator server(
-    MakeContext(dlms::security::SecurityRole::Server),
+    serverContext,
     keys,
     serverCounters,
     random);
@@ -240,8 +254,10 @@ TEST(HlsGmacAuthenticator, RejectsMissingAuthenticationKey)
   dlms::security::InMemoryInvocationCounterStore counters;
   FixedRandomSource random(0x60u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
   dlms::security::HlsGmacAuthenticator hls(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     counters,
     random);
@@ -266,8 +282,10 @@ TEST(HlsGmacAuthenticator, RefusesResponseWhenInvocationCounterIsExhausted)
   counters.SetLocalCounter(std::numeric_limits<std::uint32_t>::max());
   FixedRandomSource random(0x70u);
 
+  const dlms::security::SecurityContext clientContext =
+    MakeContext(dlms::security::SecurityRole::Client);
   dlms::security::HlsGmacAuthenticator hls(
-    MakeContext(dlms::security::SecurityRole::Client),
+    clientContext,
     keys,
     counters,
     random);

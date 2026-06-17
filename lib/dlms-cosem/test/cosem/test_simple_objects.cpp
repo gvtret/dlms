@@ -10848,3 +10848,129 @@ TEST(CosemIec61334432LlcSetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+
+namespace {
+
+// IEC 62056-6-2 ED4 (2021) S4.10.8 / DLMS UA Blue Book Ed. 12.1
+// S4.10.8: reporting_system_list is "array of system-title", where
+// system-title ::= octet-string. Holds the MIB variable
+// reporting-system-list (variable 16) per IEC 61334-4-512:2001
+// S5.7 - system-titles of server systems that issued a
+// DiscoverReport CI_PDU and have not yet been registered, sorted
+// by arrival with the newest first.
+//
+// A-XDR: array (0x01) length 2, two octet-strings (0x09) of 8
+// bytes each.
+dlms::cosem::CosemByteBuffer SampleReportingSystemList()
+{
+  return BytesFromList({
+    0x01u, 0x02u,
+      0x09u, 0x08u,
+        0x4Du, 0x4Du, 0x52u, 0x00u,
+        0x00u, 0x00u, 0x00u, 0x01u,
+      0x09u, 0x08u,
+        0x4Du, 0x4Du, 0x52u, 0x00u,
+        0x00u, 0x00u, 0x00u, 0x02u});
+}
+
+dlms::cosem::CosemSFskReportingSystemListObject
+MakeSFskReportingSystemListObject(
+  const dlms::cosem::CosemLogicalName& name,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemSFskReportingSystemListObject(
+    name,
+    SampleReportingSystemList(),
+    access);
+}
+
+} // namespace
+
+TEST(CosemSFskReportingSystemListObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 6u, 0u, 255u);
+  dlms::cosem::CosemSFskReportingSystemListObject object =
+    MakeSFskReportingSystemListObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(56u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskReportingSystemListObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(SampleReportingSystemList(), out);
+  EXPECT_EQ(SampleReportingSystemList(), object.ReportingSystemList());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(3u, out));
+}
+
+TEST(CosemSFskReportingSystemListObject, MutableAttributeHonorsAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 6u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer updated = BytesFromList({
+    0x01u, 0x01u,
+      0x09u, 0x08u,
+        0x4Du, 0x4Du, 0x52u, 0x00u,
+        0x00u, 0x00u, 0x00u, 0x09u});
+
+  dlms::cosem::CosemSFskReportingSystemListObject writable =
+    MakeSFskReportingSystemListObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, updated));
+  EXPECT_EQ(updated, writable.ReportingSystemList());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, updated));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, updated));
+
+  dlms::cosem::CosemSFskReportingSystemListObject readOnly =
+    MakeSFskReportingSystemListObject(
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, updated));
+  EXPECT_EQ(SampleReportingSystemList(), readOnly.ReportingSystemList());
+}
+
+TEST(CosemSFskReportingSystemListObject, MethodsReturnMethodNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 6u, 0u, 255u);
+  dlms::cosem::CosemSFskReportingSystemListObject object =
+    MakeSFskReportingSystemListObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemSFskReportingSystemListObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 6u, 0u, 255u);
+  dlms::cosem::CosemSFskReportingSystemListObject object(
+    name,
+    SampleReportingSystemList(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskReportingSystemListObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+

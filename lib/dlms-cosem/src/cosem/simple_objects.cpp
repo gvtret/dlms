@@ -11206,6 +11206,106 @@ CosemIec61334432LlcSetupObject::ReplyStatusList() const
   return replyStatusList_;
 }
 
+namespace {
+constexpr std::uint16_t kSFskReportingSystemListClassId = 56u;
+constexpr std::uint8_t kSFskReportingSystemListAttributeId = 2u;
+} // namespace
+
+const std::uint8_t CosemSFskReportingSystemListObject::MaxSupportedVersion;
+
+CosemSFskReportingSystemListObject::CosemSFskReportingSystemListObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& reportingSystemList,
+  AttributeAccessMode mutableAccess)
+  : CosemSFskReportingSystemListObject(
+      logicalName,
+      reportingSystemList,
+      mutableAccess,
+      CosemSFskReportingSystemListObject::MaxSupportedVersion)
+{
+}
+
+CosemSFskReportingSystemListObject::CosemSFskReportingSystemListObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& reportingSystemList,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSFskReportingSystemListClassId,
+      NormalizeVersion(
+        version, CosemSFskReportingSystemListObject::MaxSupportedVersion),
+      logicalName))
+  , reportingSystemList_(reportingSystemList)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSFskReportingSystemListAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemSFskReportingSystemListObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSFskReportingSystemListObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSFskReportingSystemListObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kSFskReportingSystemListAttributeId:
+      output = reportingSystemList_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskReportingSystemListObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kSFskReportingSystemListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      reportingSystemList_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskReportingSystemListObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IEC 62056-6-2 ED4 (2021) §4.10.8 and DLMS UA Blue Book Ed. 12.1
+  // §4.10.8 define no specific methods for IC 56 v0.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemSFskReportingSystemListObject::ReportingSystemList() const
+{
+  return reportingSystemList_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

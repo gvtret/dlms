@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.106.12 - 2026-06-17
+
+- New built-in COSEM object `CosemSFskReportingSystemListObject`
+  (`class_id=56`, `version=0`) implementing **S-FSK Reporting
+  system list** per IEC 62056-6-2 ED4 (2021) §4.10.8 and DLMS UA
+  Blue Book Ed. 12.1 §4.10.8. Exposes attribute
+  `2 reporting_system_list` (array of system-title where
+  system-title ::= octet-string; MIB variable
+  reporting-system-list (variable 16) per IEC 61334-4-512:2001
+  §5.7 — system-titles of server systems that issued a
+  DiscoverReport CI_PDU and have not yet been registered, sorted
+  by arrival with the newest first) as an opaque A-XDR buffer
+  prepared by the caller. `logical_name` is read-only;
+  attribute 2 honors a caller-selected `AttributeAccessMode` so
+  the CIASE backend can republish the list after DiscoverReport
+  CI_PDUs arrive and registrations purge entries out-of-band.
+  The class defines no specific methods; all method ids report
+  `MethodNotFound`. Constructor normalises `version` to
+  `MaxSupportedVersion=0`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributeHonorsAccessMode`,
+  `MethodsReturnMethodNotFound`, `NormalizesVersionAboveMax`).
+  MinGW64 ctest 992/992 ✅ (was 988/988 in 0.106.11; +4 new
+  cases from this IC).
+- Docs: `ic_support_matrix.md` row for IC 56 promoted from
+  Application-provided to Partial; remaining LLC row narrowed to
+  `57`-`59`. With IC 50/51/52/53/55/56 done, the S-FSK PLC stack
+  (IEC 61334-5-1 lower-layer profile, IEC 61334-4-32 LLC, S-FSK
+  CIASE reporting) is feature-complete; only the ISO/IEC 8802-2
+  LLC setup family (IC 57/58/59) remains in the LLC area.
+- No public API change to existing types. Patch bump 0.106.11 →
+  0.106.12.
+
 ## 0.106.11 - 2026-06-17
 
 - New built-in COSEM object `CosemIec61334432LlcSetupObject`

@@ -2891,6 +2891,51 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemSFskReportingSystemListObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.10.8 and DLMS UA Blue Book Ed. 12.1
+  // §4.10.8 define class_id 56, version 0 with two attributes:
+  // 1 logical_name, 2 reporting_system_list (array of
+  // system-title where system-title ::= octet-string). The class
+  // holds the MIB variable reporting-system-list (variable 16)
+  // per IEC 61334-4-512:2001 §5.7 — system-titles of server
+  // systems that issued a DiscoverReport CI_PDU and have not yet
+  // been registered, sorted by arrival with the newest first.
+  // The class defines no specific methods.
+  CosemSFskReportingSystemListObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& reportingSystemList,
+    AttributeAccessMode mutableAccess);
+  CosemSFskReportingSystemListObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& reportingSystemList,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& ReportingSystemList() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer reportingSystemList_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

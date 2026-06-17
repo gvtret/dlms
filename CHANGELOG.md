@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.106.9 - 2026-06-17
+
+- New built-in COSEM object `CosemSFskMacSyncTimeoutsObject`
+  (`class_id=52`, `version=0`) implementing **S-FSK MAC
+  Synchronization Timeouts** per IEC 62056-6-2 ED4 (2021) §4.10.5
+  and DLMS UA Blue Book Ed. 12.1 §4.10.5. Exposes attributes
+  `2 search_initiator_timeout`, `3 synchronization_confirmation_timeout`,
+  `4 time_out_not_addressed`, `5 time_out_frame_not_OK` as opaque
+  long-unsigned A-XDR buffers prepared by the caller (MIB variables
+  from IEC 61334-4-512:2001 §5.3 and IEC 61334-5-1:2001 §4.3.7.6).
+  `logical_name` is read-only; attributes 2..5 share a caller-selected
+  `AttributeAccessMode` so the client can re-tune the MAC sub-layer
+  timers after commissioning. The class defines no specific methods;
+  `InvokeMethod` reports `MethodNotFound` for all method ids and
+  clears method output. Constructor normalises `version` to
+  `MaxSupportedVersion`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`, `MethodsReturnMethodNotFound`,
+  `NormalizesVersionAboveMax`). MinGW64 ctest 980/980 ✅
+  (was 976/976 in 0.106.8; +4 new cases from this IC).
+- Docs: `ic_support_matrix.md` row for IC 52 promoted from
+  Application-provided to Partial; remaining IC 53..59 row narrowed
+  to `53`-`59`.
+- No public API change to existing types. Patch bump 0.106.8 → 0.106.9.
+
 ## 0.106.8 - 2026-06-17
 
 - Close P1 Transport §4 (buffer reuse). Five per-call hot sites

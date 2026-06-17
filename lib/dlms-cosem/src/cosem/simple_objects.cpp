@@ -10685,6 +10685,176 @@ CosemSFskActiveInitiatorObject::ActiveInitiator() const
   return activeInitiator_;
 }
 
+namespace {
+constexpr std::uint16_t kSFskMacSyncTimeoutsClassId = 52u;
+constexpr std::uint8_t kSFskMacSyncTimeoutsSearchInitiatorTimeoutAttributeId = 2u;
+constexpr std::uint8_t kSFskMacSyncTimeoutsSyncConfirmationTimeoutAttributeId = 3u;
+constexpr std::uint8_t kSFskMacSyncTimeoutsTimeOutNotAddressedAttributeId = 4u;
+constexpr std::uint8_t kSFskMacSyncTimeoutsTimeOutFrameNotOkAttributeId = 5u;
+} // namespace
+
+const std::uint8_t
+  CosemSFskMacSyncTimeoutsObject::MaxSupportedVersion;
+
+CosemSFskMacSyncTimeoutsObject::CosemSFskMacSyncTimeoutsObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& searchInitiatorTimeout,
+  const CosemByteBuffer& synchronizationConfirmationTimeout,
+  const CosemByteBuffer& timeOutNotAddressed,
+  const CosemByteBuffer& timeOutFrameNotOk,
+  AttributeAccessMode mutableAccess)
+  : CosemSFskMacSyncTimeoutsObject(
+      logicalName,
+      searchInitiatorTimeout,
+      synchronizationConfirmationTimeout,
+      timeOutNotAddressed,
+      timeOutFrameNotOk,
+      mutableAccess,
+      CosemSFskMacSyncTimeoutsObject::MaxSupportedVersion)
+{
+}
+
+CosemSFskMacSyncTimeoutsObject::CosemSFskMacSyncTimeoutsObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& searchInitiatorTimeout,
+  const CosemByteBuffer& synchronizationConfirmationTimeout,
+  const CosemByteBuffer& timeOutNotAddressed,
+  const CosemByteBuffer& timeOutFrameNotOk,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kSFskMacSyncTimeoutsClassId,
+      NormalizeVersion(
+        version,
+        CosemSFskMacSyncTimeoutsObject::MaxSupportedVersion),
+      logicalName))
+  , searchInitiatorTimeout_(searchInitiatorTimeout)
+  , synchronizationConfirmationTimeout_(
+      synchronizationConfirmationTimeout)
+  , timeOutNotAddressed_(timeOutNotAddressed)
+  , timeOutFrameNotOk_(timeOutFrameNotOk)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kSFskMacSyncTimeoutsSearchInitiatorTimeoutAttributeId,
+    mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacSyncTimeoutsSyncConfirmationTimeoutAttributeId,
+    mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacSyncTimeoutsTimeOutNotAddressedAttributeId,
+    mutableAccess);
+  rights_.SetAttributeAccess(
+    kSFskMacSyncTimeoutsTimeOutFrameNotOkAttributeId,
+    mutableAccess);
+}
+
+CosemObjectDescriptor CosemSFskMacSyncTimeoutsObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemSFskMacSyncTimeoutsObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemSFskMacSyncTimeoutsObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kSFskMacSyncTimeoutsSearchInitiatorTimeoutAttributeId:
+      output = searchInitiatorTimeout_;
+      return CosemStatus::Ok;
+    case kSFskMacSyncTimeoutsSyncConfirmationTimeoutAttributeId:
+      output = synchronizationConfirmationTimeout_;
+      return CosemStatus::Ok;
+    case kSFskMacSyncTimeoutsTimeOutNotAddressedAttributeId:
+      output = timeOutNotAddressed_;
+      return CosemStatus::Ok;
+    case kSFskMacSyncTimeoutsTimeOutFrameNotOkAttributeId:
+      output = timeOutFrameNotOk_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskMacSyncTimeoutsObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kSFskMacSyncTimeoutsSearchInitiatorTimeoutAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      searchInitiatorTimeout_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacSyncTimeoutsSyncConfirmationTimeoutAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      synchronizationConfirmationTimeout_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacSyncTimeoutsTimeOutNotAddressedAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      timeOutNotAddressed_ = input;
+      return CosemStatus::Ok;
+    case kSFskMacSyncTimeoutsTimeOutFrameNotOkAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      timeOutFrameNotOk_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemSFskMacSyncTimeoutsObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  output.clear();
+  // IEC 62056-6-2 ED4 (2021) §4.10.5 and DLMS UA Blue Book Ed. 12.1
+  // §4.10.5 define class_id 52, version 0 with no specific methods.
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemSFskMacSyncTimeoutsObject::SearchInitiatorTimeout() const
+{
+  return searchInitiatorTimeout_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacSyncTimeoutsObject::SynchronizationConfirmationTimeout() const
+{
+  return synchronizationConfirmationTimeout_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacSyncTimeoutsObject::TimeOutNotAddressed() const
+{
+  return timeOutNotAddressed_;
+}
+
+const CosemByteBuffer&
+CosemSFskMacSyncTimeoutsObject::TimeOutFrameNotOk() const
+{
+  return timeOutFrameNotOk_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

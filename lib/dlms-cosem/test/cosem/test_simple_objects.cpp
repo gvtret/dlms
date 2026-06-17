@@ -10360,4 +10360,145 @@ TEST(CosemSFskActiveInitiatorObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+namespace {
+
+// IEC 62056-6-2 ED4 (2021) §4.10.5.2: attributes 2..5 are
+// long-unsigned timers. A-XDR tag 0x12 = long-unsigned, two bytes
+// network order.
+dlms::cosem::CosemByteBuffer LongUnsigned(std::uint16_t value)
+{
+  return BytesFromList({
+    0x12u,
+    static_cast<std::uint8_t>((value >> 8) & 0xFFu),
+    static_cast<std::uint8_t>(value & 0xFFu)});
+}
+
+dlms::cosem::CosemSFskMacSyncTimeoutsObject
+MakeSFskMacSyncTimeoutsObject(
+  const dlms::cosem::CosemLogicalName& name,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemSFskMacSyncTimeoutsObject(
+    name,
+    LongUnsigned(30u),    // search_initiator_timeout = 30 s
+    LongUnsigned(2u),     // synchronization_confirmation_timeout = 2 s
+    LongUnsigned(60u),    // time_out_not_addressed = 60 min
+    LongUnsigned(10u),    // time_out_frame_not_OK = 10 min
+    access);
+}
+
+} // namespace
+
+TEST(CosemSFskMacSyncTimeoutsObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 2u, 0u, 255u);
+  dlms::cosem::CosemSFskMacSyncTimeoutsObject object =
+    MakeSFskMacSyncTimeoutsObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(52u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskMacSyncTimeoutsObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(LongUnsigned(30u), out);
+  EXPECT_EQ(LongUnsigned(30u), object.SearchInitiatorTimeout());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, out));
+  EXPECT_EQ(LongUnsigned(2u), out);
+  EXPECT_EQ(
+    LongUnsigned(2u),
+    object.SynchronizationConfirmationTimeout());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(LongUnsigned(60u), out);
+  EXPECT_EQ(LongUnsigned(60u), object.TimeOutNotAddressed());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, out));
+  EXPECT_EQ(LongUnsigned(10u), out);
+  EXPECT_EQ(LongUnsigned(10u), object.TimeOutFrameNotOk());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(6u, out));
+}
+
+TEST(CosemSFskMacSyncTimeoutsObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 2u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer replacement = LongUnsigned(0u);
+
+  dlms::cosem::CosemSFskMacSyncTimeoutsObject writable =
+    MakeSFskMacSyncTimeoutsObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+              writable.WriteAttribute(
+                static_cast<std::uint8_t>(attr), replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(replacement, writable.SearchInitiatorTimeout());
+  EXPECT_EQ(replacement, writable.SynchronizationConfirmationTimeout());
+  EXPECT_EQ(replacement, writable.TimeOutNotAddressed());
+  EXPECT_EQ(replacement, writable.TimeOutFrameNotOk());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, replacement));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, replacement));
+
+  dlms::cosem::CosemSFskMacSyncTimeoutsObject readOnly =
+    MakeSFskMacSyncTimeoutsObject(
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(
+                static_cast<std::uint8_t>(attr), replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(LongUnsigned(30u), readOnly.SearchInitiatorTimeout());
+}
+
+TEST(CosemSFskMacSyncTimeoutsObject, MethodsReturnMethodNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 2u, 0u, 255u);
+  dlms::cosem::CosemSFskMacSyncTimeoutsObject object =
+    MakeSFskMacSyncTimeoutsObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemSFskMacSyncTimeoutsObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 2u, 0u, 255u);
+  dlms::cosem::CosemSFskMacSyncTimeoutsObject object(
+    name,
+    LongUnsigned(30u),
+    LongUnsigned(2u),
+    LongUnsigned(60u),
+    LongUnsigned(10u),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemSFskMacSyncTimeoutsObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+
 

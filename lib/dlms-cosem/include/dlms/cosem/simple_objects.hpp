@@ -2713,6 +2713,61 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemSFskMacSyncTimeoutsObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.10.5 and DLMS UA Blue Book Ed. 12.1
+  // §4.10.5 define class_id 52, version 0 with five attributes:
+  // 1 logical_name, 2 search_initiator_timeout,
+  // 3 synchronization_confirmation_timeout, 4 time_out_not_addressed,
+  // 5 time_out_frame_not_OK. Attributes 2..5 are static long-unsigned
+  // timers (per IEC 61334-4-512 / IEC 61334-5-1 MIB variables). The
+  // class defines no specific methods.
+  CosemSFskMacSyncTimeoutsObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& searchInitiatorTimeout,
+    const CosemByteBuffer& synchronizationConfirmationTimeout,
+    const CosemByteBuffer& timeOutNotAddressed,
+    const CosemByteBuffer& timeOutFrameNotOk,
+    AttributeAccessMode mutableAccess);
+  CosemSFskMacSyncTimeoutsObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& searchInitiatorTimeout,
+    const CosemByteBuffer& synchronizationConfirmationTimeout,
+    const CosemByteBuffer& timeOutNotAddressed,
+    const CosemByteBuffer& timeOutFrameNotOk,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& SearchInitiatorTimeout() const;
+  const CosemByteBuffer& SynchronizationConfirmationTimeout() const;
+  const CosemByteBuffer& TimeOutNotAddressed() const;
+  const CosemByteBuffer& TimeOutFrameNotOk() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer searchInitiatorTimeout_;
+  CosemByteBuffer synchronizationConfirmationTimeout_;
+  CosemByteBuffer timeOutNotAddressed_;
+  CosemByteBuffer timeOutFrameNotOk_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.106.6 - 2026-06-17
+
+- Fix `TcpServerTransport.Close()` on POSIX so it actually unblocks a
+  concurrent `Accept()`. Previously `Close()` only called `close(fd)`,
+  which on Linux does not wake another thread that is already inside
+  `select()` / `accept()` on that fd (POSIX leaves the behaviour
+  unspecified, and Linux in particular keeps the call blocked). The
+  pre-existing `TcpServerTransport.CloseUnblocksAccept` unit test
+  surfaced this on the WSL Linux build (subprocess aborted) while
+  MinGW64 happened to short-circuit via Winsock semantics.
+  - `Close()` now (1) flips `open_ = false` *before* touching the
+    socket, so a racing `Accept()` that wakes from `select()` sees
+    the closed flag and bails out cleanly instead of calling
+    `accept()` on a stale/recycled fd, and (2) issues
+    `shutdown(fd, SHUT_RDWR)` before `close(fd)` to force any
+    in-flight `select()`/`accept()` to return immediately.
+  - New helper `ShutdownNativeSocket()` with POSIX (`SHUT_RDWR`) and
+    Win32 (`SD_BOTH`) branches. Win32 path is conservative belt-and-
+    braces: Winsock's `closesocket()` already aborts pending
+    `accept()`, but the extra `shutdown()` keeps the two platforms
+    symmetric and harmless.
+  - No public API change. `IByteStream`, `TcpServerTransport`
+    surface, options, and TransportStatus enum are untouched.
+  - Result: Linux ctest goes 1389/1390 → 1390/1390. MinGW64 stays
+    976/976. First time the framework is fully green on both
+    platforms in this roadmap pass.
+  - Patch bump: behavioural bug fix in a published method, no new
+    surface, no removed surface.
+
 ## 0.106.5 - 2026-06-17
 
 - Fix latent UB in security unit/integration tests where

@@ -73,6 +73,12 @@ void CloseNativeSocket(NativeSocket socket)
   closesocket(socket);
 }
 
+void ShutdownNativeSocket(NativeSocket socket)
+{
+  // Unblocks a concurrent accept()/select() waiting on `socket`.
+  shutdown(socket, SD_BOTH);
+}
+
 bool SetNonBlocking(NativeSocket socket)
 {
   u_long enabled = 1;
@@ -101,6 +107,16 @@ bool IsWouldBlock(int error)
 void CloseNativeSocket(NativeSocket socket)
 {
   close(socket);
+}
+
+void ShutdownNativeSocket(NativeSocket socket)
+{
+  // Unblocks a concurrent accept()/select() waiting on `socket`.
+  // POSIX accept() is not awoken by close() alone if another thread
+  // holds a reference to the fd; shutdown(SHUT_RDWR) is the portable
+  // way to surface a half-close that select() reports as readable
+  // and that accept() then fails immediately.
+  shutdown(socket, SHUT_RDWR);
 }
 
 bool SetNonBlocking(NativeSocket socket)
@@ -382,7 +398,14 @@ TransportStatus TcpServerTransport::Open()
 TransportStatus TcpServerTransport::Close()
 {
   if (socket_ != static_cast<intptr_t>(kInvalidSocket)) {
-    CloseNativeSocket(static_cast<NativeSocket>(socket_));
+    const NativeSocket listener = static_cast<NativeSocket>(socket_);
+    // Mark closed first so any concurrent Accept() that wakes from
+    // select() sees `open_ == false` and bails out cleanly instead of
+    // calling accept() on a stale or recycled fd.
+    open_ = false;
+    // Unblock any in-flight accept()/select() before releasing the fd.
+    ShutdownNativeSocket(listener);
+    CloseNativeSocket(listener);
   }
   socket_ = static_cast<intptr_t>(kInvalidSocket);
   open_ = false;

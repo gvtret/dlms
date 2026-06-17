@@ -2980,6 +2980,82 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIso8802LlcType2SetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.11.3 and DLMS UA Blue Book Ed. 12.1
+  // §4.11.3 define class_id 58, version 0 with nine attributes:
+  // 1 logical_name, 2 transmit_window_size_k (unsigned, 1..127,
+  // def 1), 3 receive_window_size_rw (unsigned, 1..127, def 1),
+  // 4 max_octets_i_pdu_n1 (long-unsigned, def 128),
+  // 5 max_number_transmissions_n2 (unsigned),
+  // 6 acknowledgement_timer (long-unsigned, seconds),
+  // 7 p_bit_timer (long-unsigned, seconds),
+  // 8 reject_timer (long-unsigned, seconds),
+  // 9 busy_state_timer (long-unsigned, seconds).
+  // See ISO/IEC 8802-2:1998 §7.8.1..7.8.4 for parameter
+  // definitions. The class defines no specific methods.
+  CosemIso8802LlcType2SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& transmitWindowSizeK,
+    const CosemByteBuffer& receiveWindowSizeRw,
+    const CosemByteBuffer& maxOctetsIPduN1,
+    const CosemByteBuffer& maxNumberTransmissionsN2,
+    const CosemByteBuffer& acknowledgementTimer,
+    const CosemByteBuffer& pBitTimer,
+    const CosemByteBuffer& rejectTimer,
+    const CosemByteBuffer& busyStateTimer,
+    AttributeAccessMode mutableAccess);
+  CosemIso8802LlcType2SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& transmitWindowSizeK,
+    const CosemByteBuffer& receiveWindowSizeRw,
+    const CosemByteBuffer& maxOctetsIPduN1,
+    const CosemByteBuffer& maxNumberTransmissionsN2,
+    const CosemByteBuffer& acknowledgementTimer,
+    const CosemByteBuffer& pBitTimer,
+    const CosemByteBuffer& rejectTimer,
+    const CosemByteBuffer& busyStateTimer,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& TransmitWindowSizeK() const;
+  const CosemByteBuffer& ReceiveWindowSizeRw() const;
+  const CosemByteBuffer& MaxOctetsIPduN1() const;
+  const CosemByteBuffer& MaxNumberTransmissionsN2() const;
+  const CosemByteBuffer& AcknowledgementTimer() const;
+  const CosemByteBuffer& PBitTimer() const;
+  const CosemByteBuffer& RejectTimer() const;
+  const CosemByteBuffer& BusyStateTimer() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer transmitWindowSizeK_;
+  CosemByteBuffer receiveWindowSizeRw_;
+  CosemByteBuffer maxOctetsIPduN1_;
+  CosemByteBuffer maxNumberTransmissionsN2_;
+  CosemByteBuffer acknowledgementTimer_;
+  CosemByteBuffer pBitTimer_;
+  CosemByteBuffer rejectTimer_;
+  CosemByteBuffer busyStateTimer_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

@@ -11406,6 +11406,200 @@ CosemIso8802LlcType1SetupObject::MaxOctetsUiPdu() const
   return maxOctetsUiPdu_;
 }
 
+namespace {
+constexpr std::uint16_t kIso8802LlcType2SetupClassId = 58u;
+} // namespace
+
+const std::uint8_t CosemIso8802LlcType2SetupObject::MaxSupportedVersion;
+
+CosemIso8802LlcType2SetupObject::CosemIso8802LlcType2SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& transmitWindowSizeK,
+  const CosemByteBuffer& receiveWindowSizeRw,
+  const CosemByteBuffer& maxOctetsIPduN1,
+  const CosemByteBuffer& maxNumberTransmissionsN2,
+  const CosemByteBuffer& acknowledgementTimer,
+  const CosemByteBuffer& pBitTimer,
+  const CosemByteBuffer& rejectTimer,
+  const CosemByteBuffer& busyStateTimer,
+  AttributeAccessMode mutableAccess)
+  : CosemIso8802LlcType2SetupObject(
+      logicalName,
+      transmitWindowSizeK,
+      receiveWindowSizeRw,
+      maxOctetsIPduN1,
+      maxNumberTransmissionsN2,
+      acknowledgementTimer,
+      pBitTimer,
+      rejectTimer,
+      busyStateTimer,
+      mutableAccess,
+      CosemIso8802LlcType2SetupObject::MaxSupportedVersion)
+{
+}
+
+CosemIso8802LlcType2SetupObject::CosemIso8802LlcType2SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& transmitWindowSizeK,
+  const CosemByteBuffer& receiveWindowSizeRw,
+  const CosemByteBuffer& maxOctetsIPduN1,
+  const CosemByteBuffer& maxNumberTransmissionsN2,
+  const CosemByteBuffer& acknowledgementTimer,
+  const CosemByteBuffer& pBitTimer,
+  const CosemByteBuffer& rejectTimer,
+  const CosemByteBuffer& busyStateTimer,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIso8802LlcType2SetupClassId,
+      NormalizeVersion(
+        version, CosemIso8802LlcType2SetupObject::MaxSupportedVersion),
+      logicalName))
+  , transmitWindowSizeK_(transmitWindowSizeK)
+  , receiveWindowSizeRw_(receiveWindowSizeRw)
+  , maxOctetsIPduN1_(maxOctetsIPduN1)
+  , maxNumberTransmissionsN2_(maxNumberTransmissionsN2)
+  , acknowledgementTimer_(acknowledgementTimer)
+  , pBitTimer_(pBitTimer)
+  , rejectTimer_(rejectTimer)
+  , busyStateTimer_(busyStateTimer)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id = 2u; id <= 9u; ++id)
+    rights_.SetAttributeAccess(id, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIso8802LlcType2SetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIso8802LlcType2SetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIso8802LlcType2SetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case 2u:
+      output = transmitWindowSizeK_;
+      return CosemStatus::Ok;
+    case 3u:
+      output = receiveWindowSizeRw_;
+      return CosemStatus::Ok;
+    case 4u:
+      output = maxOctetsIPduN1_;
+      return CosemStatus::Ok;
+    case 5u:
+      output = maxNumberTransmissionsN2_;
+      return CosemStatus::Ok;
+    case 6u:
+      output = acknowledgementTimer_;
+      return CosemStatus::Ok;
+    case 7u:
+      output = pBitTimer_;
+      return CosemStatus::Ok;
+    case 8u:
+      output = rejectTimer_;
+      return CosemStatus::Ok;
+    case 9u:
+      output = busyStateTimer_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIso8802LlcType2SetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kLogicalNameAttributeId)
+    return CosemStatus::AccessDenied;
+  if (attributeId < 2u || attributeId > 9u)
+    return CosemStatus::AttributeNotFound;
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  switch (attributeId) {
+    case 2u: transmitWindowSizeK_ = input; break;
+    case 3u: receiveWindowSizeRw_ = input; break;
+    case 4u: maxOctetsIPduN1_ = input; break;
+    case 5u: maxNumberTransmissionsN2_ = input; break;
+    case 6u: acknowledgementTimer_ = input; break;
+    case 7u: pBitTimer_ = input; break;
+    case 8u: rejectTimer_ = input; break;
+    case 9u: busyStateTimer_ = input; break;
+  }
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemIso8802LlcType2SetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IEC 62056-6-2 ED4 (2021) §4.11.3 and DLMS UA Blue Book Ed. 12.1
+  // §4.11.3 define no specific methods for IC 58 v0.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType2SetupObject::TransmitWindowSizeK() const
+{
+  return transmitWindowSizeK_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType2SetupObject::ReceiveWindowSizeRw() const
+{
+  return receiveWindowSizeRw_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType2SetupObject::MaxOctetsIPduN1() const
+{
+  return maxOctetsIPduN1_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType2SetupObject::MaxNumberTransmissionsN2() const
+{
+  return maxNumberTransmissionsN2_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType2SetupObject::AcknowledgementTimer() const
+{
+  return acknowledgementTimer_;
+}
+
+const CosemByteBuffer& CosemIso8802LlcType2SetupObject::PBitTimer() const
+{
+  return pBitTimer_;
+}
+
+const CosemByteBuffer& CosemIso8802LlcType2SetupObject::RejectTimer() const
+{
+  return rejectTimer_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType2SetupObject::BusyStateTimer() const
+{
+  return busyStateTimer_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

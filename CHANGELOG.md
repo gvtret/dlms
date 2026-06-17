@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.106.14 - 2026-06-17
+
+- New built-in COSEM object `CosemIso8802LlcType2SetupObject`
+  (`class_id=58`, `version=0`) implementing **ISO/IEC 8802-2 LLC
+  Type 2 setup** (connection-oriented operation) per IEC
+  62056-6-2 ED4 (2021) §4.11.3 and DLMS UA Blue Book Ed. 12.1
+  §4.11.3. Exposes the nine LLC Type 2 parameters as opaque
+  A-XDR buffers prepared by the caller:
+    - `2 transmit_window_size_k` (unsigned, 1..127, def 1)
+    - `3 receive_window_size_rw` (unsigned, 1..127, def 1)
+    - `4 max_octets_i_pdu_n1` (long-unsigned, def 128)
+    - `5 max_number_transmissions_n2` (unsigned)
+    - `6 acknowledgement_timer` (long-unsigned, seconds)
+    - `7 p_bit_timer` (long-unsigned, seconds)
+    - `8 reject_timer` (long-unsigned, seconds)
+    - `9 busy_state_timer` (long-unsigned, seconds)
+  Parameter semantics per ISO/IEC 8802-2:1998 §7.8.1–7.8.4.
+  `logical_name` is read-only; attributes 2–9 share a caller-
+  selected `AttributeAccessMode` so the backend can re-tune
+  connection parameters after commissioning. The class defines
+  no specific methods; all method ids report `MethodNotFound`.
+  Constructor normalises `version` to `MaxSupportedVersion=0`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `MethodsReturnMethodNotFound`, `NormalizesVersionAboveMax`).
+  MinGW64 ctest 1000/1000 ✅ (was 996/996 in 0.106.13; +4 new
+  cases from this IC).
+- Docs: `ic_support_matrix.md` row for IC 58 promoted from
+  Application-provided to Partial. Only IC 59 (LLC Type 3,
+  acknowledged connectionless) remains in the LLC area.
+- No public API change to existing types. Patch bump 0.106.13 →
+  0.106.14.
+
 ## 0.106.13 - 2026-06-17
 
 - New built-in COSEM object `CosemIso8802LlcType1SetupObject`

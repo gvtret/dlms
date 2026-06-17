@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.106.11 - 2026-06-17
+
+- New built-in COSEM object `CosemIec61334432LlcSetupObject`
+  (`class_id=55`, `version=1`) implementing **IEC 61334-4-32 LLC
+  setup** per IEC 62056-6-2 ED4 (2021) §4.10.7 and DLMS UA Blue
+  Book Ed. 12.1 §4.10.7. Exposes attributes
+  `2 max_frame_length` (long-unsigned, length of the LLC frame in
+  bytes per IEC 61334-4-32:1996 §5.1.4; S-FSK profile
+  min/def/max 26/134/242 per IEC 61334-5-1:2001 §4.2.2) and
+  `3 reply_status_list` (array of structure {L-SAP-selector,
+  length-of-waiting-L-SDU}; MIB variable reply-status-list
+  (variable 11) per IEC 61334-4-512:2001 §5.4) as opaque A-XDR
+  buffers prepared by the caller. `logical_name` is read-only;
+  attributes 2..3 share a caller-selected `AttributeAccessMode`
+  so the backend can republish refreshed frame length and reply
+  status list after the LLC sublayer accumulates events out-of-
+  band. The class defines no specific methods; all method ids
+  report `MethodNotFound`. Constructor normalises `version` to
+  `MaxSupportedVersion=1` (ED4 deprecates `0`).
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `MethodsReturnMethodNotFound`, `NormalizesVersionAboveMax`).
+  MinGW64 ctest 988/988 ✅ (was 984/984 in 0.106.10; +4 new
+  cases from this IC).
+- Docs: `ic_support_matrix.md` row for IC 55 promoted from
+  Application-provided to Partial; remaining LLC row narrowed to
+  `56`-`59`. With IC 50/51/52/53/55 done, the S-FSK PLC stack is
+  feature-complete except for `56 S-FSK Reporting system list`.
+- No public API change to existing types. Patch bump 0.106.10 →
+  0.106.11.
+
 ## 0.106.10 - 2026-06-17
 
 - New built-in COSEM object `CosemSFskMacCountersObject`

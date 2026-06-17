@@ -10713,3 +10713,138 @@ TEST(CosemSFskMacCountersObject, NormalizesVersionAboveMax)
 }
 
 
+namespace {
+
+// IEC 62056-6-2 ED4 (2021) S4.10.7 / DLMS UA Blue Book Ed. 12.1
+// S4.10.7: max_frame_length is long-unsigned (length of the LLC
+// frame in bytes; S-FSK profile min/def/max 26/134/242 per
+// IEC 61334-5-1:2001 S4.2.2). A-XDR tag 0x12 = long-unsigned, two
+// bytes network order.
+
+// array { structure { L-SAP-selector: unsigned,
+//                     length-of-waiting-L-SDU: unsigned } }
+// holding two reply_status entries per IEC 62056-6-2 ED4
+// S4.10.7.2.3 (MIB variable reply-status-list (variable 11) per
+// IEC 61334-4-512:2001 S5.4).
+dlms::cosem::CosemByteBuffer SampleReplyStatusList()
+{
+  return BytesFromList({
+    0x01u, 0x02u,
+      0x02u, 0x02u,
+        0x11u, 0x10u,
+        0x11u, 0x03u,
+      0x02u, 0x02u,
+        0x11u, 0x20u,
+        0x11u, 0x05u});
+}
+
+dlms::cosem::CosemIec61334432LlcSetupObject
+MakeIec61334432LlcSetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemIec61334432LlcSetupObject(
+    name,
+    LongUnsigned(134u),
+    SampleReplyStatusList(),
+    access);
+}
+
+} // namespace
+
+TEST(CosemIec61334432LlcSetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 5u, 0u, 255u);
+  dlms::cosem::CosemIec61334432LlcSetupObject object =
+    MakeIec61334432LlcSetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(55u, object.Descriptor().key.classId);
+  EXPECT_EQ(1u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemIec61334432LlcSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(LongUnsigned(134u), out);
+  EXPECT_EQ(LongUnsigned(134u), object.MaxFrameLength());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, out));
+  EXPECT_EQ(SampleReplyStatusList(), out);
+  EXPECT_EQ(SampleReplyStatusList(), object.ReplyStatusList());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(4u, out));
+}
+
+TEST(CosemIec61334432LlcSetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 5u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer newFrame = LongUnsigned(242u);
+  const dlms::cosem::CosemByteBuffer newList = BytesFromList({0x01u, 0x00u});
+
+  dlms::cosem::CosemIec61334432LlcSetupObject writable =
+    MakeIec61334432LlcSetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, newFrame));
+  EXPECT_EQ(newFrame, writable.MaxFrameLength());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(3u, newList));
+  EXPECT_EQ(newList, writable.ReplyStatusList());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, newFrame));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, newFrame));
+
+  dlms::cosem::CosemIec61334432LlcSetupObject readOnly =
+    MakeIec61334432LlcSetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, newFrame));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(3u, newList));
+  EXPECT_EQ(LongUnsigned(134u), readOnly.MaxFrameLength());
+  EXPECT_EQ(SampleReplyStatusList(), readOnly.ReplyStatusList());
+}
+
+TEST(CosemIec61334432LlcSetupObject, MethodsReturnMethodNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 5u, 0u, 255u);
+  dlms::cosem::CosemIec61334432LlcSetupObject object =
+    MakeIec61334432LlcSetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemIec61334432LlcSetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 5u, 0u, 255u);
+  dlms::cosem::CosemIec61334432LlcSetupObject object(
+    name,
+    LongUnsigned(134u),
+    SampleReplyStatusList(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemIec61334432LlcSetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+

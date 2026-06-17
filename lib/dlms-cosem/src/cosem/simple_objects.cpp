@@ -11085,6 +11085,127 @@ CosemSFskMacCountersObject::CrcNokFramesCounter() const
   return crcNokFramesCounter_;
 }
 
+namespace {
+constexpr std::uint16_t kIec61334432LlcSetupClassId = 55u;
+constexpr std::uint8_t kIec61334432LlcSetupMaxFrameLengthAttributeId = 2u;
+constexpr std::uint8_t kIec61334432LlcSetupReplyStatusListAttributeId = 3u;
+} // namespace
+
+const std::uint8_t CosemIec61334432LlcSetupObject::MaxSupportedVersion;
+
+CosemIec61334432LlcSetupObject::CosemIec61334432LlcSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& maxFrameLength,
+  const CosemByteBuffer& replyStatusList,
+  AttributeAccessMode mutableAccess)
+  : CosemIec61334432LlcSetupObject(
+      logicalName,
+      maxFrameLength,
+      replyStatusList,
+      mutableAccess,
+      CosemIec61334432LlcSetupObject::MaxSupportedVersion)
+{
+}
+
+CosemIec61334432LlcSetupObject::CosemIec61334432LlcSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& maxFrameLength,
+  const CosemByteBuffer& replyStatusList,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIec61334432LlcSetupClassId,
+      NormalizeVersion(
+        version, CosemIec61334432LlcSetupObject::MaxSupportedVersion),
+      logicalName))
+  , maxFrameLength_(maxFrameLength)
+  , replyStatusList_(replyStatusList)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kIec61334432LlcSetupMaxFrameLengthAttributeId, mutableAccess);
+  rights_.SetAttributeAccess(
+    kIec61334432LlcSetupReplyStatusListAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIec61334432LlcSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIec61334432LlcSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIec61334432LlcSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kIec61334432LlcSetupMaxFrameLengthAttributeId:
+      output = maxFrameLength_;
+      return CosemStatus::Ok;
+    case kIec61334432LlcSetupReplyStatusListAttributeId:
+      output = replyStatusList_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIec61334432LlcSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kIec61334432LlcSetupMaxFrameLengthAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      maxFrameLength_ = input;
+      return CosemStatus::Ok;
+    case kIec61334432LlcSetupReplyStatusListAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      replyStatusList_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIec61334432LlcSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IEC 62056-6-2 ED4 (2021) §4.10.7 and DLMS UA Blue Book Ed. 12.1
+  // §4.10.7 define no specific methods for IC 55 v1.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemIec61334432LlcSetupObject::MaxFrameLength() const
+{
+  return maxFrameLength_;
+}
+
+const CosemByteBuffer&
+CosemIec61334432LlcSetupObject::ReplyStatusList() const
+{
+  return replyStatusList_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

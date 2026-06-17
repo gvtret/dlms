@@ -2841,6 +2841,56 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIec61334432LlcSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.10.7 and DLMS UA Blue Book Ed. 12.1
+  // §4.10.7 define class_id 55, version 1 with three attributes:
+  // 1 logical_name, 2 max_frame_length (long-unsigned, length of
+  // the LLC frame in bytes per IEC 61334-4-32:1996 §5.1.4; S-FSK
+  // profile min/def/max 26/134/242 per IEC 61334-5-1:2001 §4.2.2),
+  // 3 reply_status_list (array of reply_status structures
+  // {L-SAP-selector: unsigned, length-of-waiting-L-SDU: unsigned};
+  // MIB variable reply-status-list (variable 11) per
+  // IEC 61334-4-512:2001 §5.4). The class defines no specific
+  // methods. Note: ED4 deprecates version 0.
+  CosemIec61334432LlcSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& maxFrameLength,
+    const CosemByteBuffer& replyStatusList,
+    AttributeAccessMode mutableAccess);
+  CosemIec61334432LlcSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& maxFrameLength,
+    const CosemByteBuffer& replyStatusList,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& MaxFrameLength() const;
+  const CosemByteBuffer& ReplyStatusList() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer maxFrameLength_;
+  CosemByteBuffer replyStatusList_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

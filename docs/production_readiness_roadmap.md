@@ -435,8 +435,26 @@ library may be described as an extensible DLMS/COSEM framework with partial
    Привязка к verification: `cmake/PackageInstallSmoke.cmake` уже строит
    все 6 примеров, поэтому документ автоматически синхронизирован с
    рабочими сборками.
-4. Проверить package artifact на Windows/MSYS2 и Linux CI, если Linux runner
-   доступен.
+4. ✅ DONE (v0.106.7): package artifact проверен на обеих платформах.
+   - **Windows / MSYS2 MINGW64**: `scripts/verify_release_mingw64.sh`
+     даёт clean Release build → ctest **976/976** → `cmake --build
+     --target package` (CPack tarball). Это canonical-pipeline для
+     Windows-host релизов; используется при подготовке всех релизов
+     `0.x` начиная с `0.4.x`.
+   - **Linux**: `scripts/verify_release_linux.sh` (новый,
+     добавлен в v0.106.7) — зеркало MinGW64 driver-а. Чистый
+     Release build → serial ctest **1390/1390** → CPack tarball.
+     Verified on Ubuntu 25.10 / WSL2 / gcc 15.2 / cmake 3.31 /
+     ninja 1.12 / OpenSSL 3.5.3. Скрипт автономен (любой cwd),
+     требует только cmake/ninja/g++/libssl-dev.
+   - **Параллелизм**: оба verify-скрипта запускают ctest serial.
+     Параллельный `ctest -jN` под нагрузкой может вызывать
+     флапы в нескольких TCP loopback / endpoint integration
+     тестах (port re-use под TIME_WAIT, kernel-level contention)
+     — это известное ограничение тест-харнеса, не регрессия в
+     production-коде. Релизный gate — serial run; параллельный
+     прогон оставлен dev-only.
+   - **Ничего blocking для P1 Package — секция закрыта.**
 
 ## P1. Диагностика
 

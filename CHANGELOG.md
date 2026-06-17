@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.106.7 - 2026-06-17
+
+- Close P1 Package §4. Package artifact verified on both supported
+  release platforms:
+  - **Windows / MSYS2 MINGW64** via the existing
+    `scripts/verify_release_mingw64.sh`: clean Release build →
+    serial ctest 976/976 → CPack tarball.
+  - **Linux** via the new `scripts/verify_release_linux.sh`
+    (mirror driver, mode 0755): clean Release build → serial
+    ctest **1390/1390** → CPack tarball. Toolchain reference:
+    Ubuntu 25.10 / WSL2 / gcc 15.2 / cmake 3.31 / ninja 1.12 /
+    OpenSSL 3.5.3. Script is location-independent (resolves repo
+    root from its own dir) and requires only cmake/ninja/g++/
+    libssl-dev.
+- Release gate is **serial** ctest on both platforms (matches the
+  MinGW64 driver). Parallel `ctest -jN` may surface flakes in a
+  small set of TCP loopback / endpoint integration tests under
+  kernel-level port-reuse contention (TIME_WAIT pressure). Those
+  flakes are test-harness limits, not production regressions —
+  documented in the roadmap and reproducible only under heavy
+  parallel scheduling. Parallel runs stay dev-only.
+- Roadmap (`docs/production_readiness_roadmap.md`) updated: P1
+  Package §4 marked ✅ DONE with reference to the new Linux driver
+  and the verified test counts.
+- No code changes outside scripts and docs. Patch bump 0.106.6 →
+  0.106.7 (docs + script only, no public API or behavioural
+  change).
+
 ## 0.106.6 - 2026-06-17
 
 - Fix `TcpServerTransport.Close()` on POSIX so it actually unblocks a

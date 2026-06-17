@@ -9468,6 +9468,137 @@ CosemMBusDiagnosticObject::CaptureTime() const
 }
 
 namespace {
+constexpr std::uint16_t kPrimePlcLlcSscsSetupClassId = 80u;
+constexpr std::uint8_t kPrimePlcLlcSscsSetupServiceNodeAddressId = 2u;
+constexpr std::uint8_t kPrimePlcLlcSscsSetupBaseNodeAddressId = 3u;
+constexpr std::uint8_t kPrimePlcLlcSscsSetupResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemPrimePlcLlcSscsSetupObject::MaxSupportedVersion;
+
+CosemPrimePlcLlcSscsSetupObject::CosemPrimePlcLlcSscsSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& serviceNodeAddress,
+  const CosemByteBuffer& baseNodeAddress,
+  AttributeAccessMode mutableAccess)
+  : CosemPrimePlcLlcSscsSetupObject(
+      logicalName,
+      serviceNodeAddress,
+      baseNodeAddress,
+      mutableAccess,
+      CosemPrimePlcLlcSscsSetupObject::MaxSupportedVersion)
+{
+}
+
+CosemPrimePlcLlcSscsSetupObject::CosemPrimePlcLlcSscsSetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& serviceNodeAddress,
+  const CosemByteBuffer& baseNodeAddress,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPrimePlcLlcSscsSetupClassId,
+      NormalizeVersion(
+        version,
+        CosemPrimePlcLlcSscsSetupObject::MaxSupportedVersion),
+      logicalName))
+  , serviceNodeAddress_(serviceNodeAddress)
+  , baseNodeAddress_(baseNodeAddress)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr :
+       {kPrimePlcLlcSscsSetupServiceNodeAddressId,
+        kPrimePlcLlcSscsSetupBaseNodeAddressId}) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
+}
+
+CosemObjectDescriptor
+CosemPrimePlcLlcSscsSetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemPrimePlcLlcSscsSetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemPrimePlcLlcSscsSetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPrimePlcLlcSscsSetupServiceNodeAddressId:
+      output = serviceNodeAddress_;
+      return CosemStatus::Ok;
+    case kPrimePlcLlcSscsSetupBaseNodeAddressId:
+      output = baseNodeAddress_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPrimePlcLlcSscsSetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case kPrimePlcLlcSscsSetupServiceNodeAddressId:
+      target = &serviceNodeAddress_;
+      break;
+    case kPrimePlcLlcSscsSetupBaseNodeAddressId:
+      target = &baseNodeAddress_;
+      break;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemPrimePlcLlcSscsSetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // Spec defines reset(data) (data ::= integer(0)) as the only
+  // method: it sets service_node_address to NEW (0xFFE) and
+  // base_node_address to 0. Actual deallocation is owned by the
+  // PRIME convergence-layer backend, so the built-in object
+  // surfaces UnsupportedFeature just like IC 81/IC 84.
+  if (methodId == kPrimePlcLlcSscsSetupResetMethodId)
+    return CosemStatus::UnsupportedFeature;
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcLlcSscsSetupObject::ServiceNodeAddress() const
+{
+  return serviceNodeAddress_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcLlcSscsSetupObject::BaseNodeAddress() const
+{
+  return baseNodeAddress_;
+}
+
+namespace {
 constexpr std::uint16_t kPrimePlcPhyLayerCountersClassId = 81u;
 constexpr std::uint8_t kPrimePlcPhyLayerCountersCrcIncorrectId = 2u;
 constexpr std::uint8_t kPrimePlcPhyLayerCountersCrcFailedId = 3u;

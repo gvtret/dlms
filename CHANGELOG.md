@@ -1,5 +1,42 @@
 # Changelog
 
+## 0.106.18 - 2026-06-17
+
+- New built-in COSEM object `CosemPrimePlcLlcSscsSetupObject`
+  (`class_id=80`, `version=0`) implementing **61334-4-32 LLC
+  SSCS setup** per IEC 62056-6-2 ED4 (2021) §4.12.3 and DLMS UA
+  Blue Book Ed. 12.1 §4.12.3. Previously
+  docs/ic_support_matrix.md marked IC 80 as
+  "Application-provided"; this change closes that gap so the
+  whole PRIME PLC block (ICs 80, 81, 82, 83, 84) now has
+  built-in coverage with only IC 85 (MAC network administration
+  data) and IC 86 (Application identification) left as
+  application-provided.
+  The IC holds the addresses provided by the base node during
+  the opening of the convergence layer, as a response to the
+  service node's establish request. After deregistration the
+  spec sets `service_node_address = NEW = 0x0FFE` and
+  `base_node_address = 0x0000`.
+  Exposes both 432 CL addresses as opaque A-XDR buffers prepared
+  by the caller:
+    - `2 service_node_address` (long-unsigned)
+    - `3 base_node_address`    (long-unsigned)
+  Attributes `2`-`3` share a caller-selected
+  `AttributeAccessMode` so the PRIME convergence-layer backend
+  can republish refreshed addresses as the base/service node
+  (de)registers. `logical_name` (`1`) is hard-coded read-only.
+  The spec defines one specific method `reset(data)`
+  (data ::= integer(0), method id `1`) for deallocating the
+  service node address; actual deallocation is owned by the
+  PRIME convergence-layer backend, so `InvokeMethod` reports
+  `UnsupportedFeature` for method id `1` and `MethodNotFound`
+  for every other method id. Constructor normalises `version`
+  to `MaxSupportedVersion=0`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `ResetMethodReportsUnsupported`, `NormalizesVersionAboveMax`).
+  Full MinGW64 ctest: 1016/1016 passing (was 1012/1012).
+
 ## 0.106.17 - 2026-06-17
 
 - New built-in COSEM object `CosemPrimePlcPhyLayerCountersObject`

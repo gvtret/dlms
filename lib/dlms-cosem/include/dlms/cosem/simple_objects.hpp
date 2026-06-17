@@ -2345,6 +2345,53 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPrimePlcLlcSscsSetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.12.3 / DLMS UA Blue Book Ed. 12.1
+  // §4.12.3 "61334-4-32 LLC SSCS setup" (class_id = 80,
+  // version = 0). The instance holds addresses provided by the
+  // base node during convergence-layer opening; spec defines two
+  // dynamic long-unsigned attributes (service_node_address,
+  // base_node_address) and one method reset(data) for
+  // deallocating the service node address.
+  CosemPrimePlcLlcSscsSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& serviceNodeAddress,
+    const CosemByteBuffer& baseNodeAddress,
+    AttributeAccessMode mutableAccess);
+  CosemPrimePlcLlcSscsSetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& serviceNodeAddress,
+    const CosemByteBuffer& baseNodeAddress,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& ServiceNodeAddress() const;
+  const CosemByteBuffer& BaseNodeAddress() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer serviceNodeAddress_;
+  CosemByteBuffer baseNodeAddress_;
+  CosemAccessRights rights_;
+};
+
 class CosemPrimePlcPhyLayerCountersObject : public ICosemObject
 {
 public:

@@ -363,10 +363,27 @@ library may be described as an extensible DLMS/COSEM framework with partial
    - Уже есть `codec`, `io`, `protocol`, `cosem_server`, `runtime`,
      `framework` начиная с `0.4.5`.
    - README snippets для всех component/target пар добавлены в `0.4.6`.
-2. Продолжать exported target audit.
-   - Include dirs, transitive deps, OpenSSL dependency, отсутствие test deps.
-   - Aggregate target `INTERFACE_LINK_LIBRARIES` проверяются install smoke
-     начиная с `0.4.10`.
+2. ✅ DONE (v0.106.2): exported target audit расширен явным
+   OpenSSL-gating assert-ом в `cmake/PackageInstallSmoke.cmake`.
+   - Include dirs: все 12 либ-ов единообразно используют
+     `$<BUILD_INTERFACE:...>` + `$<INSTALL_INTERFACE:include>`.
+   - Aggregate target `INTERFACE_LINK_LIBRARIES` проверяются
+     install smoke начиная с `0.4.10`.
+   - Transitive OpenSSL dependency присутствует только в
+     `dlms_security` (единственный `find_package(OpenSSL)`).
+   - Test-deps в export-tree: запрещены (`gtest`, `gmock`,
+     `GTest::` паттерны) и install smoke фейлит на любом
+     совпадении.
+   - Новое в этой версии: smoke читает установленный
+     `DLMSFrameworkConfig.cmake` и пинит контракт OpenSSL
+     opt-in: components `protocol`, `cosem_server`, `runtime`,
+     `framework` ОБЯЗАНЫ триггерить `find_dependency(OpenSSL)`,
+     a `codec` и `io` ДОЛЖНЫ оставаться OpenSSL-free.
+     Это защищает от регрессий, если кто-то расширит состав
+     aggregates или gating-логику в `Config.cmake.in`.
+   - Consumer-builds для `codec`/`io` в smoke уже линкуются без
+     OpenSSL на build-хосте и являются фактическим доказательством
+     положительной части контракта.
 3. ✅ DONE (v0.105.2): минимальные include примеры для каждого aggregate
    target сведены в `docs/package_consumer_minimum.md`. Для всех 6 публичных
    `dlms::*` aggregates (`codec`, `io`, `protocol`, `cosem_server`,

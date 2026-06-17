@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.106.2 - 2026-06-17
+
+- P1 «Package и consumer experience» §2: exported target audit расширен.
+  - Новые asserts в `cmake/PackageInstallSmoke.cmake` пинят
+    `DLMSFrameworkConfig.cmake.in` OpenSSL opt-in контракт:
+    - Components `protocol`, `cosem_server`, `runtime`, `framework`
+      ОБЯЗАНЫ триггерить `find_dependency(OpenSSL)`.
+    - Components `codec` и `io` ДОЛЖНЫ оставаться OpenSSL-free.
+    - Контракт выводится static-grep-ом по сгенерированному
+      Config-файлу, фейлит рано с понятным FATAL_ERROR.
+  - Контекст аудита (всё было уже корректным, этот коммит
+    фиксирует contracts):
+    - Include dirs: 12/12 lib-ов используют
+      `$<BUILD_INTERFACE:...>` + `$<INSTALL_INTERFACE:include>`.
+    - OpenSSL привязан только к `dlms_security`
+      (единственный `find_package(OpenSSL)` в репо).
+    - Test-deps (`gtest`, `gmock`, `GTest::`) в export-tree уже
+      запрещены smoke-ом.
+    - Aggregate `INTERFACE_LINK_LIBRARIES` проверяются smoke-ом с
+      `0.4.10`.
+    - `codec`-only и `io`-only consumer-билды в smoke фактически
+      доказывают положительную часть OpenSSL-free контракта
+      (линкуются без OpenSSL на build-хосте).
+  - Patch bump: чистый audit + smoke-extension, ни одного API/ABI/
+    поведенческого изменения. Local ctest 976/976 зелёные.
+  - `docs/production_readiness_roadmap.md`: P1 Package §2 marked ✅ DONE.
+
 ## 0.106.1 - 2026-06-17
 
 - P2 «Надежность и оптимизация» §5 (частично): overflow guards для

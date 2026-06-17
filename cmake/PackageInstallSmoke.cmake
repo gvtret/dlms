@@ -105,6 +105,49 @@ foreach(disallowed_pattern
   endif()
 endforeach()
 
+# Config.cmake.in OpenSSL gating audit (P1 Package §2).
+#
+# Contract:
+#   codec and io aggregates do NOT depend on OpenSSL, so a consumer that
+#   pulls only those components must not require OpenSSL on the build host.
+#   protocol, cosem_server, runtime, framework DO depend on dlms_security
+#   and therefore must trigger find_dependency(OpenSSL).
+#
+# This protects against future regressions if someone extends the aggregate
+# composition or the gating logic in DLMSFrameworkConfig.cmake.in.
+file(READ "${CONFIG_FILE}" config_contents)
+
+string(REGEX MATCH
+  "if[(]_DLMSFramework_requires_OpenSSL[)]"
+  config_has_gate
+  "${config_contents}")
+if(config_has_gate STREQUAL "")
+  message(FATAL_ERROR
+    "DLMSFrameworkConfig.cmake missing OpenSSL gating block")
+endif()
+
+foreach(opt_in_component IN ITEMS "protocol" "cosem_server" "runtime" "framework")
+  string(REGEX MATCH
+    "STREQUAL \"${opt_in_component}\""
+    component_marked
+    "${config_contents}")
+  if(component_marked STREQUAL "")
+    message(FATAL_ERROR
+      "DLMSFrameworkConfig.cmake does not enable OpenSSL for component '${opt_in_component}'")
+  endif()
+endforeach()
+
+foreach(opt_out_component IN ITEMS "codec" "io")
+  string(REGEX MATCH
+    "STREQUAL \"${opt_out_component}\""
+    component_marked
+    "${config_contents}")
+  if(NOT component_marked STREQUAL "")
+    message(FATAL_ERROR
+      "DLMSFrameworkConfig.cmake unexpectedly enables OpenSSL for component '${opt_out_component}'")
+  endif()
+endforeach()
+
 file(WRITE "${CONSUMER_DIR}/CMakeLists.txt" [=[
 cmake_minimum_required(VERSION 3.16)
 project(dlms_package_consumer LANGUAGES CXX)

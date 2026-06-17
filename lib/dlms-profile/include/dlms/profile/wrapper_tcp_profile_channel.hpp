@@ -39,6 +39,8 @@ private:
   dlms::wrapper::WrapperStreamDecoder decoder_;
   std::vector<std::uint8_t> readBuffer_;
   std::vector<dlms::wrapper::WrapperFrameBuffer> pendingFrames_;
+  std::vector<std::uint8_t> sendWpdu_;
+  std::vector<dlms::wrapper::WrapperFrameBuffer> decodeFrames_;
   std::uint64_t conversationId_ = 0;
 };
 

@@ -376,27 +376,27 @@ EndpointStatus GatewayEndpoint::RunOnce()
     return EndpointStatus::InvalidState;
   }
 
-  std::vector<std::uint8_t> requestApdu;
+  requestApdu_.clear();
   EndpointStatus status =
-    MapProfileStatus(downstreamChannel_.ReceiveApdu(requestApdu));
+    MapProfileStatus(downstreamChannel_.ReceiveApdu(requestApdu_));
   if (status != EndpointStatus::Ok) {
     return status;
   }
 
-  std::vector<std::uint8_t> responseApdu;
-  if (IsReleaseRequest(requestApdu)) {
-    return ReleaseDownstreamAssociation(requestApdu);
+  responseApdu_.clear();
+  if (IsReleaseRequest(requestApdu_)) {
+    return ReleaseDownstreamAssociation(requestApdu_);
   }
 
   status =
-    MapXdlmsStatus(owned_->processor.ProcessRequest(requestApdu, responseApdu));
+    MapXdlmsStatus(owned_->processor.ProcessRequest(requestApdu_, responseApdu_));
   if (status != EndpointStatus::Ok) {
     return status;
   }
 
   dlms::profile::ProfileByteView response;
-  response.data = responseApdu.empty() ? 0 : &responseApdu[0];
-  response.size = responseApdu.size();
+  response.data = responseApdu_.empty() ? 0 : &responseApdu_[0];
+  response.size = responseApdu_.size();
   return MapProfileStatus(downstreamChannel_.SendApdu(response));
 }
 

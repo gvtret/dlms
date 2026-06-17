@@ -69,6 +69,8 @@ private:
   std::unique_ptr<dlms::association::IAssociationServer> association_;
   dlms::server::ServerContext context_;
   std::unique_ptr<ServerEndpointOwnedState> owned_;
+  std::vector<std::uint8_t> requestApdu_;
+  std::vector<std::uint8_t> responseApdu_;
   bool open_;
   bool hlsPending_;
 };

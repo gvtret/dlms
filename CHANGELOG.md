@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.106.8 - 2026-06-17
+
+- Close P1 Transport §4 (buffer reuse). Five per-call hot sites
+  converted from local `std::vector<std::uint8_t>` to member
+  buffers that are reused across calls (`clear()` + reuse,
+  capacity is retained), removing per-frame heap traffic on the
+  steady-state read/write path:
+  - `WrapperTcpProfileChannel::SendApdu` — send WPDU encode
+    buffer now reuses `sendWpdu_`.
+  - `WrapperTcpProfileChannel::ReceiveNextFrame` — decoder frame
+    list now reuses `decodeFrames_`, decoded frames move into
+    `pendingFrames_` (no copy).
+  - `WrapperUdpProfileChannel::SendApdu` — reuses `sendWpdu_`.
+  - `ServerEndpoint::RunOnce` — request/response APDU buffers
+    reuse `requestApdu_` / `responseApdu_`.
+  - `GatewayEndpoint::RunOnce` — reuses `requestApdu_` /
+    `responseApdu_`.
+  - `PushListenerEndpoint::RunOnce` — reuses `apdu_`.
+- No public API change. Headers gain one or two private member
+  vectors per affected class (PODs append to private section
+  only). On-the-wire behaviour and observable trace events are
+  unchanged.
+- Verified MinGW64 ctest 976/976 ✅ and Linux Release serial
+  ctest 1390/1390 ✅. Patch bump 0.106.7 → 0.106.8.
+
 ## 0.106.7 - 2026-06-17
 
 - Close P1 Package §4. Package artifact verified on both supported

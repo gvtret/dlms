@@ -3,6 +3,7 @@
 #include "dlms/wrapper/wrapper_codec.hpp"
 
 #include <algorithm>
+#include <iterator>
 
 namespace dlms {
 namespace profile {
@@ -116,9 +117,12 @@ ProfileStatus WrapperTcpProfileChannel::SendApdu(ProfileByteView apdu)
   frame.dataSize = apdu.size;
 
   std::vector<std::uint8_t> wpdu;
+  std::swap(wpdu, sendWpdu_);
+  wpdu.clear();
   const ProfileStatus encodeStatus =
     MapWrapperStatus(dlms::wrapper::EncodeWpdu(frame, wrapperLimits_, wpdu));
   if (encodeStatus != ProfileStatus::Ok) {
+    std::swap(wpdu, sendWpdu_);
     return encodeStatus;
   }
 
@@ -135,7 +139,10 @@ ProfileStatus WrapperTcpProfileChannel::SendApdu(ProfileByteView apdu)
   event.bytes = data;
   event.byteSize = wpdu.size();
   EmitTrace(options_.wrapperTcpTraceSink, event);
-  return MapTransportStatus(stream_.WriteAll(data, wpdu.size()));
+  const ProfileStatus writeStatus =
+    MapTransportStatus(stream_.WriteAll(data, wpdu.size()));
+  std::swap(wpdu, sendWpdu_);
+  return writeStatus;
 }
 
 ProfileStatus WrapperTcpProfileChannel::ReceiveApdu(
@@ -215,16 +222,20 @@ ProfileStatus WrapperTcpProfileChannel::ReceiveNextFrame()
       EmitTrace(options_.wrapperTcpTraceSink, wireEvent);
     }
 
-    std::vector<dlms::wrapper::WrapperFrameBuffer> frames;
+    decodeFrames_.clear();
     const ProfileStatus decodeStatus =
-      MapWrapperStatus(decoder_.Push(&readBuffer_[0], bytesRead, frames));
+      MapWrapperStatus(decoder_.Push(&readBuffer_[0], bytesRead, decodeFrames_));
 
     if (decodeStatus == ProfileStatus::Ok) {
       try {
-        pendingFrames_.insert(pendingFrames_.end(), frames.begin(), frames.end());
+        pendingFrames_.insert(pendingFrames_.end(),
+                              std::make_move_iterator(decodeFrames_.begin()),
+                              std::make_move_iterator(decodeFrames_.end()));
+        decodeFrames_.clear();
       } catch (...) {
         decoder_.Reset();
         pendingFrames_.clear();
+        decodeFrames_.clear();
         return ProfileStatus::InternalError;
       }
       return ProfileStatus::Ok;

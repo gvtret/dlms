@@ -81,6 +81,8 @@ private:
   IGatewayUpstream& upstream_;
   IGatewayPolicy& policy_;
   std::unique_ptr<GatewayEndpointOwnedState> owned_;
+  std::vector<std::uint8_t> requestApdu_;
+  std::vector<std::uint8_t> responseApdu_;
   bool open_;
 };
 

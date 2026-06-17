@@ -36,6 +36,7 @@ private:
   ApduChannelOptions options_;
   dlms::wrapper::WrapperCodecLimits wrapperLimits_;
   std::vector<std::uint8_t> readBuffer_;
+  std::vector<std::uint8_t> sendWpdu_;
 };
 
 } // namespace profile

@@ -183,17 +183,17 @@ EndpointStatus PushListenerEndpoint::RunOnce()
     return EndpointStatus::InvalidState;
   }
 
-  std::vector<std::uint8_t> apdu;
-  EndpointStatus status = MapProfileStatus(channel_.ReceiveApdu(apdu));
+  apdu_.clear();
+  EndpointStatus status = MapProfileStatus(channel_.ReceiveApdu(apdu_));
   if (status != EndpointStatus::Ok) {
     return status;
   }
 
-  if (IsReleaseRequest(apdu)) {
-    return ReleaseAssociation(apdu);
+  if (IsReleaseRequest(apdu_)) {
+    return ReleaseAssociation(apdu_);
   }
 
-  return handler_.OnPushApdu(apdu);
+  return handler_.OnPushApdu(apdu_);
 }
 
 EndpointStatus PushListenerEndpoint::Close()

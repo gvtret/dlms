@@ -395,8 +395,21 @@ library may be described as an extensible DLMS/COSEM framework with partial
      ожидаемо валятся в `OpenFailed`).
    - Полностью pure-unit тесты, без mock и без живого устройства.
    - Patch bump: tests-only.
-4. Оптимизировать buffer reuse в profile/endpoint paths, где сейчас есть
-   повторные временные vectors.
+4. ✅ DONE (v0.106.8): buffer reuse в profile/endpoint hot paths.
+   - Per-call `std::vector<std::uint8_t>` заменён на member-буфер с
+     `clear()`+reuse (capacity сохраняется) в 5 hot-сайтах:
+     - `WrapperTcpProfileChannel::SendApdu` (`sendWpdu_`),
+       `ReceiveNextFrame` (`decodeFrames_`, frames `move`-ятся в
+       `pendingFrames_`).
+     - `WrapperUdpProfileChannel::SendApdu` (`sendWpdu_`).
+     - `ServerEndpoint::RunOnce`, `GatewayEndpoint::RunOnce`
+       (`requestApdu_` / `responseApdu_`).
+     - `PushListenerEndpoint::RunOnce` (`apdu_`).
+   - Никаких изменений public API; private POD members только
+     appended (ABI-safe pre-1.0). Wire behaviour и trace events
+     не меняются.
+   - Верифицировано: MinGW64 976/976 ✅, Linux Release serial
+     1390/1390 ✅.
 
 ## P1. Package и consumer experience
 

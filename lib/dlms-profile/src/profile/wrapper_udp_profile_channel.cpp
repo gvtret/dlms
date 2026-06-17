@@ -64,14 +64,20 @@ ProfileStatus WrapperUdpProfileChannel::SendApdu(ProfileByteView apdu)
   frame.dataSize = apdu.size;
 
   std::vector<std::uint8_t> wpdu;
+  std::swap(wpdu, sendWpdu_);
+  wpdu.clear();
   const ProfileStatus encodeStatus =
     MapWrapperStatus(dlms::wrapper::EncodeWpdu(frame, wrapperLimits_, wpdu));
   if (encodeStatus != ProfileStatus::Ok) {
+    std::swap(wpdu, sendWpdu_);
     return encodeStatus;
   }
 
   const std::uint8_t* data = wpdu.empty() ? 0 : &wpdu[0];
-  return MapTransportStatus(datagram_.Send(data, wpdu.size()));
+  const ProfileStatus sendStatus =
+    MapTransportStatus(datagram_.Send(data, wpdu.size()));
+  std::swap(wpdu, sendWpdu_);
+  return sendStatus;
 }
 
 ProfileStatus WrapperUdpProfileChannel::ReceiveApdu(

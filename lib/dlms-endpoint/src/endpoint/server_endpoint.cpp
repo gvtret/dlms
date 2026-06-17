@@ -845,20 +845,20 @@ EndpointStatus ServerEndpoint::RunOnce()
     return EndpointStatus::InvalidState;
   }
 
-  std::vector<std::uint8_t> requestApdu;
+  requestApdu_.clear();
   EndpointStatus status =
-    MapProfileStatus(channel_.ReceiveApdu(requestApdu));
+    MapProfileStatus(channel_.ReceiveApdu(requestApdu_));
   if (status != EndpointStatus::Ok) {
     return status;
   }
 
-  std::vector<std::uint8_t> responseApdu;
-  if (IsReleaseRequest(requestApdu)) {
-    return ReleaseAssociation(requestApdu);
+  responseApdu_.clear();
+  if (IsReleaseRequest(requestApdu_)) {
+    return ReleaseAssociation(requestApdu_);
   }
 
   bool handled = false;
-  status = HandleHlsReply(requestApdu, responseApdu, handled);
+  status = HandleHlsReply(requestApdu_, responseApdu_, handled);
   if (status != EndpointStatus::Ok) {
     return status;
   }
@@ -866,15 +866,15 @@ EndpointStatus ServerEndpoint::RunOnce()
   if (!handled) {
     status =
       MapXdlmsStatus(
-        owned_->processor->ProcessRequest(requestApdu, responseApdu));
+        owned_->processor->ProcessRequest(requestApdu_, responseApdu_));
   }
   if (status != EndpointStatus::Ok) {
     return status;
   }
 
   dlms::profile::ProfileByteView response;
-  response.data = responseApdu.empty() ? 0 : &responseApdu[0];
-  response.size = responseApdu.size();
+  response.data = responseApdu_.empty() ? 0 : &responseApdu_[0];
+  response.size = responseApdu_.size();
   return MapProfileStatus(channel_.SendApdu(response));
 }
 

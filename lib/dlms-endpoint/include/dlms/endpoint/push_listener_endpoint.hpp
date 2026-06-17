@@ -45,6 +45,7 @@ private:
   PushListenerEndpointOptions options_;
   std::unique_ptr<dlms::association::IAssociationServer> association_;
   IPushIndicationHandler& handler_;
+  std::vector<std::uint8_t> apdu_;
   bool open_;
 };
 

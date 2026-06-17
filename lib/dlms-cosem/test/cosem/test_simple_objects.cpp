@@ -11565,3 +11565,155 @@ TEST(CosemWirelessModeQChannelObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+
+namespace {
+
+// IEC 62056-6-2 ED4 (2021) S4.12.5: four PHY long-unsigned
+// counters and one reset(data) method.
+dlms::cosem::CosemByteBuffer LongUnsignedIc81(std::uint16_t value)
+{
+  return BytesFromList({
+    0x12u,
+    static_cast<std::uint8_t>((value >> 8) & 0xFFu),
+    static_cast<std::uint8_t>(value & 0xFFu)});
+}
+
+dlms::cosem::CosemPrimePlcPhyLayerCountersObject
+MakePrimePlcPhyLayerCountersObject(
+  const dlms::cosem::CosemLogicalName& name,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemPrimePlcPhyLayerCountersObject(
+    name,
+    /*phy_stats_crc_incorrect_count*/ LongUnsignedIc81(0x1111u),
+    /*phy_stats_crc_failed_count   */ LongUnsignedIc81(0x2222u),
+    /*phy_stats_tx_drop_count      */ LongUnsignedIc81(0x3333u),
+    /*phy_stats_rx_drop_count      */ LongUnsignedIc81(0x4444u),
+    access);
+}
+
+} // namespace
+
+TEST(CosemPrimePlcPhyLayerCountersObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcPhyLayerCountersObject object =
+    MakePrimePlcPhyLayerCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(81u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcPhyLayerCountersObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(LongUnsignedIc81(0x1111u), out);
+  EXPECT_EQ(LongUnsignedIc81(0x1111u), object.CrcIncorrectCount());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, out));
+  EXPECT_EQ(LongUnsignedIc81(0x2222u), out);
+  EXPECT_EQ(LongUnsignedIc81(0x2222u), object.CrcFailedCount());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(LongUnsignedIc81(0x3333u), out);
+  EXPECT_EQ(LongUnsignedIc81(0x3333u), object.TxDropCount());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, out));
+  EXPECT_EQ(LongUnsignedIc81(0x4444u), out);
+  EXPECT_EQ(LongUnsignedIc81(0x4444u), object.RxDropCount());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(6u, out));
+}
+
+TEST(CosemPrimePlcPhyLayerCountersObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer updated = LongUnsignedIc81(0x9999u);
+
+  dlms::cosem::CosemPrimePlcPhyLayerCountersObject writable =
+    MakePrimePlcPhyLayerCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, updated));
+  EXPECT_EQ(updated, writable.CrcIncorrectCount());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(3u, updated));
+  EXPECT_EQ(updated, writable.CrcFailedCount());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(4u, updated));
+  EXPECT_EQ(updated, writable.TxDropCount());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(5u, updated));
+  EXPECT_EQ(updated, writable.RxDropCount());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, updated));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, updated));
+
+  dlms::cosem::CosemPrimePlcPhyLayerCountersObject readOnly =
+    MakePrimePlcPhyLayerCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id = 2u; id <= 5u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(id, updated))
+      << "attr id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(LongUnsignedIc81(0x1111u), readOnly.CrcIncorrectCount());
+}
+
+TEST(CosemPrimePlcPhyLayerCountersObject, ResetMethodReportsUnsupported)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcPhyLayerCountersObject object =
+    MakePrimePlcPhyLayerCountersObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  // reset(data), data ::= integer(0): the spec assigns method id 1.
+  const dlms::cosem::CosemByteBuffer resetArg =
+    BytesFromList({0x0Fu, 0x00u});
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
+            object.InvokeMethod(1u, resetArg, out));
+  EXPECT_TRUE(out.empty());
+
+  for (std::uint8_t method : {0u, 2u, 99u, 255u}) {
+    out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), resetArg, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemPrimePlcPhyLayerCountersObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
+  dlms::cosem::CosemPrimePlcPhyLayerCountersObject object(
+    name,
+    LongUnsignedIc81(0x1111u),
+    LongUnsignedIc81(0x2222u),
+    LongUnsignedIc81(0x3333u),
+    LongUnsignedIc81(0x4444u),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemPrimePlcPhyLayerCountersObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+

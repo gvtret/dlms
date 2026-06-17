@@ -1,5 +1,41 @@
 # Changelog
 
+## 0.106.17 - 2026-06-17
+
+- New built-in COSEM object `CosemPrimePlcPhyLayerCountersObject`
+  (`class_id=81`, `version=0`) implementing **PRIME NB OFDM PLC
+  Physical layer counters** per IEC 62056-6-2 ED4 (2021) §4.12.5
+  and DLMS UA Blue Book Ed. 12.1 §4.12.4. Previously
+  docs/ic_support_matrix.md marked IC 81 as
+  "Application-provided"; this change closes that gap and slots
+  the class into the existing PRIME PLC block alongside IC 82
+  (MAC setup), IC 83 (MAC functional parameters) and IC 84
+  (MAC counters).
+  Exposes the four PHY statistics counters as opaque A-XDR
+  buffers prepared by the caller:
+    - `2 phy_stats_crc_incorrect_count` (long-unsigned, PIB
+      0x00A0)
+    - `3 phy_stats_crc_failed_count`    (long-unsigned, PIB
+      0x00A1)
+    - `4 phy_stats_tx_drop_count`       (long-unsigned, PIB
+      0x00A2)
+    - `5 phy_stats_rx_drop_count`       (long-unsigned, PIB
+      0x00A3)
+  Counters are read-only per spec, but attributes `2`-`5` share a
+  caller-selected `AttributeAccessMode` so the PLC stack backend
+  can republish refreshed counter buffers as the PRIME node
+  updates its PIB.
+  `logical_name` (`1`) is hard-coded read-only. The spec defines
+  one specific method `reset(data)` (data ::= integer(0), method
+  id `1`) for clearing the counters; actual zeroing is owned by
+  the PLC backend, so `InvokeMethod` reports `UnsupportedFeature`
+  for method id `1` and `MethodNotFound` for every other method
+  id. Constructor normalises `version` to `MaxSupportedVersion=0`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `ResetMethodReportsUnsupported`, `NormalizesVersionAboveMax`).
+  Full MinGW64 ctest: 1012/1012 passing (was 1008/1008).
+
 ## 0.106.16 - 2026-06-17
 
 - New built-in COSEM object `CosemWirelessModeQChannelObject`

@@ -9468,6 +9468,171 @@ CosemMBusDiagnosticObject::CaptureTime() const
 }
 
 namespace {
+constexpr std::uint16_t kPrimePlcPhyLayerCountersClassId = 81u;
+constexpr std::uint8_t kPrimePlcPhyLayerCountersCrcIncorrectId = 2u;
+constexpr std::uint8_t kPrimePlcPhyLayerCountersCrcFailedId = 3u;
+constexpr std::uint8_t kPrimePlcPhyLayerCountersTxDropId = 4u;
+constexpr std::uint8_t kPrimePlcPhyLayerCountersRxDropId = 5u;
+constexpr std::uint8_t kPrimePlcPhyLayerCountersResetMethodId = 1u;
+} // namespace
+
+const std::uint8_t CosemPrimePlcPhyLayerCountersObject::MaxSupportedVersion;
+
+CosemPrimePlcPhyLayerCountersObject::CosemPrimePlcPhyLayerCountersObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& crcIncorrectCount,
+  const CosemByteBuffer& crcFailedCount,
+  const CosemByteBuffer& txDropCount,
+  const CosemByteBuffer& rxDropCount,
+  AttributeAccessMode mutableAccess)
+  : CosemPrimePlcPhyLayerCountersObject(
+      logicalName,
+      crcIncorrectCount,
+      crcFailedCount,
+      txDropCount,
+      rxDropCount,
+      mutableAccess,
+      CosemPrimePlcPhyLayerCountersObject::MaxSupportedVersion)
+{
+}
+
+CosemPrimePlcPhyLayerCountersObject::CosemPrimePlcPhyLayerCountersObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& crcIncorrectCount,
+  const CosemByteBuffer& crcFailedCount,
+  const CosemByteBuffer& txDropCount,
+  const CosemByteBuffer& rxDropCount,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kPrimePlcPhyLayerCountersClassId,
+      NormalizeVersion(
+        version,
+        CosemPrimePlcPhyLayerCountersObject::MaxSupportedVersion),
+      logicalName))
+  , crcIncorrectCount_(crcIncorrectCount)
+  , crcFailedCount_(crcFailedCount)
+  , txDropCount_(txDropCount)
+  , rxDropCount_(rxDropCount)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t attr :
+       {kPrimePlcPhyLayerCountersCrcIncorrectId,
+        kPrimePlcPhyLayerCountersCrcFailedId,
+        kPrimePlcPhyLayerCountersTxDropId,
+        kPrimePlcPhyLayerCountersRxDropId}) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
+}
+
+CosemObjectDescriptor
+CosemPrimePlcPhyLayerCountersObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights
+CosemPrimePlcPhyLayerCountersObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemPrimePlcPhyLayerCountersObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kPrimePlcPhyLayerCountersCrcIncorrectId:
+      output = crcIncorrectCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcPhyLayerCountersCrcFailedId:
+      output = crcFailedCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcPhyLayerCountersTxDropId:
+      output = txDropCount_;
+      return CosemStatus::Ok;
+    case kPrimePlcPhyLayerCountersRxDropId:
+      output = rxDropCount_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemPrimePlcPhyLayerCountersObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  CosemByteBuffer* target = nullptr;
+  switch (attributeId) {
+    case kPrimePlcPhyLayerCountersCrcIncorrectId:
+      target = &crcIncorrectCount_;
+      break;
+    case kPrimePlcPhyLayerCountersCrcFailedId:
+      target = &crcFailedCount_;
+      break;
+    case kPrimePlcPhyLayerCountersTxDropId:
+      target = &txDropCount_;
+      break;
+    case kPrimePlcPhyLayerCountersRxDropId:
+      target = &rxDropCount_;
+      break;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemPrimePlcPhyLayerCountersObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)input;
+  output.clear();
+  // Spec defines reset(data) as the only method: actual zeroing
+  // of PHY counters is owned by the PLC stack backend, so the
+  // built-in object surfaces UnsupportedFeature like IC 84.
+  if (methodId == kPrimePlcPhyLayerCountersResetMethodId)
+    return CosemStatus::UnsupportedFeature;
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcPhyLayerCountersObject::CrcIncorrectCount() const
+{
+  return crcIncorrectCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcPhyLayerCountersObject::CrcFailedCount() const
+{
+  return crcFailedCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcPhyLayerCountersObject::TxDropCount() const
+{
+  return txDropCount_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcPhyLayerCountersObject::RxDropCount() const
+{
+  return rxDropCount_;
+}
+
+namespace {
 constexpr std::uint16_t kPrimePlcMacSetupClassId = 82u;
 constexpr std::uint8_t kPrimePlcMacSetupMacMinConWindowId = 2u;
 constexpr std::uint8_t kPrimePlcMacSetupMacMaxConWindowId = 3u;

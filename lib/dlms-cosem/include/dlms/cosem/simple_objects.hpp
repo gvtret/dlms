@@ -2345,6 +2345,61 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemPrimePlcPhyLayerCountersObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.12.5 / DLMS UA Blue Book Ed. 12.1
+  // §4.12.4 "PRIME NB OFDM PLC Physical layer counters"
+  // (class_id = 81, version = 0). Four PHY statistics counters
+  // (long-unsigned), all read-only per spec, plus method
+  // reset(data) (data ::= integer(0)) for clearing them. The
+  // backend may republish refreshed counter buffers via a
+  // caller-selected AttributeAccessMode on attributes 2..5.
+  CosemPrimePlcPhyLayerCountersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& crcIncorrectCount,
+    const CosemByteBuffer& crcFailedCount,
+    const CosemByteBuffer& txDropCount,
+    const CosemByteBuffer& rxDropCount,
+    AttributeAccessMode mutableAccess);
+  CosemPrimePlcPhyLayerCountersObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& crcIncorrectCount,
+    const CosemByteBuffer& crcFailedCount,
+    const CosemByteBuffer& txDropCount,
+    const CosemByteBuffer& rxDropCount,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& CrcIncorrectCount() const;
+  const CosemByteBuffer& CrcFailedCount() const;
+  const CosemByteBuffer& TxDropCount() const;
+  const CosemByteBuffer& RxDropCount() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer crcIncorrectCount_;
+  CosemByteBuffer crcFailedCount_;
+  CosemByteBuffer txDropCount_;
+  CosemByteBuffer rxDropCount_;
+  CosemAccessRights rights_;
+};
+
 class CosemPrimePlcMacSetupObject : public ICosemObject
 {
 public:

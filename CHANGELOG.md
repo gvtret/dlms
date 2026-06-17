@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.106.13 - 2026-06-17
+
+- New built-in COSEM object `CosemIso8802LlcType1SetupObject`
+  (`class_id=57`, `version=0`) implementing **ISO/IEC 8802-2 LLC
+  Type 1 setup** per IEC 62056-6-2 ED4 (2021) §4.11.2 and DLMS UA
+  Blue Book Ed. 12.1 §4.11.2. Exposes attribute
+  `2 max_octets_ui_pdu` (long-unsigned, default 128) as an
+  opaque A-XDR buffer prepared by the caller. Per ISO/IEC
+  8802-2:1998 §6.8.1 ("Maximum number of octets in a UI PDU"),
+  the LLC sublayer imposes no restriction, but for
+  interoperability all MACs must accommodate UI PDUs with
+  information fields up to and including 128 octets in length.
+  `logical_name` is read-only; attribute 2 honors a caller-
+  selected `AttributeAccessMode` so the backend can republish
+  the negotiated MAC ceiling after commissioning. The class
+  defines no specific methods; all method ids report
+  `MethodNotFound`. Constructor normalises `version` to
+  `MaxSupportedVersion=0`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributeHonorsAccessMode`,
+  `MethodsReturnMethodNotFound`, `NormalizesVersionAboveMax`).
+  MinGW64 ctest 996/996 ✅ (was 992/992 in 0.106.12; +4 new
+  cases from this IC).
+- Docs: `ic_support_matrix.md` row for IC 57 promoted from
+  Application-provided to Partial; remaining LLC row narrowed to
+  `58`-`59`. Type 2 (connection-oriented) and Type 3
+  (acknowledged connectionless) LLC setups remain.
+- No public API change to existing types. Patch bump 0.106.12 →
+  0.106.13.
+
 ## 0.106.12 - 2026-06-17
 
 - New built-in COSEM object `CosemSFskReportingSystemListObject`

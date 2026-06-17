@@ -11306,6 +11306,106 @@ CosemSFskReportingSystemListObject::ReportingSystemList() const
   return reportingSystemList_;
 }
 
+namespace {
+constexpr std::uint16_t kIso8802LlcType1SetupClassId = 57u;
+constexpr std::uint8_t kIso8802LlcType1SetupMaxOctetsUiPduAttributeId = 2u;
+} // namespace
+
+const std::uint8_t CosemIso8802LlcType1SetupObject::MaxSupportedVersion;
+
+CosemIso8802LlcType1SetupObject::CosemIso8802LlcType1SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& maxOctetsUiPdu,
+  AttributeAccessMode mutableAccess)
+  : CosemIso8802LlcType1SetupObject(
+      logicalName,
+      maxOctetsUiPdu,
+      mutableAccess,
+      CosemIso8802LlcType1SetupObject::MaxSupportedVersion)
+{
+}
+
+CosemIso8802LlcType1SetupObject::CosemIso8802LlcType1SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& maxOctetsUiPdu,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIso8802LlcType1SetupClassId,
+      NormalizeVersion(
+        version, CosemIso8802LlcType1SetupObject::MaxSupportedVersion),
+      logicalName))
+  , maxOctetsUiPdu_(maxOctetsUiPdu)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(
+    kIso8802LlcType1SetupMaxOctetsUiPduAttributeId, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIso8802LlcType1SetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIso8802LlcType1SetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIso8802LlcType1SetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case kIso8802LlcType1SetupMaxOctetsUiPduAttributeId:
+      output = maxOctetsUiPdu_;
+      return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIso8802LlcType1SetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  switch (attributeId) {
+    case kIso8802LlcType1SetupMaxOctetsUiPduAttributeId:
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+        return CosemStatus::AccessDenied;
+      maxOctetsUiPdu_ = input;
+      return CosemStatus::Ok;
+    case kLogicalNameAttributeId:
+      return CosemStatus::AccessDenied;
+    default:
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIso8802LlcType1SetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IEC 62056-6-2 ED4 (2021) §4.11.2 and DLMS UA Blue Book Ed. 12.1
+  // §4.11.2 define no specific methods for IC 57 v0.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType1SetupObject::MaxOctetsUiPdu() const
+{
+  return maxOctetsUiPdu_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

@@ -2936,6 +2936,50 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIso8802LlcType1SetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.11.2 and DLMS UA Blue Book Ed. 12.1
+  // §4.11.2 define class_id 57, version 0 with two attributes:
+  // 1 logical_name, 2 max_octets_ui_pdu (long-unsigned; default
+  // 128). Refer to ISO/IEC 8802-2:1998 §6.8.1 "Maximum number of
+  // octets in a UI PDU" — LLC sublayer imposes no restriction,
+  // but for interoperability all MACs must accommodate UI PDUs
+  // with information fields up to and including 128 octets in
+  // length. The class defines no specific methods.
+  CosemIso8802LlcType1SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& maxOctetsUiPdu,
+    AttributeAccessMode mutableAccess);
+  CosemIso8802LlcType1SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& maxOctetsUiPdu,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& MaxOctetsUiPdu() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer maxOctetsUiPdu_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.106.1 - 2026-06-17
+
+- P2 «Надежность и оптимизация» §5 (частично): overflow guards для
+  size calculations.
+  - Аудит выявил 4 сайта в dlms-security, где OpenSSL EVP_*Update/Final
+    возвращает два `int`, которые складывались как `int + int`
+    перед кастом в `std::size_t`:
+    - `hls_high_authenticator.cpp:54` (Aes128EcbEncrypt)
+    - `suite0_aes_gcm.cpp:148` (Seal) + `:225` (Open)
+    - `suite0_key_wrap.cpp:95` (size-equality check)
+  - Формально это signed-integer addition, который UBSan пометил бы
+    как `signed-integer-overflow` UB при близких к `INT_MAX` входах
+    (практически не достижимо на реальных APDU, но UBSan-чистота
+    важна для нового CI job).
+  - Fix: каждый `int` сначала кастится в `std::size_t`, и только
+    потом складывается. Контракт OpenSSL гарантирует `>= 0`
+    для обоих, поэтому семантика не меняется.
+  - Остальные size-арифметики в фреймворке уже имеют guards:
+    `ber.cpp` `result > size_t::max() >> 8`, `llc_codec::HasRepresentable
+    LpduSize`, `apdu_c_api` `payload_size == size_t::max()`,
+    `in_memory_invocation_counter_store::nextLocal_ == uint32_t::max()`,
+    `suite0_aes_gcm::SizeFitsInt`. Reserve-сайты в association/ciphered/
+    hls_gmac/xdlms_client складывают фиксированные мелкие
+    константы с валидированными wire-размерами — оверфлоу потребовал
+    бы 16 ЭБ памяти.
+  - Patch bump: внутренние фиксы, ни одного API/ABI/поведенческого
+    изменения. Local ctest 976/976 зелёные. Новый
+    `linux-sanitizers` CI job (P2 §2) будет обнаруживать
+    регрессии в этой категории.
+  - `docs/production_readiness_roadmap.md`: P2 §5 marked ✅ DONE (частично).
+
 ## 0.106.0 - 2026-06-17
 
 - P2 «Надежность и оптимизация» §2: sanitizers в CI.

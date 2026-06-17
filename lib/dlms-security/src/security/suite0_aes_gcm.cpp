@@ -145,7 +145,11 @@ SecurityStatus OpenSslSeal(
     return SecurityStatus::CipherFailed;
   }
 
-  cipherText.resize(static_cast<std::size_t>(outputSize + finalSize));
+  // Sum as size_t to avoid signed-int overflow UB on the int+int
+  // intermediate. EVP_EncryptUpdate/Final guarantee both are >= 0.
+  cipherText.resize(
+    static_cast<std::size_t>(outputSize) +
+    static_cast<std::size_t>(finalSize));
   return SecurityStatus::Ok;
 }
 
@@ -222,7 +226,11 @@ SecurityStatus OpenSslOpen(
     return SecurityStatus::DecipherFailed;
   }
 
-  plainText.resize(static_cast<std::size_t>(outputSize + finalSize));
+  // Sum as size_t to avoid signed-int overflow UB on the int+int
+  // intermediate. EVP_DecryptUpdate/Final guarantee both are >= 0.
+  plainText.resize(
+    static_cast<std::size_t>(outputSize) +
+    static_cast<std::size_t>(finalSize));
   return SecurityStatus::Ok;
 }
 

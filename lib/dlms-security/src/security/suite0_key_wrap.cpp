@@ -91,8 +91,11 @@ SecurityStatus AesEcbCryptBlock(
     ? EVP_EncryptFinal_ex(context.Get(), output + outputSize, &finalSize)
     : EVP_DecryptFinal_ex(context.Get(), output + outputSize, &finalSize);
 
+  // Sum as size_t to avoid signed-int overflow UB on the int+int
+  // intermediate. EVP_*Update/Final guarantee both are >= 0.
   if (updateStatus != 1 || finalStatus != 1 ||
-      outputSize + finalSize != 16) {
+      (static_cast<std::size_t>(outputSize) +
+       static_cast<std::size_t>(finalSize)) != 16u) {
     std::fill(output, output + 16, 0u);
     return encrypt ? SecurityStatus::CipherFailed
                    : SecurityStatus::DecipherFailed;

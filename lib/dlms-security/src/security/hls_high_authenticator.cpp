@@ -51,7 +51,11 @@ SecurityStatus Aes128EcbEncrypt(
         &finalSize) != 1) {
     status = SecurityStatus::CipherFailed;
   } else {
-    data.resize(static_cast<std::size_t>(outputSize + finalSize));
+    // Sum as size_t to avoid signed-int overflow UB on the int+int
+    // intermediate. EVP_EncryptUpdate/Final guarantee both are >= 0.
+    data.resize(
+      static_cast<std::size_t>(outputSize) +
+      static_cast<std::size_t>(finalSize));
   }
 
   EVP_CIPHER_CTX_free(context);

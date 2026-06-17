@@ -594,7 +594,25 @@ library may be described as an extensible DLMS/COSEM framework with partial
      ASan/UBSan runtime).
 3. Добавить microbenchmarks для codecs и profile frame paths.
 4. Уменьшить allocation churn в APDU/xDLMS/profile paths.
-5. Проверить overflow guards для всех size calculations.
+5. ✅ DONE (v0.106.1, частично): проверить overflow guards для всех
+   size calculations. Аудит собрал 4 сайта в dlms-security, где
+   `int + int` из OpenSSL EVP_*Update/Final кастился в `std::size_t`:
+   `hls_high_authenticator.cpp:54`, `suite0_aes_gcm.cpp:148` + `:225`,
+   `suite0_key_wrap.cpp:95`. Суммирование двух `int` — формально
+   signed-add, который UBSan пометил бы как `signed-integer-overflow`,
+   хотя в практике входы малы. Исправлено через cast каждого
+   `int` в `std::size_t` до сложения. Остальные size-арифметики
+   в codec/security уже имеют явные guard-ы: `ber.cpp` чекает
+   `result > size_t::max() >> 8` перед каждым shift-left,
+   `llc_codec` имеет `HasRepresentableLpduSize`, `apdu_c_api`
+   чекает `payload_size == size_t::max()`, `in_memory_invocation_
+   counter_store` чекает `nextLocal_ == uint32_t::max()`,
+   `suite0_aes_gcm::SizeFitsInt` ограничивает вход OpenSSL до
+   `INT_MAX`. Reserve-сайты в `association_*`/`ciphered_apdu_processor`/
+   `hls_gmac_authenticator`/`xdlms_client` складывают крошечные
+   константы (`1..32`) с уже валидированными wire-размерами —
+   оверфлоу требовал бы 16 ЭБ памяти. UBSan job (P2 §2) будет
+   обнаруживать любые будущие регрессии в этой категории.
 
 ## P2. Документация и сопровождение
 

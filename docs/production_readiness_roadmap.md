@@ -349,9 +349,29 @@ library may be described as an extensible DLMS/COSEM framework with partial
 
 ## P1. Transport и runtime
 
-1. Решить статус TLS.
-   - Либо реализовать `TlsStreamTransport`, либо документировать как
-     unsupported и не позиционировать как production surface.
+1. ✅ DONE (v0.106.4): статус TLS зафиксирован как documentation-only contract.
+   - `docs/tls_transport_status.md` — канонический документ:
+     framework публикует TLS *adapter slot*, но не сам TLS-бекенд.
+     Перечислено: что поставляется
+     (`TlsStreamTransportOptions`, `ITlsStreamBackend`,
+     `TlsStreamTransport`, `UnsupportedTlsStreamBackend`), что не
+     поставляется (OpenSSL/mbedTLS/SChannel имплементация,
+     валидация сертификатов, cipher policy, IEC 62056-4-7 / Green
+     Book TLS profile enforcement), почему такой дизайн (разные
+     целевые окружения, от MinGW64 до RTOS+HSM/FIPS), как
+     интегрировать свой backend, и failure semantics
+     `UnsupportedTlsStreamBackend` (`Open()` → `UnsupportedFeature`,
+     lower closed, `ReadSome`/`WriteAll` → `NotOpen`). Явно сказано:
+     «The framework itself does not claim TLS as a production-ready
+     surface and will not, until a vetted reference backend is
+     upstreamed.»
+   - `lib/dlms-transport/docs/01_transport_api.md` §7 получил
+     prominent-блок со ссылкой на этот контракт (чтобы никто
+     не выводил production-readiness из самого наличия
+     `TlsStreamTransport`).
+   - Patch bump: docs-only, код не изменялся, ABI не тронут. Никаких
+     новых API. Контракт выражает *то* состояние, что реально в репо
+     сейчас, без новых обещаний (AGENTS.md §2).
 2. Проверить non-blocking interfaces и event loop на реальные сценарии.
 3. ✅ DONE (v0.106.3): tests для serial edge cases и IEC 62056-21 Mode E
    расширены.

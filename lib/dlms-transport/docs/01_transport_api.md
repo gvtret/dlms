@@ -145,6 +145,12 @@ interfaces above. They remain byte-stream or datagram transports only: Wrapper,
 HDLC, APDU, retry, association, and COSEM validation belongs to higher
 components.
 
+**TLS:** the published `TlsStreamTransport` is an adapter, not an
+implementation. The framework ships no built-in TLS backend; integrators wire
+their own `ITlsStreamBackend` against OpenSSL/mbedTLS/SChannel/etc. See
+[`docs/tls_transport_status.md`](../../../docs/tls_transport_status.md) for
+the canonical contract, why this design, and integration guidance.
+
 Applications can implement `IByteStream` or `IDatagramTransport` directly when
 they own the socket, serial driver, embedded link, test harness, or custom
 non-blocking runtime.

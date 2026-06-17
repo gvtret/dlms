@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.106.4 - 2026-06-17
+
+- P1 «Transport и runtime» §1: TLS-статус зафиксирован как
+  documentation-only contract. Framework публикует TLS *adapter slot*,
+  но не сам TLS-бекенд — это теперь явный публичный контракт,
+  а не побочный эффект отсутствия бекенда.
+  - Новый `docs/tls_transport_status.md` — канонический документ:
+    что поставляется (`TlsStreamTransportOptions`,
+    `ITlsStreamBackend`, `TlsStreamTransport`,
+    `UnsupportedTlsStreamBackend`), что не поставляется
+    (OpenSSL/mbedTLS/SChannel имплементация, валидация
+    сертификатов, cipher policy, IEC 62056-4-7 / Green Book TLS
+    profile enforcement), почему такой дизайн (разные целевые
+    окружения — от MinGW64 до RTOS+HSM/FIPS модулей), как
+    интегрировать свой backend, и failure semantics
+    `UnsupportedTlsStreamBackend` (`Open()` → `UnsupportedFeature`,
+    lower closed, `ReadSome`/`WriteAll` → `NotOpen`). Явно сказано:
+    framework не позиционирует TLS как production-ready surface
+    до появления веттед reference backend.
+  - `lib/dlms-transport/docs/01_transport_api.md` §7 расширен
+    prominent-блоком со ссылкой на новый контракт — чтобы никто
+    не выводил production-readiness из самого наличия
+    `TlsStreamTransport` в публичных хедерах.
+  - Patch bump: docs-only. Код не изменялся, ABI не тронут,
+    новых API нет. Контракт выражает реальное состояние репо
+    без новых обещаний (AGENTS.md §2).
+  - `docs/production_readiness_roadmap.md` P1 Transport §1 marked DONE.
+
 ## 0.106.3 - 2026-06-17
 
 - P1 «Transport и runtime» §3: tests для serial edge cases и IEC 62056-21

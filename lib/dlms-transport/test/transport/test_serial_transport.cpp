@@ -70,4 +70,31 @@ TEST(SerialTransport, ReadAndWriteBeforeOpenReturnNotOpen)
   EXPECT_EQ(TransportStatus::NotOpen, transport.WriteAll(input, sizeof(input)));
 }
 
+TEST(SerialTransport, ZeroSizedIoBeforeOpenStillReturnsNotOpen)
+{
+  // Contract: NotOpen is checked before the zero-size short-circuit. A consumer
+  // that mistakenly issues IO before Open() must not be told 'Ok' for a zero
+  // payload (which would mask the misuse).
+  SerialTransport transport(InvalidDeviceOptions());
+  std::size_t bytesRead = 42;
+
+  EXPECT_EQ(TransportStatus::NotOpen, transport.ReadSome(0, 0, bytesRead));
+  EXPECT_EQ(0u, bytesRead);
+  EXPECT_EQ(TransportStatus::NotOpen, transport.WriteAll(0, 0));
+}
+
+TEST(SerialTransport, AcceptsAllLegalDataBitWidths)
+{
+  // Open() validates options before touching the OS handle, so we still get
+  // OpenFailed (device doesn't exist) rather than InvalidArgument. This pins
+  // that 5..8 are all considered legal data bit widths.
+  for (unsigned bits = 5; bits <= 8; ++bits) {
+    SerialTransportOptions options = InvalidDeviceOptions();
+    options.dataBits = bits;
+    SerialTransport transport(options);
+    EXPECT_EQ(TransportStatus::OpenFailed, transport.Open())
+      << "dataBits=" << bits;
+  }
+}
+
 } // namespace

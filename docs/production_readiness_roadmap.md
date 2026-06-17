@@ -353,7 +353,28 @@ library may be described as an extensible DLMS/COSEM framework with partial
    - Либо реализовать `TlsStreamTransport`, либо документировать как
      unsupported и не позиционировать как production surface.
 2. Проверить non-blocking interfaces и event loop на реальные сценарии.
-3. Добавить tests для serial edge cases и IEC 62056-21 Mode E.
+3. ✅ DONE (v0.106.3): tests для serial edge cases и IEC 62056-21 Mode E
+   расширены.
+   - `lib/dlms-transport/test/transport/test_iec62056_21_mode_e.cpp`:
+     +10 фокусированных тестов на ранее непокрытые ветви парсера
+     identification и хелперов:
+     `BaudRateCodeAndValueAreDefinedForEveryRate` (все 7 baud),
+     `SignOnRequestOverwritesPreviousOutput`,
+     `ParseRejectsMissingLeadingSlash`, `ParseRejectsMissingCrLfTerminator`
+     (3 варианта), `ParseRejectsTooShortFrame`, `ParseRejectsUnknownBaudCode`,
+     `ParseAcceptsFrameWithoutModeMarker`,
+     `ParseRejectsModeMarkerForNonModeE` (Mode B `\W1` и Mode D `\W3`),
+     `ParseHandlesTruncatedModeMarker` (`\W` в самом конце без digit),
+     `SelectDowngradesToMeterMaxWhenClientAsksHigher` (downgrade к meter cap),
+     `SelectHonoursClientCapWhenMeterAdvertisesHigher` (client cap),
+     `BuildModeEAckRejectsUnknownBaudRate` (cast из int + output cleared).
+   - `lib/dlms-transport/test/transport/test_serial_transport.cpp`:
+     +2 теста — `ZeroSizedIoBeforeOpenStillReturnsNotOpen` (zero-size IO
+     до Open() возвращает `NotOpen`, не `Ok`, чтобы не маскировать misuse) и
+     `AcceptsAllLegalDataBitWidths` (5..8 проходят валидацию, потом
+     ожидаемо валятся в `OpenFailed`).
+   - Полностью pure-unit тесты, без mock и без живого устройства.
+   - Patch bump: tests-only.
 4. Оптимизировать buffer reuse в profile/endpoint paths, где сейчас есть
    повторные временные vectors.
 

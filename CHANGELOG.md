@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.106.3 - 2026-06-17
+
+- P1 «Transport и runtime» §3: tests для serial edge cases и IEC 62056-21
+  Mode E расширены.
+  - `lib/dlms-transport/test/transport/test_iec62056_21_mode_e.cpp`: +10
+    тестов покрывают ранее непроверенные ветви parser-а identification:
+    нет ведущего `/`, отсутствует `\r\n`-терминатор (3 варианта),
+    фрейм короче 5 байт, неизвестный baud-код, фрейм без mode-marker,
+    маркер не Mode E (`\W1` — Mode B, `\W3` — Mode D), усечённый mode-marker
+    `\W` без цифры. Плюс baud-rate negotiation: downgrade к meter
+    capability, соблюдение client cap, отклонение ACK build для
+    unknown baud (cast из int) с выводом очищенным. Отдельный тест
+    эксхаустивно пинит code и value для всех 7 baud-рейтов, чтобы
+    будущие расширения enum ломали тест первым.
+  - `lib/dlms-transport/test/transport/test_serial_transport.cpp`: +2
+    теста. `ZeroSizedIoBeforeOpenStillReturnsNotOpen` пинит контракт
+    «NotOpen проверяется до zero-size short-circuit», чтобы
+    consumer не был обманут об успехе IO без Open().
+    `AcceptsAllLegalDataBitWidths` эксхаустивно проверяет все 4
+    легальные ширины 5..8 (валидация проходит, OS-вызов потом
+    ожидаемо даёт `OpenFailed`).
+  - Полностью pure-unit, без mock и без живого устройства.
+  - Patch bump: tests-only. Local MinGW64 ctest — 976/976 зелёных
+    (уже без pre-existing red, от 0.106.2).
+  - `docs/production_readiness_roadmap.md`: P1 Transport §3 marked DONE.
+
 ## 0.106.2 - 2026-06-17
 
 - P1 «Package и consumer experience» §2: exported target audit расширен.

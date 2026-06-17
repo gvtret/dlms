@@ -11260,3 +11260,160 @@ TEST(CosemIso8802LlcType2SetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+
+namespace {
+
+// IEC 62056-6-2 ED4 (2021) S4.11.4 / DLMS UA Blue Book Ed. 12.1
+// S4.11.4 / ISO/IEC 8802-2:1998 S8.6.1, S8.6.2 and the
+// acknowledged-connectionless timer descriptions in the same
+// clause set: six attributes for LLC Type 3 operation. Samples
+// below are pure carrier-of-tags A-XDR buffers.
+dlms::cosem::CosemByteBuffer UnsignedIc59(std::uint8_t value)
+{
+  return BytesFromList({0x11u, value});
+}
+
+dlms::cosem::CosemByteBuffer LongUnsignedIc59(std::uint16_t value)
+{
+  return BytesFromList({
+    0x12u,
+    static_cast<std::uint8_t>((value >> 8) & 0xFFu),
+    static_cast<std::uint8_t>(value & 0xFFu)});
+}
+
+dlms::cosem::CosemIso8802LlcType3SetupObject
+MakeIso8802LlcType3SetupObject(
+  const dlms::cosem::CosemLogicalName& name,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemIso8802LlcType3SetupObject(
+    name,
+    /*max_octets_acn_pdu_n3*/ LongUnsignedIc59(128u),
+    /*max_number_transmissions_n4*/ UnsignedIc59(3u),
+    /*acknowledgement_time_t1*/ LongUnsignedIc59(2u),
+    /*receive_lifetime_var_t2*/ LongUnsignedIc59(60u),
+    /*transmit_lifetime_var_t3*/ LongUnsignedIc59(60u),
+    access);
+}
+
+} // namespace
+
+TEST(CosemIso8802LlcType3SetupObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 9u, 0u, 255u);
+  dlms::cosem::CosemIso8802LlcType3SetupObject object =
+    MakeIso8802LlcType3SetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(59u, object.Descriptor().key.classId);
+  EXPECT_EQ(0u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemIso8802LlcType3SetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(LongUnsignedIc59(128u), out);
+  EXPECT_EQ(LongUnsignedIc59(128u), object.MaxOctetsAcnPduN3());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, out));
+  EXPECT_EQ(UnsignedIc59(3u), out);
+  EXPECT_EQ(UnsignedIc59(3u), object.MaxNumberTransmissionsN4());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(LongUnsignedIc59(2u), out);
+  EXPECT_EQ(LongUnsignedIc59(2u), object.AcknowledgementTimeT1());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(5u, out));
+  EXPECT_EQ(LongUnsignedIc59(60u), out);
+  EXPECT_EQ(LongUnsignedIc59(60u), object.ReceiveLifetimeVarT2());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(6u, out));
+  EXPECT_EQ(LongUnsignedIc59(60u), out);
+  EXPECT_EQ(LongUnsignedIc59(60u), object.TransmitLifetimeVarT3());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(7u, out));
+}
+
+TEST(CosemIso8802LlcType3SetupObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 9u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer updated = LongUnsignedIc59(42u);
+
+  dlms::cosem::CosemIso8802LlcType3SetupObject writable =
+    MakeIso8802LlcType3SetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, updated));
+  EXPECT_EQ(updated, writable.MaxOctetsAcnPduN3());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(3u, UnsignedIc59(7u)));
+  EXPECT_EQ(UnsignedIc59(7u), writable.MaxNumberTransmissionsN4());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(6u, updated));
+  EXPECT_EQ(updated, writable.TransmitLifetimeVarT3());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, updated));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, updated));
+
+  dlms::cosem::CosemIso8802LlcType3SetupObject readOnly =
+    MakeIso8802LlcType3SetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id = 2u; id <= 6u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(id, updated))
+      << "attr id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(LongUnsignedIc59(128u), readOnly.MaxOctetsAcnPduN3());
+}
+
+TEST(CosemIso8802LlcType3SetupObject, MethodsReturnMethodNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 9u, 0u, 255u);
+  dlms::cosem::CosemIso8802LlcType3SetupObject object =
+    MakeIso8802LlcType3SetupObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemIso8802LlcType3SetupObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 9u, 0u, 255u);
+  dlms::cosem::CosemIso8802LlcType3SetupObject object(
+    name,
+    LongUnsignedIc59(128u),
+    UnsignedIc59(3u),
+    LongUnsignedIc59(2u),
+    LongUnsignedIc59(60u),
+    LongUnsignedIc59(60u),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemIso8802LlcType3SetupObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+

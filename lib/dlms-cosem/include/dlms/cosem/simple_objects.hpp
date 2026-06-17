@@ -3056,6 +3056,68 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemIso8802LlcType3SetupObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 0u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.11.4 and DLMS UA Blue Book Ed. 12.1
+  // §4.11.4 define class_id 59, version 0 with six attributes:
+  // 1 logical_name, 2 max_octets_acn_pdu_n3 (long-unsigned),
+  // 3 max_number_transmissions_n4 (unsigned),
+  // 4 acknowledgement_time_t1 (long-unsigned),
+  // 5 receive_lifetime_var_t2 (long-unsigned),
+  // 6 transmit_lifetime_var_t3 (long-unsigned).
+  // Parameter semantics per ISO/IEC 8802-2:1998 §8.6.1, §8.6.2
+  // and the acknowledged-connectionless timer descriptions in
+  // the same clause set. The class defines no specific methods.
+  CosemIso8802LlcType3SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& maxOctetsAcnPduN3,
+    const CosemByteBuffer& maxNumberTransmissionsN4,
+    const CosemByteBuffer& acknowledgementTimeT1,
+    const CosemByteBuffer& receiveLifetimeVarT2,
+    const CosemByteBuffer& transmitLifetimeVarT3,
+    AttributeAccessMode mutableAccess);
+  CosemIso8802LlcType3SetupObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& maxOctetsAcnPduN3,
+    const CosemByteBuffer& maxNumberTransmissionsN4,
+    const CosemByteBuffer& acknowledgementTimeT1,
+    const CosemByteBuffer& receiveLifetimeVarT2,
+    const CosemByteBuffer& transmitLifetimeVarT3,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& MaxOctetsAcnPduN3() const;
+  const CosemByteBuffer& MaxNumberTransmissionsN4() const;
+  const CosemByteBuffer& AcknowledgementTimeT1() const;
+  const CosemByteBuffer& ReceiveLifetimeVarT2() const;
+  const CosemByteBuffer& TransmitLifetimeVarT3() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer maxOctetsAcnPduN3_;
+  CosemByteBuffer maxNumberTransmissionsN4_;
+  CosemByteBuffer acknowledgementTimeT1_;
+  CosemByteBuffer receiveLifetimeVarT2_;
+  CosemByteBuffer transmitLifetimeVarT3_;
+  CosemAccessRights rights_;
+};
+
 enum class CosemClockBase
 {
   NotDefined = 0,

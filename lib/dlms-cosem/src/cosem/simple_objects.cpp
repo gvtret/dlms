@@ -11600,6 +11600,150 @@ CosemIso8802LlcType2SetupObject::BusyStateTimer() const
   return busyStateTimer_;
 }
 
+namespace {
+constexpr std::uint16_t kIso8802LlcType3SetupClassId = 59u;
+} // namespace
+
+const std::uint8_t CosemIso8802LlcType3SetupObject::MaxSupportedVersion;
+
+CosemIso8802LlcType3SetupObject::CosemIso8802LlcType3SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& maxOctetsAcnPduN3,
+  const CosemByteBuffer& maxNumberTransmissionsN4,
+  const CosemByteBuffer& acknowledgementTimeT1,
+  const CosemByteBuffer& receiveLifetimeVarT2,
+  const CosemByteBuffer& transmitLifetimeVarT3,
+  AttributeAccessMode mutableAccess)
+  : CosemIso8802LlcType3SetupObject(
+      logicalName,
+      maxOctetsAcnPduN3,
+      maxNumberTransmissionsN4,
+      acknowledgementTimeT1,
+      receiveLifetimeVarT2,
+      transmitLifetimeVarT3,
+      mutableAccess,
+      CosemIso8802LlcType3SetupObject::MaxSupportedVersion)
+{
+}
+
+CosemIso8802LlcType3SetupObject::CosemIso8802LlcType3SetupObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& maxOctetsAcnPduN3,
+  const CosemByteBuffer& maxNumberTransmissionsN4,
+  const CosemByteBuffer& acknowledgementTimeT1,
+  const CosemByteBuffer& receiveLifetimeVarT2,
+  const CosemByteBuffer& transmitLifetimeVarT3,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kIso8802LlcType3SetupClassId,
+      NormalizeVersion(
+        version, CosemIso8802LlcType3SetupObject::MaxSupportedVersion),
+      logicalName))
+  , maxOctetsAcnPduN3_(maxOctetsAcnPduN3)
+  , maxNumberTransmissionsN4_(maxNumberTransmissionsN4)
+  , acknowledgementTimeT1_(acknowledgementTimeT1)
+  , receiveLifetimeVarT2_(receiveLifetimeVarT2)
+  , transmitLifetimeVarT3_(transmitLifetimeVarT3)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id = 2u; id <= 6u; ++id)
+    rights_.SetAttributeAccess(id, mutableAccess);
+}
+
+CosemObjectDescriptor CosemIso8802LlcType3SetupObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemIso8802LlcType3SetupObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemIso8802LlcType3SetupObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case 2u: output = maxOctetsAcnPduN3_; return CosemStatus::Ok;
+    case 3u: output = maxNumberTransmissionsN4_; return CosemStatus::Ok;
+    case 4u: output = acknowledgementTimeT1_; return CosemStatus::Ok;
+    case 5u: output = receiveLifetimeVarT2_; return CosemStatus::Ok;
+    case 6u: output = transmitLifetimeVarT3_; return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemIso8802LlcType3SetupObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kLogicalNameAttributeId)
+    return CosemStatus::AccessDenied;
+  if (attributeId < 2u || attributeId > 6u)
+    return CosemStatus::AttributeNotFound;
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  switch (attributeId) {
+    case 2u: maxOctetsAcnPduN3_ = input; break;
+    case 3u: maxNumberTransmissionsN4_ = input; break;
+    case 4u: acknowledgementTimeT1_ = input; break;
+    case 5u: receiveLifetimeVarT2_ = input; break;
+    case 6u: transmitLifetimeVarT3_ = input; break;
+  }
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemIso8802LlcType3SetupObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IEC 62056-6-2 ED4 (2021) §4.11.4 and DLMS UA Blue Book Ed. 12.1
+  // §4.11.4 define no specific methods for IC 59 v0.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType3SetupObject::MaxOctetsAcnPduN3() const
+{
+  return maxOctetsAcnPduN3_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType3SetupObject::MaxNumberTransmissionsN4() const
+{
+  return maxNumberTransmissionsN4_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType3SetupObject::AcknowledgementTimeT1() const
+{
+  return acknowledgementTimeT1_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType3SetupObject::ReceiveLifetimeVarT2() const
+{
+  return receiveLifetimeVarT2_;
+}
+
+const CosemByteBuffer&
+CosemIso8802LlcType3SetupObject::TransmitLifetimeVarT3() const
+{
+  return transmitLifetimeVarT3_;
+}
+
 
 const std::uint8_t CosemClockObject::MaxSupportedVersion;
 

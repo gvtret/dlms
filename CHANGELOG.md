@@ -1,5 +1,32 @@
 # Changelog
 
+## 0.106.16 - 2026-06-17
+
+- New built-in COSEM object `CosemWirelessModeQChannelObject`
+  (`class_id=73`, `version=1`) implementing **Wireless Mode Q
+  channel** per IEC 62056-6-2 ED4 (2021) §4.8.4 and DLMS UA Blue
+  Book Ed. 12.1 §4.8.3 (see also EN 13757-5:2015). Closes the
+  last M-Bus / EN 13757 short-range wireless gap in the built-in
+  IC catalogue: previously `73` was `Application-provided`.
+  Exposes the three configuration attributes as opaque A-XDR
+  buffers prepared by the caller:
+    - `2 addr_state` (enum: 0 not assigned / 1 assigned by
+      manual setting or automated method)
+    - `3 device_address` (octet-string carrying the currently
+      assigned address of the device on the network)
+    - `4 address_mask` (octet-string carrying the group address
+      the device will respond to when short-form addressing is
+      used).
+  `logical_name` (`1`) is read-only; attributes `2`-`4` share a
+  caller-selected `AttributeAccessMode` so the backend can
+  republish refreshed wireless commissioning state after over-
+  the-air re-keying performed out-of-band. The class defines no
+  specific methods; all method ids report `MethodNotFound`.
+  Constructor normalises `version` to `MaxSupportedVersion=1`.
+- 4 new gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `MethodsReturnMethodNotFound`, `NormalizesVersionAboveMax`).
+
 ## 0.106.15 - 2026-06-17
 
 - New built-in COSEM object `CosemIso8802LlcType3SetupObject`

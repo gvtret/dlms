@@ -1,5 +1,7 @@
 build-mingw64/
 build-release-mingw64/
+build-linux/
+build-release-linux/
 .idea/
 .openclaw/
 .tmp/

@@ -2196,6 +2196,56 @@ private:
   CosemAccessRights rights_;
 };
 
+class CosemWirelessModeQChannelObject : public ICosemObject
+{
+public:
+  static const std::uint8_t MaxSupportedVersion = 1u;
+
+  // IEC 62056-6-2 ED4 (2021) §4.8.4 and DLMS UA Blue Book Ed. 12.1
+  // §4.8.3 define class_id 73, version 1 with four attributes:
+  // 1 logical_name, 2 addr_state (enum), 3 device_address
+  // (octet-string), 4 address_mask (octet-string).
+  // See also EN 13757-5:2015. The class defines no specific
+  // methods.
+  CosemWirelessModeQChannelObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& addrState,
+    const CosemByteBuffer& deviceAddress,
+    const CosemByteBuffer& addressMask,
+    AttributeAccessMode mutableAccess);
+  CosemWirelessModeQChannelObject(
+    const CosemLogicalName& logicalName,
+    const CosemByteBuffer& addrState,
+    const CosemByteBuffer& deviceAddress,
+    const CosemByteBuffer& addressMask,
+    AttributeAccessMode mutableAccess,
+    std::uint8_t version);
+
+  CosemObjectDescriptor Descriptor() const;
+  CosemAccessRights AccessRights() const;
+  CosemStatus ReadAttribute(
+    std::uint8_t attributeId,
+    CosemByteBuffer& output) const;
+  CosemStatus WriteAttribute(
+    std::uint8_t attributeId,
+    const CosemByteBuffer& input);
+  CosemStatus InvokeMethod(
+    std::uint8_t methodId,
+    const CosemByteBuffer& input,
+    CosemByteBuffer& output);
+
+  const CosemByteBuffer& AddrState() const;
+  const CosemByteBuffer& DeviceAddress() const;
+  const CosemByteBuffer& AddressMask() const;
+
+private:
+  CosemObjectDescriptor descriptor_;
+  CosemByteBuffer addrState_;
+  CosemByteBuffer deviceAddress_;
+  CosemByteBuffer addressMask_;
+  CosemAccessRights rights_;
+};
+
 class CosemMBusMasterPortSetupObject : public ICosemObject
 {
 public:
@@ -2210,7 +2260,6 @@ public:
     const CosemByteBuffer& commSpeed,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
-
   CosemObjectDescriptor Descriptor() const;
   CosemAccessRights AccessRights() const;
   CosemStatus ReadAttribute(

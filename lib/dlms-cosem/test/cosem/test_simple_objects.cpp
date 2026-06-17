@@ -11417,3 +11417,151 @@ TEST(CosemIso8802LlcType3SetupObject, NormalizesVersionAboveMax)
     object.Descriptor().key.version);
 }
 
+
+namespace {
+
+// IEC 62056-6-2 ED4 (2021) S4.8.4 / DLMS UA Blue Book Ed. 12.1
+// S4.8.3: four attributes for Wireless Mode Q channel. Samples
+// below are pure carrier-of-tags A-XDR buffers (enum + two
+// octet-strings) and do not model real wireless config values.
+dlms::cosem::CosemByteBuffer EnumIc73(std::uint8_t value)
+{
+  return BytesFromList({0x16u, value});
+}
+
+dlms::cosem::CosemByteBuffer OctetStringIc73(
+  std::initializer_list<std::uint8_t> data)
+{
+  dlms::cosem::CosemByteBuffer out;
+  out.push_back(0x09u);
+  out.push_back(static_cast<std::uint8_t>(data.size()));
+  for (std::uint8_t b : data) out.push_back(b);
+  return out;
+}
+
+dlms::cosem::CosemWirelessModeQChannelObject
+MakeWirelessModeQChannelObject(
+  const dlms::cosem::CosemLogicalName& name,
+  dlms::cosem::AttributeAccessMode access)
+{
+  return dlms::cosem::CosemWirelessModeQChannelObject(
+    name,
+    /*addr_state*/     EnumIc73(1u),  // assigned
+    /*device_address*/ OctetStringIc73({0x12u, 0x34u, 0x56u, 0x78u}),
+    /*address_mask*/   OctetStringIc73({0xFFu, 0xFFu, 0x00u, 0x00u}),
+    access);
+}
+
+} // namespace
+
+TEST(CosemWirelessModeQChannelObject, ExposesAllAttributes)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 1u, 0u, 255u);
+  dlms::cosem::CosemWirelessModeQChannelObject object =
+    MakeWirelessModeQChannelObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(73u, object.Descriptor().key.classId);
+  EXPECT_EQ(1u, object.Descriptor().key.version);
+  EXPECT_EQ(
+    dlms::cosem::CosemWirelessModeQChannelObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(1u, out));
+  EXPECT_EQ(EncodedLogicalName(name), out);
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(2u, out));
+  EXPECT_EQ(EnumIc73(1u), out);
+  EXPECT_EQ(EnumIc73(1u), object.AddrState());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(3u, out));
+  EXPECT_EQ(OctetStringIc73({0x12u, 0x34u, 0x56u, 0x78u}), out);
+  EXPECT_EQ(OctetStringIc73({0x12u, 0x34u, 0x56u, 0x78u}),
+            object.DeviceAddress());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(OctetStringIc73({0xFFu, 0xFFu, 0x00u, 0x00u}), out);
+  EXPECT_EQ(OctetStringIc73({0xFFu, 0xFFu, 0x00u, 0x00u}),
+            object.AddressMask());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
+}
+
+TEST(CosemWirelessModeQChannelObject, MutableAttributesHonorAccessMode)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 1u, 0u, 255u);
+  const dlms::cosem::CosemByteBuffer updatedEnum = EnumIc73(0u);
+  const dlms::cosem::CosemByteBuffer updatedAddr =
+    OctetStringIc73({0xAAu, 0xBBu, 0xCCu, 0xDDu});
+
+  dlms::cosem::CosemWirelessModeQChannelObject writable =
+    MakeWirelessModeQChannelObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, updatedEnum));
+  EXPECT_EQ(updatedEnum, writable.AddrState());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(3u, updatedAddr));
+  EXPECT_EQ(updatedAddr, writable.DeviceAddress());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(4u, updatedAddr));
+  EXPECT_EQ(updatedAddr, writable.AddressMask());
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            writable.WriteAttribute(1u, updatedEnum));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            writable.WriteAttribute(99u, updatedEnum));
+
+  dlms::cosem::CosemWirelessModeQChannelObject readOnly =
+    MakeWirelessModeQChannelObject(
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id = 2u; id <= 4u; ++id) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(id, updatedEnum))
+      << "attr id " << static_cast<unsigned>(id);
+  }
+  EXPECT_EQ(EnumIc73(1u), readOnly.AddrState());
+}
+
+TEST(CosemWirelessModeQChannelObject, MethodsReturnMethodNotFound)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 1u, 0u, 255u);
+  dlms::cosem::CosemWirelessModeQChannelObject object =
+    MakeWirelessModeQChannelObject(
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
+  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
+    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+              object.InvokeMethod(
+                static_cast<std::uint8_t>(method), in, out))
+      << "method id " << static_cast<unsigned>(method);
+    EXPECT_TRUE(out.empty());
+  }
+}
+
+TEST(CosemWirelessModeQChannelObject, NormalizesVersionAboveMax)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 1u, 0u, 255u);
+  dlms::cosem::CosemWirelessModeQChannelObject object(
+    name,
+    EnumIc73(1u),
+    OctetStringIc73({0x12u, 0x34u, 0x56u, 0x78u}),
+    OctetStringIc73({0xFFu, 0xFFu, 0x00u, 0x00u}),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite,
+    99u);
+  EXPECT_EQ(
+    dlms::cosem::CosemWirelessModeQChannelObject::MaxSupportedVersion,
+    object.Descriptor().key.version);
+}
+

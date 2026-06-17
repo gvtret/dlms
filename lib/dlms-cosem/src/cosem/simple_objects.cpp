@@ -9011,6 +9011,123 @@ CosemMBusClientObject::EncryptionKeyStatus() const
 }
 
 namespace {
+constexpr std::uint16_t kWirelessModeQChannelClassId = 73u;
+} // namespace
+
+const std::uint8_t CosemWirelessModeQChannelObject::MaxSupportedVersion;
+
+CosemWirelessModeQChannelObject::CosemWirelessModeQChannelObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& addrState,
+  const CosemByteBuffer& deviceAddress,
+  const CosemByteBuffer& addressMask,
+  AttributeAccessMode mutableAccess)
+  : CosemWirelessModeQChannelObject(
+      logicalName,
+      addrState,
+      deviceAddress,
+      addressMask,
+      mutableAccess,
+      CosemWirelessModeQChannelObject::MaxSupportedVersion)
+{
+}
+
+CosemWirelessModeQChannelObject::CosemWirelessModeQChannelObject(
+  const CosemLogicalName& logicalName,
+  const CosemByteBuffer& addrState,
+  const CosemByteBuffer& deviceAddress,
+  const CosemByteBuffer& addressMask,
+  AttributeAccessMode mutableAccess,
+  std::uint8_t version)
+  : descriptor_(MakeDescriptor(
+      kWirelessModeQChannelClassId,
+      NormalizeVersion(
+        version, CosemWirelessModeQChannelObject::MaxSupportedVersion),
+      logicalName))
+  , addrState_(addrState)
+  , deviceAddress_(deviceAddress)
+  , addressMask_(addressMask)
+{
+  rights_.SetAttributeAccess(
+    kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
+  for (std::uint8_t id = 2u; id <= 4u; ++id)
+    rights_.SetAttributeAccess(id, mutableAccess);
+}
+
+CosemObjectDescriptor CosemWirelessModeQChannelObject::Descriptor() const
+{
+  return descriptor_;
+}
+
+CosemAccessRights CosemWirelessModeQChannelObject::AccessRights() const
+{
+  return rights_;
+}
+
+CosemStatus CosemWirelessModeQChannelObject::ReadAttribute(
+  std::uint8_t attributeId,
+  CosemByteBuffer& output) const
+{
+  switch (attributeId) {
+    case kLogicalNameAttributeId:
+      output = EncodeLogicalName(descriptor_.key.logicalName);
+      return CosemStatus::Ok;
+    case 2u: output = addrState_; return CosemStatus::Ok;
+    case 3u: output = deviceAddress_; return CosemStatus::Ok;
+    case 4u: output = addressMask_; return CosemStatus::Ok;
+    default:
+      output.clear();
+      return CosemStatus::AttributeNotFound;
+  }
+}
+
+CosemStatus CosemWirelessModeQChannelObject::WriteAttribute(
+  std::uint8_t attributeId,
+  const CosemByteBuffer& input)
+{
+  if (attributeId == kLogicalNameAttributeId)
+    return CosemStatus::AccessDenied;
+  if (attributeId < 2u || attributeId > 4u)
+    return CosemStatus::AttributeNotFound;
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  switch (attributeId) {
+    case 2u: addrState_ = input; break;
+    case 3u: deviceAddress_ = input; break;
+    case 4u: addressMask_ = input; break;
+  }
+  return CosemStatus::Ok;
+}
+
+CosemStatus CosemWirelessModeQChannelObject::InvokeMethod(
+  std::uint8_t methodId,
+  const CosemByteBuffer& input,
+  CosemByteBuffer& output)
+{
+  (void)methodId;
+  (void)input;
+  // IEC 62056-6-2 ED4 (2021) §4.8.4 and DLMS UA Blue Book Ed. 12.1
+  // §4.8.3 define no specific methods for IC 73 v1.
+  output.clear();
+  return CosemStatus::MethodNotFound;
+}
+
+const CosemByteBuffer& CosemWirelessModeQChannelObject::AddrState() const
+{
+  return addrState_;
+}
+
+const CosemByteBuffer& CosemWirelessModeQChannelObject::DeviceAddress() const
+{
+  return deviceAddress_;
+}
+
+const CosemByteBuffer& CosemWirelessModeQChannelObject::AddressMask() const
+{
+  return addressMask_;
+}
+
+namespace {
 constexpr std::uint16_t kMBusMasterPortSetupClassId = 74u;
 constexpr std::uint8_t kMBusMasterPortSetupCommSpeedAttributeId = 2u;
 } // namespace

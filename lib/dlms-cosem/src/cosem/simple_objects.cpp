@@ -2001,9 +2001,9 @@ const std::uint8_t CosemExtendedRegisterObject::MaxSupportedVersion;
 CosemExtendedRegisterObject::CosemExtendedRegisterObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& value,
-  const CosemByteBuffer& scalerUnit,
+  const types::ScalerUnit& scalerUnit,
   const CosemByteBuffer& status,
-  const CosemByteBuffer& captureTime,
+  const types::DateTime& captureTime,
   AttributeAccessMode valueAccess)
   : CosemExtendedRegisterObject(
       logicalName,
@@ -2019,16 +2019,17 @@ CosemExtendedRegisterObject::CosemExtendedRegisterObject(
 CosemExtendedRegisterObject::CosemExtendedRegisterObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& value,
-  const CosemByteBuffer& scalerUnit,
+  const types::ScalerUnit& scalerUnit,
   const CosemByteBuffer& status,
-  const CosemByteBuffer& captureTime,
+  const types::DateTime& captureTime,
   AttributeAccessMode valueAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
       kExtendedRegisterClassId,
       NormalizeVersion(version, CosemExtendedRegisterObject::MaxSupportedVersion),
       logicalName))
-  , value_(value)
+  , value_(CosemExtendedRegisterObject::IsValidValue(value) ? value
+                                                            : CosemByteBuffer())
   , scalerUnit_(scalerUnit)
   , status_(status)
   , captureTime_(captureTime)
@@ -2071,7 +2072,8 @@ CosemStatus CosemExtendedRegisterObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kScalerUnitAttributeId) {
-    output = scalerUnit_;
+    output.clear();
+    AppendScalerUnit(output, scalerUnit_);
     return CosemStatus::Ok;
   }
   if (attributeId == kExtendedRegisterStatusAttributeId) {
@@ -2079,7 +2081,8 @@ CosemStatus CosemExtendedRegisterObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kExtendedRegisterCaptureTimeAttributeId) {
-    output = captureTime_;
+    output.clear();
+    AppendDateTimeOctetString(output, captureTime_);
     return CosemStatus::Ok;
   }
   output.clear();
@@ -2097,6 +2100,9 @@ CosemStatus CosemExtendedRegisterObject::WriteAttribute(
     return CosemStatus::AccessDenied;
   }
   if (attributeId == kValueAttributeId) {
+    if (!CosemExtendedRegisterObject::IsValidValue(input)) {
+      return CosemStatus::InvalidArgument;
+    }
     value_ = input;
     return CosemStatus::Ok;
   }
@@ -2124,7 +2130,7 @@ const CosemByteBuffer& CosemExtendedRegisterObject::Value() const
   return value_;
 }
 
-const CosemByteBuffer& CosemExtendedRegisterObject::ScalerUnit() const
+const types::ScalerUnit& CosemExtendedRegisterObject::ScalerUnit() const
 {
   return scalerUnit_;
 }
@@ -2134,18 +2140,22 @@ const CosemByteBuffer& CosemExtendedRegisterObject::Status() const
   return status_;
 }
 
-const CosemByteBuffer& CosemExtendedRegisterObject::CaptureTime() const
+const types::DateTime& CosemExtendedRegisterObject::CaptureTime() const
 {
   return captureTime_;
 }
 
-void CosemExtendedRegisterObject::SetValue(const CosemByteBuffer& value)
+bool CosemExtendedRegisterObject::SetValue(const CosemByteBuffer& value)
 {
+  if (!CosemExtendedRegisterObject::IsValidValue(value)) {
+    return false;
+  }
   value_ = value;
+  return true;
 }
 
 void CosemExtendedRegisterObject::SetScalerUnit(
-  const CosemByteBuffer& scalerUnit)
+  const types::ScalerUnit& scalerUnit)
 {
   scalerUnit_ = scalerUnit;
 }
@@ -2156,9 +2166,14 @@ void CosemExtendedRegisterObject::SetStatus(const CosemByteBuffer& status)
 }
 
 void CosemExtendedRegisterObject::SetCaptureTime(
-  const CosemByteBuffer& captureTime)
+  const types::DateTime& captureTime)
 {
   captureTime_ = captureTime;
+}
+
+bool CosemExtendedRegisterObject::IsValidValue(const CosemByteBuffer& value)
+{
+  return !value.empty();
 }
 
 namespace {

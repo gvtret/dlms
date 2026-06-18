@@ -137,16 +137,16 @@ public:
   CosemExtendedRegisterObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
-    const CosemByteBuffer& scalerUnit,
+    const types::ScalerUnit& scalerUnit,
     const CosemByteBuffer& status,
-    const CosemByteBuffer& captureTime,
+    const types::DateTime& captureTime,
     AttributeAccessMode valueAccess);
   CosemExtendedRegisterObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
-    const CosemByteBuffer& scalerUnit,
+    const types::ScalerUnit& scalerUnit,
     const CosemByteBuffer& status,
-    const CosemByteBuffer& captureTime,
+    const types::DateTime& captureTime,
     AttributeAccessMode valueAccess,
     std::uint8_t version);
 
@@ -164,20 +164,24 @@ public:
     CosemByteBuffer& output);
 
   const CosemByteBuffer& Value() const;
-  const CosemByteBuffer& ScalerUnit() const;
+  const types::ScalerUnit& ScalerUnit() const;
   const CosemByteBuffer& Status() const;
-  const CosemByteBuffer& CaptureTime() const;
-  void SetValue(const CosemByteBuffer& value);
-  void SetScalerUnit(const CosemByteBuffer& scalerUnit);
+  const types::DateTime& CaptureTime() const;
+  bool SetValue(const CosemByteBuffer& value);
+  void SetScalerUnit(const types::ScalerUnit& scalerUnit);
   void SetStatus(const CosemByteBuffer& status);
-  void SetCaptureTime(const CosemByteBuffer& captureTime);
+  void SetCaptureTime(const types::DateTime& captureTime);
+
+  // Same content rule as IC 3 `value`: empty AXDR is never a valid
+  // wire encoding of any DLMS data CHOICE alternative.
+  static bool IsValidValue(const CosemByteBuffer& value);
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer value_;
-  CosemByteBuffer scalerUnit_;
+  types::ScalerUnit scalerUnit_;
   CosemByteBuffer status_;
-  CosemByteBuffer captureTime_;
+  types::DateTime captureTime_;
   CosemAccessRights rights_;
 };
 

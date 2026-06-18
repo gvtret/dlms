@@ -17,6 +17,7 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_schedule_object.cpp
   cosem/test_cosem_activity_calendar_object.cpp
   cosem/test_cosem_register_monitor_object.cpp
+  cosem/test_cosem_extended_register_object.cpp
   cosem/test_cosem_register_object.cpp
   cosem/test_cosem_script_table_object.cpp
   cosem/types/test_date_time.cpp

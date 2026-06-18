@@ -1,5 +1,70 @@
 # Changelog
 
+## 0.117.0 - 2026-06-20
+
+### Breaking changes
+
+- **`CosemExtendedRegisterObject`** (`class_id=4`, `version=0`,
+  IEC 62056-6-2 ED4 §4.3.3 / DLMS UA Blue Book Ed. 12.1 §4.3.3)
+  now takes typed `scaler_unit` and `capture_time` instead of opaque
+  `CosemByteBuffer` payloads:
+  - `scaler_unit`: `dlms::cosem::types::ScalerUnit` (same
+    `scal_unit_type ::= structure { integer scaler, enum unit }` as
+    IC 3). The wire form on `ReadAttribute(3)` is encoded by the
+    object itself on every read.
+  - `capture_time`: `dlms::cosem::types::DateTime`, the 12-byte
+    `octet-string(date_time)` from Blue Book. The wire form on
+    `ReadAttribute(5)` is encoded by the object itself.
+  - Both constructors switched from
+    `(name, value, CosemByteBuffer scalerUnit, CosemByteBuffer status,
+     CosemByteBuffer captureTime, valueAccess[, version])` to
+    `(name, value, types::ScalerUnit scalerUnit, CosemByteBuffer
+     status, types::DateTime captureTime, valueAccess[, version])`.
+  - `ScalerUnit()` / `CaptureTime()` getters now return
+    `const types::ScalerUnit&` / `const types::DateTime&` (was
+    `const CosemByteBuffer&`).
+  - `SetScalerUnit(types::ScalerUnit)` / `SetCaptureTime(types::DateTime)`
+    replace the buffer-taking variants.
+  - `SetValue(CosemByteBuffer)` now returns `bool` and rejects empty
+    buffers (matches IC 3 safe-fallback). Constructor likewise drops
+    an empty `value` argument rather than retaining it; static
+    `IsValidValue` exposes the same pre-construction check.
+  - `WriteAttribute(2, value)` returns `InvalidArgument` for empty
+    payloads (was silently accepted).
+
+  `value` and `status` remain opaque AXDR buffers for now: their
+  concrete CHOICE alternatives are per-instance (per-register) and
+  a typed discriminated-union representation will land jointly with
+  IC 5 (Demand Register).
+
+### Tests
+
+- New per-IC test file `test/cosem/test_cosem_extended_register_object.cpp`
+  (15 tests) covering class-id/version, scaler_unit/capture_time wire
+  round-trip, safe-fallback construction, `SetValue` empty rejection,
+  `WriteAttribute` `InvalidArgument`, read-only attribute write
+  rejection, `reset` → `UnsupportedFeature`, unknown method/attribute
+  handling, and `AccessRights()` carryover. Legacy IC 4 tests in
+  `test_simple_objects.cpp` reduced to a single placeholder
+  (`MigratedToPerICFile`) per the one-IC-one-file rule (P2.4).
+
+### Status matrix
+
+- IC 4 (Extended Register) description in `docs/ic_support_matrix.md`
+  updated to spell out the typed `scaler_unit`/`capture_time`
+  contract, safe-fallback construction, and why the row stays
+  `Partial` (opaque `value`/`status` pending discriminated-union
+  migration).
+
+### Test stats
+
+- ctest: **1185 / 1185 pass** (was 1173 → +12 from the new IC 4
+  per-IC file; one redundant test — `ValueWriteHonoursAccessMode`,
+  which incorrectly assumed `WriteAttribute` enforces access mode —
+  was renamed to `ValueWriteAcceptsValidPayload` to match project
+  convention that access-mode enforcement is the caller’s
+  responsibility through `AccessRights()`).
+
 ## 0.116.0 - 2026-06-19
 
 ### Breaking changes

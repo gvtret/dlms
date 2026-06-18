@@ -2716,110 +2716,13 @@ TEST(CosemSecuritySetupObject, CertificateMethodsUnsupportedWithoutStore)
   }
 }
 
-TEST(CosemExtendedRegisterObject, ExposesValueScalerStatusAndCaptureTime)
+TEST(CosemExtendedRegisterObject, MigratedToPerICFile)
 {
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(1u, 0u, 1u, 8u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer value = BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x2Au});
-  const dlms::cosem::CosemByteBuffer scaler = BytesFromList({0x02u, 0x02u, 0x0Fu, 0x00u, 0x16u, 0x1Eu});
-  const dlms::cosem::CosemByteBuffer status = BytesFromList({0x11u, 0x05u});
-  const dlms::cosem::CosemByteBuffer captureTime = BytesFromList({
-    0x09u, 0x0Cu,
-    0x07u, 0xE7u, 0x06u, 0x0Fu, 0x05u,
-    0x0Au, 0x1Eu, 0x00u, 0x00u,
-    0x80u, 0x00u, 0x00u
-  });
-
-  dlms::cosem::CosemExtendedRegisterObject object(
-    name, value, scaler, status, captureTime,
-    dlms::cosem::AttributeAccessMode::ReadOnly);
-
-  EXPECT_EQ(4u, object.Descriptor().key.classId);
-  EXPECT_EQ(0u, object.Descriptor().key.version);
-  EXPECT_EQ(dlms::cosem::CosemExtendedRegisterObject::MaxSupportedVersion,
-            object.Descriptor().key.version);
-
-  dlms::cosem::CosemByteBuffer out;
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
-  EXPECT_EQ(EncodedLogicalName(name), out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
-  EXPECT_EQ(value, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
-  EXPECT_EQ(scaler, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
-  EXPECT_EQ(status, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(5u, out));
-  EXPECT_EQ(captureTime, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(6u, out));
-}
-
-TEST(CosemExtendedRegisterObject, AllowsValueWriteAndRejectsRest)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(1u, 0u, 1u, 8u, 0u, 255u);
-  dlms::cosem::CosemExtendedRegisterObject object(
-    name,
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x00u}),
-    BytesFromList({0x02u, 0x02u, 0x0Fu, 0x00u, 0x16u, 0x1Eu}),
-    BytesFromList({0x11u, 0x00u}),
-    BytesFromList({0x09u, 0x00u}),
-    dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  const dlms::cosem::CosemByteBuffer updated =
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x10u});
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.WriteAttribute(2u, updated));
-  EXPECT_EQ(updated, object.Value());
-
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            object.WriteAttribute(1u, updated));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            object.WriteAttribute(3u, updated));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            object.WriteAttribute(4u, updated));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            object.WriteAttribute(5u, updated));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.WriteAttribute(99u, updated));
-}
-
-TEST(CosemExtendedRegisterObject, ResetIsUnsupportedAndOtherMethodsNotFound)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(1u, 0u, 1u, 8u, 0u, 255u);
-  dlms::cosem::CosemExtendedRegisterObject object(
-    name,
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x00u}),
-    BytesFromList({0x02u, 0x02u, 0x0Fu, 0x00u, 0x16u, 0x1Eu}),
-    BytesFromList({0x11u, 0x00u}),
-    BytesFromList({0x09u, 0x00u}),
-    dlms::cosem::AttributeAccessMode::ReadOnly);
-
-  dlms::cosem::CosemByteBuffer in = BytesFromList({0x00u});
-  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu, 0xBBu});
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(1u, in, out));
-  EXPECT_TRUE(out.empty());
-  out = BytesFromList({0xCCu, 0xDDu});
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(2u, in, out));
-  EXPECT_TRUE(out.empty());
-}
-
-TEST(CosemExtendedRegisterObject, NormalizesVersionAboveMax)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(1u, 0u, 1u, 8u, 0u, 255u);
-  dlms::cosem::CosemExtendedRegisterObject object(
-    name,
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x00u}),
-    BytesFromList({0x02u, 0x02u, 0x0Fu, 0x00u, 0x16u, 0x1Eu}),
-    BytesFromList({0x11u, 0x00u}),
-    BytesFromList({0x09u, 0x00u}),
-    dlms::cosem::AttributeAccessMode::ReadOnly,
-    99u);
-  EXPECT_EQ(dlms::cosem::CosemExtendedRegisterObject::MaxSupportedVersion,
-            object.Descriptor().key.version);
+  // IC 4 (Extended Register) coverage has moved to
+  // test/cosem/test_cosem_extended_register_object.cpp per the
+  // one-IC-one-file rule (P2.4). This placeholder keeps the gtest
+  // suite name registered.
+  SUCCEED();
 }
 
 TEST(CosemDemandRegisterObject, ExposesAllAttributes)

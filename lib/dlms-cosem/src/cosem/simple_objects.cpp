@@ -4554,13 +4554,116 @@ constexpr std::uint16_t kSpecialDaysTableClassId = 11u;
 constexpr std::uint8_t kSpecialDaysTableEntriesAttributeId = 2u;
 constexpr std::uint8_t kSpecialDaysTableInsertMethodId = 1u;
 constexpr std::uint8_t kSpecialDaysTableDeleteMethodId = 2u;
+
+// Encode a single spec_day_entry as AXDR:
+//   structure(3) { long-unsigned(index), octet-string(5)=date, unsigned(day_id) }
+void AppendSpecialDayEntry(
+  CosemByteBuffer& output, const dlms::cosem::types::SpecialDayEntry& entry)
+{
+  AppendStructureHeader(output, 3u);
+  AppendLongUnsigned(output, entry.Index());
+  const std::array<std::uint8_t, dlms::cosem::types::Date::WireSize>
+    dateBytes = entry.SpecialDayDate().ToBytes();
+  AppendOctetString(output, dateBytes.data(), dateBytes.size());
+  AppendUnsigned(output, entry.DayId());
+}
+
+// Decode the entries array (array of spec_day_entry). Returns false on
+// malformed AXDR, wrong tag, wrong length, or invalid date bytes. The
+// uniqueness invariant (unique index/date across the collection) is
+// enforced by the caller.
+bool DecodeSpecialDayEntries(
+  const CosemByteBuffer& input,
+  std::vector<dlms::cosem::types::SpecialDayEntry>& entries)
+{
+  entries.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  entries.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    std::size_t fieldCount = 0u;
+    if (!ReadExpectedTag(input, offset, kStructureTag) ||
+        !ReadAxdrLength(input, offset, fieldCount) || fieldCount != 3u) {
+      return false;
+    }
+    std::uint16_t index = 0u;
+    if (!ReadLongUnsignedValue(input, offset, index)) {
+      return false;
+    }
+    std::size_t dateLen = 0u;
+    const std::uint8_t* dateData = 0;
+    if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+        !ReadAxdrLength(input, offset, dateLen) ||
+        dateLen != dlms::cosem::types::Date::WireSize ||
+        !ReadFixedBytes(input, offset, dateLen, dateData)) {
+      return false;
+    }
+    dlms::cosem::types::Date date;
+    if (!dlms::cosem::types::Date::TryFromBytes(dateData, dateLen, date)) {
+      return false;
+    }
+    std::uint8_t dayId = 0u;
+    if (!ReadUnsignedValue(input, offset, dayId)) {
+      return false;
+    }
+    entries.push_back(
+      dlms::cosem::types::SpecialDayEntry(index, date, dayId));
+  }
+  if (offset != input.size()) {
+    return false;
+  }
+  return true;
+}
+
+// Decode a single spec_day_entry payload (no array wrapper) used by the
+// insert(data) method. Trailing bytes are rejected.
+bool DecodeSpecialDayEntryPayload(
+  const CosemByteBuffer& input, dlms::cosem::types::SpecialDayEntry& entry)
+{
+  std::size_t offset = 0u;
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) || fieldCount != 3u) {
+    return false;
+  }
+  std::uint16_t index = 0u;
+  if (!ReadLongUnsignedValue(input, offset, index)) {
+    return false;
+  }
+  std::size_t dateLen = 0u;
+  const std::uint8_t* dateData = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, dateLen) ||
+      dateLen != dlms::cosem::types::Date::WireSize ||
+      !ReadFixedBytes(input, offset, dateLen, dateData)) {
+    return false;
+  }
+  dlms::cosem::types::Date date;
+  if (!dlms::cosem::types::Date::TryFromBytes(dateData, dateLen, date)) {
+    return false;
+  }
+  std::uint8_t dayId = 0u;
+  if (!ReadUnsignedValue(input, offset, dayId)) {
+    return false;
+  }
+  if (offset != input.size()) {
+    return false;
+  }
+  entry = dlms::cosem::types::SpecialDayEntry(index, date, dayId);
+  return true;
+}
+
 } // namespace
 
 const std::uint8_t CosemSpecialDaysTableObject::MaxSupportedVersion;
 
 CosemSpecialDaysTableObject::CosemSpecialDaysTableObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& entries,
+  const std::vector<types::SpecialDayEntry>& entries,
   AttributeAccessMode entriesAccess)
   : CosemSpecialDaysTableObject(
       logicalName, entries, entriesAccess, kVersion0)
@@ -4569,7 +4672,7 @@ CosemSpecialDaysTableObject::CosemSpecialDaysTableObject(
 
 CosemSpecialDaysTableObject::CosemSpecialDaysTableObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& entries,
+  const std::vector<types::SpecialDayEntry>& entries,
   AttributeAccessMode entriesAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -4577,8 +4680,14 @@ CosemSpecialDaysTableObject::CosemSpecialDaysTableObject(
       NormalizeVersion(
         version, CosemSpecialDaysTableObject::MaxSupportedVersion),
       logicalName))
-  , entries_(entries)
+  , entries_()
 {
+  // Safe fallback: if the caller passes a collection that violates
+  // the uniqueness invariant, start empty rather than holding an
+  // invalid state. Per spec the table may legitimately be empty.
+  if (IsValidEntries(entries)) {
+    entries_ = entries;
+  }
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
@@ -4604,7 +4713,11 @@ CosemStatus CosemSpecialDaysTableObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kSpecialDaysTableEntriesAttributeId:
-      output = entries_;
+      output.clear();
+      AppendArrayHeader(output, entries_.size());
+      for (std::size_t i = 0u; i < entries_.size(); ++i) {
+        AppendSpecialDayEntry(output, entries_[i]);
+      }
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -4617,11 +4730,19 @@ CosemStatus CosemSpecialDaysTableObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kSpecialDaysTableEntriesAttributeId:
+    case kSpecialDaysTableEntriesAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      entries_ = input;
+      std::vector<types::SpecialDayEntry> decoded;
+      if (!DecodeSpecialDayEntries(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (!IsValidEntries(decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      entries_.swap(decoded);
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -4634,26 +4755,96 @@ CosemStatus CosemSpecialDaysTableObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)input;
   output.clear();
   switch (methodId) {
-    case kSpecialDaysTableInsertMethodId:
-    case kSpecialDaysTableDeleteMethodId:
-      // Application-defined special-day entry mutation.
-      return CosemStatus::UnsupportedFeature;
+    case kSpecialDaysTableInsertMethodId: {
+      types::SpecialDayEntry entry;
+      if (!DecodeSpecialDayEntryPayload(input, entry)) {
+        return CosemStatus::InvalidArgument;
+      }
+      // Per spec: overwrite-by-index or overwrite-by-date semantics.
+      // Insert() handles both.
+      Insert(entry);
+      return CosemStatus::Ok;
+    }
+    case kSpecialDaysTableDeleteMethodId: {
+      std::size_t offset = 0u;
+      std::uint16_t index = 0u;
+      if (!ReadLongUnsignedValue(input, offset, index) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      // Spec doesn't mandate an error for missing index, so a no-op
+      // delete still returns Ok (Delete() reports the bool to local
+      // callers, but the method just acknowledges).
+      (void)Delete(index);
+      return CosemStatus::Ok;
+    }
     default:
       return CosemStatus::MethodNotFound;
   }
 }
 
-const CosemByteBuffer& CosemSpecialDaysTableObject::Entries() const
+const std::vector<types::SpecialDayEntry>&
+CosemSpecialDaysTableObject::Entries() const
 {
   return entries_;
 }
 
-void CosemSpecialDaysTableObject::SetEntries(const CosemByteBuffer& value)
+bool CosemSpecialDaysTableObject::SetEntries(
+  const std::vector<types::SpecialDayEntry>& value)
 {
+  if (!IsValidEntries(value)) {
+    return false;
+  }
   entries_ = value;
+  return true;
+}
+
+bool CosemSpecialDaysTableObject::Insert(const types::SpecialDayEntry& entry)
+{
+  // Spec §4.5.4.3.1: if an entry with the same index OR the same date
+  // already exists, the old entry is overwritten. We resolve both keys
+  // independently — if the new entry collides with two distinct old
+  // entries (one by index, one by date), both old entries are removed
+  // before insertion so the post-condition (unique index, unique date)
+  // still holds.
+  for (std::size_t i = entries_.size(); i > 0u; --i) {
+    const std::size_t idx = i - 1u;
+    if (entries_[idx].Index() == entry.Index() ||
+        entries_[idx].SpecialDayDate() == entry.SpecialDayDate()) {
+      entries_.erase(entries_.begin() + static_cast<std::ptrdiff_t>(idx));
+    }
+  }
+  entries_.push_back(entry);
+  return true;
+}
+
+bool CosemSpecialDaysTableObject::Delete(std::uint16_t index)
+{
+  for (std::size_t i = 0u; i < entries_.size(); ++i) {
+    if (entries_[i].Index() == index) {
+      entries_.erase(entries_.begin() + static_cast<std::ptrdiff_t>(i));
+      return true;
+    }
+  }
+  return false;
+}
+
+bool CosemSpecialDaysTableObject::IsValidEntries(
+  const std::vector<types::SpecialDayEntry>& value)
+{
+  for (std::size_t i = 0u; i < value.size(); ++i) {
+    for (std::size_t j = i + 1u; j < value.size(); ++j) {
+      if (value[i].Index() == value[j].Index()) {
+        return false;
+      }
+      if (value[i].SpecialDayDate() == value[j].SpecialDayDate()) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 namespace {

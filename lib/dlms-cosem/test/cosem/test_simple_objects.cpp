@@ -4918,9 +4918,31 @@ TEST(CosemScheduleObject, NormalizesVersionAboveMax)
 
 namespace {
 
-dlms::cosem::CosemByteBuffer MakeSampleSpecialDaysTableEntries()
+dlms::cosem::types::Date MakeSpecDate(
+  std::uint16_t year, std::uint8_t month, std::uint8_t day)
 {
-  // array(2) of structure(3): two special-day entries (New Year, May 1).
+  dlms::cosem::types::Date d;
+  EXPECT_TRUE(d.SetYear(year));
+  EXPECT_TRUE(d.SetMonth(month));
+  EXPECT_TRUE(d.SetDayOfMonth(day));
+  // day_of_week left unspecified (0xFF) by default.
+  return d;
+}
+
+std::vector<dlms::cosem::types::SpecialDayEntry>
+MakeSampleSpecialDaysTableEntries()
+{
+  std::vector<dlms::cosem::types::SpecialDayEntry> entries;
+  entries.push_back(dlms::cosem::types::SpecialDayEntry(
+    1u, MakeSpecDate(2021u, 1u, 1u), 1u));   // New Year
+  entries.push_back(dlms::cosem::types::SpecialDayEntry(
+    2u, MakeSpecDate(2021u, 5u, 1u), 2u));   // May 1
+  return entries;
+}
+
+dlms::cosem::CosemByteBuffer SampleSpecialDaysTableWire()
+{
+  // array(2) of structure(3): same two entries above, AXDR-encoded.
   return BytesFromList({
     0x01u, 0x02u,
       0x02u, 0x03u,
@@ -4935,11 +4957,12 @@ dlms::cosem::CosemByteBuffer MakeSampleSpecialDaysTableEntries()
 
 } // namespace
 
-TEST(CosemSpecialDaysTableObject, ExposesLogicalNameAndEntries)
+// === IC 11 TYPED TESTS ===
+TEST(CosemSpecialDaysTableObject, ExposesLogicalNameAndEntriesWire)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer entries =
+  const std::vector<dlms::cosem::types::SpecialDayEntry> entries =
     MakeSampleSpecialDaysTableEntries();
   dlms::cosem::CosemSpecialDaysTableObject object(
     name, entries, dlms::cosem::AttributeAccessMode::ReadAndWrite);
@@ -4954,78 +4977,280 @@ TEST(CosemSpecialDaysTableObject, ExposesLogicalNameAndEntries)
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
   EXPECT_EQ(EncodedLogicalName(name), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
-  EXPECT_EQ(entries, out);
+  EXPECT_EQ(SampleSpecialDaysTableWire(), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(3u, out));
 }
 
-TEST(CosemSpecialDaysTableObject, EntriesHonorsCallerAccessMode)
+TEST(CosemSpecialDaysTableObject, ConstructorDropsInvalidCollection)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer entries =
-    MakeSampleSpecialDaysTableEntries();
-  const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x01u, 0x00u});
-
-  dlms::cosem::CosemSpecialDaysTableObject writable(
-    name, entries, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            writable.WriteAttribute(2u, replacement));
-  EXPECT_EQ(replacement, writable.Entries());
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(1u, replacement));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            writable.WriteAttribute(99u, replacement));
-
-  dlms::cosem::CosemSpecialDaysTableObject readOnly(
-    name, entries, dlms::cosem::AttributeAccessMode::ReadOnly);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            readOnly.WriteAttribute(2u, replacement));
-  EXPECT_EQ(entries, readOnly.Entries());
-
-  // Setter exposes backend-driven refresh regardless of access mode.
-  readOnly.SetEntries(replacement);
-  EXPECT_EQ(replacement, readOnly.Entries());
+  // Two entries with the same index -> invalid; constructor falls back
+  // to empty (safe state).
+  std::vector<dlms::cosem::types::SpecialDayEntry> dup;
+  dup.push_back(dlms::cosem::types::SpecialDayEntry(
+    1u, MakeSpecDate(2021u, 1u, 1u), 1u));
+  dup.push_back(dlms::cosem::types::SpecialDayEntry(
+    1u, MakeSpecDate(2021u, 5u, 1u), 2u));
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, dup, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_TRUE(obj.Entries().empty());
 }
 
-TEST(CosemSpecialDaysTableObject, MethodsReturnUnsupportedFeature)
+TEST(CosemSpecialDaysTableObject, WriteRejectsInvalidWireOrDuplicates)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer entries =
-    MakeSampleSpecialDaysTableEntries();
-  dlms::cosem::CosemSpecialDaysTableObject object(
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, MakeSampleSpecialDaysTableEntries(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  // Garbage payload.
+  const dlms::cosem::CosemByteBuffer garbage = BytesFromList({0xFFu, 0xFFu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            obj.WriteAttribute(2u, garbage));
+  // Original entries untouched after failed write.
+  EXPECT_EQ(2u, obj.Entries().size());
+
+  // Valid wire but duplicate index -> invariant rejection.
+  const dlms::cosem::CosemByteBuffer dupIndex = BytesFromList({
+    0x01u, 0x02u,
+      0x02u, 0x03u,
+        0x12u, 0x00u, 0x01u,
+        0x09u, 0x05u, 0x07u, 0xE5u, 0x01u, 0x01u, 0xFFu,
+        0x11u, 0x01u,
+      0x02u, 0x03u,
+        0x12u, 0x00u, 0x01u,                            // dup index
+        0x09u, 0x05u, 0x07u, 0xE5u, 0x05u, 0x01u, 0xFFu,
+        0x11u, 0x02u});
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            obj.WriteAttribute(2u, dupIndex));
+  EXPECT_EQ(2u, obj.Entries().size());
+
+  // AccessDenied on logical_name and unknown attribute id.
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            obj.WriteAttribute(1u, garbage));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            obj.WriteAttribute(99u, garbage));
+}
+
+TEST(CosemSpecialDaysTableObject, WriteAcceptsValidWire)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, std::vector<dlms::cosem::types::SpecialDayEntry>(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_TRUE(obj.Entries().empty());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            obj.WriteAttribute(2u, SampleSpecialDaysTableWire()));
+  ASSERT_EQ(2u, obj.Entries().size());
+  EXPECT_EQ(1u, obj.Entries()[0].Index());
+  EXPECT_EQ(MakeSpecDate(2021u, 1u, 1u), obj.Entries()[0].SpecialDayDate());
+  EXPECT_EQ(1u, obj.Entries()[0].DayId());
+  EXPECT_EQ(2u, obj.Entries()[1].Index());
+  EXPECT_EQ(MakeSpecDate(2021u, 5u, 1u), obj.Entries()[1].SpecialDayDate());
+  EXPECT_EQ(2u, obj.Entries()[1].DayId());
+}
+
+TEST(CosemSpecialDaysTableObject, WriteRejectsOnReadOnlyAccess)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject ro(
+    name, MakeSampleSpecialDaysTableEntries(),
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            ro.WriteAttribute(2u, SampleSpecialDaysTableWire()));
+}
+
+TEST(CosemSpecialDaysTableObject, SetEntriesValidatesUniqueness)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, std::vector<dlms::cosem::types::SpecialDayEntry>(),
+    dlms::cosem::AttributeAccessMode::ReadOnly);
+
+  // Valid set succeeds.
+  EXPECT_TRUE(obj.SetEntries(MakeSampleSpecialDaysTableEntries()));
+  EXPECT_EQ(2u, obj.Entries().size());
+
+  // Duplicate date rejection (and entries unchanged).
+  std::vector<dlms::cosem::types::SpecialDayEntry> dupDate;
+  dupDate.push_back(dlms::cosem::types::SpecialDayEntry(
+    1u, MakeSpecDate(2021u, 1u, 1u), 1u));
+  dupDate.push_back(dlms::cosem::types::SpecialDayEntry(
+    2u, MakeSpecDate(2021u, 1u, 1u), 2u));
+  EXPECT_FALSE(obj.SetEntries(dupDate));
+  EXPECT_EQ(2u, obj.Entries().size());
+}
+
+TEST(CosemSpecialDaysTableObject, InsertOverwritesByIndex)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, MakeSampleSpecialDaysTableEntries(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  // Insert with the same index (1) but a different date -> the old
+  // entry must be overwritten in place.
+  const dlms::cosem::types::SpecialDayEntry replacement(
+    1u, MakeSpecDate(2021u, 7u, 4u), 5u);
+  EXPECT_TRUE(obj.Insert(replacement));
+  ASSERT_EQ(2u, obj.Entries().size());
+  // The collection invariant (unique index, unique date) still holds.
+  bool foundReplacement = false;
+  for (std::size_t i = 0u; i < obj.Entries().size(); ++i) {
+    if (obj.Entries()[i].Index() == 1u) {
+      EXPECT_EQ(MakeSpecDate(2021u, 7u, 4u), obj.Entries()[i].SpecialDayDate());
+      EXPECT_EQ(5u, obj.Entries()[i].DayId());
+      foundReplacement = true;
+    }
+  }
+  EXPECT_TRUE(foundReplacement);
+}
+
+TEST(CosemSpecialDaysTableObject, InsertOverwritesByDate)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, MakeSampleSpecialDaysTableEntries(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  // Insert with a fresh index but a date that already exists -> the
+  // entry sharing that date must be overwritten.
+  const dlms::cosem::types::SpecialDayEntry replacement(
+    99u, MakeSpecDate(2021u, 5u, 1u), 8u);
+  EXPECT_TRUE(obj.Insert(replacement));
+  ASSERT_EQ(2u, obj.Entries().size());
+  // Old index 2 is gone; new index 99 owns the May-1 date.
+  bool found99 = false;
+  for (std::size_t i = 0u; i < obj.Entries().size(); ++i) {
+    EXPECT_NE(2u, obj.Entries()[i].Index());
+    if (obj.Entries()[i].Index() == 99u) {
+      EXPECT_EQ(MakeSpecDate(2021u, 5u, 1u), obj.Entries()[i].SpecialDayDate());
+      EXPECT_EQ(8u, obj.Entries()[i].DayId());
+      found99 = true;
+    }
+  }
+  EXPECT_TRUE(found99);
+}
+
+TEST(CosemSpecialDaysTableObject, InsertCollidesOnBothKeysAtOnce)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, MakeSampleSpecialDaysTableEntries(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  // index 1 from entry A + date from entry B -> both old entries must
+  // disappear so the post-condition still holds.
+  const dlms::cosem::types::SpecialDayEntry replacement(
+    1u, MakeSpecDate(2021u, 5u, 1u), 7u);
+  EXPECT_TRUE(obj.Insert(replacement));
+  ASSERT_EQ(1u, obj.Entries().size());
+  EXPECT_EQ(1u, obj.Entries()[0].Index());
+  EXPECT_EQ(MakeSpecDate(2021u, 5u, 1u), obj.Entries()[0].SpecialDayDate());
+  EXPECT_EQ(7u, obj.Entries()[0].DayId());
+}
+
+TEST(CosemSpecialDaysTableObject, DeleteRemovesByIndex)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, MakeSampleSpecialDaysTableEntries(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_TRUE(obj.Delete(2u));
+  ASSERT_EQ(1u, obj.Entries().size());
+  EXPECT_EQ(1u, obj.Entries()[0].Index());
+  // Delete of missing index -> false, no change.
+  EXPECT_FALSE(obj.Delete(2u));
+  EXPECT_EQ(1u, obj.Entries().size());
+}
+
+TEST(CosemSpecialDaysTableObject, InvokeInsertAndDelete)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
+    name, std::vector<dlms::cosem::types::SpecialDayEntry>(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  // insert(data) -> spec_day_entry as AXDR structure(3).
+  const dlms::cosem::CosemByteBuffer insertPayload = BytesFromList({
+    0x02u, 0x03u,
+      0x12u, 0x00u, 0x05u,                            // index 5
+      0x09u, 0x05u, 0x07u, 0xE6u, 0x0Cu, 0x18u, 0xFFu, // 2022-12-24
+      0x11u, 0x03u});                                  // day_id 3
+  dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, obj.InvokeMethod(1u, insertPayload, out));
+  EXPECT_TRUE(out.empty());
+  ASSERT_EQ(1u, obj.Entries().size());
+  EXPECT_EQ(5u, obj.Entries()[0].Index());
+
+  // delete(data) -> long-unsigned(index).
+  const dlms::cosem::CosemByteBuffer deletePayload =
+    BytesFromList({0x12u, 0x00u, 0x05u});
+  out = BytesFromList({0xAAu});
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, obj.InvokeMethod(2u, deletePayload, out));
+  EXPECT_TRUE(out.empty());
+  EXPECT_TRUE(obj.Entries().empty());
+
+  // Missing index -> still Ok (no-op).
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, obj.InvokeMethod(2u, deletePayload, out));
+
+  // Malformed insert payload -> InvalidArgument.
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            obj.InvokeMethod(1u, BytesFromList({0x01u}), out));
+
+  // Unknown method -> MethodNotFound.
+  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
+            obj.InvokeMethod(7u, insertPayload, out));
+}
+
+TEST(CosemSpecialDaysTableObject, WildcardDateRoundTrip)
+{
+  // Recurring Christmas: year unspecified (0xFFFF), month=12, day=25.
+  dlms::cosem::types::Date xmas;
+  EXPECT_TRUE(xmas.SetMonth(12u));
+  EXPECT_TRUE(xmas.SetDayOfMonth(25u));
+  EXPECT_TRUE(xmas.YearUnspecified());
+
+  std::vector<dlms::cosem::types::SpecialDayEntry> entries;
+  entries.push_back(dlms::cosem::types::SpecialDayEntry(10u, xmas, 9u));
+
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
+  dlms::cosem::CosemSpecialDaysTableObject obj(
     name, entries, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
-  const dlms::cosem::CosemByteBuffer in =
-    BytesFromList({0x12u, 0x00u, 0x01u});
-  for (std::uint8_t method : {1u, 2u}) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
-    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-              object.InvokeMethod(
-                static_cast<std::uint8_t>(method), in, out))
-      << "method id " << static_cast<unsigned>(method);
-    EXPECT_TRUE(out.empty());
-  }
-  for (std::uint8_t method : {3u, 4u, 5u}) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
-    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-              object.InvokeMethod(
-                static_cast<std::uint8_t>(method), in, out))
-      << "method id " << static_cast<unsigned>(method);
-    EXPECT_TRUE(out.empty());
-  }
+  dlms::cosem::CosemByteBuffer wire;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, obj.ReadAttribute(2u, wire));
+
+  dlms::cosem::CosemSpecialDaysTableObject obj2(
+    name, std::vector<dlms::cosem::types::SpecialDayEntry>(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, obj2.WriteAttribute(2u, wire));
+  ASSERT_EQ(1u, obj2.Entries().size());
+  EXPECT_EQ(entries[0], obj2.Entries()[0]);
+  EXPECT_TRUE(obj2.Entries()[0].SpecialDayDate().YearUnspecified());
 }
 
 TEST(CosemSpecialDaysTableObject, NormalizesVersionAboveMax)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 11u, 0u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer entries =
-    MakeSampleSpecialDaysTableEntries();
   dlms::cosem::CosemSpecialDaysTableObject object(
-    name, entries, dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
+    name, MakeSampleSpecialDaysTableEntries(),
+    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemSpecialDaysTableObject::MaxSupportedVersion,
     object.Descriptor().key.version);

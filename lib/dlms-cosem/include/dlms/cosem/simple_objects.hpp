@@ -6,6 +6,7 @@
 #include "dlms/cosem/types/date_time.hpp"
 #include "dlms/cosem/types/script.hpp"
 #include "dlms/cosem/types/single_action_schedule_type.hpp"
+#include "dlms/cosem/types/special_day_entry.hpp"
 #include "dlms/cosem/types/time.hpp"
 #include "dlms/security/invocation_counter_store.hpp"
 #include "dlms/security/key_store.hpp"
@@ -906,11 +907,11 @@ public:
 
   CosemSpecialDaysTableObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& entries,
+    const std::vector<types::SpecialDayEntry>& entries,
     AttributeAccessMode entriesAccess);
   CosemSpecialDaysTableObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& entries,
+    const std::vector<types::SpecialDayEntry>& entries,
     AttributeAccessMode entriesAccess,
     std::uint8_t version);
 
@@ -927,12 +928,32 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Entries() const;
-  void SetEntries(const CosemByteBuffer& value);
+  // Typed accessor. The collection invariant is that every stored
+  // `index` is unique; the spec also defines `specialday_date` as a
+  // secondary uniqueness key — both are enforced by SetEntries() and
+  // Insert().
+  const std::vector<types::SpecialDayEntry>& Entries() const;
+  // Replaces the whole collection. Returns false (and leaves the
+  // current entries untouched) if any of `value` carry a duplicate
+  // index or duplicate date — per IC 11 spec.
+  bool SetEntries(const std::vector<types::SpecialDayEntry>& value);
+
+  // IC 11 specific method 1: insert(data) where data ::= spec_day_entry.
+  // If an entry with the same index *or* the same date already exists,
+  // the old entry is overwritten in place. Returns true on success.
+  bool Insert(const types::SpecialDayEntry& entry);
+  // IC 11 specific method 2: delete(data) where data ::= long-unsigned
+  // (index). Returns true if an entry was found and removed.
+  bool Delete(std::uint16_t index);
+
+  // Pre-validation helper: collection is valid iff all indices are
+  // unique and all dates are unique.
+  static bool IsValidEntries(
+    const std::vector<types::SpecialDayEntry>& value);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer entries_;
+  std::vector<types::SpecialDayEntry> entries_;
   CosemAccessRights rights_;
 };
 

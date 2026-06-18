@@ -1,5 +1,79 @@
 # Changelog
 
+## 0.111.0 - 2026-06-18
+
+### Breaking changes
+
+- **`CosemSpecialDaysTableObject`** (`class_id=11`, `version=0`,
+  Blue Book Ed. 12.1 / IEC 62056-6-2 ED4 §4.5.4) now models its
+  `entries` attribute as a typed
+  `std::vector<dlms::cosem::types::SpecialDayEntry>` instead of an
+  opaque `CosemByteBuffer`. Each entry is
+  `{ index: long-unsigned, specialday_date: types::Date, day_id:
+  unsigned }`.
+  - Constructors now take `const std::vector<types::SpecialDayEntry>&`.
+  - `Entries()` returns `const std::vector<types::SpecialDayEntry>&`.
+  - `SetEntries(...)` returns `bool` and validates the collection
+    invariant (unique `index` and unique `specialday_date`) without
+    mutating on failure.
+  - On the wire the attribute is still encoded exactly as the spec
+    requires (`array of structure(3) { long-unsigned, octet-string(5),
+    unsigned }`). `ReadAttribute` encodes from the typed collection;
+    `WriteAttribute` decodes, validates field-by-field via
+    `types::Date::TryFromBytes`, then enforces the uniqueness
+    invariant before swapping. Malformed AXDR, wrong tags/lengths,
+    invalid dates, and invariant violations all return
+    `CosemStatus::InvalidArgument` without touching the existing
+    entries.
+  - Safe-fallback constructor: passing an invalid collection now
+    yields an empty `entries_` rather than holding an inconsistent
+    state.
+- **Method `1` `insert(spec_day_entry)`** and **method `2`
+  `delete(long-unsigned index)`** are now fully implemented per
+  §4.5.4.3.1 instead of returning `UnsupportedFeature`. `insert`
+  overwrites any existing entry sharing the new `index` *or* the new
+  `specialday_date` (so when the incoming entry collides with two
+  different stored entries on the two keys at once, both are removed
+  before insertion and the post-condition still holds). `delete`
+  removes the entry with the requested index, returning `Ok` even if
+  no entry was found (the spec does not mandate an error for a
+  missing index). Both methods return `InvalidArgument` on malformed
+  payloads and clear the output buffer on success.
+- Added public helper
+  `CosemSpecialDaysTableObject::IsValidEntries(value)` so callers can
+  pre-validate a candidate collection before `SetEntries`.
+
+### Migration notes
+
+Prior callers passing AXDR bytes directly must now build the typed
+collection:
+
+```cpp
+std::vector<dlms::cosem::types::SpecialDayEntry> entries;
+dlms::cosem::types::Date d;
+d.SetYear(2021u); d.SetMonth(1u); d.SetDayOfMonth(1u);
+entries.push_back({1u, d, 1u});
+
+CosemSpecialDaysTableObject obj(
+  name, entries, AttributeAccessMode::ReadAndWrite);
+```
+
+For wildcard-date entries (e.g. recurring Christmas) leave `year` at
+its default (unspecified, `0xFFFF`) — `types::Date` mirrors the
+spec sentinels.
+
+### Tests
+
+- 13 new `CosemSpecialDaysTableObject.*` tests covering wire
+  round-trip, validation, `Insert` overwrite-by-index /
+  overwrite-by-date / both-at-once, `Delete`, `InvokeMethod` for
+  `insert`/`delete` (success + invalid payload + missing index), and
+  wildcard-date round-trip.
+- Full `ctest`: 1078/1078 (the two transient failures
+  `dlms_transport_tests` and `dlms_package_artifact_smoke` pass on
+  re-run — same flappers observed in prior phases, unrelated to
+  IC 11).
+
 ## 0.110.0 - 2026-06-18
 
 ### Breaking changes

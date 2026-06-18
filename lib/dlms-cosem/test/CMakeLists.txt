@@ -18,7 +18,8 @@ add_executable(dlms_cosem_tests
   cosem/types/test_date.cpp
   cosem/types/test_time.cpp
   cosem/types/test_script.cpp
-  cosem/types/test_single_action_schedule_type.cpp)
+  cosem/types/test_single_action_schedule_type.cpp
+  cosem/types/test_special_day_entry.cpp)
 
 target_link_libraries(dlms_cosem_tests
   PRIVATE

@@ -1,5 +1,72 @@
 # Changelog
 
+## 0.118.0 - 2026-06-21
+
+### Breaking changes
+
+- **`CosemDemandRegisterObject`** (`class_id=5`, `version=0`,
+  IEC 62056-6-2 ED4 §4.3.4 / DLMS UA Blue Book Ed. 12.1 §4.3.4)
+  now takes typed `scaler_unit`, `capture_time` and
+  `start_time_current` instead of opaque `CosemByteBuffer` payloads:
+  - `scaler_unit`: `dlms::cosem::types::ScalerUnit` (same
+    `scal_unit_type ::= structure { integer scaler, enum unit }` as
+    IC 3 / IC 4). The wire form on `ReadAttribute(4)` is encoded by
+    the object on every read.
+  - `capture_time` and `start_time_current`: both
+    `dlms::cosem::types::DateTime`, the 12-byte
+    `octet-string(date_time)`. Wire forms on `ReadAttribute(6)` /
+    `ReadAttribute(7)` are encoded by the object on every read.
+  - Both ctors switched from `(name, currentAvg, lastAvg,
+    CosemByteBuffer scalerUnit, CosemByteBuffer status,
+    CosemByteBuffer captureTime, CosemByteBuffer startTimeCurrent,
+    period, numberOfPeriods[, version])` to `(name, currentAvg,
+    lastAvg, types::ScalerUnit scalerUnit, CosemByteBuffer status,
+    types::DateTime captureTime, types::DateTime startTimeCurrent,
+    period, numberOfPeriods[, version])`.
+  - `ScalerUnit()` / `CaptureTime()` / `StartTimeCurrent()` getters
+    now return `const types::ScalerUnit&` / `const types::DateTime&`
+    (were `const CosemByteBuffer&`).
+  - `SetScalerUnit(types::ScalerUnit)` /
+    `SetCaptureTime(types::DateTime)` /
+    `SetStartTimeCurrent(types::DateTime)` replace the buffer-taking
+    variants.
+  - `SetCurrentAverageValue` / `SetLastAverageValue` now return
+    `bool` and reject empty buffers (safe-fallback parity with
+    IC 3 / IC 4 `value`). The constructor likewise drops empty
+    `current_average_value` / `last_average_value` arguments rather
+    than retaining them; static `IsValidAverageValue` exposes the
+    same pre-construction check.
+
+  `current_average_value`, `last_average_value` and `status` remain
+  opaque AXDR buffers: their concrete CHOICE alternatives are
+  per-instance (per-register), and a typed discriminated-union
+  representation will land later.
+
+### Tests
+
+- New per-IC test file `test/cosem/test_cosem_demand_register_object.cpp`
+  (14 tests) covering class-id/version normalisation,
+  scaler_unit / capture_time / start_time_current wire round-trip,
+  safe-fallback construction, setter rejection of empty average
+  values, read-only enforcement across all 9 attributes, `reset` /
+  `next_period` → `UnsupportedFeature`, and unknown
+  method/attribute handling. Legacy IC 5 tests in
+  `test_simple_objects.cpp` reduced to a single placeholder
+  (`MigratedToPerICFile`) per the one-IC-one-file rule (P2.4).
+
+### Status matrix
+
+- IC 5 (Demand Register) description in `docs/ic_support_matrix.md`
+  updated to spell out the typed contract, safe-fallback construction,
+  and why the row stays `Partial` (opaque
+  `current_average_value` / `last_average_value` / `status` pending
+  discriminated-union migration).
+
+### Test stats
+
+- ctest: **1195 / 1195 pass** (was 1185 → +10 from the new IC 5
+  per-IC file minus 4 collapsed legacy tests).
+
 ## 0.117.0 - 2026-06-20
 
 ### Breaking changes

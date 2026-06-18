@@ -2196,10 +2196,10 @@ CosemDemandRegisterObject::CosemDemandRegisterObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& currentAverageValue,
   const CosemByteBuffer& lastAverageValue,
-  const CosemByteBuffer& scalerUnit,
+  const types::ScalerUnit& scalerUnit,
   const CosemByteBuffer& status,
-  const CosemByteBuffer& captureTime,
-  const CosemByteBuffer& startTimeCurrent,
+  const types::DateTime& captureTime,
+  const types::DateTime& startTimeCurrent,
   std::uint32_t period,
   std::uint16_t numberOfPeriods)
   : CosemDemandRegisterObject(
@@ -2220,10 +2220,10 @@ CosemDemandRegisterObject::CosemDemandRegisterObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& currentAverageValue,
   const CosemByteBuffer& lastAverageValue,
-  const CosemByteBuffer& scalerUnit,
+  const types::ScalerUnit& scalerUnit,
   const CosemByteBuffer& status,
-  const CosemByteBuffer& captureTime,
-  const CosemByteBuffer& startTimeCurrent,
+  const types::DateTime& captureTime,
+  const types::DateTime& startTimeCurrent,
   std::uint32_t period,
   std::uint16_t numberOfPeriods,
   std::uint8_t version)
@@ -2231,8 +2231,14 @@ CosemDemandRegisterObject::CosemDemandRegisterObject(
       kDemandRegisterClassId,
       NormalizeVersion(version, CosemDemandRegisterObject::MaxSupportedVersion),
       logicalName))
-  , currentAverageValue_(currentAverageValue)
-  , lastAverageValue_(lastAverageValue)
+  , currentAverageValue_(
+      CosemDemandRegisterObject::IsValidAverageValue(currentAverageValue)
+        ? currentAverageValue
+        : CosemByteBuffer())
+  , lastAverageValue_(
+      CosemDemandRegisterObject::IsValidAverageValue(lastAverageValue)
+        ? lastAverageValue
+        : CosemByteBuffer())
   , scalerUnit_(scalerUnit)
   , status_(status)
   , captureTime_(captureTime)
@@ -2296,7 +2302,8 @@ CosemStatus CosemDemandRegisterObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kDemandRegisterScalerUnitAttributeId) {
-    output = scalerUnit_;
+    output.clear();
+    AppendScalerUnit(output, scalerUnit_);
     return CosemStatus::Ok;
   }
   if (attributeId == kDemandRegisterStatusAttributeId) {
@@ -2304,11 +2311,13 @@ CosemStatus CosemDemandRegisterObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kDemandRegisterCaptureTimeAttributeId) {
-    output = captureTime_;
+    output.clear();
+    AppendDateTimeOctetString(output, captureTime_);
     return CosemStatus::Ok;
   }
   if (attributeId == kDemandRegisterStartTimeCurrentAttributeId) {
-    output = startTimeCurrent_;
+    output.clear();
+    AppendDateTimeOctetString(output, startTimeCurrent_);
     return CosemStatus::Ok;
   }
   if (attributeId == kDemandRegisterPeriodAttributeId) {
@@ -2371,7 +2380,7 @@ const CosemByteBuffer& CosemDemandRegisterObject::LastAverageValue() const
   return lastAverageValue_;
 }
 
-const CosemByteBuffer& CosemDemandRegisterObject::ScalerUnit() const
+const types::ScalerUnit& CosemDemandRegisterObject::ScalerUnit() const
 {
   return scalerUnit_;
 }
@@ -2381,12 +2390,12 @@ const CosemByteBuffer& CosemDemandRegisterObject::Status() const
   return status_;
 }
 
-const CosemByteBuffer& CosemDemandRegisterObject::CaptureTime() const
+const types::DateTime& CosemDemandRegisterObject::CaptureTime() const
 {
   return captureTime_;
 }
 
-const CosemByteBuffer& CosemDemandRegisterObject::StartTimeCurrent() const
+const types::DateTime& CosemDemandRegisterObject::StartTimeCurrent() const
 {
   return startTimeCurrent_;
 }
@@ -2401,20 +2410,34 @@ std::uint16_t CosemDemandRegisterObject::NumberOfPeriods() const
   return numberOfPeriods_;
 }
 
-void CosemDemandRegisterObject::SetCurrentAverageValue(
+bool CosemDemandRegisterObject::IsValidAverageValue(
   const CosemByteBuffer& value)
 {
-  currentAverageValue_ = value;
+  return !value.empty();
 }
 
-void CosemDemandRegisterObject::SetLastAverageValue(
+bool CosemDemandRegisterObject::SetCurrentAverageValue(
   const CosemByteBuffer& value)
 {
+  if (!CosemDemandRegisterObject::IsValidAverageValue(value)) {
+    return false;
+  }
+  currentAverageValue_ = value;
+  return true;
+}
+
+bool CosemDemandRegisterObject::SetLastAverageValue(
+  const CosemByteBuffer& value)
+{
+  if (!CosemDemandRegisterObject::IsValidAverageValue(value)) {
+    return false;
+  }
   lastAverageValue_ = value;
+  return true;
 }
 
 void CosemDemandRegisterObject::SetScalerUnit(
-  const CosemByteBuffer& scalerUnit)
+  const types::ScalerUnit& scalerUnit)
 {
   scalerUnit_ = scalerUnit;
 }
@@ -2425,13 +2448,13 @@ void CosemDemandRegisterObject::SetStatus(const CosemByteBuffer& status)
 }
 
 void CosemDemandRegisterObject::SetCaptureTime(
-  const CosemByteBuffer& captureTime)
+  const types::DateTime& captureTime)
 {
   captureTime_ = captureTime;
 }
 
 void CosemDemandRegisterObject::SetStartTimeCurrent(
-  const CosemByteBuffer& startTime)
+  const types::DateTime& startTime)
 {
   startTimeCurrent_ = startTime;
 }

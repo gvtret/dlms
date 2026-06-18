@@ -194,20 +194,20 @@ public:
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& currentAverageValue,
     const CosemByteBuffer& lastAverageValue,
-    const CosemByteBuffer& scalerUnit,
+    const types::ScalerUnit& scalerUnit,
     const CosemByteBuffer& status,
-    const CosemByteBuffer& captureTime,
-    const CosemByteBuffer& startTimeCurrent,
+    const types::DateTime& captureTime,
+    const types::DateTime& startTimeCurrent,
     std::uint32_t period,
     std::uint16_t numberOfPeriods);
   CosemDemandRegisterObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& currentAverageValue,
     const CosemByteBuffer& lastAverageValue,
-    const CosemByteBuffer& scalerUnit,
+    const types::ScalerUnit& scalerUnit,
     const CosemByteBuffer& status,
-    const CosemByteBuffer& captureTime,
-    const CosemByteBuffer& startTimeCurrent,
+    const types::DateTime& captureTime,
+    const types::DateTime& startTimeCurrent,
     std::uint32_t period,
     std::uint16_t numberOfPeriods,
     std::uint8_t version);
@@ -227,19 +227,24 @@ public:
 
   const CosemByteBuffer& CurrentAverageValue() const;
   const CosemByteBuffer& LastAverageValue() const;
-  const CosemByteBuffer& ScalerUnit() const;
+  const types::ScalerUnit& ScalerUnit() const;
   const CosemByteBuffer& Status() const;
-  const CosemByteBuffer& CaptureTime() const;
-  const CosemByteBuffer& StartTimeCurrent() const;
+  const types::DateTime& CaptureTime() const;
+  const types::DateTime& StartTimeCurrent() const;
   std::uint32_t Period() const;
   std::uint16_t NumberOfPeriods() const;
 
-  void SetCurrentAverageValue(const CosemByteBuffer& value);
-  void SetLastAverageValue(const CosemByteBuffer& value);
-  void SetScalerUnit(const CosemByteBuffer& scalerUnit);
+  // Same content rule as IC 3/4 `value`: empty AXDR is never a valid
+  // wire encoding of any DLMS data CHOICE alternative. Applied to both
+  // current_average_value and last_average_value.
+  static bool IsValidAverageValue(const CosemByteBuffer& value);
+
+  bool SetCurrentAverageValue(const CosemByteBuffer& value);
+  bool SetLastAverageValue(const CosemByteBuffer& value);
+  void SetScalerUnit(const types::ScalerUnit& scalerUnit);
   void SetStatus(const CosemByteBuffer& status);
-  void SetCaptureTime(const CosemByteBuffer& captureTime);
-  void SetStartTimeCurrent(const CosemByteBuffer& startTime);
+  void SetCaptureTime(const types::DateTime& captureTime);
+  void SetStartTimeCurrent(const types::DateTime& startTime);
   void SetPeriod(std::uint32_t period);
   void SetNumberOfPeriods(std::uint16_t numberOfPeriods);
 
@@ -247,10 +252,10 @@ private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer currentAverageValue_;
   CosemByteBuffer lastAverageValue_;
-  CosemByteBuffer scalerUnit_;
+  types::ScalerUnit scalerUnit_;
   CosemByteBuffer status_;
-  CosemByteBuffer captureTime_;
-  CosemByteBuffer startTimeCurrent_;
+  types::DateTime captureTime_;
+  types::DateTime startTimeCurrent_;
   std::uint32_t period_;
   std::uint16_t numberOfPeriods_;
   CosemAccessRights rights_;

@@ -71,6 +71,7 @@ constexpr std::uint8_t kArrayTag = 0x01u;
 constexpr std::uint8_t kStructureTag = 0x02u;
 constexpr std::uint8_t kNullDataTag = 0x00u;
 constexpr std::uint8_t kBooleanTag = 0x03u;
+constexpr std::uint8_t kBitStringTag = 0x04u;
 constexpr std::uint8_t kDoubleLongTag = 0x05u;
 constexpr std::uint8_t kDoubleLongUnsignedTag = 0x06u;
 constexpr std::uint8_t kDataOctetStringTag = 0x09u;
@@ -1038,6 +1039,259 @@ bool DateHasAnyWildcard(const dlms::cosem::types::Date& date)
            dlms::cosem::types::Date::DayOfMonthLastValue ||
          date.DayOfMonth() ==
            dlms::cosem::types::Date::DayOfMonthSecondLastValue;
+}
+
+// AXDR bit-string codec (IEC 61334-6 / Blue Book §4.1.2):
+//   tag       = 0x04
+//   length    = number of *bits* (length-axdr encoded)
+//   payload   = ceil(bits/8) octets, MSB-first inside each octet
+//
+// Bit numbering: bit index `i` (0-based) lives in octet `i/8` at bit
+// position `7 - (i%8)`. This matches DLMS conventions (e.g. weekday
+// where Monday = bit 0 = 0x80 of the first octet).
+void AppendBitStringMsbFirst(
+  CosemByteBuffer& output,
+  std::uint64_t bits,
+  std::uint8_t bitWidth)
+{
+  output.push_back(kBitStringTag);
+  AppendLength(output, bitWidth);
+  const std::size_t octets =
+    static_cast<std::size_t>((bitWidth + 7u) / 8u);
+  for (std::size_t o = 0u; o < octets; ++o) {
+    std::uint8_t byte = 0u;
+    for (std::uint8_t b = 0u; b < 8u; ++b) {
+      const std::uint32_t bitIndex =
+        static_cast<std::uint32_t>(o) * 8u + b;
+      if (bitIndex >= bitWidth)
+        break;
+      if ((bits >> bitIndex) & std::uint64_t{1}) {
+        byte = static_cast<std::uint8_t>(
+          byte | (0x80u >> b));
+      }
+    }
+    output.push_back(byte);
+  }
+}
+
+// Reads a bit-string of exactly `expectedBitWidth` bits. Wider strings
+// are rejected; narrower strings are accepted and zero-extended on the
+// high end. Returns false on tag/length/EOF mismatch.
+bool ReadBitStringMsbFirst(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::uint8_t expectedBitWidth,
+  std::uint64_t& bitsOut)
+{
+  if (!ReadExpectedTag(input, offset, kBitStringTag)) {
+    return false;
+  }
+  std::size_t bitLen = 0u;
+  if (!ReadAxdrLength(input, offset, bitLen)) {
+    return false;
+  }
+  if (bitLen > expectedBitWidth) {
+    return false;
+  }
+  const std::size_t octets = (bitLen + 7u) / 8u;
+  const std::uint8_t* data = 0;
+  if (!ReadFixedBytes(input, offset, octets, data)) {
+    return false;
+  }
+  std::uint64_t bits = 0u;
+  for (std::size_t o = 0u; o < octets; ++o) {
+    for (std::uint8_t b = 0u; b < 8u; ++b) {
+      const std::uint32_t bitIndex =
+        static_cast<std::uint32_t>(o) * 8u + b;
+      if (bitIndex >= bitLen)
+        break;
+      if (data[o] & (0x80u >> b)) {
+        bits |= (std::uint64_t{1} << bitIndex);
+      }
+    }
+  }
+  bitsOut = bits;
+  return true;
+}
+
+// Encode IC 10.entries element:
+//   structure(10) {
+//     index:               long-unsigned,
+//     enable:              boolean,
+//     script_logical_name: octet-string(6),
+//     script_selector:     long-unsigned,
+//     switch_time:         octet-string(4),
+//     validity_window:     long-unsigned,
+//     exec_weekdays:       bit-string(7),
+//     exec_specdays:       bit-string(64),
+//     begin_date:          octet-string(5),
+//     end_date:            octet-string(5)
+//   }
+void AppendScheduleTableEntry(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::ScheduleTableEntry& entry)
+{
+  AppendStructureHeader(output, 10u);
+  AppendLongUnsigned(output, entry.Index());
+  AppendBoolean(output, entry.Enable());
+  AppendOctetString(
+    output,
+    entry.GetScript().LogicalName().Data(),
+    entry.GetScript().LogicalName().Size());
+  AppendLongUnsigned(output, entry.GetScript().Selector());
+  const std::array<std::uint8_t, dlms::cosem::types::Time::WireSize>
+    timeBytes = entry.SwitchTime().ToBytes();
+  AppendOctetString(output, timeBytes.data(), timeBytes.size());
+  AppendLongUnsigned(output, entry.ValidityWindow());
+  AppendBitStringMsbFirst(
+    output,
+    static_cast<std::uint64_t>(entry.ExecWeekdays()),
+    dlms::cosem::types::ScheduleTableEntry::WeekdaysBitWidth);
+  AppendBitStringMsbFirst(
+    output,
+    entry.ExecSpecdays(),
+    dlms::cosem::types::ScheduleTableEntry::SpecdaysBitWidth);
+  const std::array<std::uint8_t, dlms::cosem::types::Date::WireSize>
+    beginBytes = entry.BeginDate().ToBytes();
+  AppendOctetString(output, beginBytes.data(), beginBytes.size());
+  const std::array<std::uint8_t, dlms::cosem::types::Date::WireSize>
+    endBytes = entry.EndDate().ToBytes();
+  AppendOctetString(output, endBytes.data(), endBytes.size());
+}
+
+bool DecodeScheduleTableEntry(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::ScheduleTableEntry& entryOut)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 10u) {
+    return false;
+  }
+
+  std::uint16_t index = 0u;
+  if (!ReadLongUnsignedValue(input, offset, index)) return false;
+
+  bool enable = false;
+  if (!ReadBooleanValue(input, offset, enable)) return false;
+
+  dlms::cosem::CosemLogicalName logicalName;
+  if (!ReadLogicalNameValue(input, offset, logicalName)) return false;
+
+  std::uint16_t selector = 0u;
+  if (!ReadLongUnsignedValue(input, offset, selector)) return false;
+
+  std::size_t timeLen = 0u;
+  const std::uint8_t* timeData = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, timeLen) ||
+      timeLen != dlms::cosem::types::Time::WireSize ||
+      !ReadFixedBytes(input, offset, timeLen, timeData)) {
+    return false;
+  }
+  dlms::cosem::types::Time switchTime;
+  if (!dlms::cosem::types::Time::TryFromBytes(
+        timeData, timeLen, switchTime)) {
+    return false;
+  }
+
+  std::uint16_t validityWindow = 0u;
+  if (!ReadLongUnsignedValue(input, offset, validityWindow)) return false;
+
+  std::uint64_t weekdaysBits = 0u;
+  if (!ReadBitStringMsbFirst(
+        input, offset,
+        dlms::cosem::types::ScheduleTableEntry::WeekdaysBitWidth,
+        weekdaysBits)) {
+    return false;
+  }
+  if (weekdaysBits > 0x7Fu) {
+    return false;
+  }
+
+  std::uint64_t specdaysBits = 0u;
+  if (!ReadBitStringMsbFirst(
+        input, offset,
+        dlms::cosem::types::ScheduleTableEntry::SpecdaysBitWidth,
+        specdaysBits)) {
+    return false;
+  }
+
+  std::size_t beginLen = 0u;
+  const std::uint8_t* beginData = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, beginLen) ||
+      beginLen != dlms::cosem::types::Date::WireSize ||
+      !ReadFixedBytes(input, offset, beginLen, beginData)) {
+    return false;
+  }
+  dlms::cosem::types::Date beginDate;
+  if (!dlms::cosem::types::Date::TryFromBytes(
+        beginData, beginLen, beginDate)) {
+    return false;
+  }
+
+  std::size_t endLen = 0u;
+  const std::uint8_t* endData = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, endLen) ||
+      endLen != dlms::cosem::types::Date::WireSize ||
+      !ReadFixedBytes(input, offset, endLen, endData)) {
+    return false;
+  }
+  dlms::cosem::types::Date endDate;
+  if (!dlms::cosem::types::Date::TryFromBytes(
+        endData, endLen, endDate)) {
+    return false;
+  }
+
+  entryOut = dlms::cosem::types::ScheduleTableEntry(
+    index, enable,
+    dlms::cosem::types::Script(logicalName, selector),
+    switchTime,
+    validityWindow,
+    static_cast<std::uint8_t>(weekdaysBits & 0x7Fu),
+    specdaysBits,
+    beginDate,
+    endDate);
+  return dlms::cosem::types::ScheduleTableEntry::IsValid(entryOut);
+}
+
+void AppendScheduleEntries(
+  CosemByteBuffer& output,
+  const std::vector<dlms::cosem::types::ScheduleTableEntry>& entries)
+{
+  AppendArrayHeader(output, entries.size());
+  for (std::size_t i = 0u; i < entries.size(); ++i) {
+    AppendScheduleTableEntry(output, entries[i]);
+  }
+}
+
+bool DecodeScheduleEntries(
+  const CosemByteBuffer& input,
+  std::vector<dlms::cosem::types::ScheduleTableEntry>& entriesOut)
+{
+  entriesOut.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  entriesOut.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    dlms::cosem::types::ScheduleTableEntry entry;
+    if (!DecodeScheduleTableEntry(input, offset, entry)) {
+      return false;
+    }
+    entriesOut.push_back(entry);
+  }
+  if (offset != input.size()) {
+    return false;
+  }
+  return true;
 }
 
 void AppendLogicalName(
@@ -4444,13 +4698,34 @@ constexpr std::uint8_t kScheduleEntriesAttributeId = 2u;
 constexpr std::uint8_t kScheduleEnableDisableMethodId = 1u;
 constexpr std::uint8_t kScheduleInsertMethodId = 2u;
 constexpr std::uint8_t kScheduleDeleteMethodId = 3u;
+
+// True when no two entries in `entries` share an `index`.
+bool ScheduleEntriesIndicesUnique(
+  const std::vector<dlms::cosem::types::ScheduleTableEntry>& entries)
+{
+  for (std::size_t i = 0u; i < entries.size(); ++i) {
+    for (std::size_t j = i + 1u; j < entries.size(); ++j) {
+      if (entries[i].Index() == entries[j].Index()) return false;
+    }
+  }
+  return true;
+}
 } // namespace
 
 const std::uint8_t CosemScheduleObject::MaxSupportedVersion;
 
+bool CosemScheduleObject::IsValidEntries(
+  const std::vector<types::ScheduleTableEntry>& value)
+{
+  for (std::size_t i = 0u; i < value.size(); ++i) {
+    if (!types::ScheduleTableEntry::IsValid(value[i])) return false;
+  }
+  return ScheduleEntriesIndicesUnique(value);
+}
+
 CosemScheduleObject::CosemScheduleObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& entries,
+  const std::vector<types::ScheduleTableEntry>& entries,
   AttributeAccessMode entriesAccess)
   : CosemScheduleObject(logicalName, entries, entriesAccess, kVersion0)
 {
@@ -4458,7 +4733,7 @@ CosemScheduleObject::CosemScheduleObject(
 
 CosemScheduleObject::CosemScheduleObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& entries,
+  const std::vector<types::ScheduleTableEntry>& entries,
   AttributeAccessMode entriesAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -4466,7 +4741,9 @@ CosemScheduleObject::CosemScheduleObject(
       NormalizeVersion(
         version, CosemScheduleObject::MaxSupportedVersion),
       logicalName))
-  , entries_(entries)
+  , entries_(IsValidEntries(entries)
+             ? entries
+             : std::vector<types::ScheduleTableEntry>())
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
@@ -4493,7 +4770,8 @@ CosemStatus CosemScheduleObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kScheduleEntriesAttributeId:
-      output = entries_;
+      output.clear();
+      AppendScheduleEntries(output, entries_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -4506,11 +4784,19 @@ CosemStatus CosemScheduleObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kScheduleEntriesAttributeId:
+    case kScheduleEntriesAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      entries_ = input;
+      std::vector<types::ScheduleTableEntry> decoded;
+      if (!DecodeScheduleEntries(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (!IsValidEntries(decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      entries_ = decoded;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -4523,30 +4809,108 @@ CosemStatus CosemScheduleObject::InvokeMethod(
   const CosemByteBuffer& input,
   CosemByteBuffer& output)
 {
-  (void)input;
   output.clear();
   switch (methodId) {
-    case kScheduleEnableDisableMethodId:
-    case kScheduleInsertMethodId:
-    case kScheduleDeleteMethodId:
-      // Application-defined schedule entry mutation (enable_disable / insert /
-      // delete). The built-in object surfaces them explicitly as
-      // UnsupportedFeature pending a backend that can mutate the schedule
-      // entries table.
-      return CosemStatus::UnsupportedFeature;
+    case kScheduleEnableDisableMethodId: {
+      // data ::= structure { firstA, lastA, firstB, lastB : long-unsigned }
+      // Spec §4.5.3.3.1: ranges with first>last are no-ops; first/last
+      // beyond 9999 mean "no entry". Disable range A first, then enable
+      // range B — strict spec ordering.
+      std::size_t offset = 0u;
+      std::size_t fieldCount = 0u;
+      if (!ReadExpectedTag(input, offset, kStructureTag) ||
+          !ReadAxdrLength(input, offset, fieldCount) ||
+          fieldCount != 4u) {
+        return CosemStatus::InvalidArgument;
+      }
+      std::uint16_t firstA = 0u, lastA = 0u, firstB = 0u, lastB = 0u;
+      if (!ReadLongUnsignedValue(input, offset, firstA) ||
+          !ReadLongUnsignedValue(input, offset, lastA) ||
+          !ReadLongUnsignedValue(input, offset, firstB) ||
+          !ReadLongUnsignedValue(input, offset, lastB) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      auto applyEnable = [this](std::uint16_t lo, std::uint16_t hi, bool on) {
+        if (lo > hi) return;
+        if (lo > 9999u) return;
+        const std::uint16_t cappedHi = (hi > 9999u) ? 9999u : hi;
+        for (std::size_t i = 0u; i < entries_.size(); ++i) {
+          const std::uint16_t idx = entries_[i].Index();
+          if (idx >= lo && idx <= cappedHi) {
+            entries_[i].SetEnable(on);
+          }
+        }
+      };
+      applyEnable(firstA, lastA, false);
+      applyEnable(firstB, lastB, true);
+      return CosemStatus::Ok;
+    }
+    case kScheduleInsertMethodId: {
+      // data ::= schedule_table_entry. If entry.index already exists,
+      // the existing entry is overwritten by the new one.
+      std::size_t offset = 0u;
+      types::ScheduleTableEntry entry;
+      if (!DecodeScheduleTableEntry(input, offset, entry) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      for (std::size_t i = 0u; i < entries_.size(); ++i) {
+        if (entries_[i].Index() == entry.Index()) {
+          entries_[i] = entry;
+          return CosemStatus::Ok;
+        }
+      }
+      entries_.push_back(entry);
+      return CosemStatus::Ok;
+    }
+    case kScheduleDeleteMethodId: {
+      // data ::= structure { firstIndex, lastIndex : long-unsigned }
+      // first>last — nothing deleted (spec also allows first==last for
+      // single-entry delete, included in the inclusive range below).
+      std::size_t offset = 0u;
+      std::size_t fieldCount = 0u;
+      if (!ReadExpectedTag(input, offset, kStructureTag) ||
+          !ReadAxdrLength(input, offset, fieldCount) ||
+          fieldCount != 2u) {
+        return CosemStatus::InvalidArgument;
+      }
+      std::uint16_t firstIndex = 0u, lastIndex = 0u;
+      if (!ReadLongUnsignedValue(input, offset, firstIndex) ||
+          !ReadLongUnsignedValue(input, offset, lastIndex) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (firstIndex > lastIndex) {
+        return CosemStatus::Ok;
+      }
+      std::vector<types::ScheduleTableEntry> kept;
+      kept.reserve(entries_.size());
+      for (std::size_t i = 0u; i < entries_.size(); ++i) {
+        const std::uint16_t idx = entries_[i].Index();
+        if (idx >= firstIndex && idx <= lastIndex) continue;
+        kept.push_back(entries_[i]);
+      }
+      entries_.swap(kept);
+      return CosemStatus::Ok;
+    }
     default:
       return CosemStatus::MethodNotFound;
   }
 }
 
-const CosemByteBuffer& CosemScheduleObject::Entries() const
+const std::vector<types::ScheduleTableEntry>&
+CosemScheduleObject::Entries() const
 {
   return entries_;
 }
 
-void CosemScheduleObject::SetEntries(const CosemByteBuffer& value)
+bool CosemScheduleObject::SetEntries(
+  const std::vector<types::ScheduleTableEntry>& value)
 {
+  if (!IsValidEntries(value)) return false;
   entries_ = value;
+  return true;
 }
 
 namespace {

@@ -4,6 +4,7 @@
 #include "dlms/cosem/logical_device.hpp"
 #include "dlms/cosem/types/date.hpp"
 #include "dlms/cosem/types/date_time.hpp"
+#include "dlms/cosem/types/schedule_table_entry.hpp"
 #include "dlms/cosem/types/script.hpp"
 #include "dlms/cosem/types/single_action_schedule_type.hpp"
 #include "dlms/cosem/types/special_day_entry.hpp"
@@ -863,6 +864,16 @@ private:
   CosemAccessRights rights_;
 };
 
+// IC 10 "Schedule" — class_id=10, version=0, IEC 62056-6-2 ED4
+// §4.5.3 / DLMS UA Blue Book Ed. 12.1.
+//
+// Typed `entries` attribute (std::vector<types::ScheduleTableEntry>):
+// fully spec-compliant codec, with field-level validation of every
+// stored Date/Time/Script and the collection-level invariant that
+// each `index` is unique.
+//
+// All three methods (enable_disable / insert / delete) are
+// implemented per §4.5.3.3.
 class CosemScheduleObject : public ICosemObject
 {
 public:
@@ -870,11 +881,11 @@ public:
 
   CosemScheduleObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& entries,
+    const std::vector<types::ScheduleTableEntry>& entries,
     AttributeAccessMode entriesAccess);
   CosemScheduleObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& entries,
+    const std::vector<types::ScheduleTableEntry>& entries,
     AttributeAccessMode entriesAccess,
     std::uint8_t version);
 
@@ -891,12 +902,21 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Entries() const;
-  void SetEntries(const CosemByteBuffer& value);
+  // Typed accessor. Collection invariant: every stored `index` is
+  // unique (enforced by SetEntries() and Insert()).
+  const std::vector<types::ScheduleTableEntry>& Entries() const;
+  // Replaces the whole collection. Returns false (no mutation) when
+  // any entry is per-field invalid or when two entries share an
+  // `index`.
+  bool SetEntries(const std::vector<types::ScheduleTableEntry>& value);
+
+  // Pre-validation helper: same checks SetEntries performs.
+  static bool IsValidEntries(
+    const std::vector<types::ScheduleTableEntry>& value);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer entries_;
+  std::vector<types::ScheduleTableEntry> entries_;
   CosemAccessRights rights_;
 };
 

@@ -1,5 +1,103 @@
 # Changelog
 
+## 0.112.0 - 2026-06-18
+
+### Breaking changes
+
+- **`CosemScheduleObject`** (`class_id=10`, `version=0`,
+  IEC 62056-6-2 ED4 §4.5.3 / Blue Book Ed. 12.1 §5.1.7) now models its
+  `entries` attribute as a typed
+  `std::vector<dlms::cosem::types::ScheduleTableEntry>` instead of an
+  opaque `CosemByteBuffer`. Each entry is
+  `{ index: long-unsigned, enable: boolean,
+     script: { logical_name: octet-string(6), selector: long-unsigned },
+     switch_time: octet-string(4)=time,
+     validity_window: long-unsigned (0xFFFF=always),
+     exec_weekdays: bit-string(7) (bit 0 = Mon … bit 6 = Sun),
+     exec_specdays: bit-string(64) (bit i = day_id i, capped to 0..63),
+     begin_date: octet-string(5)=date,
+     end_date: octet-string(5)=date }`.
+  - Constructors now take
+    `const std::vector<types::ScheduleTableEntry>&`.
+  - `Entries()` returns `const std::vector<types::ScheduleTableEntry>&`.
+  - `SetEntries(...)` returns `bool`: validates every entry via
+    `types::ScheduleTableEntry::IsValid` and the collection invariant
+    (unique `index`) without mutating on failure.
+  - On the wire the attribute is still encoded exactly as the spec
+    requires (`array of structure(10) { long-unsigned, boolean,
+    octet-string(6), long-unsigned, octet-string(4), long-unsigned,
+    bit-string(7), bit-string(64), octet-string(5), octet-string(5) }`).
+    `ReadAttribute` encodes from the typed collection;
+    `WriteAttribute` decodes the wire form, validates each field via
+    `types::Time::TryFromBytes` / `types::Date::TryFromBytes` and the
+    uniqueness invariant before swapping. Malformed AXDR, wrong
+    tags/lengths, bit-string widths > the spec maximum, invalid
+    times/dates and duplicate `index` values all return
+    `CosemStatus::InvalidArgument` without touching the existing
+    entries.
+  - Safe-fallback constructor: passing an invalid collection now
+    yields an empty `entries_` rather than holding an inconsistent
+    state.
+
+### Specific methods
+
+- **Method `1` `enable_disable(structure { first_disable, last_disable,
+  first_enable, last_enable })`**, **method `2` `insert(schedule_table_entry)`**
+  and **method `3` `delete(structure { first_index, last_index })`** are
+  now fully implemented per IEC 62056-6-2 ED4 §4.5.3.3 instead of
+  returning `UnsupportedFeature`.
+  - `enable_disable` disables range A first, then enables range B, so
+    when the ranges overlap the enabling side wins per spec. Ranges
+    with `first>last` or `first>9999` are no-ops; `last>9999` is
+    capped to 9999.
+  - `insert` appends a new entry or overwrites the existing one
+    sharing the new `index`.
+  - `delete` removes all entries whose `index` falls in the inclusive
+    `[first,last]` range; `first>last` is a no-op.
+  - All three return `Ok` on success and `InvalidArgument` on
+    malformed AXDR (wrong tag, wrong structure arity, EOF, trailing
+    bytes, decoded entry that violates `ScheduleTableEntry::IsValid`,
+    …); other method ids continue to report `MethodNotFound`.
+
+### `exec_specdays` width — path A (64-day cap)
+
+- `types::ScheduleTableEntry::SpecdaysBitWidth = 64` and the field is
+  carried as `uint64_t`. Per spec choice **A** the IC caps usable
+  `day_id` values at `0..63`. Values outside this range cannot be
+  represented in this implementation; encode/decode round-trips fail
+  on wider bit-strings, and a backend that needs the historical
+  ED4-era "unbounded" interpretation should either truncate before
+  insertion or stick to spec choice B (out of scope here).
+
+### Tests
+
+- New file `lib/dlms-cosem/test/cosem/types/test_schedule_table_entry.cpp`
+  (7 tests) covering value/equality, weekday-mask high-bit refusal,
+  `IsValid`, and accessor/setter round-trips.
+- New file `lib/dlms-cosem/test/cosem/test_cosem_schedule_object.cpp`
+  (16 tests) covering descriptor / default rights, version
+  normalization, ctor and `SetEntries` validation (per-entry +
+  unique-index, fail-no-mutate), AXDR codec round-trip, empty
+  collection wire form, `WriteAttribute` accept/reject paths
+  (malformed, truncated, duplicate-index), access-mode gating,
+  `enable_disable` spec ordering and no-op rules,
+  `insert` overwrite-on-index-collision, `delete` inclusive-range
+  removal and `first>last` no-op, and `MethodNotFound` for unknown
+  ids. The corresponding 4 legacy buffer-based tests in
+  `test_simple_objects.cpp` (and their now-unused
+  `MakeSampleScheduleEntries` helper) were removed in the same
+  commit to honor the new "one test file per IC class" roadmap rule.
+
+### AXDR codec additions
+
+- New shared helpers in `src/cosem/simple_objects.cpp`:
+  `AppendBitStringMsbFirst(output, bits, bit_width)` and
+  `ReadBitStringMsbFirst(input, offset, expected_bit_width, bits_out)`
+  for the standard AXDR bit-string (`tag=0x04`, length in bits,
+  MSB-aligned, bit 0 of the bit-string = MSB of the first octet).
+  These will be reused by upcoming work on IC 20 (Activity Calendar)
+  and any other ICs that carry bit-string fields.
+
 ## 0.111.0 - 2026-06-18
 
 ### Breaking changes

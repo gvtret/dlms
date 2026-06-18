@@ -1,5 +1,76 @@
 # Changelog
 
+## 0.122.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemDisconnectControlObject`** (`class_id=70`, `version=0`,
+  IEC 62056-6-2 ED4 §4.5.8 / DLMS UA Blue Book Ed. 12.1 §4.5.8)
+  now exposes all three dynamic attributes as typed values
+  instead of opaque `CosemByteBuffer` payloads:
+  - `output_state` (attribute `2`) → `bool`
+  - `control_state` (attribute `3`) → nested enum
+    `CosemDisconnectControlObject::ControlState`
+    `{Disconnected=0, Connected=1, ReadyForReconnection=2}`
+  - `control_mode` (attribute `4`) → nested enum
+    `CosemDisconnectControlObject::ControlMode` `{Mode0..Mode6}`
+  Both ctors take typed parameters; `OutputState()`,
+  `GetControlState()`, `GetControlMode()` return typed values;
+  `SetOutputState(bool)` and `SetControlState(ControlState)`
+  expose backend-driven refresh (`output_state` and
+  `control_state` remain RO via `WriteAttribute`).
+  `ReadAttribute` encodes the values as AXDR `boolean` /
+  `enum` on every read. `WriteAttribute(4)` parses the AXDR
+  enum, validates the range `0..6` and returns
+  `InvalidArgument` for malformed payloads (the stored value
+  is preserved on rejection).
+
+### Added
+
+- Methods `1` `remote_disconnect` and `2` `remote_reconnect`
+  are now **implemented** per §4.5.8.3 directly inside the
+  built-in object (no longer `UnsupportedFeature` in
+  configured modes):
+  - `remote_disconnect`: `UnsupportedFeature` in `Mode0`;
+    otherwise sets `control_state = Disconnected` and
+    `output_state = false`.
+  - `remote_reconnect`: `UnsupportedFeature` in `Mode0`;
+    transitions to `Connected` (output `true`) in modes 2/4
+    and to `ReadyForReconnection` (output `false`) in modes
+    1/3/5/6. The `data` argument is tolerated (real meters
+    often invoke with empty input).
+- Static helpers `IsValidControlMode(raw)` and
+  `IsValidControlState(raw)` for caller-side validation.
+- New per-IC test file (rule P2.4)
+  `lib/dlms-cosem/test/cosem/test_cosem_disconnect_control_object.cpp`
+  with 16 focused tests covering:
+  `DescriptorAndAccessRights`,
+  `ReadAttributeEncodesTypedAxdr`,
+  `OutputStateFalseEncodesAsBooleanZero`,
+  `WriteControlModeParsesAndValidatesEnum`,
+  `WriteControlModeRejectsMalformedAxdr`,
+  `WriteControlModeReadOnlyRejected`,
+  `WriteAttributeRejectsReadOnlyAttributes`,
+  `RemoteDisconnectInMode0IsUnsupported`,
+  `RemoteDisconnectFromConnectedInMode2` (parametric over
+  modes 1..6), `RemoteReconnectInMode0IsUnsupported`,
+  `RemoteReconnectInModes1356TransitionsToReady`,
+  `RemoteReconnectInModes24ClosesRelay`,
+  `UnknownMethodIdsReturnMethodNotFound`,
+  `SettersUpdateObservableState`, `IsValidStaticHelpers`,
+  `NormalizesVersionAboveMax`. Helpers are self-contained.
+- Legacy IC 70 tests in `test_simple_objects.cpp` collapsed
+  to a `_MovedToPerIcFile` placeholder (rule P2.4).
+- `docs/ic_support_matrix.md` IC 70 row promoted to
+  **Supported** with full typed-attribute and FSM coverage.
+
+### Verified
+
+- Full ctest: `1236/1236` pass.
+- Focused
+  `dlms_cosem_tests.exe --gtest_filter='CosemDisconnectControlObject.*'`:
+  `17/17` pass (includes the moved-file placeholder).
+
 ## 0.121.0 - 2026-06-22
 
 ### Breaking changes

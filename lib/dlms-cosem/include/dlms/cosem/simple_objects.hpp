@@ -660,22 +660,53 @@ private:
   CosemAccessRights rights_;
 };
 
+// IC 70 (Disconnect Control) per IEC 62056-6-2 ED4 §4.5.8 and
+// DLMS UA Blue Book Ed. 12.1 §4.5.8. All three dynamic attributes
+// are small typed values:
+//   output_state   : boolean (true = Connected, false = Disconnected)
+//   control_state  : enum {Disconnected=0, Connected=1, ReadyForReconnection=2}
+//   control_mode   : enum {0..6}
 class CosemDisconnectControlObject : public ICosemObject
 {
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // Internal state of the Disconnect control object (§4.5.8.2.3).
+  enum class ControlState : std::uint8_t
+  {
+    Disconnected = 0u,
+    Connected = 1u,
+    ReadyForReconnection = 2u
+  };
+
+  // Configures the behaviour of the object for all triggers (§4.5.8.2.4).
+  // Mode 0 keeps the object always in 'connected' state; modes 1..6 enable
+  // specific subsets of (remote/manual/local) disconnect/reconnect triggers.
+  enum class ControlMode : std::uint8_t
+  {
+    Mode0 = 0u,
+    Mode1 = 1u,
+    Mode2 = 2u,
+    Mode3 = 3u,
+    Mode4 = 4u,
+    Mode5 = 5u,
+    Mode6 = 6u
+  };
+
+  static bool IsValidControlMode(std::uint8_t raw);
+  static bool IsValidControlState(std::uint8_t raw);
+
   CosemDisconnectControlObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& outputState,
-    const CosemByteBuffer& controlState,
-    const CosemByteBuffer& controlMode,
+    bool outputState,
+    ControlState controlState,
+    ControlMode controlMode,
     AttributeAccessMode controlModeAccess);
   CosemDisconnectControlObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& outputState,
-    const CosemByteBuffer& controlState,
-    const CosemByteBuffer& controlMode,
+    bool outputState,
+    ControlState controlState,
+    ControlMode controlMode,
     AttributeAccessMode controlModeAccess,
     std::uint8_t version);
 
@@ -692,18 +723,18 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& OutputState() const;
-  const CosemByteBuffer& ControlState() const;
-  const CosemByteBuffer& ControlMode() const;
+  bool OutputState() const;
+  ControlState GetControlState() const;
+  ControlMode GetControlMode() const;
 
-  void SetOutputState(const CosemByteBuffer& value);
-  void SetControlState(const CosemByteBuffer& value);
+  void SetOutputState(bool value);
+  void SetControlState(ControlState value);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer outputState_;
-  CosemByteBuffer controlState_;
-  CosemByteBuffer controlMode_;
+  bool outputState_;
+  ControlState controlState_;
+  ControlMode controlMode_;
   CosemAccessRights rights_;
 };
 

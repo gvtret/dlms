@@ -4831,11 +4831,21 @@ constexpr std::uint8_t kDisconnectControlRemoteReconnectMethodId = 2u;
 
 const std::uint8_t CosemDisconnectControlObject::MaxSupportedVersion;
 
+bool CosemDisconnectControlObject::IsValidControlMode(std::uint8_t raw)
+{
+  return raw <= 6u;
+}
+
+bool CosemDisconnectControlObject::IsValidControlState(std::uint8_t raw)
+{
+  return raw <= 2u;
+}
+
 CosemDisconnectControlObject::CosemDisconnectControlObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& outputState,
-  const CosemByteBuffer& controlState,
-  const CosemByteBuffer& controlMode,
+  bool outputState,
+  ControlState controlState,
+  ControlMode controlMode,
   AttributeAccessMode controlModeAccess)
   : CosemDisconnectControlObject(
       logicalName, outputState, controlState, controlMode,
@@ -4845,9 +4855,9 @@ CosemDisconnectControlObject::CosemDisconnectControlObject(
 
 CosemDisconnectControlObject::CosemDisconnectControlObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& outputState,
-  const CosemByteBuffer& controlState,
-  const CosemByteBuffer& controlMode,
+  bool outputState,
+  ControlState controlState,
+  ControlMode controlMode,
   AttributeAccessMode controlModeAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -4891,13 +4901,16 @@ CosemStatus CosemDisconnectControlObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kDisconnectControlOutputStateAttributeId:
-      output = outputState_;
+      output.clear();
+      AppendBoolean(output, outputState_);
       return CosemStatus::Ok;
     case kDisconnectControlControlStateAttributeId:
-      output = controlState_;
+      output.clear();
+      AppendEnum(output, static_cast<std::uint8_t>(controlState_));
       return CosemStatus::Ok;
     case kDisconnectControlControlModeAttributeId:
-      output = controlMode_;
+      output.clear();
+      AppendEnum(output, static_cast<std::uint8_t>(controlMode_));
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -4910,11 +4923,19 @@ CosemStatus CosemDisconnectControlObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kDisconnectControlControlModeAttributeId:
+    case kDisconnectControlControlModeAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      controlMode_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t raw = 0u;
+      if (!ReadEnumValue(input, offset, raw)
+          || offset != input.size()
+          || !IsValidControlMode(raw)) {
+        return CosemStatus::InvalidArgument;
+      }
+      controlMode_ = static_cast<ControlMode>(raw);
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
     case kDisconnectControlOutputStateAttributeId:
     case kDisconnectControlControlStateAttributeId:
@@ -4931,41 +4952,57 @@ CosemStatus CosemDisconnectControlObject::InvokeMethod(
 {
   (void)input;
   output.clear();
-  // Methods 1 (remote_disconnect) and 2 (remote_reconnect) drive the
-  // load relay and update output_state / control_state per the
-  // configured control_mode state machine. The built-in object surfaces
-  // them as UnsupportedFeature; a future relay backend will own the
-  // electrical switching and state transitions.
-  if (methodId == kDisconnectControlRemoteDisconnectMethodId ||
-      methodId == kDisconnectControlRemoteReconnectMethodId) {
-    return CosemStatus::UnsupportedFeature;
+  // data ::= integer (0); spec allows tolerance — we don't reject
+  // payload mismatches because real meters often invoke with empty input.
+  const std::uint8_t mode = static_cast<std::uint8_t>(controlMode_);
+  if (methodId == kDisconnectControlRemoteDisconnectMethodId) {
+    // §4.5.8.3.1: enabled only when control_mode > 0.
+    if (mode == 0u) return CosemStatus::UnsupportedFeature;
+    controlState_ = ControlState::Disconnected;
+    outputState_ = false;
+    return CosemStatus::Ok;
+  }
+  if (methodId == kDisconnectControlRemoteReconnectMethodId) {
+    // §4.5.8.3.2:
+    //   modes 1, 3, 5, 6 → ready_for_reconnection (output stays FALSE)
+    //   modes 2, 4       → connected directly (output TRUE)
+    //   mode  0          → not enabled
+    if (mode == 0u) return CosemStatus::UnsupportedFeature;
+    if (mode == 2u || mode == 4u) {
+      controlState_ = ControlState::Connected;
+      outputState_ = true;
+    } else {
+      controlState_ = ControlState::ReadyForReconnection;
+      outputState_ = false;
+    }
+    return CosemStatus::Ok;
   }
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemDisconnectControlObject::OutputState() const
+bool CosemDisconnectControlObject::OutputState() const
 {
   return outputState_;
 }
 
-const CosemByteBuffer& CosemDisconnectControlObject::ControlState() const
+CosemDisconnectControlObject::ControlState
+CosemDisconnectControlObject::GetControlState() const
 {
   return controlState_;
 }
 
-const CosemByteBuffer& CosemDisconnectControlObject::ControlMode() const
+CosemDisconnectControlObject::ControlMode
+CosemDisconnectControlObject::GetControlMode() const
 {
   return controlMode_;
 }
 
-void CosemDisconnectControlObject::SetOutputState(
-  const CosemByteBuffer& value)
+void CosemDisconnectControlObject::SetOutputState(bool value)
 {
   outputState_ = value;
 }
 
-void CosemDisconnectControlObject::SetControlState(
-  const CosemByteBuffer& value)
+void CosemDisconnectControlObject::SetControlState(ControlState value)
 {
   controlState_ = value;
 }

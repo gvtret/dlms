@@ -1350,7 +1350,7 @@ TEST(EndpointIntegration, ServerEndpointServesCosemGetThroughProfileChannel)
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x1234u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   dlms::endpoint::ServerEndpoint endpoint(channel, logicalDevice);
@@ -1381,7 +1381,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeServesOneWrapperGet)
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x5678u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -1408,7 +1408,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperAssociationThenServ
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x789au),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -1591,7 +1591,7 @@ TEST(EndpointIntegration, TcpClientEndpointUsesHdlcWithoutDataLinkSessionThenSer
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x3579u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   dlms::endpoint::EndpointProfileOptions profile =
@@ -1694,7 +1694,7 @@ TEST(EndpointIntegration, TcpClientEndpointCloseCleansUpAfterReleaseFailure)
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x4680u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   dlms::endpoint::EndpointProfileOptions profile =
@@ -1796,7 +1796,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesWrapperLowPasswordAssociat
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x2345u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -1986,7 +1986,7 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesWrapperHighGmacCipheredThen
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x6a5bu),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> encodedData;
@@ -2062,7 +2062,7 @@ TEST(EndpointIntegration, TcpClientEndpointNegotiatesHdlcSessionHighGmacCiphered
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x1357u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> encodedData;
@@ -2299,7 +2299,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcAssociationThenServesG
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x3456u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -2333,7 +2333,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcLowPasswordAssociation
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x8642u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -2526,7 +2526,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcGet)
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x6789u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -2554,7 +2554,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeServesOneHdlcSessionGet)
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x2468u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -2583,7 +2583,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionAssociationThen
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x9753u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;
@@ -2617,7 +2617,7 @@ TEST(EndpointIntegration, TcpListenerRuntimeNegotiatesHdlcSessionLowPasswordAsso
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x5317u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   std::vector<std::uint8_t> responseBytes;

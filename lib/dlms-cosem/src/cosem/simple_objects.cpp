@@ -1422,6 +1422,35 @@ void AppendSapAssignment(
     assignment.logicalDeviceName.size());
 }
 
+// scal_unit_type ::= structure(2) { integer scaler, enum unit }
+// per IEC 62056-6-2 ED4 (2021) §4.3.2.2.3 and DLMS UA Blue Book Ed. 12.1.
+void AppendScalerUnit(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::ScalerUnit& su)
+{
+  AppendStructureHeader(output, 2u);
+  AppendInteger(output, static_cast<std::uint8_t>(su.Scaler()));
+  AppendEnum(output, su.Unit());
+}
+
+bool DecodeScalerUnit(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::ScalerUnit& out)
+{
+  if (!ReadExpectedTag(input, offset, kStructureTag)) return false;
+  std::size_t fieldCount = 0u;
+  if (!ReadAxdrLength(input, offset, fieldCount)) return false;
+  if (fieldCount != 2u) return false;
+  std::uint8_t scalerRaw = 0u;
+  if (!ReadIntegerValue(input, offset, scalerRaw)) return false;
+  std::uint8_t unitRaw = 0u;
+  if (!ReadEnumValue(input, offset, unitRaw)) return false;
+  out = dlms::cosem::types::ScalerUnit(
+    static_cast<std::int8_t>(scalerRaw), unitRaw);
+  return true;
+}
+
 } // namespace
 
 std::uint8_t ProfileGenericRangeAccessSelector()
@@ -1823,7 +1852,7 @@ const std::uint8_t CosemRegisterObject::MaxSupportedVersion;
 CosemRegisterObject::CosemRegisterObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& value,
-  const CosemByteBuffer& scalerUnit,
+  const dlms::cosem::types::ScalerUnit& scalerUnit,
   AttributeAccessMode valueAccess)
   : CosemRegisterObject(
       logicalName,
@@ -1837,16 +1866,22 @@ CosemRegisterObject::CosemRegisterObject(
 CosemRegisterObject::CosemRegisterObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& value,
-  const CosemByteBuffer& scalerUnit,
+  const dlms::cosem::types::ScalerUnit& scalerUnit,
   AttributeAccessMode valueAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
       kRegisterClassId,
       NormalizeVersion(version, CosemRegisterObject::MaxSupportedVersion),
       logicalName))
-  , value_(value)
+  , value_()
   , scalerUnit_(scalerUnit)
 {
+  // Safe-fallback: only retain `value` when it is a non-empty AXDR
+  // data item. Empty / missing payload leaves the attribute cleared
+  // and the backend must publish a real value via SetValue().
+  if (IsValidValue(value)) {
+    value_ = value;
+  }
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
     AttributeAccessMode::ReadOnly);
@@ -1879,7 +1914,8 @@ CosemStatus CosemRegisterObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kScalerUnitAttributeId) {
-    output = scalerUnit_;
+    output.clear();
+    AppendScalerUnit(output, scalerUnit_);
     return CosemStatus::Ok;
   }
   output.clear();
@@ -1895,6 +1931,9 @@ CosemStatus CosemRegisterObject::WriteAttribute(
     return CosemStatus::AccessDenied;
   }
   if (attributeId == kValueAttributeId) {
+    if (!IsValidValue(input)) {
+      return CosemStatus::InvalidArgument;
+    }
     value_ = input;
     return CosemStatus::Ok;
   }
@@ -1922,20 +1961,32 @@ const CosemByteBuffer& CosemRegisterObject::Value() const
   return value_;
 }
 
-const CosemByteBuffer& CosemRegisterObject::ScalerUnit() const
+const dlms::cosem::types::ScalerUnit& CosemRegisterObject::ScalerUnit() const
 {
   return scalerUnit_;
 }
 
-void CosemRegisterObject::SetValue(const CosemByteBuffer& value)
+bool CosemRegisterObject::SetValue(const CosemByteBuffer& value)
 {
+  if (!IsValidValue(value)) {
+    return false;
+  }
   value_ = value;
+  return true;
 }
 
 void CosemRegisterObject::SetScalerUnit(
-  const CosemByteBuffer& scalerUnit)
+  const dlms::cosem::types::ScalerUnit& scalerUnit)
 {
   scalerUnit_ = scalerUnit;
+}
+
+bool CosemRegisterObject::IsValidValue(const CosemByteBuffer& value)
+{
+  // A single non-empty AXDR data item; the concrete type belongs to
+  // the instance (see spec §4.3.2.2.2 CHOICE) so we only require that
+  // the producer pushed at least the tag byte.
+  return !value.empty();
 }
 
 namespace {

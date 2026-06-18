@@ -45,7 +45,7 @@ int main()
           new dlms::cosem::CosemRegisterObject(
             dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
             EncodeLongUnsigned(2300u),
-            dlms::cosem::CosemByteBuffer(),
+            dlms::cosem::types::ScalerUnit(),
             dlms::cosem::AttributeAccessMode::ReadOnly))) !=
       dlms::cosem::CosemStatus::Ok) {
     return 1;

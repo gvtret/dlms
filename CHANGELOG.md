@@ -1,5 +1,73 @@
 # Changelog
 
+## 0.116.0 - 2026-06-19
+
+### Breaking changes
+
+- **`CosemRegisterObject`** (`class_id=3`, `version=0`,
+  IEC 62056-6-2 ED4 §4.3.2 / DLMS UA Blue Book Ed. 12.1 §4.3.2) now
+  takes a typed `scaler_unit` instead of an opaque
+  `CosemByteBuffer`:
+  - `scaler_unit`: `dlms::cosem::types::ScalerUnit` — the
+    `scal_unit_type ::= structure { integer scaler, enum unit }` per
+    §4.3.2.2.3, with `scaler ∈ [-128,127]` and `unit` mapping to the
+    Blue Book unit enumeration. The wire form on `ReadAttribute(3)`
+    is encoded by the object itself on every read, so call sites no
+    longer need to pre-encode the structure (or pass an empty buffer
+    placeholder).
+  - Constructors signature changed from
+    `CosemRegisterObject(name, value, CosemByteBuffer scalerUnit,
+    valueAccess[, version])` to
+    `CosemRegisterObject(name, value, types::ScalerUnit scalerUnit,
+    valueAccess[, version])`. All call sites in the tree
+    (`tools/endpoint_*_example.cpp`, `test/integration/*`,
+    `lib/dlms-endpoint/test/*`) were migrated to pass
+    `dlms::cosem::types::ScalerUnit()` (default = `{scaler=0,
+    unit=255 (“no unit”)}`) or an explicit `{scaler, unit}` pair.
+
+- `SetValue` now returns `bool` and refuses empty buffers (the COSEM
+  `value` attribute is a CHOICE of concrete DLMS data items — the
+  empty buffer is not a valid encoding). `SetScalerUnit` takes
+  `types::ScalerUnit` and never fails (every constructible
+  `ScalerUnit` is on the wire valid by construction).
+
+- `Value()` is unchanged (`const CosemByteBuffer&`), but `ScalerUnit()`
+  now returns `const types::ScalerUnit&`.
+
+### Safe-fallback construction
+
+- The constructor drops an empty `value` argument rather than
+  retaining an invalid empty AXDR payload; the attribute starts
+  cleared and the backend must publish a real value via `SetValue`
+  (which rejects empty buffers symmetrically). `WriteAttribute(2)`
+  returns `CosemStatus::InvalidArgument` for empty payloads. A new
+  public `static bool IsValidValue(const CosemByteBuffer&)` exposes
+  the same check pre-construction.
+
+### Behaviour preserved
+
+- Class version still defaults to `0` and is normalised to
+  `MaxSupportedVersion` for higher requests.
+- `logical_name` (attr 1) and `scaler_unit` (attr 3) remain
+  read-only; `value` (attr 2) honours the constructor’s
+  `AttributeAccessMode`.
+- Method `1` `reset` still surfaces as `UnsupportedFeature`
+  (application-defined semantics); other method ids still return
+  `MethodNotFound`.
+
+### Tests / docs
+
+- New per-IC suite `test/cosem/test_cosem_register_object.cpp`
+  (16 tests): version normalisation, typed scaler/unit encoding,
+  safe-fallback constructor, empty-value rejection on construction
+  and write, access-mode propagation, `reset` → `UnsupportedFeature`,
+  `IsValidValue` static checker. Legacy IC 3 cases removed from
+  `test/cosem/test_simple_objects.cpp` per the one-IC-one-file rule
+  (P2.4 in `docs/production_readiness_roadmap.md`).
+- `docs/ic_support_matrix.md` row `3`: clarified to spell out the
+  typed `ScalerUnit` surface and the safe-fallback behaviour.
+- Full suite: **1173 / 1173** tests pass.
+
 ## 0.115.0 - 2026-06-19
 
 ### Breaking changes

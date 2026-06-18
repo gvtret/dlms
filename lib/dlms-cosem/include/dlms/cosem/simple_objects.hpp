@@ -10,6 +10,7 @@
 #include "dlms/cosem/types/day_profile_action.hpp"
 #include "dlms/cosem/types/monitored_value.hpp"
 #include "dlms/cosem/types/schedule_table_entry.hpp"
+#include "dlms/cosem/types/scaler_unit.hpp"
 #include "dlms/cosem/types/script.hpp"
 #include "dlms/cosem/types/script_entry.hpp"
 #include "dlms/cosem/types/season_profile.hpp"
@@ -65,6 +66,21 @@ private:
   CosemAccessRights rights_;
 };
 
+// IC "Register" (class_id=3, version=0) per IEC 62056-6-2 ED4 §4.3.2.
+//
+// The `value` attribute is intentionally kept as an opaque AXDR data item:
+// its concrete simple/complex type depends on the meter instance (see the
+// CHOICE in spec §4.3.2.2.2) and is established by the producer out of
+// band. The object validates only that `value` is non-empty AXDR.
+//
+// The `scaler_unit` attribute is the typed structure
+//   scal_unit_type ::= structure { scaler: integer, unit: enum }
+// represented by `types::ScalerUnit`. The class encodes/decodes the wire
+// form internally.
+//
+// Method 1 `reset` sets `value` to an instance-specific default; the
+// built-in object surfaces it as `UnsupportedFeature` (default value is
+// instance-defined and owned by the backend).
 class CosemRegisterObject : public ICosemObject
 {
 public:
@@ -73,12 +89,12 @@ public:
   CosemRegisterObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
-    const CosemByteBuffer& scalerUnit,
+    const types::ScalerUnit& scalerUnit,
     AttributeAccessMode valueAccess);
   CosemRegisterObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& value,
-    const CosemByteBuffer& scalerUnit,
+    const types::ScalerUnit& scalerUnit,
     AttributeAccessMode valueAccess,
     std::uint8_t version);
 
@@ -96,14 +112,20 @@ public:
     CosemByteBuffer& output);
 
   const CosemByteBuffer& Value() const;
-  const CosemByteBuffer& ScalerUnit() const;
-  void SetValue(const CosemByteBuffer& value);
-  void SetScalerUnit(const CosemByteBuffer& scalerUnit);
+  const types::ScalerUnit& ScalerUnit() const;
+
+  // Backend-driven publication. `SetValue` validates non-empty AXDR;
+  // returns false (no mutation) on empty input.
+  bool SetValue(const CosemByteBuffer& value);
+  void SetScalerUnit(const types::ScalerUnit& scalerUnit);
+
+  // Invariants exposed for pre-construction validation.
+  static bool IsValidValue(const CosemByteBuffer& value);
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer value_;
-  CosemByteBuffer scalerUnit_;
+  types::ScalerUnit scalerUnit_;
   CosemAccessRights rights_;
 };
 

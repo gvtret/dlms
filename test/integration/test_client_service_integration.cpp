@@ -279,7 +279,7 @@ TEST(ClientGetIntegration, PublicClientReadsMinimalServerObject)
     new dlms::cosem::CosemRegisterObject(
       MakeCosemName(),
       expectedValue,
-      dlms::cosem::CosemByteBuffer(),
+      dlms::cosem::types::ScalerUnit(),
       dlms::cosem::AttributeAccessMode::ReadOnly));
 
   AttachObject(context, logicalDevice, object);
@@ -429,7 +429,7 @@ TEST(ClientSetIntegration, PublicClientWritesMinimalServerObject)
     new dlms::cosem::CosemRegisterObject(
       MakeCosemName(),
       EncodeLongUnsigned(0x1234u),
-      dlms::cosem::CosemByteBuffer(),
+      dlms::cosem::types::ScalerUnit(),
       dlms::cosem::AttributeAccessMode::ReadAndWrite));
   AttachObject(context, logicalDevice, object);
 
@@ -462,7 +462,7 @@ TEST(ClientSetIntegration, PublicClientReportsServiceRejection)
     new dlms::cosem::CosemRegisterObject(
       MakeCosemName(),
       initialValue,
-      dlms::cosem::CosemByteBuffer(),
+      dlms::cosem::types::ScalerUnit(),
       dlms::cosem::AttributeAccessMode::ReadOnly));
   AttachObject(context, logicalDevice, object);
 

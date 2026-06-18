@@ -160,7 +160,7 @@ std::shared_ptr<dlms::cosem::CosemRegisterObject> MakeRegisterObject(
     new dlms::cosem::CosemRegisterObject(
       dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
       EncodeLongUnsigned(value),
-      dlms::cosem::CosemByteBuffer(),
+      dlms::cosem::types::ScalerUnit(),
       dlms::cosem::AttributeAccessMode::ReadOnly));
 }
 

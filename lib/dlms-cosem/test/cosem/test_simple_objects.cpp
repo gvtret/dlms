@@ -308,105 +308,10 @@ TEST(CosemDataObject, NormalizesRequestedVersion)
             object.Descriptor().key.version);
 }
 
-TEST(CosemRegisterObject, ExposesDescriptorValueAndScalerUnit)
-{
-  const dlms::cosem::CosemLogicalName name = MakeName(3u);
-  const dlms::cosem::CosemByteBuffer value = Bytes(0x06u, 0x01u);
-  const dlms::cosem::CosemByteBuffer scaler = Bytes(0x02u, 0x03u);
-  dlms::cosem::CosemRegisterObject object(
-    name,
-    value,
-    scaler,
-    dlms::cosem::AttributeAccessMode::ReadOnly);
-
-  const dlms::cosem::CosemObjectDescriptor descriptor =
-    object.Descriptor();
-  EXPECT_EQ(3u, descriptor.key.classId);
-  EXPECT_EQ(0u, descriptor.key.version);
-  EXPECT_EQ(name, descriptor.key.logicalName);
-
-  dlms::cosem::CosemByteBuffer output;
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(1u, output));
-  EXPECT_EQ(EncodedLogicalName(name), output);
-
-  output.clear();
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(2u, output));
-  EXPECT_EQ(value, output);
-
-  output.clear();
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(3u, output));
-  EXPECT_EQ(scaler, output);
-}
-
-TEST(CosemRegisterObject, WritesValueAndRejectsUnsupportedMembers)
-{
-  dlms::cosem::CosemRegisterObject object(
-    MakeName(4u),
-    Bytes(0x01u, 0x02u),
-    Bytes(0x03u, 0x04u),
-    dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  const dlms::cosem::CosemByteBuffer updated = Bytes(0x05u, 0x06u);
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.WriteAttribute(2u, updated));
-  EXPECT_EQ(updated, object.Value());
-
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            object.WriteAttribute(1u, updated));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            object.WriteAttribute(3u, updated));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.WriteAttribute(99u, updated));
-
-  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(99u, output));
-  EXPECT_TRUE(output.empty());
-  output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(2u, updated, output));
-  EXPECT_TRUE(output.empty());
-}
-
-TEST(CosemRegisterObject, ResetMethodIsUnsupportedAndOtherIdsNotFound)
-{
-  dlms::cosem::CosemRegisterObject object(
-    MakeName(5u),
-    Bytes(0x01u, 0x02u),
-    Bytes(0x03u, 0x04u),
-    dlms::cosem::AttributeAccessMode::ReadOnly);
-
-  dlms::cosem::CosemByteBuffer input = Bytes(0x00u, 0x00u);
-  dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-            object.InvokeMethod(1u, input, output));
-  EXPECT_TRUE(output.empty());
-
-  output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(0u, input, output));
-  EXPECT_TRUE(output.empty());
-  output = Bytes(0xAAu, 0xBBu);
-  EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-            object.InvokeMethod(99u, input, output));
-  EXPECT_TRUE(output.empty());
-}
-
-TEST(CosemRegisterObject, NormalizesRequestedVersion)
-{
-  dlms::cosem::CosemRegisterObject object(
-    MakeName(3u),
-    Bytes(0x12u, 0x34u),
-    Bytes(0x02u, 0x03u),
-    dlms::cosem::AttributeAccessMode::ReadOnly,
-    7u);
-
-  EXPECT_EQ(dlms::cosem::CosemRegisterObject::MaxSupportedVersion,
-            object.Descriptor().key.version);
-}
+// CosemRegisterObject (IC 3) tests live in
+// test/cosem/test_cosem_register_object.cpp per the per-IC test-file rule
+// (see docs/production_readiness_roadmap.md P2.4). Migrated as part of
+// the IC 3 typed-scaler_unit migration.
 
 namespace {
 

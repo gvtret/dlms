@@ -501,7 +501,7 @@ TEST(ListenerRuntime, ServerRuntimeAcceptsOneChannelAndRunsServerEndpoint)
         new dlms::cosem::CosemRegisterObject(
           dlms::cosem::CosemLogicalName(1, 0, 1, 8, 0, 255),
           EncodeLongUnsigned(0x1234u),
-          dlms::cosem::CosemByteBuffer(),
+          dlms::cosem::types::ScalerUnit(),
           dlms::cosem::AttributeAccessMode::ReadOnly))));
 
   dlms::endpoint::ServerListenerRuntime runtime(listener, logicalDevice);

@@ -6,8 +6,10 @@
 #include <gtest/gtest.h>
 
 #include <array>
+#include <cassert>
 #include <memory>
 #include <string>
+#include <utility>
 
 namespace {
 
@@ -5031,39 +5033,69 @@ TEST(CosemSpecialDaysTableObject, NormalizesVersionAboveMax)
 
 namespace {
 
-struct SingleActionScheduleBuffers
+struct SingleActionScheduleInputs
 {
-  dlms::cosem::CosemByteBuffer executedScript;
-  dlms::cosem::CosemByteBuffer type;
-  dlms::cosem::CosemByteBuffer executionTime;
+  dlms::cosem::types::Script executedScript;
+  dlms::cosem::types::SingleActionScheduleType type;
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    executionTime;
 };
 
-SingleActionScheduleBuffers MakeSampleSingleActionSchedule()
+// Builds an executed_script pointing at script_table 0.0.10.0.100.255,
+// selector 1 — the same values used by the legacy buffer-based helper.
+SingleActionScheduleInputs MakeSampleSingleActionSchedule()
 {
-  SingleActionScheduleBuffers b;
-  // structure(2): script_logical_name + script_selector
-  b.executedScript = BytesFromList({
+  SingleActionScheduleInputs s;
+  s.executedScript = dlms::cosem::types::Script(
+    dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u), 1u);
+  s.type = dlms::cosem::types::SingleActionScheduleType(1u);
+  // 06:00:00.00 on 2021-01-01 (day_of_week unspecified).
+  dlms::cosem::types::Time t;
+  const bool tOk = t.SetHour(6u) && t.SetMinute(0u) && t.SetSecond(0u) &&
+                   t.SetHundredths(0u);
+  assert(tOk);
+  (void)tOk;
+  dlms::cosem::types::Date d;
+  const bool dOk = d.SetYear(2021u) && d.SetMonth(1u) &&
+                   d.SetDayOfMonth(1u);
+  assert(dOk);
+  (void)dOk;
+  // day_of_week left at default (0xFF, unspecified).
+  s.executionTime.push_back(std::make_pair(t, d));
+  return s;
+}
+
+// Wire-form helpers mirroring what the IC must emit for the sample above.
+dlms::cosem::CosemByteBuffer EncodedSampleScript()
+{
+  return BytesFromList({
     0x02u, 0x02u,
       0x09u, 0x06u, 0x00u, 0x00u, 0x0Au, 0x00u, 0x64u, 0xFFu,
       0x12u, 0x00u, 0x01u});
-  // enum 1 (SingleAction)
-  b.type = BytesFromList({0x16u, 0x01u});
-  // array(1) of structure(2): time + date
-  b.executionTime = BytesFromList({
+}
+
+dlms::cosem::CosemByteBuffer EncodedSampleType(std::uint8_t value = 1u)
+{
+  return BytesFromList({0x16u, value});
+}
+
+dlms::cosem::CosemByteBuffer EncodedSampleExecutionTime()
+{
+  return BytesFromList({
     0x01u, 0x01u,
       0x02u, 0x02u,
-        0x09u, 0x04u, 0x06u, 0x00u, 0x00u, 0x00u,        // 06:00:00.00
+        0x09u, 0x04u, 0x06u, 0x00u, 0x00u, 0x00u,         // 06:00:00.00
         0x09u, 0x05u, 0x07u, 0xE5u, 0x01u, 0x01u, 0xFFu});// 2021-01-01
-  return b;
 }
 
 dlms::cosem::CosemSingleActionScheduleObject MakeSingleActionScheduleObject(
   const dlms::cosem::CosemLogicalName& name,
-  const SingleActionScheduleBuffers& b,
+  const SingleActionScheduleInputs& s,
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemSingleActionScheduleObject(
-    name, b.executedScript, b.type, b.executionTime, access);
+    name, s.executedScript, s.type, s.executionTime, access);
 }
 
 } // namespace
@@ -5072,10 +5104,10 @@ TEST(CosemSingleActionScheduleObject, ExposesAllAttributes)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
-  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
+  const SingleActionScheduleInputs s = MakeSampleSingleActionSchedule();
   dlms::cosem::CosemSingleActionScheduleObject object =
     MakeSingleActionScheduleObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+      name, s, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   EXPECT_EQ(22u, object.Descriptor().key.classId);
   EXPECT_EQ(0u, object.Descriptor().key.version);
@@ -5087,11 +5119,11 @@ TEST(CosemSingleActionScheduleObject, ExposesAllAttributes)
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
   EXPECT_EQ(EncodedLogicalName(name), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
-  EXPECT_EQ(b.executedScript, out);
+  EXPECT_EQ(EncodedSampleScript(), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
-  EXPECT_EQ(b.type, out);
+  EXPECT_EQ(EncodedSampleType(1u), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
-  EXPECT_EQ(b.executionTime, out);
+  EXPECT_EQ(EncodedSampleExecutionTime(), out);
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
             object.ReadAttribute(5u, out));
 }
@@ -5100,49 +5132,74 @@ TEST(CosemSingleActionScheduleObject, MutableAttributesHonorAccessMode)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
-  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
-  const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x16u, 0x02u});
+  const SingleActionScheduleInputs s = MakeSampleSingleActionSchedule();
+
+  // Build a writable input set: a different script, type stays at 1
+  // (so the single-entry executionTime still satisfies the invariant),
+  // and a different execution_time entry with the same shape.
+  const dlms::cosem::types::Script otherScript(
+    dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 254u), 2u);
+  dlms::cosem::CosemByteBuffer scriptInput;
+  scriptInput.push_back(0x02u); scriptInput.push_back(0x02u);
+  scriptInput.push_back(0x09u); scriptInput.push_back(0x06u);
+  scriptInput.push_back(0x00u); scriptInput.push_back(0x00u);
+  scriptInput.push_back(0x0Au); scriptInput.push_back(0x00u);
+  scriptInput.push_back(0x64u); scriptInput.push_back(0xFEu);
+  scriptInput.push_back(0x12u); scriptInput.push_back(0x00u);
+  scriptInput.push_back(0x02u);
+
+  // type=1 wire input (still matches the existing single-entry array)
+  const dlms::cosem::CosemByteBuffer typeInput = EncodedSampleType(1u);
+  // execution_time replacement: same shape, different time (07:30:00.00).
+  const dlms::cosem::CosemByteBuffer execTimeInput = BytesFromList({
+    0x01u, 0x01u,
+      0x02u, 0x02u,
+        0x09u, 0x04u, 0x07u, 0x1Eu, 0x00u, 0x00u,
+        0x09u, 0x05u, 0x07u, 0xE5u, 0x01u, 0x01u, 0xFFu});
 
   dlms::cosem::CosemSingleActionScheduleObject writable =
     MakeSingleActionScheduleObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t id : {2u, 3u, 4u}) {
-    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-              writable.WriteAttribute(
-                static_cast<std::uint8_t>(id), replacement))
-      << "attribute id " << static_cast<unsigned>(id);
-  }
-  EXPECT_EQ(replacement, writable.ExecutedScript());
-  EXPECT_EQ(replacement, writable.Type());
-  EXPECT_EQ(replacement, writable.ExecutionTime());
+      name, s, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(2u, scriptInput));
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(3u, typeInput));
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(4u, execTimeInput));
+  EXPECT_EQ(otherScript, writable.ExecutedScript());
+  EXPECT_EQ(1u, writable.Type().Value());
+  ASSERT_EQ(1u, writable.ExecutionTime().size());
+  EXPECT_EQ(7u, writable.ExecutionTime()[0].first.Hour());
+  EXPECT_EQ(30u, writable.ExecutionTime()[0].first.Minute());
+
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(1u, replacement));
+            writable.WriteAttribute(1u, scriptInput));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            writable.WriteAttribute(99u, replacement));
+            writable.WriteAttribute(99u, scriptInput));
 
   dlms::cosem::CosemSingleActionScheduleObject readOnly =
     MakeSingleActionScheduleObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  for (std::uint8_t id : {2u, 3u, 4u}) {
-    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-              readOnly.WriteAttribute(
-                static_cast<std::uint8_t>(id), replacement))
-      << "attribute id " << static_cast<unsigned>(id);
-  }
-  EXPECT_EQ(b.executedScript, readOnly.ExecutedScript());
-  EXPECT_EQ(b.type, readOnly.Type());
-  EXPECT_EQ(b.executionTime, readOnly.ExecutionTime());
+      name, s, dlms::cosem::AttributeAccessMode::ReadOnly);
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(2u, scriptInput));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(3u, typeInput));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(4u, execTimeInput));
+  EXPECT_EQ(s.executedScript, readOnly.ExecutedScript());
+  EXPECT_EQ(1u, readOnly.Type().Value());
+  ASSERT_EQ(1u, readOnly.ExecutionTime().size());
+  EXPECT_EQ(6u, readOnly.ExecutionTime()[0].first.Hour());
 }
 
 TEST(CosemSingleActionScheduleObject, NoMethodsDefined)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
-  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
+  const SingleActionScheduleInputs s = MakeSampleSingleActionSchedule();
   dlms::cosem::CosemSingleActionScheduleObject object =
     MakeSingleActionScheduleObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+      name, s, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
   for (std::uint8_t method : {1u, 2u, 3u}) {
@@ -5159,13 +5216,283 @@ TEST(CosemSingleActionScheduleObject, NormalizesVersionAboveMax)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
-  const SingleActionScheduleBuffers b = MakeSampleSingleActionSchedule();
+  const SingleActionScheduleInputs s = MakeSampleSingleActionSchedule();
   dlms::cosem::CosemSingleActionScheduleObject object(
-    name, b.executedScript, b.type, b.executionTime,
+    name, s.executedScript, s.type, s.executionTime,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemSingleActionScheduleObject::MaxSupportedVersion,
     object.Descriptor().key.version);
+}
+
+namespace {
+
+// Build an execution_time entry with the given (h:m:s.00) time and a
+// concrete 2024-03-15 date — a date that contains no wildcards, so it
+// satisfies type \in {2,4} as well as the more permissive types.
+dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry
+MakeConcreteEntry(std::uint8_t h, std::uint8_t m, std::uint8_t s)
+{
+  dlms::cosem::types::Time t;
+  const bool tOk = t.SetHour(h) && t.SetMinute(m) && t.SetSecond(s) &&
+                   t.SetHundredths(0u);
+  assert(tOk);
+  (void)tOk;
+  dlms::cosem::types::Date d;
+  const bool dOk = d.SetYear(2024u) && d.SetMonth(3u) &&
+                   d.SetDayOfMonth(15u) && d.SetDayOfWeek(5u);
+  assert(dOk);
+  (void)dOk;
+  return std::make_pair(t, d);
+}
+
+// Build an entry whose date carries a wildcard year. Useful to exercise
+// the ForbidsWildcardsInDate() invariant.
+dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry
+MakeWildcardDateEntry(std::uint8_t h, std::uint8_t m, std::uint8_t s)
+{
+  dlms::cosem::types::Time t;
+  const bool tOk = t.SetHour(h) && t.SetMinute(m) && t.SetSecond(s) &&
+                   t.SetHundredths(0u);
+  assert(tOk);
+  (void)tOk;
+  // Year unspecified is the canonical wildcard form.
+  dlms::cosem::types::Date d;
+  const bool dOk = d.SetMonth(3u) && d.SetDayOfMonth(15u);
+  assert(dOk);
+  (void)dOk;
+  return std::make_pair(t, d);
+}
+
+} // namespace
+
+TEST(CosemSingleActionScheduleObject,
+     RejectsConstructionViolatingTypeOneSingleEntry)
+{
+  // type==1 requires exactly one entry; supplying two must trip the
+  // safe-fallback path so the object holds a single all-wildcard entry
+  // and type stays at 1.
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    times;
+  times.push_back(MakeConcreteEntry(6u, 0u, 0u));
+  times.push_back(MakeConcreteEntry(18u, 0u, 0u));
+
+  dlms::cosem::CosemSingleActionScheduleObject object(
+    name,
+    dlms::cosem::types::Script(
+      dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u), 1u),
+    dlms::cosem::types::SingleActionScheduleType(1u),
+    times,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  EXPECT_EQ(1u, object.Type().Value());
+  ASSERT_EQ(1u, object.ExecutionTime().size());
+  // The fallback entry uses the default time/date wildcards.
+  EXPECT_TRUE(object.ExecutionTime()[0].first.HourUnspecified());
+  EXPECT_TRUE(object.ExecutionTime()[0].second.YearUnspecified());
+}
+
+TEST(CosemSingleActionScheduleObject,
+     RejectsConstructionWithNonZeroHundredths)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  dlms::cosem::types::Time t;
+  ASSERT_TRUE(t.SetHour(6u));
+  ASSERT_TRUE(t.SetMinute(0u));
+  ASSERT_TRUE(t.SetSecond(0u));
+  ASSERT_TRUE(t.SetHundredths(50u)); // 0.5s — forbidden by spec
+  dlms::cosem::types::Date d;
+  ASSERT_TRUE(d.SetYear(2024u));
+  ASSERT_TRUE(d.SetMonth(3u));
+  ASSERT_TRUE(d.SetDayOfMonth(15u));
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    times;
+  times.push_back(std::make_pair(t, d));
+
+  dlms::cosem::CosemSingleActionScheduleObject object(
+    name,
+    dlms::cosem::types::Script(
+      dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u), 1u),
+    dlms::cosem::types::SingleActionScheduleType(1u),
+    times,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  ASSERT_EQ(1u, object.ExecutionTime().size());
+  // Fallback entry uses the default unspecified time, not the supplied 0.5s.
+  EXPECT_TRUE(object.ExecutionTime()[0].first.HundredthsUnspecified());
+}
+
+TEST(CosemSingleActionScheduleObject,
+     SetTypeRejectsIncompatibleCombination)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  // Start with type=4 + two concrete entries with different times.
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    times;
+  times.push_back(MakeConcreteEntry(6u, 0u, 0u));
+  times.push_back(MakeConcreteEntry(18u, 30u, 0u));
+
+  dlms::cosem::CosemSingleActionScheduleObject object(
+    name,
+    dlms::cosem::types::Script(
+      dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u), 1u),
+    dlms::cosem::types::SingleActionScheduleType(4u),
+    times,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+  ASSERT_EQ(4u, object.Type().Value());
+  ASSERT_EQ(2u, object.ExecutionTime().size());
+
+  // type=1 requires a single entry — must be rejected.
+  EXPECT_FALSE(
+    object.SetType(dlms::cosem::types::SingleActionScheduleType(1u)));
+  EXPECT_EQ(4u, object.Type().Value());
+
+  // type=2 requires all times equal — our two differ, also rejected.
+  EXPECT_FALSE(
+    object.SetType(dlms::cosem::types::SingleActionScheduleType(2u)));
+  EXPECT_EQ(4u, object.Type().Value());
+
+  // type=5 has no extra constraint — accepted.
+  EXPECT_TRUE(
+    object.SetType(dlms::cosem::types::SingleActionScheduleType(5u)));
+  EXPECT_EQ(5u, object.Type().Value());
+}
+
+TEST(CosemSingleActionScheduleObject,
+     SetExecutionTimeRejectsWildcardWhenTypeForbidsIt)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    seed;
+  seed.push_back(MakeConcreteEntry(6u, 0u, 0u));
+
+  // type=2 forbids wildcards in date.
+  dlms::cosem::CosemSingleActionScheduleObject object(
+    name,
+    dlms::cosem::types::Script(
+      dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u), 1u),
+    dlms::cosem::types::SingleActionScheduleType(2u),
+    seed,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    withWildcard;
+  withWildcard.push_back(MakeWildcardDateEntry(6u, 0u, 0u));
+  EXPECT_FALSE(object.SetExecutionTime(withWildcard));
+  ASSERT_EQ(1u, object.ExecutionTime().size());
+  EXPECT_FALSE(object.ExecutionTime()[0].second.YearUnspecified());
+
+  // Same wildcard set is fine once we switch to type=3 (uniform time,
+  // wildcards allowed). Need two entries with the same time for type 3's
+  // uniform-time rule.
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    uniformWildcard;
+  uniformWildcard.push_back(MakeWildcardDateEntry(6u, 0u, 0u));
+  uniformWildcard.push_back(MakeWildcardDateEntry(6u, 0u, 0u));
+  ASSERT_TRUE(
+    object.SetType(dlms::cosem::types::SingleActionScheduleType(3u)));
+  EXPECT_TRUE(object.SetExecutionTime(uniformWildcard));
+  EXPECT_EQ(2u, object.ExecutionTime().size());
+}
+
+TEST(CosemSingleActionScheduleObject,
+     WriteAttributeReportsInvalidArgumentOnBadInput)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  const SingleActionScheduleInputs s = MakeSampleSingleActionSchedule();
+  dlms::cosem::CosemSingleActionScheduleObject object =
+    MakeSingleActionScheduleObject(
+      name, s, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  // Malformed script (truncated structure header).
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(2u, BytesFromList({0x02u, 0x02u})));
+  // type enum outside 1..5.
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(3u, BytesFromList({0x16u, 0x00u})));
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(3u, BytesFromList({0x16u, 0x06u})));
+  // type enum that is valid in isolation but breaks the invariant: the
+  // sample's day_of_week is 0xFF (unspecified, counts as a wildcard) so
+  // switching to type=2 — which forbids any wildcard — must be rejected.
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(3u, BytesFromList({0x16u, 0x02u})));
+  // Malformed execution_time array (truncated).
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(4u, BytesFromList({0x01u, 0x01u})));
+  // Empty execution_time array (array(0)) violates the "≥ 1 entry" rule.
+  EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+            object.WriteAttribute(4u, BytesFromList({0x01u, 0x00u})));
+}
+
+TEST(CosemSingleActionScheduleObject,
+     ReadRoundTripsType4MultiEntrySchedule)
+{
+  // Constructs a type=4 schedule with two concrete entries and verifies
+  // the wire output matches the hand-rolled AXDR encoding the spec
+  // describes (array(2) of structure(2)).
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  std::vector<
+    dlms::cosem::CosemSingleActionScheduleObject::ExecutionTimeEntry>
+    times;
+  times.push_back(MakeConcreteEntry(6u, 0u, 0u));
+  times.push_back(MakeConcreteEntry(18u, 30u, 0u));
+
+  dlms::cosem::CosemSingleActionScheduleObject object(
+    name,
+    dlms::cosem::types::Script(
+      dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 100u, 255u), 1u),
+    dlms::cosem::types::SingleActionScheduleType(4u),
+    times,
+    dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  dlms::cosem::CosemByteBuffer out;
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
+  // Expected: array(2) [ struct(2){oct(4) 06:00:00.00 + oct(5) 2024-03-15 dow=5},
+  //                      struct(2){oct(4) 18:30:00.00 + oct(5) 2024-03-15 dow=5} ]
+  const dlms::cosem::CosemByteBuffer expected = BytesFromList({
+    0x01u, 0x02u,
+      0x02u, 0x02u,
+        0x09u, 0x04u, 0x06u, 0x00u, 0x00u, 0x00u,
+        0x09u, 0x05u, 0x07u, 0xE8u, 0x03u, 0x0Fu, 0x05u,
+      0x02u, 0x02u,
+        0x09u, 0x04u, 0x12u, 0x1Eu, 0x00u, 0x00u,
+        0x09u, 0x05u, 0x07u, 0xE8u, 0x03u, 0x0Fu, 0x05u});
+  EXPECT_EQ(expected, out);
+
+  // And the bytes are accepted back through WriteAttribute.
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.WriteAttribute(4u, expected));
+  EXPECT_EQ(2u, object.ExecutionTime().size());
+}
+
+TEST(CosemSingleActionScheduleObject,
+     SetExecutedScriptHasNoCrossFieldConstraint)
+{
+  const dlms::cosem::CosemLogicalName name =
+    dlms::cosem::CosemLogicalName(0u, 0u, 15u, 0u, 0u, 255u);
+  const SingleActionScheduleInputs s = MakeSampleSingleActionSchedule();
+  dlms::cosem::CosemSingleActionScheduleObject object =
+    MakeSingleActionScheduleObject(
+      name, s, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+
+  const dlms::cosem::types::Script novel(
+    dlms::cosem::CosemLogicalName(0u, 0u, 10u, 0u, 99u, 255u), 0xCAFEu);
+  object.SetExecutedScript(novel);
+  EXPECT_EQ(novel, object.ExecutedScript());
 }
 
 namespace {

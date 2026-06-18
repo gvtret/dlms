@@ -916,6 +916,130 @@ bool DecodeDateTimeOctetString(
   return dlms::cosem::types::DateTime::TryFromBytes(data, length, value);
 }
 
+// Encode the `script` structure used by IC 22.executed_script:
+//   structure(2) { octet-string(6) logical_name, long-unsigned selector }
+void AppendScript(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::Script& value)
+{
+  AppendStructureHeader(output, 2u);
+  AppendOctetString(
+    output, value.LogicalName().Data(), value.LogicalName().Size());
+  AppendLongUnsigned(output, value.Selector());
+}
+
+bool DecodeScript(
+  const CosemByteBuffer& input,
+  dlms::cosem::types::Script& value)
+{
+  std::size_t offset = 0u;
+  std::uint8_t tag = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, count) || count != 2u) {
+    return false;
+  }
+
+  dlms::cosem::CosemLogicalName logicalName;
+  std::uint16_t selector = 0u;
+  if (!ReadLogicalNameValue(input, offset, logicalName)) {
+    return false;
+  }
+  if (!ReadLongUnsignedValue(input, offset, selector)) {
+    return false;
+  }
+  if (offset != input.size()) {
+    return false;
+  }
+  (void)tag;
+  value = dlms::cosem::types::Script(logicalName, selector);
+  return true;
+}
+
+// Encode IC 22.execution_time:
+//   array(n) of structure(2) { octet-string(4) time, octet-string(5) date }.
+void AppendExecutionTime(
+  CosemByteBuffer& output,
+  const std::vector<std::pair<
+    dlms::cosem::types::Time, dlms::cosem::types::Date> >& entries)
+{
+  AppendArrayHeader(output, entries.size());
+  for (std::size_t i = 0u; i < entries.size(); ++i) {
+    AppendStructureHeader(output, 2u);
+    const std::array<std::uint8_t, dlms::cosem::types::Time::WireSize>
+      timeBytes = entries[i].first.ToBytes();
+    AppendOctetString(output, timeBytes.data(), timeBytes.size());
+    const std::array<std::uint8_t, dlms::cosem::types::Date::WireSize>
+      dateBytes = entries[i].second.ToBytes();
+    AppendOctetString(output, dateBytes.data(), dateBytes.size());
+  }
+}
+
+bool DecodeExecutionTime(
+  const CosemByteBuffer& input,
+  std::vector<std::pair<
+    dlms::cosem::types::Time, dlms::cosem::types::Date> >& entries)
+{
+  entries.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  entries.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    std::size_t fieldCount = 0u;
+    if (!ReadExpectedTag(input, offset, kStructureTag) ||
+        !ReadAxdrLength(input, offset, fieldCount) ||
+        fieldCount != 2u) {
+      return false;
+    }
+    std::size_t timeLen = 0u;
+    const std::uint8_t* timeData = 0;
+    if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+        !ReadAxdrLength(input, offset, timeLen) ||
+        timeLen != dlms::cosem::types::Time::WireSize ||
+        !ReadFixedBytes(input, offset, timeLen, timeData)) {
+      return false;
+    }
+    dlms::cosem::types::Time time;
+    if (!dlms::cosem::types::Time::TryFromBytes(timeData, timeLen, time)) {
+      return false;
+    }
+    std::size_t dateLen = 0u;
+    const std::uint8_t* dateData = 0;
+    if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+        !ReadAxdrLength(input, offset, dateLen) ||
+        dateLen != dlms::cosem::types::Date::WireSize ||
+        !ReadFixedBytes(input, offset, dateLen, dateData)) {
+      return false;
+    }
+    dlms::cosem::types::Date date;
+    if (!dlms::cosem::types::Date::TryFromBytes(dateData, dateLen, date)) {
+      return false;
+    }
+    entries.push_back(std::make_pair(time, date));
+  }
+  if (offset != input.size()) {
+    return false;
+  }
+  return true;
+}
+
+// True when any spec wildcard sentinel is set in the date.
+bool DateHasAnyWildcard(const dlms::cosem::types::Date& date)
+{
+  return date.YearUnspecified() || date.MonthUnspecified() ||
+         date.DayOfMonthUnspecified() || date.DayOfWeekUnspecified() ||
+         date.Month() == dlms::cosem::types::Date::MonthDstBeginValue ||
+         date.Month() == dlms::cosem::types::Date::MonthDstEndValue ||
+         date.DayOfMonth() ==
+           dlms::cosem::types::Date::DayOfMonthLastValue ||
+         date.DayOfMonth() ==
+           dlms::cosem::types::Date::DayOfMonthSecondLastValue;
+}
+
 void AppendLogicalName(
   CosemByteBuffer& output,
   const CosemLogicalName& logicalName)
@@ -4537,15 +4661,71 @@ constexpr std::uint16_t kSingleActionScheduleClassId = 22u;
 constexpr std::uint8_t kSingleActionScheduleExecutedScriptAttributeId = 2u;
 constexpr std::uint8_t kSingleActionScheduleTypeAttributeId = 3u;
 constexpr std::uint8_t kSingleActionScheduleExecutionTimeAttributeId = 4u;
+
+std::vector<CosemSingleActionScheduleObject::ExecutionTimeEntry>
+MakeFallbackExecutionTime()
+{
+  // type=1 requires exactly one entry. Use an all-wildcard time + date,
+  // which is always a legal value: wildcards in date are allowed for
+  // type=1 and the per-field 0xFF time wildcard satisfies the
+  // hundredths==0xFF (== unspecified, not the numeric 0) sanity check
+  // below.
+  std::vector<CosemSingleActionScheduleObject::ExecutionTimeEntry> out;
+  out.push_back(std::make_pair(
+    dlms::cosem::types::Time(), dlms::cosem::types::Date()));
+  return out;
+}
 } // namespace
 
 const std::uint8_t CosemSingleActionScheduleObject::MaxSupportedVersion;
 
+bool CosemSingleActionScheduleObject::IsValidExecutionTime(
+  const types::SingleActionScheduleType& type,
+  const std::vector<ExecutionTimeEntry>& executionTime)
+{
+  if (executionTime.empty()) {
+    return false;
+  }
+  if (type.RequiresSingleEntry() && executionTime.size() != 1u) {
+    return false;
+  }
+
+  for (std::size_t i = 0u; i < executionTime.size(); ++i) {
+    const types::Time& t = executionTime[i].first;
+    // Spec §4.5.7.2.4: "Hundredths of seconds shall be zero." Accept
+    // either the literal 0 or the per-field 0xFF wildcard (which still
+    // round-trips through the wire untouched and is the only other
+    // legitimate way to express "no value").
+    if (!t.HundredthsUnspecified() && t.Hundredths() != 0u) {
+      return false;
+    }
+  }
+
+  if (type.RequiresUniformTime()) {
+    const types::Time& first = executionTime[0].first;
+    for (std::size_t i = 1u; i < executionTime.size(); ++i) {
+      if (!(executionTime[i].first == first)) {
+        return false;
+      }
+    }
+  }
+
+  if (type.ForbidsWildcardsInDate()) {
+    for (std::size_t i = 0u; i < executionTime.size(); ++i) {
+      if (DateHasAnyWildcard(executionTime[i].second)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
 CosemSingleActionScheduleObject::CosemSingleActionScheduleObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& executedScript,
-  const CosemByteBuffer& type,
-  const CosemByteBuffer& executionTime,
+  const types::Script& executedScript,
+  const types::SingleActionScheduleType& type,
+  const std::vector<ExecutionTimeEntry>& executionTime,
   AttributeAccessMode mutableAccess)
   : CosemSingleActionScheduleObject(
       logicalName, executedScript, type, executionTime,
@@ -4555,9 +4735,9 @@ CosemSingleActionScheduleObject::CosemSingleActionScheduleObject(
 
 CosemSingleActionScheduleObject::CosemSingleActionScheduleObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& executedScript,
-  const CosemByteBuffer& type,
-  const CosemByteBuffer& executionTime,
+  const types::Script& executedScript,
+  const types::SingleActionScheduleType& type,
+  const std::vector<ExecutionTimeEntry>& executionTime,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -4567,8 +4747,18 @@ CosemSingleActionScheduleObject::CosemSingleActionScheduleObject(
       logicalName))
   , executedScript_(executedScript)
   , type_(type)
-  , executionTime_(executionTime)
+  , executionTime_(
+      IsValidExecutionTime(type, executionTime)
+        ? executionTime
+        : MakeFallbackExecutionTime())
 {
+  // If the caller-supplied execution_time violated the invariants we
+  // fell back to a safe empty single-entry schedule, which forces type
+  // back to 1 so the stored pair stays consistent.
+  if (!IsValidExecutionTime(type, executionTime)) {
+    type_ = types::SingleActionScheduleType(1u);
+  }
+
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
@@ -4598,13 +4788,16 @@ CosemStatus CosemSingleActionScheduleObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kSingleActionScheduleExecutedScriptAttributeId:
-      output = executedScript_;
+      output.clear();
+      AppendScript(output, executedScript_);
       return CosemStatus::Ok;
     case kSingleActionScheduleTypeAttributeId:
-      output = type_;
+      output.clear();
+      AppendEnum(output, type_.Value());
       return CosemStatus::Ok;
     case kSingleActionScheduleExecutionTimeAttributeId:
-      output = executionTime_;
+      output.clear();
+      AppendExecutionTime(output, executionTime_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -4617,21 +4810,48 @@ CosemStatus CosemSingleActionScheduleObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kSingleActionScheduleExecutedScriptAttributeId:
+    case kSingleActionScheduleExecutedScriptAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      executedScript_ = input;
+      types::Script decoded;
+      if (!DecodeScript(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      executedScript_ = decoded;
       return CosemStatus::Ok;
-    case kSingleActionScheduleTypeAttributeId:
+    }
+    case kSingleActionScheduleTypeAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      type_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t raw = 0u;
+      if (!ReadEnumValue(input, offset, raw) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (!types::SingleActionScheduleType::IsValid(raw)) {
+        return CosemStatus::InvalidArgument;
+      }
+      const types::SingleActionScheduleType candidate(raw);
+      if (!IsValidExecutionTime(candidate, executionTime_)) {
+        return CosemStatus::InvalidArgument;
+      }
+      type_ = candidate;
       return CosemStatus::Ok;
-    case kSingleActionScheduleExecutionTimeAttributeId:
+    }
+    case kSingleActionScheduleExecutionTimeAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      executionTime_ = input;
+      std::vector<ExecutionTimeEntry> decoded;
+      if (!DecodeExecutionTime(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (!IsValidExecutionTime(type_, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      executionTime_ = decoded;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -4651,19 +4871,49 @@ CosemStatus CosemSingleActionScheduleObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemSingleActionScheduleObject::ExecutedScript() const
+const types::Script&
+CosemSingleActionScheduleObject::ExecutedScript() const
 {
   return executedScript_;
 }
 
-const CosemByteBuffer& CosemSingleActionScheduleObject::Type() const
+const types::SingleActionScheduleType&
+CosemSingleActionScheduleObject::Type() const
 {
   return type_;
 }
 
-const CosemByteBuffer& CosemSingleActionScheduleObject::ExecutionTime() const
+const std::vector<
+  CosemSingleActionScheduleObject::ExecutionTimeEntry>&
+CosemSingleActionScheduleObject::ExecutionTime() const
 {
   return executionTime_;
+}
+
+void CosemSingleActionScheduleObject::SetExecutedScript(
+  const types::Script& value)
+{
+  executedScript_ = value;
+}
+
+bool CosemSingleActionScheduleObject::SetType(
+  const types::SingleActionScheduleType& value)
+{
+  if (!IsValidExecutionTime(value, executionTime_)) {
+    return false;
+  }
+  type_ = value;
+  return true;
+}
+
+bool CosemSingleActionScheduleObject::SetExecutionTime(
+  const std::vector<ExecutionTimeEntry>& value)
+{
+  if (!IsValidExecutionTime(type_, value)) {
+    return false;
+  }
+  executionTime_ = value;
+  return true;
 }
 
 namespace {

@@ -1,5 +1,65 @@
 # Changelog
 
+## 0.110.0 - 2026-06-18
+
+### Breaking changes
+
+- **`CosemSingleActionScheduleObject`** (`class_id=22`, `version=0`,
+  Blue Book Ed. 12.1 / IEC 62056-6-2 ED4 §4.5.7) now models its three
+  configurable attributes via typed values instead of opaque
+  `CosemByteBuffer`s:
+  - `executed_script` → `dlms::cosem::types::Script` (new typed
+    struct: `{ logical_name, selector }`).
+  - `type` → `dlms::cosem::types::SingleActionScheduleType` (new
+    enum wrapper, range 1..5, with predicate helpers
+    `RequiresSingleEntry()`, `RequiresUniformTime()`,
+    `ForbidsWildcardsInDate()` matching §4.5.7.2.3).
+  - `execution_time` → `std::vector<std::pair<types::Time,
+    types::Date>>` (typedef
+    `CosemSingleActionScheduleObject::ExecutionTimeEntry`).
+  Constructors, getters (`ExecutedScript()` / `Type()` /
+  `ExecutionTime()`) and the new `SetExecutedScript` /
+  `SetType` / `SetExecutionTime` setters all use these typed values.
+  On the wire the attributes are still encoded exactly as the spec
+  requires (`structure(2) { octet-string(6), long-unsigned }` for the
+  script; `enum` for the type; `array of structure(2) { octet-string(4)
+  time, octet-string(5) date }` for execution_time); field-level
+  validation now enforces both per-field constraints and the
+  cross-field invariants from §4.5.7.2.3.
+- **Invariants enforced**: `type==1 → exactly 1 entry`; `type∈{2,3} →
+  all entries share the same time`; `type∈{2,4} → no wildcard in date`;
+  `hundredths_of_second` must be `0` (or unspecified) on every stored
+  time. Setters refuse to mutate on violation (`SetType` /
+  `SetExecutionTime` return `false`); constructors fall back to a safe
+  single-entry, all-wildcard, type=1 schedule rather than holding an
+  invalid value. `WriteAttribute` returns `CosemStatus::InvalidArgument`
+  for malformed AXDR, out-of-range enum values, and invariant
+  violations.
+- Added public helper
+  `CosemSingleActionScheduleObject::IsValidExecutionTime(type,
+  executionTime)` so callers can pre-validate a candidate pair before
+  committing it.
+
+No migration shim is provided — callers that were constructing IC 22
+from hand-rolled `CosemByteBuffer`s must build the typed values
+directly. The wire encoding is unchanged.
+
+### Added
+
+- **`dlms::cosem::types::Script`** — typed wrapper around the IC 22
+  executed_script structure (`{ logical_name, selector }`). Header
+  `dlms/cosem/types/script.hpp`, 4 dedicated unit tests in
+  `TypesScript.*`.
+- **`dlms::cosem::types::SingleActionScheduleType`** — typed wrapper
+  around the IC 22 type enum (1..5) with spec-driven invariant
+  predicates. Header
+  `dlms/cosem/types/single_action_schedule_type.hpp`, 6 dedicated
+  unit tests in `TypesSingleActionScheduleType.*`.
+- **`CosemSingleActionScheduleObject`** — 7 new unit tests covering
+  the invariants, the safe-fallback construction path, the
+  `WriteAttribute` error reporting, and a round-trip of a type=4
+  multi-entry schedule (11 IC 22 tests total).
+
 ## 0.109.1 - 2026-06-17
 
 ### Added

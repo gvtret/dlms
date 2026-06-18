@@ -2,12 +2,17 @@
 
 #include "dlms/cosem/certificate_store.hpp"
 #include "dlms/cosem/logical_device.hpp"
+#include "dlms/cosem/types/date.hpp"
 #include "dlms/cosem/types/date_time.hpp"
+#include "dlms/cosem/types/script.hpp"
+#include "dlms/cosem/types/single_action_schedule_type.hpp"
+#include "dlms/cosem/types/time.hpp"
 #include "dlms/security/invocation_counter_store.hpp"
 #include "dlms/security/key_store.hpp"
 
 #include <array>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dlms {
@@ -931,22 +936,43 @@ private:
   CosemAccessRights rights_;
 };
 
+// Single action schedule (IC 22, version 0) per DLMS UA Blue Book Ed. 12.1
+// / IEC 62056-6-2 ED4 §4.5.7. All three configurable attributes are now
+// typed:
+//   - executed_script  -> types::Script
+//   - type             -> types::SingleActionScheduleType (enum 1..5)
+//   - execution_time   -> std::vector<types::ExecutionTimeEntry>
+//                         where each entry is { time: types::Time,
+//                                               date: types::Date }.
+//
+// The IC enforces three spec-driven invariants between `type` and
+// `execution_time` (see §4.5.7.2.3):
+//   1. type == 1  -> execution_time must hold exactly one entry,
+//   2. type \in {2,3} -> all entries must share the same time value,
+//   3. type \in {2,4} -> date fields must not contain any wildcard.
+// Additionally the spec mandates `hundredths_of_second == 0` on every
+// stored time. Constructors and setters that would violate any of these
+// rules fail without mutating state (setters return false; constructors
+// fall back to a safe empty schedule with type 1 and a single all-
+// wildcard entry).
 class CosemSingleActionScheduleObject : public ICosemObject
 {
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  typedef std::pair<types::Time, types::Date> ExecutionTimeEntry;
+
   CosemSingleActionScheduleObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& executedScript,
-    const CosemByteBuffer& type,
-    const CosemByteBuffer& executionTime,
+    const types::Script& executedScript,
+    const types::SingleActionScheduleType& type,
+    const std::vector<ExecutionTimeEntry>& executionTime,
     AttributeAccessMode mutableAccess);
   CosemSingleActionScheduleObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& executedScript,
-    const CosemByteBuffer& type,
-    const CosemByteBuffer& executionTime,
+    const types::Script& executedScript,
+    const types::SingleActionScheduleType& type,
+    const std::vector<ExecutionTimeEntry>& executionTime,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -963,15 +989,33 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& ExecutedScript() const;
-  const CosemByteBuffer& Type() const;
-  const CosemByteBuffer& ExecutionTime() const;
+  const types::Script& ExecutedScript() const;
+  const types::SingleActionScheduleType& Type() const;
+  const std::vector<ExecutionTimeEntry>& ExecutionTime() const;
+
+  // Typed setters. SetType / SetExecutionTime validate the requested
+  // combination against the currently-stored value of the other field
+  // and the spec invariants; they return true on success and false
+  // (without mutating state) on violation. SetExecutedScript has no
+  // cross-field constraints and always succeeds.
+  void SetExecutedScript(const types::Script& value);
+  bool SetType(const types::SingleActionScheduleType& value);
+  bool SetExecutionTime(
+    const std::vector<ExecutionTimeEntry>& value);
+
+  // Helper exposed for callers that want to validate a candidate
+  // execution_time / type pair before committing it. Returns true iff
+  // the pair satisfies every spec invariant from §4.5.7.2.3 plus the
+  // `hundredths == 0` rule.
+  static bool IsValidExecutionTime(
+    const types::SingleActionScheduleType& type,
+    const std::vector<ExecutionTimeEntry>& executionTime);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer executedScript_;
-  CosemByteBuffer type_;
-  CosemByteBuffer executionTime_;
+  types::Script executedScript_;
+  types::SingleActionScheduleType type_;
+  std::vector<ExecutionTimeEntry> executionTime_;
   CosemAccessRights rights_;
 };
 

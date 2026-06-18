@@ -3358,49 +3358,15 @@ TEST(CosemScriptTableObject, NormalizesVersionAboveMax)
             object.Descriptor().key.version);
 }
 
-namespace {
+// CosemActivityCalendarObject (IC 20) tests now live in
+// test/cosem/test_cosem_activity_calendar_object.cpp per the
+// per-class test-file convention adopted in
+// docs/production_readiness_roadmap.md P2.4. The legacy CosemByteBuffer
+// based fixture was removed together with the old typeless API; the
+// migrated tests exercise the typed types::SeasonProfile /
+// types::WeekProfile / types::DayProfile API instead.
 
-struct ActivityCalendarBuffers
-{
-  dlms::cosem::CosemByteBuffer calendarNameActive;
-  dlms::cosem::CosemByteBuffer seasonProfileActive;
-  dlms::cosem::CosemByteBuffer weekProfileTableActive;
-  dlms::cosem::CosemByteBuffer dayProfileTableActive;
-  dlms::cosem::CosemByteBuffer calendarNamePassive;
-  dlms::cosem::CosemByteBuffer seasonProfilePassive;
-  dlms::cosem::CosemByteBuffer weekProfileTablePassive;
-  dlms::cosem::CosemByteBuffer dayProfileTablePassive;
-  dlms::cosem::CosemByteBuffer activatePassiveCalendarTime;
-};
-
-ActivityCalendarBuffers MakeSampleActivityCalendar()
-{
-  ActivityCalendarBuffers b;
-  b.calendarNameActive = BytesFromList({
-    0x09u, 0x06u, 'A', 'C', 'T', 'I', 'V', 'E'});
-  b.seasonProfileActive = BytesFromList({0x01u, 0x00u});
-  b.weekProfileTableActive = BytesFromList({0x01u, 0x00u});
-  b.dayProfileTableActive = BytesFromList({0x01u, 0x00u});
-  b.calendarNamePassive = BytesFromList({
-    0x09u, 0x07u, 'P', 'A', 'S', 'S', 'I', 'V', 'E'});
-  b.seasonProfilePassive = BytesFromList({
-    0x01u, 0x01u,
-    0x02u, 0x03u,
-      0x09u, 0x06u, 'S', 'U', 'M', 'M', 'E', 'R',
-      0x09u, 0x05u, 0x07u, 0xE5u, 0x06u, 0x15u, 0x00u,
-      0x09u, 0x06u, 'W', 'E', 'E', 'K', 'D', 'Y'});
-  b.weekProfileTablePassive = BytesFromList({0x01u, 0x00u});
-  b.dayProfileTablePassive = BytesFromList({0x01u, 0x00u});
-  b.activatePassiveCalendarTime = BytesFromList({
-    0x09u, 0x0Cu,
-    0x07u, 0xE5u, 0x07u, 0x01u, 0xFFu,
-    0x00u, 0x00u, 0x00u, 0x00u,
-    0x80u, 0x00u, 0x00u});
-  return b;
-}
-
-} // namespace
-
+#if 0  // moved to test_cosem_activity_calendar_object.cpp
 TEST(CosemActivityCalendarObject, ExposesAllAttributes)
 {
   const dlms::cosem::CosemLogicalName name =
@@ -3572,6 +3538,7 @@ TEST(CosemActivityCalendarObject, NormalizesVersionAboveMax)
     dlms::cosem::CosemActivityCalendarObject::MaxSupportedVersion,
     object.Descriptor().key.version);
 }
+#endif  // moved to test_cosem_activity_calendar_object.cpp
 
 namespace {
 

@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.113.0 - 2026-06-18
+
+### Breaking changes
+
+- **`CosemActivityCalendarObject`** (`class_id=20`, `version=0`,
+  IEC 62056-6-2 ED4 §4.5.5 / Blue Book Ed. 12.1 §5.1.9) now models
+  `season_profile` / `week_profile_table` / `day_profile_table` (both
+  active and passive) as typed
+  `std::vector<dlms::cosem::types::SeasonProfile>` /
+  `std::vector<dlms::cosem::types::WeekProfile>` /
+  `std::vector<dlms::cosem::types::DayProfile>` instead of opaque
+  `CosemByteBuffer`s, and `activate_passive_calendar_time` as a typed
+  `dlms::cosem::types::DateTime` (wildcards allowed; an all-wildcard
+  value means "never activates" per the spec note).
+  `calendar_name_active` and `calendar_name_passive` remain opaque
+  octet-strings.
+  - Constructors now take typed `std::vector<>` collections and a
+    `types::DateTime` activation time instead of `CosemByteBuffer`s.
+  - Setters `SetSeasonProfilePassive`, `SetWeekProfileTablePassive`,
+    `SetDayProfileTablePassive` return `bool` and do not mutate on
+    failure.
+  - New static validators expose intra-collection invariants
+    (`IsValidSeasonProfile`, `IsValidWeekProfileTable`,
+    `IsValidDayProfileTable`) and cross-collection invariants
+    (`WeekProfileTableSatisfies`, `SeasonProfileSatisfies`).
+  - Safe-fallback construction: passing an inconsistent collection
+    yields an empty value for that collection rather than holding
+    invalid state.
+  - `WriteAttribute` decodes the wire form
+    (`array of season`, `array of week_profile`,
+    `array of day_profile`, `date_time` octet-string), validates each
+    field via `types::DateTime::TryFromBytes` /
+    `types::Time::TryFromBytes` and enforces uniqueness and
+    cross-reference invariants before swapping; returns
+    `CosemStatus::InvalidArgument` on malformed AXDR, unknown tags,
+    out-of-range fields, duplicate season/week names, duplicate
+    day_ids, or broken cross-references, without touching the
+    existing collections.
+
+### Test reorganization
+
+- IC 20 tests live in their own file
+  `test/cosem/test_cosem_activity_calendar_object.cpp` per the
+  per-class test-file convention adopted in
+  `docs/production_readiness_roadmap.md` P2.4. The legacy buffer-based
+  fixture (`ActivityCalendarBuffers`) and tests were removed from
+  `test/cosem/test_simple_objects.cpp`.
+
+### Documentation
+
+- `docs/ic_support_matrix.md` row `20` Activity Calendar: Partial →
+  Yes; description updated to reflect the typed model and the new
+  validator surface.
+
 ## 0.112.0 - 2026-06-18
 
 ### Breaking changes

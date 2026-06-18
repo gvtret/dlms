@@ -2840,6 +2840,330 @@ bool IsAccessWritable(AttributeAccessMode mode)
       || mode == AttributeAccessMode::AuthenticatedWriteOnly
       || mode == AttributeAccessMode::AuthenticatedReadAndWrite;
 }
+
+// AXDR codec helpers for IC 20 "Activity calendar" per IEC 62056-6-2 ED4
+// (2021) section 4.5.5 and DLMS UA Blue Book Ed. 12.1 section 5.1.9. All
+// helpers are pure functions: they never mutate the IC 20 instance and
+// reject malformed input by returning `false` without leaving partial
+// state in their out-parameter.
+
+void AppendDayProfileAction(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::DayProfileAction& action)
+{
+  // day_profile_action ::= structure
+  // { start_time:time, script_logical_name:octet-string(6),
+  //   script_selector:long-unsigned }
+  AppendStructureHeader(output, 3u);
+  const std::array<std::uint8_t, dlms::cosem::types::Time::WireSize>
+    timeBytes = action.StartTime().ToBytes();
+  AppendOctetString(output, timeBytes.data(), timeBytes.size());
+  AppendOctetString(
+    output,
+    action.ScriptLogicalName().Data(),
+    action.ScriptLogicalName().Size());
+  AppendLongUnsigned(output, action.ScriptSelector());
+}
+
+bool DecodeDayProfileAction(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::DayProfileAction& out)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag)
+      || !ReadAxdrLength(input, offset, fieldCount) || fieldCount != 3u) {
+    return false;
+  }
+  std::size_t timeLen = 0u;
+  const std::uint8_t* timeData = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag)
+      || !ReadAxdrLength(input, offset, timeLen)
+      || timeLen != dlms::cosem::types::Time::WireSize
+      || !ReadFixedBytes(input, offset, timeLen, timeData)) {
+    return false;
+  }
+  dlms::cosem::types::Time startTime;
+  if (!dlms::cosem::types::Time::TryFromBytes(
+         timeData, timeLen, startTime)) {
+    return false;
+  }
+  dlms::cosem::CosemLogicalName scriptName;
+  if (!ReadLogicalNameValue(input, offset, scriptName)) {
+    return false;
+  }
+  std::uint16_t selector = 0u;
+  if (!ReadLongUnsignedValue(input, offset, selector)) {
+    return false;
+  }
+  dlms::cosem::types::DayProfileAction tmp;
+  if (!tmp.SetStartTime(startTime)) {
+    return false;  // start_time must not be wildcard.
+  }
+  tmp.SetScriptLogicalName(scriptName);
+  tmp.SetScriptSelector(selector);
+  if (!tmp.IsValid()) {
+    return false;
+  }
+  out = tmp;
+  return true;
+}
+
+void AppendDayProfile(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::DayProfile& profile)
+{
+  // day_profile ::= structure { day_id:unsigned, day_schedule:array }
+  AppendStructureHeader(output, 2u);
+  AppendUnsigned(output, profile.DayId());
+  AppendArrayHeader(output, profile.DaySchedule().size());
+  for (std::size_t i = 0u; i < profile.DaySchedule().size(); ++i) {
+    AppendDayProfileAction(output, profile.DaySchedule()[i]);
+  }
+}
+
+bool DecodeDayProfile(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::DayProfile& out)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag)
+      || !ReadAxdrLength(input, offset, fieldCount) || fieldCount != 2u) {
+    return false;
+  }
+  std::uint8_t dayId = 0u;
+  if (!ReadUnsignedValue(input, offset, dayId)) {
+    return false;
+  }
+  std::size_t actionCount = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, actionCount)) {
+    return false;
+  }
+  std::vector<dlms::cosem::types::DayProfileAction> schedule;
+  schedule.reserve(actionCount);
+  for (std::size_t i = 0u; i < actionCount; ++i) {
+    dlms::cosem::types::DayProfileAction action;
+    if (!DecodeDayProfileAction(input, offset, action)) {
+      return false;
+    }
+    schedule.push_back(action);
+  }
+  dlms::cosem::types::DayProfile tmp;
+  tmp.SetDayId(dayId);
+  if (!tmp.SetDaySchedule(schedule)) {
+    // Strictly-ascending start_time invariant violated.
+    return false;
+  }
+  out = tmp;
+  return true;
+}
+
+void AppendDayProfileTable(
+  CosemByteBuffer& output,
+  const std::vector<dlms::cosem::types::DayProfile>& table)
+{
+  AppendArrayHeader(output, table.size());
+  for (std::size_t i = 0u; i < table.size(); ++i) {
+    AppendDayProfile(output, table[i]);
+  }
+}
+
+bool DecodeDayProfileTablePayload(
+  const CosemByteBuffer& input,
+  std::vector<dlms::cosem::types::DayProfile>& out)
+{
+  out.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  out.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    dlms::cosem::types::DayProfile profile;
+    if (!DecodeDayProfile(input, offset, profile)) {
+      return false;
+    }
+    out.push_back(profile);
+  }
+  return offset == input.size();
+}
+
+void AppendWeekProfile(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::WeekProfile& profile)
+{
+  // week_profile ::= structure(8)
+  // { name:octet-string, mon..sun: unsigned day_id }
+  AppendStructureHeader(output, 8u);
+  AppendBufferOctetString(output, profile.Name());
+  AppendUnsigned(output, profile.Monday());
+  AppendUnsigned(output, profile.Tuesday());
+  AppendUnsigned(output, profile.Wednesday());
+  AppendUnsigned(output, profile.Thursday());
+  AppendUnsigned(output, profile.Friday());
+  AppendUnsigned(output, profile.Saturday());
+  AppendUnsigned(output, profile.Sunday());
+}
+
+bool ReadBufferOctetString(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemByteBuffer& out)
+{
+  std::size_t length = 0u;
+  const std::uint8_t* data = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag)
+      || !ReadAxdrLength(input, offset, length)
+      || !ReadFixedBytes(input, offset, length, data)) {
+    return false;
+  }
+  out.assign(data, data + length);
+  return true;
+}
+
+bool DecodeWeekProfile(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::WeekProfile& out)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag)
+      || !ReadAxdrLength(input, offset, fieldCount) || fieldCount != 8u) {
+    return false;
+  }
+  CosemByteBuffer name;
+  if (!ReadBufferOctetString(input, offset, name)) {
+    return false;
+  }
+  std::uint8_t days[7] = {0u, 0u, 0u, 0u, 0u, 0u, 0u};
+  for (std::size_t i = 0u; i < 7u; ++i) {
+    if (!ReadUnsignedValue(input, offset, days[i])) {
+      return false;
+    }
+  }
+  out = dlms::cosem::types::WeekProfile(
+    name,
+    days[0], days[1], days[2], days[3],
+    days[4], days[5], days[6]);
+  return true;
+}
+
+void AppendWeekProfileTable(
+  CosemByteBuffer& output,
+  const std::vector<dlms::cosem::types::WeekProfile>& table)
+{
+  AppendArrayHeader(output, table.size());
+  for (std::size_t i = 0u; i < table.size(); ++i) {
+    AppendWeekProfile(output, table[i]);
+  }
+}
+
+bool DecodeWeekProfileTablePayload(
+  const CosemByteBuffer& input,
+  std::vector<dlms::cosem::types::WeekProfile>& out)
+{
+  out.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  out.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    dlms::cosem::types::WeekProfile profile;
+    if (!DecodeWeekProfile(input, offset, profile)) {
+      return false;
+    }
+    out.push_back(profile);
+  }
+  return offset == input.size();
+}
+
+void AppendSeasonProfile(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::SeasonProfile& profile)
+{
+  // season ::= structure(3)
+  // { name:octet-string, start:date_time octet-string(12),
+  //   week_name:octet-string }
+  AppendStructureHeader(output, 3u);
+  AppendBufferOctetString(output, profile.Name());
+  const std::array<std::uint8_t, dlms::cosem::types::DateTime::WireSize>
+    dtBytes = profile.Start().ToBytes();
+  AppendOctetString(output, dtBytes.data(), dtBytes.size());
+  AppendBufferOctetString(output, profile.WeekName());
+}
+
+bool DecodeSeasonProfile(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::SeasonProfile& out)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag)
+      || !ReadAxdrLength(input, offset, fieldCount) || fieldCount != 3u) {
+    return false;
+  }
+  CosemByteBuffer name;
+  if (!ReadBufferOctetString(input, offset, name)) {
+    return false;
+  }
+  std::size_t dtLen = 0u;
+  const std::uint8_t* dtData = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag)
+      || !ReadAxdrLength(input, offset, dtLen)
+      || dtLen != dlms::cosem::types::DateTime::WireSize
+      || !ReadFixedBytes(input, offset, dtLen, dtData)) {
+    return false;
+  }
+  dlms::cosem::types::DateTime start;
+  if (!dlms::cosem::types::DateTime::TryFromBytes(dtData, dtLen, start)) {
+    return false;
+  }
+  CosemByteBuffer weekName;
+  if (!ReadBufferOctetString(input, offset, weekName)) {
+    return false;
+  }
+  out = dlms::cosem::types::SeasonProfile(name, start, weekName);
+  return true;
+}
+
+void AppendSeasonProfileTable(
+  CosemByteBuffer& output,
+  const std::vector<dlms::cosem::types::SeasonProfile>& table)
+{
+  AppendArrayHeader(output, table.size());
+  for (std::size_t i = 0u; i < table.size(); ++i) {
+    AppendSeasonProfile(output, table[i]);
+  }
+}
+
+bool DecodeSeasonProfilePayload(
+  const CosemByteBuffer& input,
+  std::vector<dlms::cosem::types::SeasonProfile>& out)
+{
+  out.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  out.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    dlms::cosem::types::SeasonProfile profile;
+    if (!DecodeSeasonProfile(input, offset, profile)) {
+      return false;
+    }
+    out.push_back(profile);
+  }
+  return offset == input.size();
+}
 } // namespace
 
 const std::uint8_t CosemActivityCalendarObject::MaxSupportedVersion;
@@ -2847,14 +3171,14 @@ const std::uint8_t CosemActivityCalendarObject::MaxSupportedVersion;
 CosemActivityCalendarObject::CosemActivityCalendarObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& calendarNameActive,
-  const CosemByteBuffer& seasonProfileActive,
-  const CosemByteBuffer& weekProfileTableActive,
-  const CosemByteBuffer& dayProfileTableActive,
+  const std::vector<types::SeasonProfile>& seasonProfileActive,
+  const std::vector<types::WeekProfile>& weekProfileTableActive,
+  const std::vector<types::DayProfile>& dayProfileTableActive,
   const CosemByteBuffer& calendarNamePassive,
-  const CosemByteBuffer& seasonProfilePassive,
-  const CosemByteBuffer& weekProfileTablePassive,
-  const CosemByteBuffer& dayProfileTablePassive,
-  const CosemByteBuffer& activatePassiveCalendarTime,
+  const std::vector<types::SeasonProfile>& seasonProfilePassive,
+  const std::vector<types::WeekProfile>& weekProfileTablePassive,
+  const std::vector<types::DayProfile>& dayProfileTablePassive,
+  const types::DateTime& activatePassiveCalendarTime,
   AttributeAccessMode passiveAccess)
   : CosemActivityCalendarObject(
       logicalName,
@@ -2875,14 +3199,14 @@ CosemActivityCalendarObject::CosemActivityCalendarObject(
 CosemActivityCalendarObject::CosemActivityCalendarObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& calendarNameActive,
-  const CosemByteBuffer& seasonProfileActive,
-  const CosemByteBuffer& weekProfileTableActive,
-  const CosemByteBuffer& dayProfileTableActive,
+  const std::vector<types::SeasonProfile>& seasonProfileActive,
+  const std::vector<types::WeekProfile>& weekProfileTableActive,
+  const std::vector<types::DayProfile>& dayProfileTableActive,
   const CosemByteBuffer& calendarNamePassive,
-  const CosemByteBuffer& seasonProfilePassive,
-  const CosemByteBuffer& weekProfileTablePassive,
-  const CosemByteBuffer& dayProfileTablePassive,
-  const CosemByteBuffer& activatePassiveCalendarTime,
+  const std::vector<types::SeasonProfile>& seasonProfilePassive,
+  const std::vector<types::WeekProfile>& weekProfileTablePassive,
+  const std::vector<types::DayProfile>& dayProfileTablePassive,
+  const types::DateTime& activatePassiveCalendarTime,
   AttributeAccessMode passiveAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -2892,15 +3216,46 @@ CosemActivityCalendarObject::CosemActivityCalendarObject(
         CosemActivityCalendarObject::MaxSupportedVersion),
       logicalName))
   , calendarNameActive_(calendarNameActive)
-  , seasonProfileActive_(seasonProfileActive)
-  , weekProfileTableActive_(weekProfileTableActive)
-  , dayProfileTableActive_(dayProfileTableActive)
+  , seasonProfileActive_()
+  , weekProfileTableActive_()
+  , dayProfileTableActive_()
   , calendarNamePassive_(calendarNamePassive)
-  , seasonProfilePassive_(seasonProfilePassive)
-  , weekProfileTablePassive_(weekProfileTablePassive)
-  , dayProfileTablePassive_(dayProfileTablePassive)
+  , seasonProfilePassive_()
+  , weekProfileTablePassive_()
+  , dayProfileTablePassive_()
   , activatePassiveCalendarTime_(activatePassiveCalendarTime)
 {
+  // Safe-fallback construction: silently drop ill-formed collections so
+  // the constructed object never holds invalid state. Tests covering the
+  // boundary use the explicit Setter() / IsValid*() API to verify the
+  // refusal path.
+  if (IsValidDayProfileTable(dayProfileTableActive)) {
+    dayProfileTableActive_ = dayProfileTableActive;
+  }
+  if (IsValidWeekProfileTable(weekProfileTableActive)
+      && WeekProfileTableSatisfies(
+           weekProfileTableActive, dayProfileTableActive_)) {
+    weekProfileTableActive_ = weekProfileTableActive;
+  }
+  if (IsValidSeasonProfile(seasonProfileActive)
+      && SeasonProfileSatisfies(
+           seasonProfileActive, weekProfileTableActive_)) {
+    seasonProfileActive_ = seasonProfileActive;
+  }
+  if (IsValidDayProfileTable(dayProfileTablePassive)) {
+    dayProfileTablePassive_ = dayProfileTablePassive;
+  }
+  if (IsValidWeekProfileTable(weekProfileTablePassive)
+      && WeekProfileTableSatisfies(
+           weekProfileTablePassive, dayProfileTablePassive_)) {
+    weekProfileTablePassive_ = weekProfileTablePassive;
+  }
+  if (IsValidSeasonProfile(seasonProfilePassive)
+      && SeasonProfileSatisfies(
+           seasonProfilePassive, weekProfileTablePassive_)) {
+    seasonProfilePassive_ = seasonProfilePassive;
+  }
+
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   rights_.SetAttributeAccess(
@@ -2950,28 +3305,35 @@ CosemStatus CosemActivityCalendarObject::ReadAttribute(
       output = calendarNameActive_;
       return CosemStatus::Ok;
     case kActivityCalendarSeasonProfileActiveAttributeId:
-      output = seasonProfileActive_;
+      output.clear();
+      AppendSeasonProfileTable(output, seasonProfileActive_);
       return CosemStatus::Ok;
     case kActivityCalendarWeekProfileTableActiveAttributeId:
-      output = weekProfileTableActive_;
+      output.clear();
+      AppendWeekProfileTable(output, weekProfileTableActive_);
       return CosemStatus::Ok;
     case kActivityCalendarDayProfileTableActiveAttributeId:
-      output = dayProfileTableActive_;
+      output.clear();
+      AppendDayProfileTable(output, dayProfileTableActive_);
       return CosemStatus::Ok;
     case kActivityCalendarCalendarNamePassiveAttributeId:
       output = calendarNamePassive_;
       return CosemStatus::Ok;
     case kActivityCalendarSeasonProfilePassiveAttributeId:
-      output = seasonProfilePassive_;
+      output.clear();
+      AppendSeasonProfileTable(output, seasonProfilePassive_);
       return CosemStatus::Ok;
     case kActivityCalendarWeekProfileTablePassiveAttributeId:
-      output = weekProfileTablePassive_;
+      output.clear();
+      AppendWeekProfileTable(output, weekProfileTablePassive_);
       return CosemStatus::Ok;
     case kActivityCalendarDayProfileTablePassiveAttributeId:
-      output = dayProfileTablePassive_;
+      output.clear();
+      AppendDayProfileTable(output, dayProfileTablePassive_);
       return CosemStatus::Ok;
     case kActivityCalendarActivatePassiveCalendarTimeAttributeId:
-      output = activatePassiveCalendarTime_;
+      output.clear();
+      AppendDateTimeOctetString(output, activatePassiveCalendarTime_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -2985,39 +3347,61 @@ CosemStatus CosemActivityCalendarObject::WriteAttribute(
 {
   switch (attributeId) {
     case kActivityCalendarCalendarNamePassiveAttributeId: {
-      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
-        calendarNamePassive_ = input;
-        return CosemStatus::Ok;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        return CosemStatus::AccessDenied;
       }
-      return CosemStatus::AccessDenied;
+      calendarNamePassive_ = input;
+      return CosemStatus::Ok;
     }
     case kActivityCalendarSeasonProfilePassiveAttributeId: {
-      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
-        seasonProfilePassive_ = input;
-        return CosemStatus::Ok;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        return CosemStatus::AccessDenied;
       }
-      return CosemStatus::AccessDenied;
+      std::vector<types::SeasonProfile> decoded;
+      if (!DecodeSeasonProfilePayload(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (!SetSeasonProfilePassive(decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      return CosemStatus::Ok;
     }
     case kActivityCalendarWeekProfileTablePassiveAttributeId: {
-      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
-        weekProfileTablePassive_ = input;
-        return CosemStatus::Ok;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        return CosemStatus::AccessDenied;
       }
-      return CosemStatus::AccessDenied;
+      std::vector<types::WeekProfile> decoded;
+      if (!DecodeWeekProfileTablePayload(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (!SetWeekProfileTablePassive(decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      return CosemStatus::Ok;
     }
     case kActivityCalendarDayProfileTablePassiveAttributeId: {
-      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
-        dayProfileTablePassive_ = input;
-        return CosemStatus::Ok;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        return CosemStatus::AccessDenied;
       }
-      return CosemStatus::AccessDenied;
+      std::vector<types::DayProfile> decoded;
+      if (!DecodeDayProfileTablePayload(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      if (!SetDayProfileTablePassive(decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      return CosemStatus::Ok;
     }
     case kActivityCalendarActivatePassiveCalendarTimeAttributeId: {
-      if (IsAccessWritable(rights_.AttributeAccess(attributeId))) {
-        activatePassiveCalendarTime_ = input;
-        return CosemStatus::Ok;
+      if (!IsAccessWritable(rights_.AttributeAccess(attributeId))) {
+        return CosemStatus::AccessDenied;
       }
-      return CosemStatus::AccessDenied;
+      types::DateTime decoded;
+      if (!DecodeDateTimeOctetString(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      activatePassiveCalendarTime_ = decoded;
+      return CosemStatus::Ok;
     }
     case kLogicalNameAttributeId:
     case kActivityCalendarCalendarNameActiveAttributeId:
@@ -3053,19 +3437,19 @@ const CosemByteBuffer& CosemActivityCalendarObject::CalendarNameActive() const
   return calendarNameActive_;
 }
 
-const CosemByteBuffer&
+const std::vector<types::SeasonProfile>&
 CosemActivityCalendarObject::SeasonProfileActive() const
 {
   return seasonProfileActive_;
 }
 
-const CosemByteBuffer&
+const std::vector<types::WeekProfile>&
 CosemActivityCalendarObject::WeekProfileTableActive() const
 {
   return weekProfileTableActive_;
 }
 
-const CosemByteBuffer&
+const std::vector<types::DayProfile>&
 CosemActivityCalendarObject::DayProfileTableActive() const
 {
   return dayProfileTableActive_;
@@ -3077,25 +3461,25 @@ CosemActivityCalendarObject::CalendarNamePassive() const
   return calendarNamePassive_;
 }
 
-const CosemByteBuffer&
+const std::vector<types::SeasonProfile>&
 CosemActivityCalendarObject::SeasonProfilePassive() const
 {
   return seasonProfilePassive_;
 }
 
-const CosemByteBuffer&
+const std::vector<types::WeekProfile>&
 CosemActivityCalendarObject::WeekProfileTablePassive() const
 {
   return weekProfileTablePassive_;
 }
 
-const CosemByteBuffer&
+const std::vector<types::DayProfile>&
 CosemActivityCalendarObject::DayProfileTablePassive() const
 {
   return dayProfileTablePassive_;
 }
 
-const CosemByteBuffer&
+const types::DateTime&
 CosemActivityCalendarObject::ActivatePassiveCalendarTime() const
 {
   return activatePassiveCalendarTime_;
@@ -3107,28 +3491,171 @@ void CosemActivityCalendarObject::SetCalendarNamePassive(
   calendarNamePassive_ = value;
 }
 
-void CosemActivityCalendarObject::SetSeasonProfilePassive(
-  const CosemByteBuffer& value)
+bool CosemActivityCalendarObject::SetSeasonProfilePassive(
+  const std::vector<types::SeasonProfile>& value)
 {
+  if (!IsValidSeasonProfile(value)
+      || !SeasonProfileSatisfies(value, weekProfileTablePassive_)) {
+    return false;
+  }
   seasonProfilePassive_ = value;
+  return true;
 }
 
-void CosemActivityCalendarObject::SetWeekProfileTablePassive(
-  const CosemByteBuffer& value)
+bool CosemActivityCalendarObject::SetWeekProfileTablePassive(
+  const std::vector<types::WeekProfile>& value)
 {
+  if (!IsValidWeekProfileTable(value)
+      || !WeekProfileTableSatisfies(value, dayProfileTablePassive_)) {
+    return false;
+  }
+  // Replacing week_profile_table may invalidate the existing
+  // season_profile cross-reference. Reject when this would leave the
+  // object in an inconsistent state instead of silently dropping seasons.
+  if (!SeasonProfileSatisfies(seasonProfilePassive_, value)) {
+    return false;
+  }
   weekProfileTablePassive_ = value;
+  return true;
 }
 
-void CosemActivityCalendarObject::SetDayProfileTablePassive(
-  const CosemByteBuffer& value)
+bool CosemActivityCalendarObject::SetDayProfileTablePassive(
+  const std::vector<types::DayProfile>& value)
 {
+  if (!IsValidDayProfileTable(value)) {
+    return false;
+  }
+  // Replacing day_profile_table may break week_profile cross-references.
+  if (!WeekProfileTableSatisfies(weekProfileTablePassive_, value)) {
+    return false;
+  }
   dayProfileTablePassive_ = value;
+  return true;
 }
 
 void CosemActivityCalendarObject::SetActivatePassiveCalendarTime(
-  const CosemByteBuffer& value)
+  const types::DateTime& value)
 {
   activatePassiveCalendarTime_ = value;
+}
+
+bool CosemActivityCalendarObject::IsValidSeasonProfile(
+  const std::vector<types::SeasonProfile>& value)
+{
+  // Per IEC 62056-6-2 ED4 §4.5.5: season_profile entries must have a
+  // unique season name (sort key) and the array must be ordered by
+  // strictly ascending start date_time. We enforce both invariants here.
+  // DateTime has no operator<; compare the canonical wire form bytewise
+  // (lexicographic order on the 12-byte representation matches calendar
+  // order field-by-field: year-hi, year-lo, month, day, ...).
+  for (std::size_t i = 0u; i < value.size(); ++i) {
+    for (std::size_t j = i + 1u; j < value.size(); ++j) {
+      if (value[i].Name() == value[j].Name()) {
+        return false;
+      }
+    }
+    if (i > 0u) {
+      const std::array<std::uint8_t, types::DateTime::WireSize> prev
+        = value[i - 1u].Start().ToBytes();
+      const std::array<std::uint8_t, types::DateTime::WireSize> cur
+        = value[i].Start().ToBytes();
+      bool strictlyLess = false;
+      for (std::size_t k = 0u; k < types::DateTime::WireSize; ++k) {
+        if (prev[k] < cur[k]) {
+          strictlyLess = true;
+          break;
+        }
+        if (prev[k] > cur[k]) {
+          break;
+        }
+      }
+      if (!strictlyLess) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool CosemActivityCalendarObject::IsValidWeekProfileTable(
+  const std::vector<types::WeekProfile>& value)
+{
+  // Week-profile names must be unique within the table.
+  for (std::size_t i = 0u; i < value.size(); ++i) {
+    for (std::size_t j = i + 1u; j < value.size(); ++j) {
+      if (value[i].Name() == value[j].Name()) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool CosemActivityCalendarObject::IsValidDayProfileTable(
+  const std::vector<types::DayProfile>& value)
+{
+  // day_id values are the keys of the day_profile_table and must be
+  // unique. Each entry itself enforces its day_schedule invariants via
+  // types::DayProfile::IsValid().
+  for (std::size_t i = 0u; i < value.size(); ++i) {
+    if (!value[i].IsValid()) {
+      return false;
+    }
+    for (std::size_t j = i + 1u; j < value.size(); ++j) {
+      if (value[i].DayId() == value[j].DayId()) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool CosemActivityCalendarObject::WeekProfileTableSatisfies(
+  const std::vector<types::WeekProfile>& weekTable,
+  const std::vector<types::DayProfile>& dayTable)
+{
+  // Every day_id referenced by a week profile must resolve to a row in
+  // the day_profile_table. Pure check, no side effects.
+  for (std::size_t i = 0u; i < weekTable.size(); ++i) {
+    const std::uint8_t ids[7] = {
+      weekTable[i].Monday(), weekTable[i].Tuesday(),
+      weekTable[i].Wednesday(), weekTable[i].Thursday(),
+      weekTable[i].Friday(), weekTable[i].Saturday(),
+      weekTable[i].Sunday()};
+    for (std::size_t k = 0u; k < 7u; ++k) {
+      bool found = false;
+      for (std::size_t d = 0u; d < dayTable.size(); ++d) {
+        if (dayTable[d].DayId() == ids[k]) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+bool CosemActivityCalendarObject::SeasonProfileSatisfies(
+  const std::vector<types::SeasonProfile>& seasonProfile,
+  const std::vector<types::WeekProfile>& weekTable)
+{
+  // Each season's week_name must reference an existing week profile.
+  for (std::size_t i = 0u; i < seasonProfile.size(); ++i) {
+    bool found = false;
+    for (std::size_t j = 0u; j < weekTable.size(); ++j) {
+      if (seasonProfile[i].WeekName() == weekTable[j].Name()) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      return false;
+    }
+  }
+  return true;
 }
 
 namespace {

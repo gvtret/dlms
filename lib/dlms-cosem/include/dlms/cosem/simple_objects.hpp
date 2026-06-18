@@ -4,11 +4,15 @@
 #include "dlms/cosem/logical_device.hpp"
 #include "dlms/cosem/types/date.hpp"
 #include "dlms/cosem/types/date_time.hpp"
+#include "dlms/cosem/types/day_profile.hpp"
+#include "dlms/cosem/types/day_profile_action.hpp"
 #include "dlms/cosem/types/schedule_table_entry.hpp"
 #include "dlms/cosem/types/script.hpp"
+#include "dlms/cosem/types/season_profile.hpp"
 #include "dlms/cosem/types/single_action_schedule_type.hpp"
 #include "dlms/cosem/types/special_day_entry.hpp"
 #include "dlms/cosem/types/time.hpp"
+#include "dlms/cosem/types/week_profile.hpp"
 #include "dlms/security/invocation_counter_store.hpp"
 #include "dlms/security/key_store.hpp"
 
@@ -361,26 +365,26 @@ public:
   CosemActivityCalendarObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& calendarNameActive,
-    const CosemByteBuffer& seasonProfileActive,
-    const CosemByteBuffer& weekProfileTableActive,
-    const CosemByteBuffer& dayProfileTableActive,
+    const std::vector<types::SeasonProfile>& seasonProfileActive,
+    const std::vector<types::WeekProfile>& weekProfileTableActive,
+    const std::vector<types::DayProfile>& dayProfileTableActive,
     const CosemByteBuffer& calendarNamePassive,
-    const CosemByteBuffer& seasonProfilePassive,
-    const CosemByteBuffer& weekProfileTablePassive,
-    const CosemByteBuffer& dayProfileTablePassive,
-    const CosemByteBuffer& activatePassiveCalendarTime,
+    const std::vector<types::SeasonProfile>& seasonProfilePassive,
+    const std::vector<types::WeekProfile>& weekProfileTablePassive,
+    const std::vector<types::DayProfile>& dayProfileTablePassive,
+    const types::DateTime& activatePassiveCalendarTime,
     AttributeAccessMode passiveAccess);
   CosemActivityCalendarObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& calendarNameActive,
-    const CosemByteBuffer& seasonProfileActive,
-    const CosemByteBuffer& weekProfileTableActive,
-    const CosemByteBuffer& dayProfileTableActive,
+    const std::vector<types::SeasonProfile>& seasonProfileActive,
+    const std::vector<types::WeekProfile>& weekProfileTableActive,
+    const std::vector<types::DayProfile>& dayProfileTableActive,
     const CosemByteBuffer& calendarNamePassive,
-    const CosemByteBuffer& seasonProfilePassive,
-    const CosemByteBuffer& weekProfileTablePassive,
-    const CosemByteBuffer& dayProfileTablePassive,
-    const CosemByteBuffer& activatePassiveCalendarTime,
+    const std::vector<types::SeasonProfile>& seasonProfilePassive,
+    const std::vector<types::WeekProfile>& weekProfileTablePassive,
+    const std::vector<types::DayProfile>& dayProfileTablePassive,
+    const types::DateTime& activatePassiveCalendarTime,
     AttributeAccessMode passiveAccess,
     std::uint8_t version);
 
@@ -398,32 +402,53 @@ public:
     CosemByteBuffer& output);
 
   const CosemByteBuffer& CalendarNameActive() const;
-  const CosemByteBuffer& SeasonProfileActive() const;
-  const CosemByteBuffer& WeekProfileTableActive() const;
-  const CosemByteBuffer& DayProfileTableActive() const;
+  const std::vector<types::SeasonProfile>& SeasonProfileActive() const;
+  const std::vector<types::WeekProfile>& WeekProfileTableActive() const;
+  const std::vector<types::DayProfile>& DayProfileTableActive() const;
   const CosemByteBuffer& CalendarNamePassive() const;
-  const CosemByteBuffer& SeasonProfilePassive() const;
-  const CosemByteBuffer& WeekProfileTablePassive() const;
-  const CosemByteBuffer& DayProfileTablePassive() const;
-  const CosemByteBuffer& ActivatePassiveCalendarTime() const;
+  const std::vector<types::SeasonProfile>& SeasonProfilePassive() const;
+  const std::vector<types::WeekProfile>& WeekProfileTablePassive() const;
+  const std::vector<types::DayProfile>& DayProfileTablePassive() const;
+  const types::DateTime& ActivatePassiveCalendarTime() const;
 
   void SetCalendarNamePassive(const CosemByteBuffer& value);
-  void SetSeasonProfilePassive(const CosemByteBuffer& value);
-  void SetWeekProfileTablePassive(const CosemByteBuffer& value);
-  void SetDayProfileTablePassive(const CosemByteBuffer& value);
-  void SetActivatePassiveCalendarTime(const CosemByteBuffer& value);
+  bool SetSeasonProfilePassive(
+    const std::vector<types::SeasonProfile>& value);
+  bool SetWeekProfileTablePassive(
+    const std::vector<types::WeekProfile>& value);
+  bool SetDayProfileTablePassive(
+    const std::vector<types::DayProfile>& value);
+  void SetActivatePassiveCalendarTime(const types::DateTime& value);
+
+  // Intra-collection validators. Cross-collection invariants are
+  // checked separately so that the caller can stage passive values
+  // before committing them.
+  static bool IsValidSeasonProfile(
+    const std::vector<types::SeasonProfile>& value);
+  static bool IsValidWeekProfileTable(
+    const std::vector<types::WeekProfile>& value);
+  static bool IsValidDayProfileTable(
+    const std::vector<types::DayProfile>& value);
+
+  // Cross-collection validators (pure, no state mutation).
+  static bool WeekProfileTableSatisfies(
+    const std::vector<types::WeekProfile>& weekTable,
+    const std::vector<types::DayProfile>& dayTable);
+  static bool SeasonProfileSatisfies(
+    const std::vector<types::SeasonProfile>& seasonProfile,
+    const std::vector<types::WeekProfile>& weekTable);
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer calendarNameActive_;
-  CosemByteBuffer seasonProfileActive_;
-  CosemByteBuffer weekProfileTableActive_;
-  CosemByteBuffer dayProfileTableActive_;
+  std::vector<types::SeasonProfile> seasonProfileActive_;
+  std::vector<types::WeekProfile> weekProfileTableActive_;
+  std::vector<types::DayProfile> dayProfileTableActive_;
   CosemByteBuffer calendarNamePassive_;
-  CosemByteBuffer seasonProfilePassive_;
-  CosemByteBuffer weekProfileTablePassive_;
-  CosemByteBuffer dayProfileTablePassive_;
-  CosemByteBuffer activatePassiveCalendarTime_;
+  std::vector<types::SeasonProfile> seasonProfilePassive_;
+  std::vector<types::WeekProfile> weekProfileTablePassive_;
+  std::vector<types::DayProfile> dayProfileTablePassive_;
+  types::DateTime activatePassiveCalendarTime_;
   CosemAccessRights rights_;
 };
 

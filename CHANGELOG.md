@@ -1,5 +1,58 @@
 # Changelog
 
+## 0.120.0 - 2026-06-22
+
+### Changed
+
+- **`CosemProfileGenericObject`** (`class_id=7`, IEC 62056-6-2 ED4
+  §4.3.6 / DLMS UA Blue Book Ed. 12.1 §4.3.6) now implements method
+  `1` `reset()` with real semantics instead of returning
+  `UnsupportedFeature`. Calling `InvokeMethod(1, ...)` clears the
+  stored profile buffer (`bufferRows_`) and returns
+  `CosemStatus::Ok`; the derived `entries_in_use` attribute (`7`)
+  drops to `0` on the next read. Method output is cleared
+  regardless of input. The call is idempotent on an already-empty
+  buffer.
+- Methods `2` `capture()`, `3` `get_buffer_by_range()` and `4`
+  `get_buffer_by_index()` still return `UnsupportedFeature` and
+  remain backend hooks — the built-in object has no notion of
+  "now" or of the captured objects' live values, and selective
+  access still relies on the backend wiring the free-standing
+  `DecodeProfileGenericRangeDescriptor` /
+  `DecodeProfileGenericEntryDescriptor` codecs. All four methods
+  keep their `MethodAccessMode::Access` access-right entries; any
+  other method id continues to return `MethodNotFound`.
+
+### Added
+
+- New per-IC test file
+  `lib/dlms-cosem/test/cosem/test_cosem_profile_generic_object.cpp`
+  (rule P2.4) with 11 focused tests covering:
+  `ResetClearsBufferAndReportsZeroEntries`,
+  `ResetIsIdempotentOnEmptyBuffer`,
+  `CaptureMethodIsUnsupportedFeature`,
+  `GetBufferByRangeIsUnsupportedFeature`,
+  `GetBufferByIndexIsUnsupportedFeature`,
+  `UnknownMethodReturnsMethodNotFound`,
+  `EntriesInUseTracksBufferSize`,
+  `WriteAttributeReturnsAccessDeniedForKnownIds`,
+  `ReadAttributeRejectsUnknownIds`. Helpers are self-contained
+  (no dependency on the shared `test_simple_objects.cpp` fixtures).
+- Existing `RejectsWritesAndReportsUnsupportedMethods` and
+  `AcceptsExplicitVersion` legacy tests in `test_simple_objects.cpp`
+  updated to expect `Ok` on method `1` and `UnsupportedFeature` on
+  methods `2`-`4` (instead of `UnsupportedFeature` across the
+  board).
+- IC support matrix row `7` updated to reflect the implemented
+  `reset()`; AXDR codecs for `capture_objects`, `buffer`,
+  range/entry descriptors are still pre-existing and unchanged.
+
+### Verified
+
+- Full ctest: `1218/1218` pass.
+- Focused `dlms_cosem_tests.exe --gtest_filter='CosemProfileGenericObject.*'`:
+  `23/23` pass.
+
 ## 0.119.0 - 2026-06-22
 
 ### Breaking changes

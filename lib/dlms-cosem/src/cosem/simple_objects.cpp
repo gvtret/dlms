@@ -14656,10 +14656,20 @@ CosemStatus CosemProfileGenericObject::InvokeMethod(
 {
   (void)input;
   output.clear();
-  if (methodId == kProfileResetMethodId ||
-      methodId == kProfileCaptureMethodId ||
+  if (methodId == kProfileResetMethodId) {
+    // IEC 62056-6-2 ED4 4.3.6.3.1 / Blue Book Ed. 12.1 IC 7:
+    // reset() clears the profile buffer. entries_in_use derives
+    // from bufferRows_.size() and therefore returns to 0 on the
+    // next read.
+    bufferRows_.clear();
+    return CosemStatus::Ok;
+  }
+  if (methodId == kProfileCaptureMethodId ||
       methodId == kProfileGetBufferByRangeMethodId ||
       methodId == kProfileGetBufferByIndexMethodId) {
+    // capture() and get_buffer_by_{range,index}() are application
+    // hooks: the built-in object has no notion of "now" or of the
+    // captured objects' live values. Backends own this semantics.
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;

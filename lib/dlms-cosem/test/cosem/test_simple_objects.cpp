@@ -965,8 +965,11 @@ TEST(CosemProfileGenericObject, RejectsWritesAndReportsUnsupportedMethods)
 
   for (std::uint8_t methodId = 1u; methodId <= 4u; ++methodId) {
     dlms::cosem::CosemByteBuffer output = Bytes(0xAAu, 0xBBu);
-    EXPECT_EQ(dlms::cosem::CosemStatus::UnsupportedFeature,
-              object.InvokeMethod(methodId, input, output))
+    const dlms::cosem::CosemStatus expected =
+      (methodId == 1u)
+        ? dlms::cosem::CosemStatus::Ok
+        : dlms::cosem::CosemStatus::UnsupportedFeature;
+    EXPECT_EQ(expected, object.InvokeMethod(methodId, input, output))
       << "methodId=" << static_cast<int>(methodId);
     EXPECT_TRUE(output.empty())
       << "methodId=" << static_cast<int>(methodId);
@@ -1024,12 +1027,16 @@ TEST(CosemProfileGenericObject, AcceptsExplicitVersion)
       << "v1 methodId=" << static_cast<int>(methodId);
 
     dlms::cosem::CosemByteBuffer output;
+    const dlms::cosem::CosemStatus expected =
+      (methodId == 1u)
+        ? dlms::cosem::CosemStatus::Ok
+        : dlms::cosem::CosemStatus::UnsupportedFeature;
     EXPECT_EQ(
-      dlms::cosem::CosemStatus::UnsupportedFeature,
+      expected,
       version0.InvokeMethod(methodId, dlms::cosem::CosemByteBuffer(), output))
       << "v0 methodId=" << static_cast<int>(methodId);
     EXPECT_EQ(
-      dlms::cosem::CosemStatus::UnsupportedFeature,
+      expected,
       capped.InvokeMethod(methodId, dlms::cosem::CosemByteBuffer(), output))
       << "v1 methodId=" << static_cast<int>(methodId);
   }

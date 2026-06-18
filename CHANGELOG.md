@@ -1,5 +1,96 @@
 # Changelog
 
+## 0.125.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemIecHdlcSetupObject`** (`class_id=23`, `version=1`,
+  IEC 62056-6-2 ED4 (2021) §4.7.2.2.2 / DLMS UA Blue Book
+  Ed. 12.1) now exposes all seven dynamic attributes as
+  typed values instead of opaque `CosemByteBuffer` payloads:
+  - `comm_speed` (attribute `2`) → nested enum
+    `CosemIecHdlcSetupObject::CommSpeed`
+    `{Baud300=0, Baud600=1, Baud1200=2, Baud2400=3,
+      Baud4800=4, Baud9600=5, Baud19200=6, Baud38400=7,
+      Baud57600=8, Baud115200=9}`
+  - `window_size_transmit` (attribute `3`) → `std::uint8_t`
+    (range `1..7`)
+  - `window_size_receive` (attribute `4`) → `std::uint8_t`
+    (range `1..7`)
+  - `max_info_field_length_transmit` (attribute `5`) →
+    `std::uint16_t` (range `32..2030`)
+  - `max_info_field_length_receive` (attribute `6`) →
+    `std::uint16_t` (range `32..2030`)
+  - `inter_octet_time_out` (attribute `7`) → `std::uint16_t`
+    milliseconds (range `20..6000`)
+  - `inactivity_time_out` (attribute `8`) → `std::uint16_t`
+    seconds (`0` disables the timer)
+  - `device_address` (attribute `9`) → `std::uint16_t`
+    (range `0x0010..0x3FFD`, always read-only over the wire;
+    use `SetDeviceAddress` server-side, which now returns
+    `bool` and rejects out-of-range values)
+
+  The ctor takes `CommSpeed`, the seven scalar typed members
+  above, and the standard `AttributeAccessMode` for mutable
+  attributes. The previously-existing read-only getters
+  (`WindowSizeTransmit()`, `MaxInfoFieldLengthReceive()`,
+  `InterOctetTimeOut()`, …) now return their typed values
+  rather than `CosemByteBuffer`. The getter previously
+  named `CommSpeed()` was renamed to `GetCommSpeed()` so
+  the unqualified name denotes the nested enum type (same
+  pattern as `CosemDisconnectControlObject::ControlMode` /
+  `CosemCompactDataObject::CaptureMethod` /
+  `CosemParameterMonitorObject::HashAlgorithmId`).
+
+  `ReadAttribute(2)` encodes an AXDR `enum`;
+  `ReadAttribute(3)`/`(4)` encode AXDR `unsigned`;
+  `ReadAttribute(5..9)` encode AXDR `long-unsigned`.
+  `WriteAttribute(2..8)` decode the matching wire forms,
+  enforce the Blue Book ranges above, and return
+  `InvalidArgument` on malformed input or out-of-range
+  values (stored value preserved on rejection).
+  `WriteAttribute(1)` and `WriteAttribute(9)` always return
+  `AccessDenied` (logical_name and device_address are
+  read-only by spec). All ctor inputs are clamped/normalised
+  on construction (invalid `CommSpeed` → `Baud9600`, window
+  sizes clamped to `[1,7]`, max-info-field clamped to
+  `[32,2030]`, inter-octet timeout clamped to `[20,6000]`,
+  device address clamped to `[0x0010,0x3FFD]`), so the
+  object never holds invalid state.
+
+  Five new static validators are exported:
+  `IsValidCommSpeed`, `IsValidWindowSize`,
+  `IsValidMaxInfoFieldLength`, `IsValidInterOctetTimeOut`,
+  `IsValidDeviceAddress`. The class still defines no methods
+  (`InvokeMethod` returns `MethodNotFound` for every id),
+  matching the Blue Book.
+
+  `docs/ic_support_matrix.md` row for IC 23 moves from
+  Partial to Supported.
+
+### Tests
+
+- New per-IC file
+  `lib/dlms-cosem/test/cosem/test_cosem_iec_hdlc_setup_object.cpp`
+  (15 tests) covers descriptor/access rights, typed AXDR
+  read encoding for all 9 attributes, ctor clamping for
+  every out-of-range input, per-attribute write decoding
+  including range and malformed-AXDR rejection (correct
+  bounds: max-info-field `0x07EE = 2030`, not `0x07F2`),
+  read-only attribute enforcement (`AccessDenied` for
+  attrs 1 & 9), `ReadOnly` access-mode propagation,
+  `MethodNotFound` for every method id,
+  `SetDeviceAddress` boundary checks (`0x0010`, `0x3FFD`,
+  rejections at `0x000F`, `0x3FFE`, `0xFFFF` preserving
+  prior value), the five `IsValid*` helpers, and version
+  normalisation above `MaxSupportedVersion`.
+- Legacy `CosemByteBuffer`-typed IC 23 tests in
+  `test_simple_objects.cpp` were collapsed to a
+  `_MovedToPerIcFile` placeholder (P2.4: one IC per file).
+- Full ctest suite: **1273/1273 passing** (one Windows
+  parallel-link flake on `dlms_package_artifact_smoke`
+  resolved on isolated re-run; not related to IC 23).
+
 ## 0.124.0 - 2026-06-22
 
 ### Breaking changes

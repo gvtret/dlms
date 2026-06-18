@@ -818,27 +818,49 @@ class CosemIecHdlcSetupObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 1u;
 
+  // Per IEC 62056-6-2 ED4 (2021) §4.7.2.2.2 / DLMS UA Blue Book
+  // Ed. 12.1: comm_speed is an enum 0..9. Names follow the table.
+  enum class CommSpeed : std::uint8_t
+  {
+    Baud300 = 0u,
+    Baud600 = 1u,
+    Baud1200 = 2u,
+    Baud2400 = 3u,
+    Baud4800 = 4u,
+    Baud9600 = 5u,
+    Baud19200 = 6u,
+    Baud38400 = 7u,
+    Baud57600 = 8u,
+    Baud115200 = 9u
+  };
+
+  static bool IsValidCommSpeed(std::uint8_t raw);
+  static bool IsValidWindowSize(std::uint8_t value);
+  static bool IsValidMaxInfoFieldLength(std::uint16_t value);
+  static bool IsValidInterOctetTimeOut(std::uint16_t value);
+  static bool IsValidDeviceAddress(std::uint16_t value);
+
   CosemIecHdlcSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& commSpeed,
-    const CosemByteBuffer& windowSizeTransmit,
-    const CosemByteBuffer& windowSizeReceive,
-    const CosemByteBuffer& maxInfoFieldLengthTransmit,
-    const CosemByteBuffer& maxInfoFieldLengthReceive,
-    const CosemByteBuffer& interOctetTimeOut,
-    const CosemByteBuffer& inactivityTimeOut,
-    const CosemByteBuffer& deviceAddress,
+    CommSpeed commSpeed,
+    std::uint8_t windowSizeTransmit,
+    std::uint8_t windowSizeReceive,
+    std::uint16_t maxInfoFieldLengthTransmit,
+    std::uint16_t maxInfoFieldLengthReceive,
+    std::uint16_t interOctetTimeOut,
+    std::uint16_t inactivityTimeOut,
+    std::uint16_t deviceAddress,
     AttributeAccessMode mutableAccess);
   CosemIecHdlcSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& commSpeed,
-    const CosemByteBuffer& windowSizeTransmit,
-    const CosemByteBuffer& windowSizeReceive,
-    const CosemByteBuffer& maxInfoFieldLengthTransmit,
-    const CosemByteBuffer& maxInfoFieldLengthReceive,
-    const CosemByteBuffer& interOctetTimeOut,
-    const CosemByteBuffer& inactivityTimeOut,
-    const CosemByteBuffer& deviceAddress,
+    CommSpeed commSpeed,
+    std::uint8_t windowSizeTransmit,
+    std::uint8_t windowSizeReceive,
+    std::uint16_t maxInfoFieldLengthTransmit,
+    std::uint16_t maxInfoFieldLengthReceive,
+    std::uint16_t interOctetTimeOut,
+    std::uint16_t inactivityTimeOut,
+    std::uint16_t deviceAddress,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -855,27 +877,27 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& CommSpeed() const;
-  const CosemByteBuffer& WindowSizeTransmit() const;
-  const CosemByteBuffer& WindowSizeReceive() const;
-  const CosemByteBuffer& MaxInfoFieldLengthTransmit() const;
-  const CosemByteBuffer& MaxInfoFieldLengthReceive() const;
-  const CosemByteBuffer& InterOctetTimeOut() const;
-  const CosemByteBuffer& InactivityTimeOut() const;
-  const CosemByteBuffer& DeviceAddress() const;
+  CommSpeed GetCommSpeed() const;
+  std::uint8_t WindowSizeTransmit() const;
+  std::uint8_t WindowSizeReceive() const;
+  std::uint16_t MaxInfoFieldLengthTransmit() const;
+  std::uint16_t MaxInfoFieldLengthReceive() const;
+  std::uint16_t InterOctetTimeOut() const;
+  std::uint16_t InactivityTimeOut() const;
+  std::uint16_t DeviceAddress() const;
 
-  void SetDeviceAddress(const CosemByteBuffer& value);
+  bool SetDeviceAddress(std::uint16_t value);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer commSpeed_;
-  CosemByteBuffer windowSizeTransmit_;
-  CosemByteBuffer windowSizeReceive_;
-  CosemByteBuffer maxInfoFieldLengthTransmit_;
-  CosemByteBuffer maxInfoFieldLengthReceive_;
-  CosemByteBuffer interOctetTimeOut_;
-  CosemByteBuffer inactivityTimeOut_;
-  CosemByteBuffer deviceAddress_;
+  CommSpeed commSpeed_;
+  std::uint8_t windowSizeTransmit_;
+  std::uint8_t windowSizeReceive_;
+  std::uint16_t maxInfoFieldLengthTransmit_;
+  std::uint16_t maxInfoFieldLengthReceive_;
+  std::uint16_t interOctetTimeOut_;
+  std::uint16_t inactivityTimeOut_;
+  std::uint16_t deviceAddress_;
   CosemAccessRights rights_;
 };
 

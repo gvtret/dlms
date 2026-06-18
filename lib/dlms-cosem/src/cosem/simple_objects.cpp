@@ -5302,16 +5302,82 @@ constexpr std::uint8_t kIecHdlcSetupDeviceAddressAttributeId = 9u;
 
 const std::uint8_t CosemIecHdlcSetupObject::MaxSupportedVersion;
 
+bool CosemIecHdlcSetupObject::IsValidCommSpeed(std::uint8_t raw)
+{
+  return raw <= 9u;
+}
+
+bool CosemIecHdlcSetupObject::IsValidWindowSize(std::uint8_t value)
+{
+  return value >= 1u && value <= 7u;
+}
+
+bool CosemIecHdlcSetupObject::IsValidMaxInfoFieldLength(std::uint16_t value)
+{
+  return value >= 32u && value <= 2030u;
+}
+
+bool CosemIecHdlcSetupObject::IsValidInterOctetTimeOut(std::uint16_t value)
+{
+  return value >= 20u && value <= 6000u;
+}
+
+bool CosemIecHdlcSetupObject::IsValidDeviceAddress(std::uint16_t value)
+{
+  return value >= 0x0010u && value <= 0x3FFDu;
+}
+
+namespace {
+
+CosemIecHdlcSetupObject::CommSpeed NormalizeCommSpeed(
+  CosemIecHdlcSetupObject::CommSpeed value)
+{
+  const std::uint8_t raw = static_cast<std::uint8_t>(value);
+  return CosemIecHdlcSetupObject::IsValidCommSpeed(raw)
+           ? value
+           : CosemIecHdlcSetupObject::CommSpeed::Baud9600;
+}
+
+std::uint8_t ClampWindowSize(std::uint8_t value)
+{
+  if (value < 1u) return 1u;
+  if (value > 7u) return 7u;
+  return value;
+}
+
+std::uint16_t ClampMaxInfoFieldLength(std::uint16_t value)
+{
+  if (value < 32u) return 32u;
+  if (value > 2030u) return 2030u;
+  return value;
+}
+
+std::uint16_t ClampInterOctetTimeOut(std::uint16_t value)
+{
+  if (value < 20u) return 20u;
+  if (value > 6000u) return 6000u;
+  return value;
+}
+
+std::uint16_t ClampDeviceAddress(std::uint16_t value)
+{
+  if (value < 0x0010u) return 0x0010u;
+  if (value > 0x3FFDu) return 0x3FFDu;
+  return value;
+}
+
+}  // namespace
+
 CosemIecHdlcSetupObject::CosemIecHdlcSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& commSpeed,
-  const CosemByteBuffer& windowSizeTransmit,
-  const CosemByteBuffer& windowSizeReceive,
-  const CosemByteBuffer& maxInfoFieldLengthTransmit,
-  const CosemByteBuffer& maxInfoFieldLengthReceive,
-  const CosemByteBuffer& interOctetTimeOut,
-  const CosemByteBuffer& inactivityTimeOut,
-  const CosemByteBuffer& deviceAddress,
+  CommSpeed commSpeed,
+  std::uint8_t windowSizeTransmit,
+  std::uint8_t windowSizeReceive,
+  std::uint16_t maxInfoFieldLengthTransmit,
+  std::uint16_t maxInfoFieldLengthReceive,
+  std::uint16_t interOctetTimeOut,
+  std::uint16_t inactivityTimeOut,
+  std::uint16_t deviceAddress,
   AttributeAccessMode mutableAccess)
   : CosemIecHdlcSetupObject(
       logicalName, commSpeed, windowSizeTransmit, windowSizeReceive,
@@ -5323,14 +5389,14 @@ CosemIecHdlcSetupObject::CosemIecHdlcSetupObject(
 
 CosemIecHdlcSetupObject::CosemIecHdlcSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& commSpeed,
-  const CosemByteBuffer& windowSizeTransmit,
-  const CosemByteBuffer& windowSizeReceive,
-  const CosemByteBuffer& maxInfoFieldLengthTransmit,
-  const CosemByteBuffer& maxInfoFieldLengthReceive,
-  const CosemByteBuffer& interOctetTimeOut,
-  const CosemByteBuffer& inactivityTimeOut,
-  const CosemByteBuffer& deviceAddress,
+  CommSpeed commSpeed,
+  std::uint8_t windowSizeTransmit,
+  std::uint8_t windowSizeReceive,
+  std::uint16_t maxInfoFieldLengthTransmit,
+  std::uint16_t maxInfoFieldLengthReceive,
+  std::uint16_t interOctetTimeOut,
+  std::uint16_t inactivityTimeOut,
+  std::uint16_t deviceAddress,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -5338,14 +5404,16 @@ CosemIecHdlcSetupObject::CosemIecHdlcSetupObject(
       NormalizeVersion(
         version, CosemIecHdlcSetupObject::MaxSupportedVersion),
       logicalName))
-  , commSpeed_(commSpeed)
-  , windowSizeTransmit_(windowSizeTransmit)
-  , windowSizeReceive_(windowSizeReceive)
-  , maxInfoFieldLengthTransmit_(maxInfoFieldLengthTransmit)
-  , maxInfoFieldLengthReceive_(maxInfoFieldLengthReceive)
-  , interOctetTimeOut_(interOctetTimeOut)
+  , commSpeed_(NormalizeCommSpeed(commSpeed))
+  , windowSizeTransmit_(ClampWindowSize(windowSizeTransmit))
+  , windowSizeReceive_(ClampWindowSize(windowSizeReceive))
+  , maxInfoFieldLengthTransmit_(
+      ClampMaxInfoFieldLength(maxInfoFieldLengthTransmit))
+  , maxInfoFieldLengthReceive_(
+      ClampMaxInfoFieldLength(maxInfoFieldLengthReceive))
+  , interOctetTimeOut_(ClampInterOctetTimeOut(interOctetTimeOut))
   , inactivityTimeOut_(inactivityTimeOut)
-  , deviceAddress_(deviceAddress)
+  , deviceAddress_(ClampDeviceAddress(deviceAddress))
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
@@ -5364,7 +5432,7 @@ CosemIecHdlcSetupObject::CosemIecHdlcSetupObject(
   rights_.SetAttributeAccess(
     kIecHdlcSetupInactivityTimeOutAttributeId, mutableAccess);
   // device_address is the assigned HDLC address; treat it as read-only
-  // and let the backend refresh it via SetDeviceAddress.
+  // and let the backend refresh it via SetDeviceAddress (validated).
   rights_.SetAttributeAccess(
     kIecHdlcSetupDeviceAddressAttributeId, AttributeAccessMode::ReadOnly);
 }
@@ -5383,36 +5451,36 @@ CosemStatus CosemIecHdlcSetupObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
 {
+  output.clear();
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kIecHdlcSetupCommSpeedAttributeId:
-      output = commSpeed_;
+      AppendEnum(output, static_cast<std::uint8_t>(commSpeed_));
       return CosemStatus::Ok;
     case kIecHdlcSetupWindowSizeTransmitAttributeId:
-      output = windowSizeTransmit_;
+      AppendUnsigned(output, windowSizeTransmit_);
       return CosemStatus::Ok;
     case kIecHdlcSetupWindowSizeReceiveAttributeId:
-      output = windowSizeReceive_;
+      AppendUnsigned(output, windowSizeReceive_);
       return CosemStatus::Ok;
     case kIecHdlcSetupMaxInfoTxAttributeId:
-      output = maxInfoFieldLengthTransmit_;
+      AppendLongUnsigned(output, maxInfoFieldLengthTransmit_);
       return CosemStatus::Ok;
     case kIecHdlcSetupMaxInfoRxAttributeId:
-      output = maxInfoFieldLengthReceive_;
+      AppendLongUnsigned(output, maxInfoFieldLengthReceive_);
       return CosemStatus::Ok;
     case kIecHdlcSetupInterOctetTimeOutAttributeId:
-      output = interOctetTimeOut_;
+      AppendLongUnsigned(output, interOctetTimeOut_);
       return CosemStatus::Ok;
     case kIecHdlcSetupInactivityTimeOutAttributeId:
-      output = inactivityTimeOut_;
+      AppendLongUnsigned(output, inactivityTimeOut_);
       return CosemStatus::Ok;
     case kIecHdlcSetupDeviceAddressAttributeId:
-      output = deviceAddress_;
+      AppendLongUnsigned(output, deviceAddress_);
       return CosemStatus::Ok;
     default:
-      output.clear();
       return CosemStatus::AttributeNotFound;
   }
 }
@@ -5422,41 +5490,84 @@ CosemStatus CosemIecHdlcSetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kIecHdlcSetupCommSpeedAttributeId:
+    case kIecHdlcSetupCommSpeedAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      commSpeed_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t raw = 0u;
+      if (!ReadEnumValue(input, offset, raw) || offset != input.size() ||
+          !IsValidCommSpeed(raw))
+        return CosemStatus::InvalidArgument;
+      commSpeed_ = static_cast<CommSpeed>(raw);
       return CosemStatus::Ok;
-    case kIecHdlcSetupWindowSizeTransmitAttributeId:
+    }
+    case kIecHdlcSetupWindowSizeTransmitAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      windowSizeTransmit_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t raw = 0u;
+      if (!ReadUnsignedValue(input, offset, raw) || offset != input.size() ||
+          !IsValidWindowSize(raw))
+        return CosemStatus::InvalidArgument;
+      windowSizeTransmit_ = raw;
       return CosemStatus::Ok;
-    case kIecHdlcSetupWindowSizeReceiveAttributeId:
+    }
+    case kIecHdlcSetupWindowSizeReceiveAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      windowSizeReceive_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t raw = 0u;
+      if (!ReadUnsignedValue(input, offset, raw) || offset != input.size() ||
+          !IsValidWindowSize(raw))
+        return CosemStatus::InvalidArgument;
+      windowSizeReceive_ = raw;
       return CosemStatus::Ok;
-    case kIecHdlcSetupMaxInfoTxAttributeId:
+    }
+    case kIecHdlcSetupMaxInfoTxAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      maxInfoFieldLengthTransmit_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t raw = 0u;
+      if (!ReadLongUnsignedValue(input, offset, raw) ||
+          offset != input.size() || !IsValidMaxInfoFieldLength(raw))
+        return CosemStatus::InvalidArgument;
+      maxInfoFieldLengthTransmit_ = raw;
       return CosemStatus::Ok;
-    case kIecHdlcSetupMaxInfoRxAttributeId:
+    }
+    case kIecHdlcSetupMaxInfoRxAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      maxInfoFieldLengthReceive_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t raw = 0u;
+      if (!ReadLongUnsignedValue(input, offset, raw) ||
+          offset != input.size() || !IsValidMaxInfoFieldLength(raw))
+        return CosemStatus::InvalidArgument;
+      maxInfoFieldLengthReceive_ = raw;
       return CosemStatus::Ok;
-    case kIecHdlcSetupInterOctetTimeOutAttributeId:
+    }
+    case kIecHdlcSetupInterOctetTimeOutAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      interOctetTimeOut_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t raw = 0u;
+      if (!ReadLongUnsignedValue(input, offset, raw) ||
+          offset != input.size() || !IsValidInterOctetTimeOut(raw))
+        return CosemStatus::InvalidArgument;
+      interOctetTimeOut_ = raw;
       return CosemStatus::Ok;
-    case kIecHdlcSetupInactivityTimeOutAttributeId:
+    }
+    case kIecHdlcSetupInactivityTimeOutAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      inactivityTimeOut_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t raw = 0u;
+      if (!ReadLongUnsignedValue(input, offset, raw) ||
+          offset != input.size())
+        return CosemStatus::InvalidArgument;
+      // inactivity_time_out has no upper bound per Blue Book; 0 disables it.
+      inactivityTimeOut_ = raw;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
     case kIecHdlcSetupDeviceAddressAttributeId:
       return CosemStatus::AccessDenied;
@@ -5477,51 +5588,52 @@ CosemStatus CosemIecHdlcSetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemIecHdlcSetupObject::CommSpeed() const
+CosemIecHdlcSetupObject::CommSpeed
+CosemIecHdlcSetupObject::GetCommSpeed() const
 {
   return commSpeed_;
 }
 
-const CosemByteBuffer& CosemIecHdlcSetupObject::WindowSizeTransmit() const
+std::uint8_t CosemIecHdlcSetupObject::WindowSizeTransmit() const
 {
   return windowSizeTransmit_;
 }
 
-const CosemByteBuffer& CosemIecHdlcSetupObject::WindowSizeReceive() const
+std::uint8_t CosemIecHdlcSetupObject::WindowSizeReceive() const
 {
   return windowSizeReceive_;
 }
 
-const CosemByteBuffer&
-CosemIecHdlcSetupObject::MaxInfoFieldLengthTransmit() const
+std::uint16_t CosemIecHdlcSetupObject::MaxInfoFieldLengthTransmit() const
 {
   return maxInfoFieldLengthTransmit_;
 }
 
-const CosemByteBuffer&
-CosemIecHdlcSetupObject::MaxInfoFieldLengthReceive() const
+std::uint16_t CosemIecHdlcSetupObject::MaxInfoFieldLengthReceive() const
 {
   return maxInfoFieldLengthReceive_;
 }
 
-const CosemByteBuffer& CosemIecHdlcSetupObject::InterOctetTimeOut() const
+std::uint16_t CosemIecHdlcSetupObject::InterOctetTimeOut() const
 {
   return interOctetTimeOut_;
 }
 
-const CosemByteBuffer& CosemIecHdlcSetupObject::InactivityTimeOut() const
+std::uint16_t CosemIecHdlcSetupObject::InactivityTimeOut() const
 {
   return inactivityTimeOut_;
 }
 
-const CosemByteBuffer& CosemIecHdlcSetupObject::DeviceAddress() const
+std::uint16_t CosemIecHdlcSetupObject::DeviceAddress() const
 {
   return deviceAddress_;
 }
 
-void CosemIecHdlcSetupObject::SetDeviceAddress(const CosemByteBuffer& value)
+bool CosemIecHdlcSetupObject::SetDeviceAddress(std::uint16_t value)
 {
+  if (!IsValidDeviceAddress(value)) return false;
   deviceAddress_ = value;
+  return true;
 }
 
 namespace {

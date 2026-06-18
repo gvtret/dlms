@@ -1,5 +1,87 @@
 # Changelog
 
+## 0.124.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemParameterMonitorObject`** (`class_id=65`,
+  `version=1`, IEC 62056-6-2 ED4 (2021) §4.5.10 / DLMS UA
+  Blue Book Ed. 12.1 §4.5.10) now exposes three of its
+  seven dynamic attributes as typed values instead of opaque
+  `CosemByteBuffer` payloads:
+  - `capture_time` (attribute `3`) →
+    `dlms::cosem::types::DateTime`
+  - `parameter_list` (attribute `4`, previously named
+    `parameters` internally) →
+    `std::vector<dlms::cosem::types::MonitoredValue>`
+  - `hash_algorithm_id` (attribute `6`) → nested enum
+    `CosemParameterMonitorObject::HashAlgorithmId`
+    `{Sha256=0, Sha384=1, Sha256Last16=2, Sha256Last8=3,
+      Sha256Last4=4}`
+  Both ctors now take `const types::DateTime& captureTime`,
+  `const std::vector<types::MonitoredValue>& parameterList`
+  and `HashAlgorithmId hashAlgorithmId`. The corresponding
+  getter previously named `Parameters()` was renamed to
+  `ParameterList()` to match the Blue Book attribute name;
+  the getter previously named `HashAlgorithmId()` was renamed
+  to `GetHashAlgorithmId()` so the unqualified name denotes
+  the nested enum type. `CaptureTime()` now returns
+  `const types::DateTime&`.
+
+  `ReadAttribute(3)` encodes a 12-byte AXDR `octet-string`
+  per Blue Book §4.1.6.1; `ReadAttribute(4)` encodes an AXDR
+  `array of value_definition` (each element a
+  `structure { long-unsigned class_id, octet-string(6)
+  logical_name, integer attribute_index }`);
+  `ReadAttribute(6)` encodes an AXDR `enum`.
+  `WriteAttribute(3)`/`(4)`/`(6)` decode the same wire forms,
+  validate length / structure / enum range, and return
+  `InvalidArgument` on malformed input (stored value preserved
+  on rejection). The ctor normalises out-of-range
+  `hash_algorithm_id` raw values to `HashAlgorithmId::Sha256`
+  so objects never hold invalid enum state.
+
+  `changed_parameter` (`2`), `parameter_list_name` (`5`),
+  `parameter_value_digest` (`7`) and `parameter_values` (`8`)
+  remain opaque encoded DLMS Data buffers pending the typed
+  discriminated-union (CHOICE) machinery shared with the
+  other value-bearing ICs (3 / 4 / 5 / 61). The `_name` /
+  `_digest` / `_values` attributes stay gated on
+  `version >= 1` exactly as before.
+
+### Methods
+
+- Methods `add_parameter` (`1`) and `delete_parameter` (`2`)
+  per IEC 62056-6-2 ED4 §4.5.10.2 are now implemented in the
+  built-in object instead of always returning
+  `UnsupportedFeature`:
+  - `add_parameter` decodes a single
+    `parameter_list_element` (`MonitoredValue` wire form),
+    appends it to `parameter_list` and returns `Ok`.
+  - `delete_parameter` decodes the same element and removes
+    the first matching entry (matching
+    `class_id` + `logical_name` + `attribute_index`),
+    returning `Ok` on success or `ObjectError` when no entry
+    matches.
+  Both methods return `InvalidArgument` for malformed input,
+  and `UnsupportedFeature` when the object is in legacy
+  `version 0` (no `parameter_list_name` series). The backend
+  may still override these by intercepting the request before
+  it reaches the built-in object.
+
+### Tests
+
+- Added per-IC test file
+  `test/cosem/test_cosem_parameter_monitor_object.cpp`
+  (20 tests covering attribute layout, AXDR round-trips,
+  malformed-payload rejection, enum-range validation, ctor
+  normalisation, legacy-version gating, version normalisation
+  and method 1 / 2 semantics).
+- Collapsed the previous in-place IC 65 tests in
+  `test/cosem/test_simple_objects.cpp` to the
+  `_MovedToPerIcFile` placeholder per rule P2.4.
+- Full test suite: 1262 / 1262 passing.
+
 ## 0.123.0 - 2026-06-22
 
 ### Breaking changes

@@ -2036,23 +2036,37 @@ class CosemParameterMonitorObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 1u;
 
+  // Per IEC 62056-6-2 ED4 (2021) §4.5.10.1.6: hash_algorithm_id is
+  // an `enum` with five defined values; everything outside this
+  // range is invalid wire data.
+  enum class HashAlgorithmId : std::uint8_t
+  {
+    Sha256 = 0u,
+    Sha384 = 1u,
+    Sha256Last16 = 2u,
+    Sha256Last8 = 3u,
+    Sha256Last4 = 4u
+  };
+
+  static bool IsValidHashAlgorithmId(std::uint8_t raw);
+
   CosemParameterMonitorObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& changedParameter,
-    const CosemByteBuffer& captureTime,
-    const CosemByteBuffer& parameters,
+    const dlms::cosem::types::DateTime& captureTime,
+    const std::vector<dlms::cosem::types::MonitoredValue>& parameterList,
     const CosemByteBuffer& parameterListName,
-    const CosemByteBuffer& hashAlgorithmId,
+    HashAlgorithmId hashAlgorithmId,
     const CosemByteBuffer& parameterValueDigest,
     const CosemByteBuffer& parameterValues,
     AttributeAccessMode mutableAccess);
   CosemParameterMonitorObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& changedParameter,
-    const CosemByteBuffer& captureTime,
-    const CosemByteBuffer& parameters,
+    const dlms::cosem::types::DateTime& captureTime,
+    const std::vector<dlms::cosem::types::MonitoredValue>& parameterList,
     const CosemByteBuffer& parameterListName,
-    const CosemByteBuffer& hashAlgorithmId,
+    HashAlgorithmId hashAlgorithmId,
     const CosemByteBuffer& parameterValueDigest,
     const CosemByteBuffer& parameterValues,
     AttributeAccessMode mutableAccess,
@@ -2072,20 +2086,21 @@ public:
     CosemByteBuffer& output);
 
   const CosemByteBuffer& ChangedParameter() const;
-  const CosemByteBuffer& CaptureTime() const;
-  const CosemByteBuffer& Parameters() const;
+  const dlms::cosem::types::DateTime& CaptureTime() const;
+  const std::vector<dlms::cosem::types::MonitoredValue>&
+  ParameterList() const;
   const CosemByteBuffer& ParameterListName() const;
-  const CosemByteBuffer& HashAlgorithmId() const;
+  HashAlgorithmId GetHashAlgorithmId() const;
   const CosemByteBuffer& ParameterValueDigest() const;
   const CosemByteBuffer& ParameterValues() const;
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer changedParameter_;
-  CosemByteBuffer captureTime_;
-  CosemByteBuffer parameters_;
+  dlms::cosem::types::DateTime captureTime_;
+  std::vector<dlms::cosem::types::MonitoredValue> parameterList_;
   CosemByteBuffer parameterListName_;
-  CosemByteBuffer hashAlgorithmId_;
+  HashAlgorithmId hashAlgorithmId_;
   CosemByteBuffer parameterValueDigest_;
   CosemByteBuffer parameterValues_;
   CosemAccessRights rights_;

@@ -1,5 +1,69 @@
 # Changelog
 
+## 0.115.0 - 2026-06-19
+
+### Breaking changes
+
+- **`CosemRegisterMonitorObject`** (`class_id=21`, `version=0`,
+  IEC 62056-6-2 ED4 §4.5.6 / Blue Book Ed. 12.1 §4.5.6) now models its
+  three payload attributes as typed values instead of opaque
+  `CosemByteBuffer`s:
+  - `thresholds`: `std::vector<dlms::cosem::CosemByteBuffer>` — one
+    opaque-per-entry AXDR data item (the per-element type tracks the
+    monitored attribute and is intentionally not narrowed).
+  - `monitored_value`: `dlms::cosem::types::MonitoredValue` —
+    structure `{class_id: long-unsigned, logical_name: octet-string(6),
+    attribute_index: integer (>= 1)}`.
+  - `actions`: `std::vector<dlms::cosem::types::ActionSet>` —
+    `action_set ::= structure{action_up: action_item,
+    action_down: action_item}` where `action_item` reuses
+    `dlms::cosem::types::Script` (`{script_logical_name,
+    script_selector}`).
+  - Both constructors now take typed parameters; legacy buffer-based
+    constructors removed.
+  - `Thresholds()`, `MonitoredValue()` and `Actions()` return typed
+    references.
+  - Safe-fallback construction: when `|thresholds| != |actions|` or
+    any threshold entry is empty AXDR, both collections are dropped
+    together rather than holding inconsistent state.
+  - `SetThresholds(...)`, `SetActions(...)`, `SetMonitoredValue(...)`
+    return `bool` and refuse the mutation on invariant violation
+    (`|thresholds|==|actions|`, non-empty threshold entries,
+    `MonitoredValue::IsValid`).
+  - New static validators: `IsValidThresholds`,
+    `ThresholdsMatchActions`.
+  - `WriteAttribute(thresholds)` decodes the wire form
+    (`array of <opaque AXDR>`), captures each entry verbatim via
+    `SkipDlmsData`, rejects trailing bytes / empty entries /
+    size-mismatch against current `actions` with
+    `CosemStatus::InvalidArgument`, and swaps only on success.
+  - `ReadAttribute` re-encodes typed state with new AXDR helpers
+    (`AppendThresholds`, `AppendMonitoredValue`, `AppendActions`,
+    plus `AppendActionSet`/`AppendActionItem`).
+  - Behaviour unchanged: `logical_name` is read-only,
+    `monitored_value`/`actions` are read-only, `thresholds` access
+    is caller-selected, no methods are defined (all return
+    `MethodNotFound`), version normalization to
+    `MaxSupportedVersion`.
+
+### Added
+
+- **`dlms::cosem::types::MonitoredValue`** — typed representation of
+  the `value_definition` structure (IEC 62056-6-2 ED4 §4.5.6.2.3):
+  `class_id`, `logical_name`, `attribute_index`. Constructor clamps
+  `attribute_index < 1` to `1` (safe-fallback); `SetAttributeIndex`
+  refuses values below the minimum. Static `IsValid` validator.
+- **`dlms::cosem::types::ActionSet`** — typed representation of the
+  `action_set` structure (IEC 62056-6-2 ED4 §4.5.6.2.4) holding two
+  `types::Script` action items (`action_up`, `action_down`).
+- Unit tests `test_monitored_value.cpp` and `test_action_set.cpp` for
+  the new types; per-class test file
+  `test_cosem_register_monitor_object.cpp` for IC 21 typed API
+  (18 tests covering ctor safe-fallback, AXDR round-trip,
+  WriteAttribute validation paths, access-mode gating, setters,
+  static validators, and method/version behaviour).
+- IC support matrix row 21 promoted from **Partial** to **Yes**.
+
 ## 0.114.0 - 2026-06-18
 
 ### Breaking changes

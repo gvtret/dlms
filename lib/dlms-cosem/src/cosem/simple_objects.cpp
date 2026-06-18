@@ -2542,15 +2542,189 @@ constexpr std::uint16_t kRegisterMonitorClassId = 21u;
 constexpr std::uint8_t kRegisterMonitorThresholdsAttributeId = 2u;
 constexpr std::uint8_t kRegisterMonitorMonitoredValueAttributeId = 3u;
 constexpr std::uint8_t kRegisterMonitorActionsAttributeId = 4u;
+
+// ---- IC 21 AXDR codec helpers (IEC 62056-6-2 ED4 §4.5.6) ----
+//
+// action_item ::= structure(2) {
+//   octet-string(6) script_logical_name,
+//   long-unsigned   script_selector
+// }
+void AppendActionItem(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::Script& item)
+{
+  AppendStructureHeader(output, 2u);
+  AppendLogicalName(output, item.LogicalName());
+  AppendLongUnsigned(output, item.Selector());
+}
+
+bool DecodeActionItem(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::Script& out)
+{
+  if (!ReadExpectedTag(input, offset, kStructureTag)) return false;
+  std::size_t fieldCount = 0u;
+  if (!ReadAxdrLength(input, offset, fieldCount)) return false;
+  if (fieldCount != 2u) return false;
+  CosemLogicalName ln;
+  if (!ReadLogicalNameValue(input, offset, ln)) return false;
+  std::uint16_t selector = 0u;
+  if (!ReadLongUnsignedValue(input, offset, selector)) return false;
+  out = dlms::cosem::types::Script(ln, selector);
+  return true;
+}
+
+// action_set ::= structure(2) { action_item action_up, action_item action_down }
+void AppendActionSet(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::ActionSet& set)
+{
+  AppendStructureHeader(output, 2u);
+  AppendActionItem(output, set.ActionUp());
+  AppendActionItem(output, set.ActionDown());
+}
+
+bool DecodeActionSet(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::ActionSet& out)
+{
+  if (!ReadExpectedTag(input, offset, kStructureTag)) return false;
+  std::size_t fieldCount = 0u;
+  if (!ReadAxdrLength(input, offset, fieldCount)) return false;
+  if (fieldCount != 2u) return false;
+  dlms::cosem::types::Script up;
+  dlms::cosem::types::Script down;
+  if (!DecodeActionItem(input, offset, up)) return false;
+  if (!DecodeActionItem(input, offset, down)) return false;
+  out = dlms::cosem::types::ActionSet(up, down);
+  return true;
+}
+
+// actions ::= array of action_set
+void AppendActions(
+  CosemByteBuffer& output,
+  const std::vector<dlms::cosem::types::ActionSet>& actions)
+{
+  AppendArrayHeader(output, actions.size());
+  for (const auto& s : actions) {
+    AppendActionSet(output, s);
+  }
+}
+
+bool DecodeActions(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::vector<dlms::cosem::types::ActionSet>& out)
+{
+  if (!ReadExpectedTag(input, offset, kArrayTag)) return false;
+  std::size_t count = 0u;
+  if (!ReadAxdrLength(input, offset, count)) return false;
+  std::vector<dlms::cosem::types::ActionSet> tmp;
+  tmp.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    dlms::cosem::types::ActionSet s;
+    if (!DecodeActionSet(input, offset, s)) return false;
+    tmp.push_back(s);
+  }
+  out.swap(tmp);
+  return true;
+}
+
+// value_definition ::= structure(3) {
+//   long-unsigned class_id, octet-string(6) logical_name, integer attribute_index
+// }
+void AppendMonitoredValue(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::MonitoredValue& v)
+{
+  AppendStructureHeader(output, 3u);
+  AppendLongUnsigned(output, v.ClassId());
+  AppendLogicalName(output, v.LogicalName());
+  AppendInteger(output, v.AttributeIndex());
+}
+
+bool DecodeMonitoredValue(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::MonitoredValue& out)
+{
+  if (!ReadExpectedTag(input, offset, kStructureTag)) return false;
+  std::size_t fieldCount = 0u;
+  if (!ReadAxdrLength(input, offset, fieldCount)) return false;
+  if (fieldCount != 3u) return false;
+  std::uint16_t classId = 0u;
+  if (!ReadLongUnsignedValue(input, offset, classId)) return false;
+  CosemLogicalName ln;
+  if (!ReadLogicalNameValue(input, offset, ln)) return false;
+  std::uint8_t attrRaw = 0u;
+  if (!ReadIntegerValue(input, offset, attrRaw)) return false;
+  const std::int8_t attrIndex = static_cast<std::int8_t>(attrRaw);
+  if (attrIndex < dlms::cosem::types::MonitoredValue::AttributeIndexMin) {
+    return false;
+  }
+  out = dlms::cosem::types::MonitoredValue(classId, ln, attrIndex);
+  return true;
+}
+
+// thresholds ::= array of <opaque AXDR data item>
+// (the per-element type matches the monitored attribute; we capture
+// the raw AXDR bytes verbatim via SkipDlmsData)
+void AppendThresholds(
+  CosemByteBuffer& output,
+  const std::vector<CosemByteBuffer>& thresholds)
+{
+  AppendArrayHeader(output, thresholds.size());
+  for (const auto& t : thresholds) {
+    output.insert(output.end(), t.begin(), t.end());
+  }
+}
+
+bool DecodeThresholds(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  std::vector<CosemByteBuffer>& out)
+{
+  if (!ReadExpectedTag(input, offset, kArrayTag)) return false;
+  std::size_t count = 0u;
+  if (!ReadAxdrLength(input, offset, count)) return false;
+  std::vector<CosemByteBuffer> tmp;
+  tmp.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    const std::size_t start = offset;
+    if (!SkipDlmsData(input, offset, 0u)) return false;
+    if (offset <= start) return false;
+    tmp.emplace_back(input.begin() + start, input.begin() + offset);
+  }
+  out.swap(tmp);
+  return true;
+}
 } // namespace
 
 const std::uint8_t CosemRegisterMonitorObject::MaxSupportedVersion;
 
+bool CosemRegisterMonitorObject::IsValidThresholds(
+  const std::vector<CosemByteBuffer>& thresholds)
+{
+  for (const auto& t : thresholds) {
+    if (t.empty()) return false;
+  }
+  return true;
+}
+
+bool CosemRegisterMonitorObject::ThresholdsMatchActions(
+  const std::vector<CosemByteBuffer>& thresholds,
+  const std::vector<types::ActionSet>& actions)
+{
+  return thresholds.size() == actions.size();
+}
+
 CosemRegisterMonitorObject::CosemRegisterMonitorObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& thresholds,
-  const CosemByteBuffer& monitoredValue,
-  const CosemByteBuffer& actions,
+  const std::vector<CosemByteBuffer>& thresholds,
+  const types::MonitoredValue& monitoredValue,
+  const std::vector<types::ActionSet>& actions,
   AttributeAccessMode thresholdsAccess)
   : CosemRegisterMonitorObject(
       logicalName,
@@ -2564,9 +2738,9 @@ CosemRegisterMonitorObject::CosemRegisterMonitorObject(
 
 CosemRegisterMonitorObject::CosemRegisterMonitorObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& thresholds,
-  const CosemByteBuffer& monitoredValue,
-  const CosemByteBuffer& actions,
+  const std::vector<CosemByteBuffer>& thresholds,
+  const types::MonitoredValue& monitoredValue,
+  const std::vector<types::ActionSet>& actions,
   AttributeAccessMode thresholdsAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -2575,10 +2749,20 @@ CosemRegisterMonitorObject::CosemRegisterMonitorObject(
         version,
         CosemRegisterMonitorObject::MaxSupportedVersion),
       logicalName))
-  , thresholds_(thresholds)
-  , monitoredValue_(monitoredValue)
-  , actions_(actions)
+  , thresholds_()
+  , monitoredValue_()
+  , actions_()
 {
+  // Safe-fallback: drop any collection that violates IC 21 invariants
+  // rather than holding invalid state.
+  if (IsValidThresholds(thresholds)
+      && ThresholdsMatchActions(thresholds, actions)) {
+    thresholds_ = thresholds;
+    actions_ = actions;
+  }
+  if (types::MonitoredValue::IsValid(monitoredValue)) {
+    monitoredValue_ = monitoredValue;
+  }
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
     AttributeAccessMode::ReadOnly);
@@ -2612,15 +2796,18 @@ CosemStatus CosemRegisterMonitorObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kRegisterMonitorThresholdsAttributeId) {
-    output = thresholds_;
+    output.clear();
+    AppendThresholds(output, thresholds_);
     return CosemStatus::Ok;
   }
   if (attributeId == kRegisterMonitorMonitoredValueAttributeId) {
-    output = monitoredValue_;
+    output.clear();
+    AppendMonitoredValue(output, monitoredValue_);
     return CosemStatus::Ok;
   }
   if (attributeId == kRegisterMonitorActionsAttributeId) {
-    output = actions_;
+    output.clear();
+    AppendActions(output, actions_);
     return CosemStatus::Ok;
   }
   output.clear();
@@ -2634,14 +2821,26 @@ CosemStatus CosemRegisterMonitorObject::WriteAttribute(
   if (attributeId == kRegisterMonitorThresholdsAttributeId) {
     const AttributeAccessMode mode = rights_.AttributeAccess(
       kRegisterMonitorThresholdsAttributeId);
-    if (mode == AttributeAccessMode::WriteOnly
-        || mode == AttributeAccessMode::ReadAndWrite
-        || mode == AttributeAccessMode::AuthenticatedWriteOnly
-        || mode == AttributeAccessMode::AuthenticatedReadAndWrite) {
-      thresholds_ = input;
-      return CosemStatus::Ok;
+    if (mode != AttributeAccessMode::WriteOnly
+        && mode != AttributeAccessMode::ReadAndWrite
+        && mode != AttributeAccessMode::AuthenticatedWriteOnly
+        && mode != AttributeAccessMode::AuthenticatedReadAndWrite) {
+      return CosemStatus::AccessDenied;
     }
-    return CosemStatus::AccessDenied;
+    std::vector<CosemByteBuffer> decoded;
+    std::size_t offset = 0u;
+    if (!DecodeThresholds(input, offset, decoded)) {
+      return CosemStatus::InvalidArgument;
+    }
+    if (offset != input.size()) {
+      return CosemStatus::InvalidArgument;
+    }
+    if (!IsValidThresholds(decoded)
+        || !ThresholdsMatchActions(decoded, actions_)) {
+      return CosemStatus::InvalidArgument;
+    }
+    thresholds_ = std::move(decoded);
+    return CosemStatus::Ok;
   }
   if (attributeId == kLogicalNameAttributeId
       || attributeId == kRegisterMonitorMonitoredValueAttributeId
@@ -2664,37 +2863,52 @@ CosemStatus CosemRegisterMonitorObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemRegisterMonitorObject::Thresholds() const
+const std::vector<CosemByteBuffer>& CosemRegisterMonitorObject::Thresholds() const
 {
   return thresholds_;
 }
 
-const CosemByteBuffer& CosemRegisterMonitorObject::MonitoredValue() const
+const dlms::cosem::types::MonitoredValue&
+CosemRegisterMonitorObject::MonitoredValue() const
 {
   return monitoredValue_;
 }
 
-const CosemByteBuffer& CosemRegisterMonitorObject::Actions() const
+const std::vector<dlms::cosem::types::ActionSet>&
+CosemRegisterMonitorObject::Actions() const
 {
   return actions_;
 }
 
-void CosemRegisterMonitorObject::SetThresholds(
-  const CosemByteBuffer& thresholds)
+bool CosemRegisterMonitorObject::SetThresholds(
+  const std::vector<CosemByteBuffer>& thresholds)
 {
+  if (!IsValidThresholds(thresholds)
+      || !ThresholdsMatchActions(thresholds, actions_)) {
+    return false;
+  }
   thresholds_ = thresholds;
+  return true;
 }
 
-void CosemRegisterMonitorObject::SetMonitoredValue(
-  const CosemByteBuffer& monitoredValue)
+bool CosemRegisterMonitorObject::SetMonitoredValue(
+  const types::MonitoredValue& monitoredValue)
 {
+  if (!types::MonitoredValue::IsValid(monitoredValue)) {
+    return false;
+  }
   monitoredValue_ = monitoredValue;
+  return true;
 }
 
-void CosemRegisterMonitorObject::SetActions(
-  const CosemByteBuffer& actions)
+bool CosemRegisterMonitorObject::SetActions(
+  const std::vector<types::ActionSet>& actions)
 {
+  if (!ThresholdsMatchActions(thresholds_, actions)) {
+    return false;
+  }
   actions_ = actions;
+  return true;
 }
 
 namespace {

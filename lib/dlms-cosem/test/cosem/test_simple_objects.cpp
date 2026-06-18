@@ -3146,122 +3146,13 @@ TEST(CosemRegisterActivationObject, NormalizesVersionAboveMax)
             object.Descriptor().key.version);
 }
 
-TEST(CosemRegisterMonitorObject, ExposesThresholdsMonitoredValueAndActions)
+// CosemRegisterMonitorObject (IC 21) tests now live in
+// test/cosem/test_cosem_register_monitor_object.cpp per the per-class
+// test-file convention (P2.4 in production_readiness_roadmap.md).
+
+TEST(CosemRegisterMonitorObject_LegacyPlaceholder, MovedToOwnFile)
 {
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer thresholds = BytesFromList({
-    0x01u, 0x02u,
-    0x06u, 0x00u, 0x00u, 0x00u, 0x64u,
-    0x06u, 0x00u, 0x00u, 0x00u, 0xC8u});
-  const dlms::cosem::CosemByteBuffer monitoredValue = BytesFromList({
-    0x02u, 0x03u,
-    0x12u, 0x00u, 0x03u,
-    0x09u, 0x06u, 0x01u, 0x00u, 0x01u, 0x08u, 0x00u, 0xFFu,
-    0x0Fu, 0x02u});
-  const dlms::cosem::CosemByteBuffer actions = BytesFromList({
-    0x01u, 0x01u,
-    0x02u, 0x02u,
-    0x02u, 0x02u,
-      0x09u, 0x06u, 0x00u, 0x00u, 0x0Au, 0x00u, 0x64u, 0xFFu,
-      0x12u, 0x00u, 0x01u,
-    0x02u, 0x02u,
-      0x09u, 0x06u, 0x00u, 0x00u, 0x0Au, 0x00u, 0x64u, 0xFFu,
-      0x12u, 0x00u, 0x02u});
-
-  dlms::cosem::CosemRegisterMonitorObject object(
-    name, thresholds, monitoredValue, actions,
-    dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  EXPECT_EQ(21u, object.Descriptor().key.classId);
-  EXPECT_EQ(0u, object.Descriptor().key.version);
-  EXPECT_EQ(dlms::cosem::CosemRegisterMonitorObject::MaxSupportedVersion,
-            object.Descriptor().key.version);
-
-  dlms::cosem::CosemByteBuffer out;
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
-  EXPECT_EQ(EncodedLogicalName(name), out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
-  EXPECT_EQ(thresholds, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
-  EXPECT_EQ(monitoredValue, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
-  EXPECT_EQ(actions, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(5u, out));
-}
-
-TEST(CosemRegisterMonitorObject, ThresholdsHonorCallerAccessMode)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer initial =
-    BytesFromList({0x01u, 0x00u});
-  const dlms::cosem::CosemByteBuffer replacement = BytesFromList({
-    0x01u, 0x01u,
-    0x06u, 0x00u, 0x00u, 0x00u, 0xFFu});
-
-  dlms::cosem::CosemRegisterMonitorObject writable(
-    name, initial,
-    BytesFromList({0x02u, 0x00u}),
-    BytesFromList({0x01u, 0x00u}),
-    dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            writable.WriteAttribute(2u, replacement));
-  EXPECT_EQ(replacement, writable.Thresholds());
-
-  dlms::cosem::CosemRegisterMonitorObject readOnly(
-    name, initial,
-    BytesFromList({0x02u, 0x00u}),
-    BytesFromList({0x01u, 0x00u}),
-    dlms::cosem::AttributeAccessMode::ReadOnly);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            readOnly.WriteAttribute(2u, replacement));
-  EXPECT_EQ(initial, readOnly.Thresholds());
-
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(1u, replacement));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(3u, replacement));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(4u, replacement));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            writable.WriteAttribute(99u, replacement));
-}
-
-TEST(CosemRegisterMonitorObject, NoMethodsAreDefined)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
-  dlms::cosem::CosemRegisterMonitorObject object(
-    name,
-    BytesFromList({0x01u, 0x00u}),
-    BytesFromList({0x02u, 0x00u}),
-    BytesFromList({0x01u, 0x00u}),
-    dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  dlms::cosem::CosemByteBuffer in = BytesFromList({0x00u});
-  for (std::uint8_t method = 1u; method <= 4u; ++method) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu, 0xBBu});
-    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-              object.InvokeMethod(method, in, out));
-    EXPECT_TRUE(out.empty());
-  }
-}
-
-TEST(CosemRegisterMonitorObject, NormalizesVersionAboveMax)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 16u, 1u, 0u, 255u);
-  dlms::cosem::CosemRegisterMonitorObject object(
-    name,
-    BytesFromList({0x01u, 0x00u}),
-    BytesFromList({0x02u, 0x00u}),
-    BytesFromList({0x01u, 0x00u}),
-    dlms::cosem::AttributeAccessMode::ReadAndWrite,
-    99u);
-  EXPECT_EQ(dlms::cosem::CosemRegisterMonitorObject::MaxSupportedVersion,
-            object.Descriptor().key.version);
+  SUCCEED();
 }
 
 // CosemScriptTableObject (IC 9) tests now live in

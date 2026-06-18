@@ -2,11 +2,13 @@
 
 #include "dlms/cosem/certificate_store.hpp"
 #include "dlms/cosem/logical_device.hpp"
+#include "dlms/cosem/types/action_set.hpp"
 #include "dlms/cosem/types/action_specification.hpp"
 #include "dlms/cosem/types/date.hpp"
 #include "dlms/cosem/types/date_time.hpp"
 #include "dlms/cosem/types/day_profile.hpp"
 #include "dlms/cosem/types/day_profile_action.hpp"
+#include "dlms/cosem/types/monitored_value.hpp"
 #include "dlms/cosem/types/schedule_table_entry.hpp"
 #include "dlms/cosem/types/script.hpp"
 #include "dlms/cosem/types/script_entry.hpp"
@@ -281,15 +283,15 @@ public:
 
   CosemRegisterMonitorObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& thresholds,
-    const CosemByteBuffer& monitoredValue,
-    const CosemByteBuffer& actions,
+    const std::vector<CosemByteBuffer>& thresholds,
+    const types::MonitoredValue& monitoredValue,
+    const std::vector<types::ActionSet>& actions,
     AttributeAccessMode thresholdsAccess);
   CosemRegisterMonitorObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& thresholds,
-    const CosemByteBuffer& monitoredValue,
-    const CosemByteBuffer& actions,
+    const std::vector<CosemByteBuffer>& thresholds,
+    const types::MonitoredValue& monitoredValue,
+    const std::vector<types::ActionSet>& actions,
     AttributeAccessMode thresholdsAccess,
     std::uint8_t version);
 
@@ -306,19 +308,32 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Thresholds() const;
-  const CosemByteBuffer& MonitoredValue() const;
-  const CosemByteBuffer& Actions() const;
+  const std::vector<CosemByteBuffer>& Thresholds() const;
+  const types::MonitoredValue& MonitoredValue() const;
+  const std::vector<types::ActionSet>& Actions() const;
 
-  void SetThresholds(const CosemByteBuffer& thresholds);
-  void SetMonitoredValue(const CosemByteBuffer& monitoredValue);
-  void SetActions(const CosemByteBuffer& actions);
+  // Setters return false (no mutation) when the replacement would
+  // violate IC 21 invariants:
+  //   * SetThresholds(t): rejects if t.size() != Actions().size()
+  //                       or any element is empty AXDR.
+  //   * SetActions(a):    rejects if a.size() != Thresholds().size().
+  //   * SetMonitoredValue(v): rejects if !MonitoredValue::IsValid(v).
+  bool SetThresholds(const std::vector<CosemByteBuffer>& thresholds);
+  bool SetMonitoredValue(const types::MonitoredValue& monitoredValue);
+  bool SetActions(const std::vector<types::ActionSet>& actions);
+
+  // Static validators expose the same invariants pre-construction.
+  static bool IsValidThresholds(
+    const std::vector<CosemByteBuffer>& thresholds);
+  static bool ThresholdsMatchActions(
+    const std::vector<CosemByteBuffer>& thresholds,
+    const std::vector<types::ActionSet>& actions);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer thresholds_;
-  CosemByteBuffer monitoredValue_;
-  CosemByteBuffer actions_;
+  std::vector<CosemByteBuffer> thresholds_;
+  types::MonitoredValue monitoredValue_;
+  std::vector<types::ActionSet> actions_;
   CosemAccessRights rights_;
 };
 

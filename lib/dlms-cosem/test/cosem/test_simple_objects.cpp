@@ -9964,21 +9964,35 @@ TEST(CosemPrimePlcMacNetworkAdminDataObject, NormalizesVersionAboveMax)
 
 namespace {
 
-dlms::cosem::CosemByteBuffer SamplePrimePlcApplicationIdentifier()
+// IEC 62056-6-2 ED4 (2021) §4.12.11: textual firmware_version
+// (octet-string, max 128 bytes; PIB 0x0075) plus two long-unsigned
+// identifiers vendor_Id (PIB 0x0076) and product_Id (PIB 0x0077).
+dlms::cosem::CosemByteBuffer SamplePrimePlcFirmwareVersion()
 {
-  // octet-string of length 8 (PRIME application identifier)
-  return BytesFromList({0x09u, 0x08u, 0x01u, 0x02u, 0x03u, 0x04u,
-                        0x05u, 0x06u, 0x07u, 0x08u});
+  // octet-string of length 5: "v1.23"
+  return BytesFromList({0x09u, 0x05u, 0x76u, 0x31u, 0x2Eu, 0x32u,
+                        0x33u});
+}
+
+dlms::cosem::CosemByteBuffer LongUnsignedIc86(std::uint16_t value)
+{
+  return BytesFromList({
+    0x12u,
+    static_cast<std::uint8_t>((value >> 8) & 0xFFu),
+    static_cast<std::uint8_t>(value & 0xFFu)});
 }
 
 dlms::cosem::CosemPrimePlcApplicationIdentificationObject
 MakePrimePlcApplicationIdentificationObject(
   const dlms::cosem::CosemLogicalName& name,
-  const dlms::cosem::CosemByteBuffer& appId,
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemPrimePlcApplicationIdentificationObject(
-    name, appId, access);
+    name,
+    /*firmware_version*/ SamplePrimePlcFirmwareVersion(),
+    /*vendor_Id       */ LongUnsignedIc86(0x1234u),
+    /*product_Id      */ LongUnsignedIc86(0x5678u),
+    access);
 }
 
 } // namespace
@@ -9987,11 +10001,9 @@ TEST(CosemPrimePlcApplicationIdentificationObject, ExposesAllAttributes)
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer appId =
-    SamplePrimePlcApplicationIdentifier();
   dlms::cosem::CosemPrimePlcApplicationIdentificationObject object =
     MakePrimePlcApplicationIdentificationObject(
-      name, appId, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   EXPECT_EQ(86u, object.Descriptor().key.classId);
   EXPECT_EQ(0u, object.Descriptor().key.version);
@@ -10004,11 +10016,24 @@ TEST(CosemPrimePlcApplicationIdentificationObject, ExposesAllAttributes)
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(1u, out));
   EXPECT_EQ(EncodedLogicalName(name), out);
+
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(2u, out));
-  EXPECT_EQ(appId, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+  EXPECT_EQ(SamplePrimePlcFirmwareVersion(), out);
+  EXPECT_EQ(SamplePrimePlcFirmwareVersion(), object.FirmwareVersion());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(3u, out));
+  EXPECT_EQ(LongUnsignedIc86(0x1234u), out);
+  EXPECT_EQ(LongUnsignedIc86(0x1234u), object.VendorId());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            object.ReadAttribute(4u, out));
+  EXPECT_EQ(LongUnsignedIc86(0x5678u), out);
+  EXPECT_EQ(LongUnsignedIc86(0x5678u), object.ProductId());
+
+  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
+            object.ReadAttribute(5u, out));
 }
 
 TEST(CosemPrimePlcApplicationIdentificationObject,
@@ -10016,28 +10041,42 @@ TEST(CosemPrimePlcApplicationIdentificationObject,
 {
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer appId =
-    SamplePrimePlcApplicationIdentifier();
-  const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x09u, 0x04u, 0xDEu, 0xADu, 0xBEu, 0xEFu});
+  const dlms::cosem::CosemByteBuffer newFirmware =
+    BytesFromList({0x09u, 0x04u, 0x76u, 0x32u, 0x2Eu, 0x30u});
+  const dlms::cosem::CosemByteBuffer newVendor =
+    LongUnsignedIc86(0xABCDu);
+  const dlms::cosem::CosemByteBuffer newProduct =
+    LongUnsignedIc86(0xEF01u);
 
   dlms::cosem::CosemPrimePlcApplicationIdentificationObject writable =
     MakePrimePlcApplicationIdentificationObject(
-      name, appId, dlms::cosem::AttributeAccessMode::ReadAndWrite);
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
   EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            writable.WriteAttribute(2u, replacement));
-  EXPECT_EQ(replacement, writable.ApplicationIdentifier());
+            writable.WriteAttribute(2u, newFirmware));
+  EXPECT_EQ(newFirmware, writable.FirmwareVersion());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(3u, newVendor));
+  EXPECT_EQ(newVendor, writable.VendorId());
+  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
+            writable.WriteAttribute(4u, newProduct));
+  EXPECT_EQ(newProduct, writable.ProductId());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(1u, replacement));
+            writable.WriteAttribute(1u, newFirmware));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            writable.WriteAttribute(99u, replacement));
+            writable.WriteAttribute(99u, newFirmware));
 
   dlms::cosem::CosemPrimePlcApplicationIdentificationObject readOnly =
     MakePrimePlcApplicationIdentificationObject(
-      name, appId, dlms::cosem::AttributeAccessMode::ReadOnly);
+      name, dlms::cosem::AttributeAccessMode::ReadOnly);
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            readOnly.WriteAttribute(2u, replacement));
-  EXPECT_EQ(appId, readOnly.ApplicationIdentifier());
+            readOnly.WriteAttribute(2u, newFirmware));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(3u, newVendor));
+  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+            readOnly.WriteAttribute(4u, newProduct));
+  EXPECT_EQ(SamplePrimePlcFirmwareVersion(), readOnly.FirmwareVersion());
+  EXPECT_EQ(LongUnsignedIc86(0x1234u), readOnly.VendorId());
+  EXPECT_EQ(LongUnsignedIc86(0x5678u), readOnly.ProductId());
 }
 
 TEST(CosemPrimePlcApplicationIdentificationObject, NoMethodsDefined)
@@ -10046,8 +10085,7 @@ TEST(CosemPrimePlcApplicationIdentificationObject, NoMethodsDefined)
     dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
   dlms::cosem::CosemPrimePlcApplicationIdentificationObject object =
     MakePrimePlcApplicationIdentificationObject(
-      name, SamplePrimePlcApplicationIdentifier(),
-      dlms::cosem::AttributeAccessMode::ReadAndWrite);
+      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
 
   const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
   for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
@@ -10066,7 +10104,10 @@ TEST(CosemPrimePlcApplicationIdentificationObject,
   const dlms::cosem::CosemLogicalName name =
     dlms::cosem::CosemLogicalName(0u, 0u, 28u, 6u, 0u, 255u);
   dlms::cosem::CosemPrimePlcApplicationIdentificationObject object(
-    name, SamplePrimePlcApplicationIdentifier(),
+    name,
+    SamplePrimePlcFirmwareVersion(),
+    LongUnsignedIc86(0x1234u),
+    LongUnsignedIc86(0x5678u),
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemPrimePlcApplicationIdentificationObject::

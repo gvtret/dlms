@@ -10765,7 +10765,9 @@ CosemPrimePlcMacNetworkAdminDataObject::HandledPromotions() const
 
 namespace {
 constexpr std::uint16_t kPrimePlcApplicationIdentificationClassId = 86u;
-constexpr std::uint8_t kPrimePlcApplicationIdentificationAppIdId = 2u;
+constexpr std::uint8_t kPrimePlcApplicationIdentificationFirmwareVersionId = 2u;
+constexpr std::uint8_t kPrimePlcApplicationIdentificationVendorIdId = 3u;
+constexpr std::uint8_t kPrimePlcApplicationIdentificationProductIdId = 4u;
 } // namespace
 
 const std::uint8_t
@@ -10774,10 +10776,13 @@ const std::uint8_t
 CosemPrimePlcApplicationIdentificationObject::
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& applicationIdentifier,
+    const CosemByteBuffer& firmwareVersion,
+    const CosemByteBuffer& vendorId,
+    const CosemByteBuffer& productId,
     AttributeAccessMode mutableAccess)
   : CosemPrimePlcApplicationIdentificationObject(
-      logicalName, applicationIdentifier, mutableAccess,
+      logicalName, firmwareVersion, vendorId, productId,
+      mutableAccess,
       CosemPrimePlcApplicationIdentificationObject::
         MaxSupportedVersion)
 {
@@ -10786,7 +10791,9 @@ CosemPrimePlcApplicationIdentificationObject::
 CosemPrimePlcApplicationIdentificationObject::
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& applicationIdentifier,
+    const CosemByteBuffer& firmwareVersion,
+    const CosemByteBuffer& vendorId,
+    const CosemByteBuffer& productId,
     AttributeAccessMode mutableAccess,
     std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -10796,12 +10803,18 @@ CosemPrimePlcApplicationIdentificationObject::
         CosemPrimePlcApplicationIdentificationObject::
           MaxSupportedVersion),
       logicalName))
-  , applicationIdentifier_(applicationIdentifier)
+  , firmwareVersion_(firmwareVersion)
+  , vendorId_(vendorId)
+  , productId_(productId)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
-  rights_.SetAttributeAccess(
-    kPrimePlcApplicationIdentificationAppIdId, mutableAccess);
+  for (std::uint8_t attr :
+       {kPrimePlcApplicationIdentificationFirmwareVersionId,
+        kPrimePlcApplicationIdentificationVendorIdId,
+        kPrimePlcApplicationIdentificationProductIdId}) {
+    rights_.SetAttributeAccess(attr, mutableAccess);
+  }
 }
 
 CosemObjectDescriptor
@@ -10825,8 +10838,14 @@ CosemPrimePlcApplicationIdentificationObject::ReadAttribute(
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case kPrimePlcApplicationIdentificationAppIdId:
-      output = applicationIdentifier_;
+    case kPrimePlcApplicationIdentificationFirmwareVersionId:
+      output = firmwareVersion_;
+      return CosemStatus::Ok;
+    case kPrimePlcApplicationIdentificationVendorIdId:
+      output = vendorId_;
+      return CosemStatus::Ok;
+    case kPrimePlcApplicationIdentificationProductIdId:
+      output = productId_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -10839,17 +10858,26 @@ CosemPrimePlcApplicationIdentificationObject::WriteAttribute(
   std::uint8_t attributeId,
   const CosemByteBuffer& input)
 {
+  CosemByteBuffer* target = nullptr;
   switch (attributeId) {
-    case kPrimePlcApplicationIdentificationAppIdId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      applicationIdentifier_ = input;
-      return CosemStatus::Ok;
+    case kPrimePlcApplicationIdentificationFirmwareVersionId:
+      target = &firmwareVersion_;
+      break;
+    case kPrimePlcApplicationIdentificationVendorIdId:
+      target = &vendorId_;
+      break;
+    case kPrimePlcApplicationIdentificationProductIdId:
+      target = &productId_;
+      break;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
       return CosemStatus::AttributeNotFound;
   }
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  *target = input;
+  return CosemStatus::Ok;
 }
 
 CosemStatus
@@ -10866,10 +10894,21 @@ CosemPrimePlcApplicationIdentificationObject::InvokeMethod(
 }
 
 const CosemByteBuffer&
-CosemPrimePlcApplicationIdentificationObject::ApplicationIdentifier()
-  const
+CosemPrimePlcApplicationIdentificationObject::FirmwareVersion() const
 {
-  return applicationIdentifier_;
+  return firmwareVersion_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcApplicationIdentificationObject::VendorId() const
+{
+  return vendorId_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcApplicationIdentificationObject::ProductId() const
+{
+  return productId_;
 }
 
 namespace {

@@ -1,5 +1,46 @@
 # Changelog
 
+## 0.107.0 - 2026-06-17
+
+### Breaking changes
+
+- **`CosemPrimePlcApplicationIdentificationObject`** (`class_id=86`,
+  `version=0`) realigned with IEC 62056-6-2 ED4 (2021) §4.12.11 /
+  DLMS UA Blue Book Ed. 12.1 §4.12.11. The previous implementation
+  exposed a single sweeping `application_identifier` attribute on
+  attribute id `2`, which never matched the published IC layout.
+  The class now exposes the three spec-defined static attributes:
+    - `2 firmware_version` (octet-string, max 128 bytes,
+      PIB attribute `0x0075`)
+    - `3 vendor_Id`        (long-unsigned,
+      PIB attribute `0x0076`)
+    - `4 product_Id`       (long-unsigned,
+      PIB attribute `0x0077`)
+  Both constructors gained `firmwareVersion`, `vendorId` and
+  `productId` parameters instead of a single
+  `applicationIdentifier`. The `ApplicationIdentifier()` accessor
+  is replaced with `FirmwareVersion()`, `VendorId()` and
+  `ProductId()`. Attributes `2`-`4` share a caller-selected
+  `AttributeAccessMode` so the management backend can republish
+  refreshed identifiers as the firmware updates; `logical_name`
+  (`1`) stays hard-coded read-only. IC v0 still defines no
+  specific methods, so `InvokeMethod` keeps reporting
+  `MethodNotFound` for every method id.
+  Callers that previously constructed the object with a sweeping
+  application identifier must split it into the three spec
+  attributes and switch their getters.
+
+### Misc
+
+- Existing 4 IC 86 gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`, `NoMethodsDefined`,
+  `NormalizesVersionAboveMax`) rewritten against the new
+  attribute layout; no net test count change. Full MinGW64
+  ctest: 1016/1016 passing.
+- `docs/ic_support_matrix.md` IC 86 row updated to describe the
+  three spec attributes, PIB mappings, RW policy and lack of
+  methods.
+
 ## 0.106.18 - 2026-06-17
 
 - New built-in COSEM object `CosemPrimePlcLlcSscsSetupObject`

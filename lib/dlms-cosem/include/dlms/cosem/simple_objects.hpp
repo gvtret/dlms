@@ -2724,13 +2724,27 @@ class CosemPrimePlcApplicationIdentificationObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // IEC 62056-6-2 ED4 (2021) §4.12.11 / DLMS UA Blue Book Ed. 12.1
+  // §4.12.11 "PRIME NB OFDM PLC Application identification"
+  // (class_id = 86, version = 0). Holds identification info
+  // related to administration and maintenance of PRIME NB OFDM
+  // PLC devices; these are not communication parameters but
+  // allow device management. Three static attributes:
+  //   2 firmware_version  octet-string (max 128, PIB 0x0075)
+  //   3 vendor_Id         long-unsigned          (PIB 0x0076)
+  //   4 product_Id        long-unsigned          (PIB 0x0077)
+  // No specific methods.
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& applicationIdentifier,
+    const CosemByteBuffer& firmwareVersion,
+    const CosemByteBuffer& vendorId,
+    const CosemByteBuffer& productId,
     AttributeAccessMode mutableAccess);
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& applicationIdentifier,
+    const CosemByteBuffer& firmwareVersion,
+    const CosemByteBuffer& vendorId,
+    const CosemByteBuffer& productId,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -2747,11 +2761,15 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& ApplicationIdentifier() const;
+  const CosemByteBuffer& FirmwareVersion() const;
+  const CosemByteBuffer& VendorId() const;
+  const CosemByteBuffer& ProductId() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer applicationIdentifier_;
+  CosemByteBuffer firmwareVersion_;
+  CosemByteBuffer vendorId_;
+  CosemByteBuffer productId_;
   CosemAccessRights rights_;
 };
 

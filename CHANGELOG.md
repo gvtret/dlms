@@ -1,5 +1,31 @@
 # Changelog
 
+## 0.109.1 - 2026-06-17
+
+### Added
+
+- **`dlms::cosem::types::Date`** — typed wrapper around the
+  Blue Book Ed. 12.1 §4.1.6.1 `date` value (5 bytes:
+  `year`/`month`/`day_of_month`/`day_of_week`). Exposed via
+  `dlms/cosem/types/date.hpp` with validating setters, sentinel
+  constants (year `0xFFFF`, month DST begin/end `0xFE`/`0xFD`,
+  day-of-month last/second-last `0xFE`/`0xFD`, reserved range
+  `0xE0..0xFC` rejected), `ToBytes` / `TryFromBytes` round-trip
+  helpers and equality operators. 11 dedicated unit tests in
+  `TypesDate.*`.
+- **`dlms::cosem::types::Time`** — typed wrapper around the
+  Blue Book Ed. 12.1 §4.1.6.1 `time` value (4 bytes:
+  `hour`/`minute`/`second`/`hundredths_of_second`). Exposed via
+  `dlms/cosem/types/time.hpp` with validating setters, the
+  `0xFF` per-field wildcard, `ToBytes` / `TryFromBytes` round-trip
+  helpers and equality operators. 7 dedicated unit tests in
+  `TypesTime.*`.
+
+Neither type is consumed by any IC yet; this release only adds the
+building blocks. Upcoming phases will migrate IC 19 (Special Days
+Table), IC 20 (Activity Calendar) and IC 22 (Single Action
+Schedule) onto these typed values.
+
 ## 0.109.0 - 2026-06-17
 
 ### Breaking changes

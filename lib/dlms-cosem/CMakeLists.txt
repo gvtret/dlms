@@ -17,7 +17,9 @@ add_library(dlms_cosem
   src/cosem/logical_device.cpp
   src/cosem/object_registry.cpp
   src/cosem/simple_objects.cpp
-  src/cosem/types/date_time.cpp)
+  src/cosem/types/date_time.cpp
+  src/cosem/types/date.cpp
+  src/cosem/types/time.cpp)
 
 if(NOT TARGET dlms_security AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security/CMakeLists.txt")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security" "${CMAKE_CURRENT_BINARY_DIR}/_deps/dlms-security")

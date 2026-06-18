@@ -11,6 +11,8 @@
 #include "dlms/cosem/types/monitored_value.hpp"
 #include "dlms/cosem/types/schedule_table_entry.hpp"
 #include "dlms/cosem/types/scaler_unit.hpp"
+#include "dlms/cosem/types/object_definition.hpp"
+#include "dlms/cosem/types/register_mask.hpp"
 #include "dlms/cosem/types/script.hpp"
 #include "dlms/cosem/types/script_entry.hpp"
 #include "dlms/cosem/types/season_profile.hpp"
@@ -268,13 +270,13 @@ public:
 
   CosemRegisterActivationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& registerAssignment,
-    const CosemByteBuffer& maskList,
+    const std::vector<types::ObjectDefinition>& registerAssignment,
+    const std::vector<types::RegisterMask>& maskList,
     const CosemByteBuffer& activeMask);
   CosemRegisterActivationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& registerAssignment,
-    const CosemByteBuffer& maskList,
+    const std::vector<types::ObjectDefinition>& registerAssignment,
+    const std::vector<types::RegisterMask>& maskList,
     const CosemByteBuffer& activeMask,
     std::uint8_t version);
 
@@ -291,18 +293,19 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& RegisterAssignment() const;
-  const CosemByteBuffer& MaskList() const;
+  const std::vector<types::ObjectDefinition>& RegisterAssignment() const;
+  const std::vector<types::RegisterMask>& MaskList() const;
   const CosemByteBuffer& ActiveMask() const;
 
-  void SetRegisterAssignment(const CosemByteBuffer& assignment);
-  void SetMaskList(const CosemByteBuffer& maskList);
+  void SetRegisterAssignment(
+    const std::vector<types::ObjectDefinition>& assignment);
+  void SetMaskList(const std::vector<types::RegisterMask>& maskList);
   void SetActiveMask(const CosemByteBuffer& activeMask);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer registerAssignment_;
-  CosemByteBuffer maskList_;
+  std::vector<types::ObjectDefinition> registerAssignment_;
+  std::vector<types::RegisterMask> maskList_;
   CosemByteBuffer activeMask_;
   CosemAccessRights rights_;
 };

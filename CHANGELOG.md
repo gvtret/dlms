@@ -1,5 +1,81 @@
 # Changelog
 
+## 0.119.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemRegisterActivationObject`** (`class_id=6`, `version=0`,
+  IEC 62056-6-2 ED4 §4.3.5 / DLMS UA Blue Book Ed. 12.1 §4.3.5)
+  now takes typed structured lists instead of opaque AXDR buffers:
+  - `register_assignment` switched from `CosemByteBuffer` to
+    `std::vector<dlms::cosem::types::ObjectDefinition>`. Each entry
+    is the `object_definition ::= structure { long-unsigned class_id,
+    octet-string(6) logical_name }` from the spec. Wire form on
+    `ReadAttribute(2)` is encoded by the object on every read.
+  - `mask_list` switched from `CosemByteBuffer` to
+    `std::vector<dlms::cosem::types::RegisterMask>`. Each entry is
+    `structure { octet-string mask_name, array of long-unsigned
+    index_list }`; `index_list` items are 1-based indices into
+    `register_assignment`. Wire form on `ReadAttribute(3)` is encoded
+    by the object on every read.
+  - `active_mask` stays an `octet-string` payload (`CosemByteBuffer`),
+    but is now encoded as a proper AXDR `octet-string` on every read
+    instead of being passed through opaque.
+  - Both ctors switched accordingly: `(name, registerAssignment,
+    maskList, activeMask[, version])` now takes
+    `(name, std::vector<types::ObjectDefinition>,
+     std::vector<types::RegisterMask>, CosemByteBuffer activeMask
+     [, version])`.
+  - `RegisterAssignment()` / `MaskList()` getters now return
+    `const std::vector<types::ObjectDefinition>&` /
+    `const std::vector<types::RegisterMask>&` (were
+    `const CosemByteBuffer&`).
+  - `SetRegisterAssignment(std::vector<types::ObjectDefinition>)` /
+    `SetMaskList(std::vector<types::RegisterMask>)` replace the
+    buffer-taking variants.
+
+  Methods `1` `add_register`, `2` `add_mask` and `3` `delete_mask`
+  remain `UnsupportedFeature` (application-defined semantics owned by
+  the backend's object catalogue).
+
+### New types
+
+- `dlms::cosem::types::ObjectDefinition` — typed view of the COSEM
+  `object_definition` structure `{class_id, logical_name(6)}`,
+  reused across ICs that reference COSEM objects by class+LN.
+- `dlms::cosem::types::RegisterMask` — typed view of one
+  `mask_list` entry `{mask_name, index_list[]}` from IC 6.
+
+  Both types are inline (header-only API with thin `.cpp` for build
+  discipline parity); equality / mutator surface matches the other
+  COSEM types.
+
+### Tests
+
+- New per-IC test file
+  `test/cosem/test_cosem_register_activation_object.cpp` (9 tests)
+  covering class-id/version normalisation, empty / non-empty
+  `register_assignment` / `mask_list` / `active_mask` wire encoding,
+  read-only enforcement across all 4 attributes, `add_register` /
+  `add_mask` / `delete_mask` → `UnsupportedFeature`, unknown
+  method/attribute handling, and typed setter round-trip.
+- New type tests: `test/cosem/types/test_object_definition.cpp` (4
+  tests) and `test/cosem/types/test_register_mask.cpp` (4 tests).
+- Legacy IC 6 tests in `test_simple_objects.cpp` reduced to a single
+  placeholder (`MigratedToPerICFile`) per P2.4.
+
+### Status matrix
+
+- IC 6 (Register Activation) promoted from **Partial** to **Yes** in
+  `docs/ic_support_matrix.md` (all three attributes now have a
+  typed, spec-aligned representation).
+
+### Test stats
+
+- ctest: **1209 / 1209 pass** (was 1195 → +14 from the new IC 6
+  per-IC file plus the two new type-test files, minus the four
+  collapsed legacy tests).
+
 ## 0.118.0 - 2026-06-21
 
 ### Breaking changes

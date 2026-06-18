@@ -18,6 +18,7 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_activity_calendar_object.cpp
   cosem/test_cosem_register_monitor_object.cpp
   cosem/test_cosem_demand_register_object.cpp
+  cosem/test_cosem_register_activation_object.cpp
   cosem/test_cosem_extended_register_object.cpp
   cosem/test_cosem_register_object.cpp
   cosem/test_cosem_script_table_object.cpp
@@ -32,7 +33,9 @@ add_executable(dlms_cosem_tests
   cosem/types/test_script_entry.cpp
   cosem/types/test_monitored_value.cpp
   cosem/types/test_action_set.cpp
-  cosem/types/test_scaler_unit.cpp)
+  cosem/types/test_scaler_unit.cpp
+  cosem/types/test_object_definition.cpp
+  cosem/types/test_register_mask.cpp)
 
 target_link_libraries(dlms_cosem_tests
   PRIVATE

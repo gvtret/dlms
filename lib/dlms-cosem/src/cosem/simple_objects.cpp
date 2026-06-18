@@ -2484,8 +2484,8 @@ const std::uint8_t CosemRegisterActivationObject::MaxSupportedVersion;
 
 CosemRegisterActivationObject::CosemRegisterActivationObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& registerAssignment,
-  const CosemByteBuffer& maskList,
+  const std::vector<types::ObjectDefinition>& registerAssignment,
+  const std::vector<types::RegisterMask>& maskList,
   const CosemByteBuffer& activeMask)
   : CosemRegisterActivationObject(
       logicalName,
@@ -2498,8 +2498,8 @@ CosemRegisterActivationObject::CosemRegisterActivationObject(
 
 CosemRegisterActivationObject::CosemRegisterActivationObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& registerAssignment,
-  const CosemByteBuffer& maskList,
+  const std::vector<types::ObjectDefinition>& registerAssignment,
+  const std::vector<types::RegisterMask>& maskList,
   const CosemByteBuffer& activeMask,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -2536,6 +2536,47 @@ CosemAccessRights CosemRegisterActivationObject::AccessRights() const
   return rights_;
 }
 
+namespace {
+
+// register_assignment ::= array of object_definition { class_id LU,
+//                                                      logical_name OS(6) }
+void AppendRegisterAssignment(
+  CosemByteBuffer& out,
+  const std::vector<types::ObjectDefinition>& items)
+{
+  AppendArrayHeader(out, items.size());
+  for (const auto& item : items) {
+    AppendStructureHeader(out, 2u);
+    AppendLongUnsigned(out, item.ClassId());
+    AppendLogicalName(out, item.LogicalName());
+  }
+}
+
+// mask_list ::= array of structure { mask_name OS, index_list array of LU }
+void AppendMaskList(
+  CosemByteBuffer& out,
+  const std::vector<types::RegisterMask>& items)
+{
+  AppendArrayHeader(out, items.size());
+  for (const auto& item : items) {
+    AppendStructureHeader(out, 2u);
+    AppendOctetString(out, item.MaskName().data(), item.MaskName().size());
+    const auto& indices = item.IndexList();
+    AppendArrayHeader(out, indices.size());
+    for (const auto index : indices) {
+      AppendLongUnsigned(out, index);
+    }
+  }
+}
+
+// active_mask ::= octet-string
+void AppendActiveMask(CosemByteBuffer& out, const CosemByteBuffer& name)
+{
+  AppendOctetString(out, name.data(), name.size());
+}
+
+}  // namespace
+
 CosemStatus CosemRegisterActivationObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
@@ -2545,15 +2586,18 @@ CosemStatus CosemRegisterActivationObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kRegisterActivationRegisterAssignmentAttributeId) {
-    output = registerAssignment_;
+    output.clear();
+    AppendRegisterAssignment(output, registerAssignment_);
     return CosemStatus::Ok;
   }
   if (attributeId == kRegisterActivationMaskListAttributeId) {
-    output = maskList_;
+    output.clear();
+    AppendMaskList(output, maskList_);
     return CosemStatus::Ok;
   }
   if (attributeId == kRegisterActivationActiveMaskAttributeId) {
-    output = activeMask_;
+    output.clear();
+    AppendActiveMask(output, activeMask_);
     return CosemStatus::Ok;
   }
   output.clear();
@@ -2593,12 +2637,14 @@ CosemStatus CosemRegisterActivationObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemRegisterActivationObject::RegisterAssignment() const
+const std::vector<types::ObjectDefinition>&
+CosemRegisterActivationObject::RegisterAssignment() const
 {
   return registerAssignment_;
 }
 
-const CosemByteBuffer& CosemRegisterActivationObject::MaskList() const
+const std::vector<types::RegisterMask>&
+CosemRegisterActivationObject::MaskList() const
 {
   return maskList_;
 }
@@ -2609,13 +2655,13 @@ const CosemByteBuffer& CosemRegisterActivationObject::ActiveMask() const
 }
 
 void CosemRegisterActivationObject::SetRegisterAssignment(
-  const CosemByteBuffer& assignment)
+  const std::vector<types::ObjectDefinition>& assignment)
 {
   registerAssignment_ = assignment;
 }
 
 void CosemRegisterActivationObject::SetMaskList(
-  const CosemByteBuffer& maskList)
+  const std::vector<types::RegisterMask>& maskList)
 {
   maskList_ = maskList;
 }

@@ -2096,21 +2096,34 @@ class CosemCompactDataObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 1u;
 
+  // Controls how the compact_buffer is refreshed (§5.2.2.2.6 of
+  // IEC 62056-6-2 ED4): `Inactive` keeps the buffer static,
+  // `Invoke` refreshes the buffer on every read of attribute 2,
+  // `InvokeAndStore` additionally persists the captured value.
+  enum class CaptureMethod : std::uint8_t
+  {
+    Inactive = 0u,
+    Invoke = 1u,
+    InvokeAndStore = 2u
+  };
+
+  static bool IsValidCaptureMethod(std::uint8_t raw);
+
   CosemCompactDataObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& buffer,
     const CosemByteBuffer& captureObjects,
-    const CosemByteBuffer& templateId,
+    std::uint8_t templateId,
     const CosemByteBuffer& templateDescription,
-    const CosemByteBuffer& captureMethod,
+    CaptureMethod captureMethod,
     AttributeAccessMode mutableAccess);
   CosemCompactDataObject(
     const CosemLogicalName& logicalName,
     const CosemByteBuffer& buffer,
     const CosemByteBuffer& captureObjects,
-    const CosemByteBuffer& templateId,
+    std::uint8_t templateId,
     const CosemByteBuffer& templateDescription,
-    const CosemByteBuffer& captureMethod,
+    CaptureMethod captureMethod,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -2129,17 +2142,17 @@ public:
 
   const CosemByteBuffer& Buffer() const;
   const CosemByteBuffer& CaptureObjects() const;
-  const CosemByteBuffer& TemplateId() const;
+  std::uint8_t TemplateId() const;
   const CosemByteBuffer& TemplateDescription() const;
-  const CosemByteBuffer& CaptureMethod() const;
+  CaptureMethod GetCaptureMethod() const;
 
 private:
   CosemObjectDescriptor descriptor_;
   CosemByteBuffer buffer_;
   CosemByteBuffer captureObjects_;
-  CosemByteBuffer templateId_;
+  std::uint8_t templateId_;
   CosemByteBuffer templateDescription_;
-  CosemByteBuffer captureMethod_;
+  CaptureMethod captureMethod_;
   CosemAccessRights rights_;
 };
 

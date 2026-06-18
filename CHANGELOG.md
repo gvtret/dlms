@@ -1,5 +1,70 @@
 # Changelog
 
+## 0.123.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemCompactDataObject`** (`class_id=62`, `version=1`,
+  IEC 62056-6-2 ED4 §4.3.10 / DLMS UA Blue Book Ed. 12.1
+  §4.3.10) now exposes two of its five dynamic attributes as
+  typed values instead of opaque `CosemByteBuffer` payloads:
+  - `template_id` (attribute `4`) → `std::uint8_t`
+  - `capture_method` (attribute `6`) → nested enum
+    `CosemCompactDataObject::CaptureMethod`
+    `{Inactive=0, Invoke=1, InvokeAndStore=2}`
+  Both ctors now take `std::uint8_t templateId` and
+  `CaptureMethod captureMethod`; `TemplateId()` returns
+  `std::uint8_t`; the getter previously named `CaptureMethod()`
+  was renamed to `GetCaptureMethod()` (the unqualified name
+  now denotes the nested enum type) and returns the typed
+  enum. `ReadAttribute(4)`/`ReadAttribute(6)` encode AXDR
+  `unsigned`/`enum` on every read; `WriteAttribute(4)`/
+  `WriteAttribute(6)` decode the same wire form, validate tag,
+  length and enum range (`0..2` for `capture_method`), and
+  return `InvalidArgument` for malformed or out-of-range
+  payloads (stored value preserved on rejection).
+
+  `compact_buffer` (`2`), `capture_objects` (`3`) and
+  `template_description` (`5`) remain opaque encoded DLMS
+  Data buffers pending the typed discriminated-union machinery
+  shared with IC 7 (Profile Generic).
+
+### Added
+
+- Static helper `CosemCompactDataObject::IsValidCaptureMethod`
+  exposes the `0..2` range check pre-construction.
+- Safe-fallback ctor: an out-of-range raw `capture_method`
+  collapses to `Inactive` (the spec default) rather than
+  leaving the object in an invalid state.
+- Method `1` `reset` is now implemented in-place and clears
+  `compact_buffer` only; configuration (`capture_objects`,
+  `template_id`, `template_description`, `capture_method`) is
+  preserved. Previously surfaced as `UnsupportedFeature`.
+- New per-IC test file `test_cosem_compact_data_object.cpp`
+  with 15 tests covering descriptor + access rights, AXDR
+  encode/decode of typed attributes, malformed-AXDR rejection
+  for both `template_id` and `capture_method`, the
+  `reset`-clears-buffer-only contract, `capture` returning
+  `UnsupportedFeature`, RO-access-mode enforcement, the
+  out-of-range-enum ctor fallback, and version normalization.
+  Registered in `lib/dlms-cosem/test/CMakeLists.txt` per rule
+  P2.4.
+
+### Changed
+
+- Method `2` `capture` still returns `UnsupportedFeature`, but
+  the rationale is now narrower: it remains unsupported only
+  until the typed `capture_object_definition` machinery shared
+  with IC 7 lands (the built-in object cannot evaluate the
+  capture list against live attribute values yet).
+- Legacy IC 62 tests in
+  `test/cosem/test_simple_objects.cpp` collapsed to a
+  placeholder pointing at the per-IC file.
+- `docs/ic_support_matrix.md` row `62` rewritten to describe
+  the typed `template_id` / `capture_method`, the safe-fallback
+  enum normalization, the in-place `reset`, and the remaining
+  opaque attributes.
+
 ## 0.122.0 - 2026-06-22
 
 ### Breaking changes

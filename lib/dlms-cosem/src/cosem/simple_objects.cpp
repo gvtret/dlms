@@ -890,6 +890,32 @@ void AppendBufferOctetString(
     value.size());
 }
 
+void AppendDateTimeOctetString(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::DateTime& value)
+{
+  const std::array<std::uint8_t, dlms::cosem::types::DateTime::WireSize>
+    bytes = value.ToBytes();
+  AppendOctetString(output, bytes.data(), bytes.size());
+}
+
+bool DecodeDateTimeOctetString(
+  const CosemByteBuffer& input,
+  dlms::cosem::types::DateTime& value)
+{
+  std::size_t offset = 0u;
+  std::size_t length = 0u;
+  const std::uint8_t* data = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, length) ||
+      length != dlms::cosem::types::DateTime::WireSize ||
+      !ReadFixedBytes(input, offset, length, data) ||
+      offset != input.size()) {
+    return false;
+  }
+  return dlms::cosem::types::DateTime::TryFromBytes(data, length, value);
+}
+
 void AppendLogicalName(
   CosemByteBuffer& output,
   const CosemLogicalName& logicalName)
@@ -12218,11 +12244,11 @@ const std::uint8_t CosemClockObject::MaxSupportedVersion;
 
 CosemClockObject::CosemClockObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& time,
+  const types::DateTime& time,
   std::int16_t timeZone,
   std::uint8_t status,
-  const CosemByteBuffer& daylightSavingsBegin,
-  const CosemByteBuffer& daylightSavingsEnd,
+  const types::DateTime& daylightSavingsBegin,
+  const types::DateTime& daylightSavingsEnd,
   std::int8_t daylightSavingsDeviation,
   bool daylightSavingsEnabled,
   CosemClockBase clockBase)
@@ -12242,11 +12268,11 @@ CosemClockObject::CosemClockObject(
 
 CosemClockObject::CosemClockObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& time,
+  const types::DateTime& time,
   std::int16_t timeZone,
   std::uint8_t status,
-  const CosemByteBuffer& daylightSavingsBegin,
-  const CosemByteBuffer& daylightSavingsEnd,
+  const types::DateTime& daylightSavingsBegin,
+  const types::DateTime& daylightSavingsEnd,
   std::int8_t daylightSavingsDeviation,
   bool daylightSavingsEnabled,
   CosemClockBase clockBase,
@@ -12329,7 +12355,7 @@ CosemStatus CosemClockObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kClockTimeAttributeId) {
-    AppendBufferOctetString(output, time_);
+    AppendDateTimeOctetString(output, time_);
     return CosemStatus::Ok;
   }
   if (attributeId == kClockTimeZoneAttributeId) {
@@ -12341,11 +12367,11 @@ CosemStatus CosemClockObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kClockDaylightSavingsBeginAttributeId) {
-    AppendBufferOctetString(output, daylightSavingsBegin_);
+    AppendDateTimeOctetString(output, daylightSavingsBegin_);
     return CosemStatus::Ok;
   }
   if (attributeId == kClockDaylightSavingsEndAttributeId) {
-    AppendBufferOctetString(output, daylightSavingsEnd_);
+    AppendDateTimeOctetString(output, daylightSavingsEnd_);
     return CosemStatus::Ok;
   }
   if (attributeId == kClockDaylightSavingsDeviationAttributeId) {
@@ -12375,8 +12401,8 @@ CosemStatus CosemClockObject::WriteAttribute(
     return CosemStatus::AccessDenied;
   }
   if (attributeId == kClockTimeAttributeId) {
-    CosemByteBuffer value;
-    if (!DecodeExactOctetString(input, kClockDateTimeOctetStringSize, value)) {
+    types::DateTime value;
+    if (!DecodeDateTimeOctetString(input, value)) {
       return CosemStatus::InvalidArgument;
     }
     time_ = value;
@@ -12392,16 +12418,16 @@ CosemStatus CosemClockObject::WriteAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kClockDaylightSavingsBeginAttributeId) {
-    CosemByteBuffer value;
-    if (!DecodeExactOctetString(input, kClockDateTimeOctetStringSize, value)) {
+    types::DateTime value;
+    if (!DecodeDateTimeOctetString(input, value)) {
       return CosemStatus::InvalidArgument;
     }
     daylightSavingsBegin_ = value;
     return CosemStatus::Ok;
   }
   if (attributeId == kClockDaylightSavingsEndAttributeId) {
-    CosemByteBuffer value;
-    if (!DecodeExactOctetString(input, kClockDateTimeOctetStringSize, value)) {
+    types::DateTime value;
+    if (!DecodeDateTimeOctetString(input, value)) {
       return CosemStatus::InvalidArgument;
     }
     daylightSavingsEnd_ = value;
@@ -12454,7 +12480,7 @@ CosemStatus CosemClockObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemClockObject::Time() const
+const types::DateTime& CosemClockObject::Time() const
 {
   return time_;
 }
@@ -12469,12 +12495,12 @@ std::uint8_t CosemClockObject::Status() const
   return status_;
 }
 
-const CosemByteBuffer& CosemClockObject::DaylightSavingsBegin() const
+const types::DateTime& CosemClockObject::DaylightSavingsBegin() const
 {
   return daylightSavingsBegin_;
 }
 
-const CosemByteBuffer& CosemClockObject::DaylightSavingsEnd() const
+const types::DateTime& CosemClockObject::DaylightSavingsEnd() const
 {
   return daylightSavingsEnd_;
 }
@@ -12492,6 +12518,16 @@ bool CosemClockObject::DaylightSavingsEnabled() const
 CosemClockBase CosemClockObject::ClockBase() const
 {
   return clockBase_;
+}
+
+void CosemClockObject::SetTime(const types::DateTime& value)
+{
+  time_ = value;
+}
+
+void CosemClockObject::SetStatus(std::uint8_t value)
+{
+  status_ = value;
 }
 
 const std::uint8_t CosemProfileGenericObject::MaxSupportedVersion;

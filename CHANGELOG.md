@@ -1,5 +1,44 @@
 # Changelog
 
+## 0.109.0 - 2026-06-17
+
+### Breaking changes
+
+- **`CosemClockObject`** (`class_id=8`, `version=0`) now models the
+  `date_time` attributes via the new typed value
+  `dlms::cosem::types::DateTime` (Blue Book Ed. 12.1 §4.1.6.1)
+  instead of opaque 12-byte buffers. The constructors and the
+  `Time()` / `DaylightSavingsBegin()` / `DaylightSavingsEnd()`
+  accessors take and return `const types::DateTime&`. On the wire
+  the attributes are still encoded as `octet-string` of length 12
+  (per spec), but field-level validation now rejects values with
+  out-of-range months, day-of-month, day-of-week, hour / minute /
+  second / hundredths and deviation; wildcard sentinels
+  (`0xFF`, `0xFFFF`, `0x8000`, `0xFE`, `0xFD`) and the documented
+  DST sentinels (`0xFE`, `0xFD` for the month; `last day`,
+  `second-last day`) are accepted. The new
+  `SetTime` / `SetStatus` backend hooks let owners republish
+  authoritative clock state without going through the
+  `WriteAttribute` access-mode gate.
+
+  Migration: construct the value via `types::DateTime` setters
+  (`SetYear`, `SetMonth`, ..., `SetDeviation`, `SetClockStatus`)
+  or via `types::DateTime::TryFromBytes` if you already have the
+  12-byte buffer; pass the resulting `types::DateTime` to the
+  `CosemClockObject` constructor. Replace direct buffer access
+  with the typed getters (e.g. `object.Time().Year()`).
+
+### Added
+
+- **`dlms::cosem::types::DateTime`** — typed wrapper around the
+  Blue Book Ed. 12.1 §4.1.6.1 `date_time` value (12 bytes,
+  `year`/`month`/`day_of_month`/`day_of_week`/`hour`/`minute`/
+  `second`/`hundredths_of_second`/`deviation`/`clock_status`).
+  Exposed via `dlms/cosem/types/date_time.hpp` with validating
+  setters, sentinel constants, `ToBytes` / `TryFromBytes` round-trip
+  helpers and equality operators. 14 dedicated unit tests in
+  `TypesDateTime.*`.
+
 ## 0.108.0 - 2026-06-17
 
 ### Breaking changes

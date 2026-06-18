@@ -406,18 +406,62 @@ TEST(CosemRegisterObject, NormalizesRequestedVersion)
             object.Descriptor().key.version);
 }
 
+namespace {
+
+dlms::cosem::types::DateTime MakeClockDateTime(
+  std::uint16_t year,
+  std::uint8_t month,
+  std::uint8_t day,
+  std::uint8_t dow,
+  std::uint8_t hour,
+  std::uint8_t minute,
+  std::uint8_t second,
+  std::uint8_t hundredths,
+  std::int16_t deviation,
+  std::uint8_t status)
+{
+  dlms::cosem::types::DateTime dt;
+  if (year != dlms::cosem::types::DateTime::YearUnspecifiedValue) {
+    EXPECT_TRUE(dt.SetYear(year));
+  }
+  EXPECT_TRUE(dt.SetMonth(month));
+  EXPECT_TRUE(dt.SetDayOfMonth(day));
+  EXPECT_TRUE(dt.SetDayOfWeek(dow));
+  EXPECT_TRUE(dt.SetHour(hour));
+  EXPECT_TRUE(dt.SetMinute(minute));
+  EXPECT_TRUE(dt.SetSecond(second));
+  EXPECT_TRUE(dt.SetHundredths(hundredths));
+  EXPECT_TRUE(dt.SetDeviation(deviation));
+  dt.SetClockStatus(status);
+  return dt;
+}
+
+dlms::cosem::CosemByteBuffer DateTimeBytes(
+  const dlms::cosem::types::DateTime& dt)
+{
+  const std::array<std::uint8_t, 12u> bytes = dt.ToBytes();
+  return dlms::cosem::CosemByteBuffer(bytes.begin(), bytes.end());
+}
+
+}  // namespace
+
 TEST(CosemClockObject, ExposesClockAttributes)
 {
-  dlms::cosem::CosemByteBuffer time;
-  for (std::uint8_t i = 0u; i < 12u; ++i) {
-    time.push_back(static_cast<std::uint8_t>(0x10u + i));
-  }
-  dlms::cosem::CosemByteBuffer dstBegin;
-  dlms::cosem::CosemByteBuffer dstEnd;
-  for (std::uint8_t i = 0u; i < 12u; ++i) {
-    dstBegin.push_back(static_cast<std::uint8_t>(0x20u + i));
-    dstEnd.push_back(static_cast<std::uint8_t>(0x30u + i));
-  }
+  const dlms::cosem::types::DateTime time =
+    MakeClockDateTime(2024u, 6u, 15u, 6u, 12u, 34u, 56u, 78u, 180,
+      dlms::cosem::types::DateTime::ClockStatusDaylightSavingActiveBit);
+  const dlms::cosem::types::DateTime dstBegin =
+    MakeClockDateTime(
+      dlms::cosem::types::DateTime::YearUnspecifiedValue,
+      3u, dlms::cosem::types::DateTime::DayOfMonthLastValue,
+      7u, 2u, 0u, 0u, 0u, 0,
+      dlms::cosem::types::DateTime::ClockStatusUnspecifiedValue);
+  const dlms::cosem::types::DateTime dstEnd =
+    MakeClockDateTime(
+      dlms::cosem::types::DateTime::YearUnspecifiedValue,
+      10u, dlms::cosem::types::DateTime::DayOfMonthLastValue,
+      7u, 3u, 0u, 0u, 0u, 0,
+      dlms::cosem::types::DateTime::ClockStatusUnspecifiedValue);
 
   dlms::cosem::CosemClockObject object(
     MakeName(8u),
@@ -443,7 +487,7 @@ TEST(CosemClockObject, ExposesClockAttributes)
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(2u, output));
-  EXPECT_EQ(EncodedRawOctetString(time), output);
+  EXPECT_EQ(EncodedRawOctetString(DateTimeBytes(time)), output);
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(3u, output));
@@ -455,11 +499,11 @@ TEST(CosemClockObject, ExposesClockAttributes)
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(5u, output));
-  EXPECT_EQ(EncodedRawOctetString(dstBegin), output);
+  EXPECT_EQ(EncodedRawOctetString(DateTimeBytes(dstBegin)), output);
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(6u, output));
-  EXPECT_EQ(EncodedRawOctetString(dstEnd), output);
+  EXPECT_EQ(EncodedRawOctetString(DateTimeBytes(dstEnd)), output);
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
             object.ReadAttribute(7u, output));
@@ -476,21 +520,27 @@ TEST(CosemClockObject, ExposesClockAttributes)
 
 TEST(CosemClockObject, WritesMutableClockAttributes)
 {
-  dlms::cosem::CosemByteBuffer value(12u, 0x11u);
+  const dlms::cosem::types::DateTime initial =
+    MakeClockDateTime(2020u, 1u, 1u, 3u, 0u, 0u, 0u, 0u, 0, 0u);
   dlms::cosem::CosemClockObject object(
     MakeName(8u),
-    value,
+    initial,
     0,
     0u,
-    value,
-    value,
+    initial,
+    initial,
     0,
     false,
     dlms::cosem::CosemClockBase::NotDefined);
 
-  dlms::cosem::CosemByteBuffer updated(12u, 0x22u);
+  const dlms::cosem::types::DateTime updated =
+    MakeClockDateTime(2025u, 11u, 30u, 7u, 23u, 59u, 59u, 99u, -180,
+      dlms::cosem::types::DateTime::ClockStatusDaylightSavingActiveBit |
+      dlms::cosem::types::DateTime::ClockStatusDifferentClockBaseBit);
+  const dlms::cosem::CosemByteBuffer updatedBytes = DateTimeBytes(updated);
+
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.WriteAttribute(2u, EncodedRawOctetString(updated)));
+            object.WriteAttribute(2u, EncodedRawOctetString(updatedBytes)));
   EXPECT_EQ(updated, object.Time());
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
@@ -498,11 +548,11 @@ TEST(CosemClockObject, WritesMutableClockAttributes)
   EXPECT_EQ(-180, object.TimeZone());
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.WriteAttribute(5u, EncodedRawOctetString(updated)));
+            object.WriteAttribute(5u, EncodedRawOctetString(updatedBytes)));
   EXPECT_EQ(updated, object.DaylightSavingsBegin());
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.WriteAttribute(6u, EncodedRawOctetString(updated)));
+            object.WriteAttribute(6u, EncodedRawOctetString(updatedBytes)));
   EXPECT_EQ(updated, object.DaylightSavingsEnd());
 
   ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
@@ -518,11 +568,21 @@ TEST(CosemClockObject, WritesMutableClockAttributes)
   EXPECT_EQ(
     dlms::cosem::CosemClockBase::Gps,
     object.ClockBase());
+
+  // Backend-driven updates bypass the access-mode check.
+  const dlms::cosem::types::DateTime refreshed =
+    MakeClockDateTime(2026u, 2u, 1u, 1u, 12u, 0u, 0u, 0u, 0, 0u);
+  object.SetTime(refreshed);
+  EXPECT_EQ(refreshed, object.Time());
+  object.SetStatus(0x0Au);
+  EXPECT_EQ(0x0Au, object.Status());
 }
 
 TEST(CosemClockObject, RejectsInvalidWritesAndUnsupportedMethods)
 {
-  dlms::cosem::CosemByteBuffer value(12u, 0x11u);
+  const dlms::cosem::types::DateTime value =
+    MakeClockDateTime(2020u, 1u, 1u, 3u, 0u, 0u, 0u, 0u, 0, 0u);
+  const dlms::cosem::CosemByteBuffer valueBytes = DateTimeBytes(value);
   dlms::cosem::CosemClockObject object(
     MakeName(8u),
     value,
@@ -535,11 +595,26 @@ TEST(CosemClockObject, RejectsInvalidWritesAndUnsupportedMethods)
     dlms::cosem::CosemClockBase::NotDefined);
 
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            object.WriteAttribute(1u, EncodedRawOctetString(value)));
+            object.WriteAttribute(1u, EncodedRawOctetString(valueBytes)));
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             object.WriteAttribute(4u, Bytes(0x11u, 0x00u)));
+  // Short octet-string is rejected.
   EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
             object.WriteAttribute(2u, Bytes(0x09u, 0x01u)));
+  // Wrong length (11 instead of 12) is rejected.
+  {
+    dlms::cosem::CosemByteBuffer shortBytes(valueBytes.begin(),
+                                            valueBytes.begin() + 11);
+    EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+              object.WriteAttribute(2u, EncodedRawOctetString(shortBytes)));
+  }
+  // Field validation: out-of-range month is rejected.
+  {
+    dlms::cosem::CosemByteBuffer badBytes = valueBytes;
+    badBytes[2] = 13u;
+    EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
+              object.WriteAttribute(2u, EncodedRawOctetString(badBytes)));
+  }
   EXPECT_EQ(dlms::cosem::CosemStatus::InvalidArgument,
             object.WriteAttribute(9u, Bytes(0x16u, 0xFFu)));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
@@ -556,7 +631,8 @@ TEST(CosemClockObject, RejectsInvalidWritesAndUnsupportedMethods)
 
 TEST(CosemClockObject, NormalizesRequestedVersion)
 {
-  dlms::cosem::CosemByteBuffer value(12u, 0x11u);
+  const dlms::cosem::types::DateTime value =
+    MakeClockDateTime(2020u, 1u, 1u, 3u, 0u, 0u, 0u, 0u, 0, 0u);
   dlms::cosem::CosemClockObject object(
     MakeName(8u),
     value,

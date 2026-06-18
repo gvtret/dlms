@@ -13,7 +13,8 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_status.cpp
   cosem/test_logical_device.cpp
   cosem/test_object_registry.cpp
-  cosem/test_simple_objects.cpp)
+  cosem/test_simple_objects.cpp
+  cosem/types/test_date_time.cpp)
 
 target_link_libraries(dlms_cosem_tests
   PRIVATE

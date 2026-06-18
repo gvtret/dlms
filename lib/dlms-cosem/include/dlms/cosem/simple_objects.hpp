@@ -2,6 +2,7 @@
 
 #include "dlms/cosem/certificate_store.hpp"
 #include "dlms/cosem/logical_device.hpp"
+#include "dlms/cosem/types/date_time.hpp"
 #include "dlms/security/invocation_counter_store.hpp"
 #include "dlms/security/key_store.hpp"
 
@@ -3318,23 +3319,24 @@ class CosemClockObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // Convenience constructor: zero deviation, no DST, default clock base.
   CosemClockObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& time,
+    const types::DateTime& time,
     std::int16_t timeZone,
     std::uint8_t status,
-    const CosemByteBuffer& daylightSavingsBegin,
-    const CosemByteBuffer& daylightSavingsEnd,
+    const types::DateTime& daylightSavingsBegin,
+    const types::DateTime& daylightSavingsEnd,
     std::int8_t daylightSavingsDeviation,
     bool daylightSavingsEnabled,
     CosemClockBase clockBase);
   CosemClockObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& time,
+    const types::DateTime& time,
     std::int16_t timeZone,
     std::uint8_t status,
-    const CosemByteBuffer& daylightSavingsBegin,
-    const CosemByteBuffer& daylightSavingsEnd,
+    const types::DateTime& daylightSavingsBegin,
+    const types::DateTime& daylightSavingsEnd,
     std::int8_t daylightSavingsDeviation,
     bool daylightSavingsEnabled,
     CosemClockBase clockBase,
@@ -3353,22 +3355,28 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Time() const;
+  const types::DateTime& Time() const;
   std::int16_t TimeZone() const;
   std::uint8_t Status() const;
-  const CosemByteBuffer& DaylightSavingsBegin() const;
-  const CosemByteBuffer& DaylightSavingsEnd() const;
+  const types::DateTime& DaylightSavingsBegin() const;
+  const types::DateTime& DaylightSavingsEnd() const;
   std::int8_t DaylightSavingsDeviation() const;
   bool DaylightSavingsEnabled() const;
   CosemClockBase ClockBase() const;
 
+  // Backend-driven updates. `time` reflects the meter's authoritative clock
+  // state; backends call `SetStatus` to publish refreshed `clock_status` bits
+  // (the attribute is exposed as read-only on the wire per spec).
+  void SetTime(const types::DateTime& value);
+  void SetStatus(std::uint8_t value);
+
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer time_;
+  types::DateTime time_;
   std::int16_t timeZone_;
   std::uint8_t status_;
-  CosemByteBuffer daylightSavingsBegin_;
-  CosemByteBuffer daylightSavingsEnd_;
+  types::DateTime daylightSavingsBegin_;
+  types::DateTime daylightSavingsEnd_;
   std::int8_t daylightSavingsDeviation_;
   bool daylightSavingsEnabled_;
   CosemClockBase clockBase_;

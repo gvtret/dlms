@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.114.0 - 2026-06-18
+
+### Breaking changes
+
+- **`CosemScriptTableObject`** (`class_id=9`, `version=0`,
+  IEC 62056-6-2 ED4 §4.5.2 / Blue Book Ed. 12.1 §4.5.2) now models the
+  `scripts` attribute as a typed
+  `std::vector<dlms::cosem::types::ScriptEntry>` instead of an opaque
+  `CosemByteBuffer`. Each entry holds a `script_identifier` plus a
+  `std::vector<dlms::cosem::types::ActionSpecification>` (typed
+  `service_id`, `class_id`, `logical_name`, `index`, and an opaque
+  `parameter` whose raw AXDR bytes are preserved verbatim).
+  - Both constructors now take a `std::vector<types::ScriptEntry>`
+    instead of a `CosemByteBuffer`.
+  - `Scripts()` returns `const std::vector<types::ScriptEntry>&`.
+  - `SetScripts(...)` returns `bool` and does not mutate on failure;
+    new static `IsValidScripts(...)` exposes the same invariants
+    (per-action `IsValid` + unique `script_identifier`).
+  - Safe-fallback construction: a malformed `scripts` argument leaves
+    the object holding an empty collection rather than invalid state.
+  - `WriteAttribute(scripts)` decodes the wire form
+    (`array of script`, `script ::= structure(2){long-unsigned id,
+    array of action_specification}`,
+    `action_specification ::= structure(5){enum, long-unsigned, octet-
+    string(6), integer, parameter}`), captures `parameter` as raw
+    AXDR via the existing `SkipDlmsData` helper, validates every
+    field plus the unique-identifier invariant, and only swaps on
+    success; returns `CosemStatus::InvalidArgument` on malformed
+    AXDR, wrong tags, wrong field counts, invalid actions, duplicate
+    `script_identifier`, or trailing bytes after the last script.
+  - `ReadAttribute(scripts)` re-encodes from the typed model; empty
+    `parameter` round-trips as AXDR `null-data` (`0x00`).
+  - `InvokeMethod(execute=1)` semantics are unchanged: still surfaces
+    `CosemStatus::UnsupportedFeature` so a future backend can attach
+    script execution without changing the object surface.
+
+### Added
+
+- New AXDR codec helpers `AppendActionSpecification` /
+  `DecodeActionSpecification` and `AppendScripts` / `DecodeScripts`
+  in `lib/dlms-cosem/src/cosem/simple_objects.cpp`, layered on the
+  existing AXDR primitives plus `SkipDlmsData` for opaque
+  `parameter` capture.
+- Per-class test file `test/cosem/test_cosem_script_table_object.cpp`
+  (16 tests) per the per-IC test-file convention
+  (`docs/production_readiness_roadmap.md` P2.4). Legacy buffer-based
+  IC 9 tests removed from `test/cosem/test_simple_objects.cpp`.
+
+### Docs
+
+- `docs/ic_support_matrix.md`: IC 9 row updated from Partial to Yes.
+
 ## 0.113.0 - 2026-06-18
 
 ### Breaking changes

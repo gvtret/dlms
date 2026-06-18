@@ -27,7 +27,9 @@ add_library(dlms_cosem
   src/cosem/types/day_profile_action.cpp
   src/cosem/types/day_profile.cpp
   src/cosem/types/week_profile.cpp
-  src/cosem/types/season_profile.cpp)
+  src/cosem/types/season_profile.cpp
+  src/cosem/types/action_specification.cpp
+  src/cosem/types/script_entry.cpp)
 
 if(NOT TARGET dlms_security AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security/CMakeLists.txt")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security" "${CMAKE_CURRENT_BINARY_DIR}/_deps/dlms-security")

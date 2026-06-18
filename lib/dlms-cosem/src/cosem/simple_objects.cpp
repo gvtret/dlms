@@ -2701,13 +2701,217 @@ namespace {
 constexpr std::uint16_t kScriptTableClassId = 9u;
 constexpr std::uint8_t kScriptTableScriptsAttributeId = 2u;
 constexpr std::uint8_t kScriptTableExecuteMethodId = 1u;
+constexpr std::size_t kScriptTableLogicalNameSize = 6u;
+
+// Append a single action_specification structure on the wire:
+//   structure(5) {
+//     enum service_id,
+//     long-unsigned class_id,
+//     octet-string(6) logical_name,
+//     integer index,
+//     parameter (raw AXDR; null-data if empty)
+//   }
+void AppendActionSpecification(
+  CosemByteBuffer& output,
+  const dlms::cosem::types::ActionSpecification& action)
+{
+  AppendStructureHeader(output, 5u);
+  AppendEnum(
+    output,
+    static_cast<std::uint8_t>(action.ServiceId()));
+  AppendLongUnsigned(output, action.ClassId());
+  AppendLogicalName(output, action.LogicalName());
+  AppendInteger(
+    output,
+    static_cast<std::uint8_t>(action.Index()));
+  const CosemByteBuffer& parameter = action.Parameter();
+  if (parameter.empty()) {
+    output.push_back(kNullDataTag);
+  } else {
+    output.insert(output.end(), parameter.begin(), parameter.end());
+  }
+}
+
+// Decode a single action_specification structure starting at `offset`.
+bool DecodeActionSpecification(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::ActionSpecification& outAction)
+{
+  std::size_t fields = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fields) ||
+      fields != 5u) {
+    return false;
+  }
+
+  std::uint8_t serviceIdRaw = 0u;
+  if (!ReadEnumValue(input, offset, serviceIdRaw)) {
+    return false;
+  }
+  dlms::cosem::types::ScriptServiceId serviceId =
+    dlms::cosem::types::ScriptServiceId::Dummy;
+  switch (serviceIdRaw) {
+    case 0u:
+      serviceId = dlms::cosem::types::ScriptServiceId::Dummy;
+      break;
+    case 1u:
+      serviceId = dlms::cosem::types::ScriptServiceId::WriteAttribute;
+      break;
+    case 2u:
+      serviceId = dlms::cosem::types::ScriptServiceId::ExecuteMethod;
+      break;
+    default:
+      return false;
+  }
+
+  std::uint16_t classId = 0u;
+  if (!ReadLongUnsignedValue(input, offset, classId)) {
+    return false;
+  }
+
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag)) {
+    return false;
+  }
+  std::size_t nameLen = 0u;
+  if (!ReadAxdrLength(input, offset, nameLen) ||
+      nameLen != kScriptTableLogicalNameSize) {
+    return false;
+  }
+  const std::uint8_t* nameBytes = nullptr;
+  if (!ReadFixedBytes(input, offset, nameLen, nameBytes)) {
+    return false;
+  }
+  CosemLogicalName logicalName(
+    nameBytes[0], nameBytes[1], nameBytes[2],
+    nameBytes[3], nameBytes[4], nameBytes[5]);
+
+  std::uint8_t indexRaw = 0u;
+  if (!ReadIntegerValue(input, offset, indexRaw)) {
+    return false;
+  }
+  const std::int8_t index = static_cast<std::int8_t>(indexRaw);
+
+  // parameter: capture raw AXDR bytes for the full data item.
+  if (offset >= input.size()) {
+    return false;
+  }
+  const std::size_t paramStart = offset;
+  const std::uint8_t paramTag = input[paramStart];
+  if (!SkipDlmsData(input, offset, 0u)) {
+    return false;
+  }
+  CosemByteBuffer parameter;
+  // null-data has zero "payload"; round-trip "absent" as empty buffer.
+  if (paramTag != kNullDataTag) {
+    parameter.assign(
+      input.begin() + paramStart,
+      input.begin() + offset);
+  }
+
+  dlms::cosem::types::ActionSpecification decoded(
+    serviceId, classId, logicalName, index, parameter);
+  if (!dlms::cosem::types::ActionSpecification::IsValid(decoded)) {
+    return false;
+  }
+  outAction = decoded;
+  return true;
+}
+
+// Append the full `scripts` attribute on the wire:
+//   array of script
+//   script ::= structure(2) {
+//     long-unsigned script_identifier,
+//     array of action_specification
+//   }
+void AppendScripts(
+  CosemByteBuffer& output,
+  const std::vector<dlms::cosem::types::ScriptEntry>& scripts)
+{
+  AppendArrayHeader(output, scripts.size());
+  for (std::size_t i = 0u; i < scripts.size(); ++i) {
+    const dlms::cosem::types::ScriptEntry& entry = scripts[i];
+    AppendStructureHeader(output, 2u);
+    AppendLongUnsigned(output, entry.Identifier());
+    const std::vector<dlms::cosem::types::ActionSpecification>&
+      actions = entry.Actions();
+    AppendArrayHeader(output, actions.size());
+    for (std::size_t j = 0u; j < actions.size(); ++j) {
+      AppendActionSpecification(output, actions[j]);
+    }
+  }
+}
+
+bool DecodeScripts(
+  const CosemByteBuffer& input,
+  std::vector<dlms::cosem::types::ScriptEntry>& outScripts)
+{
+  std::size_t offset = 0u;
+  std::size_t scriptCount = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag) ||
+      !ReadAxdrLength(input, offset, scriptCount)) {
+    return false;
+  }
+
+  std::vector<dlms::cosem::types::ScriptEntry> decoded;
+  decoded.reserve(scriptCount);
+
+  for (std::size_t i = 0u; i < scriptCount; ++i) {
+    std::size_t scriptFields = 0u;
+    if (!ReadExpectedTag(input, offset, kStructureTag) ||
+        !ReadAxdrLength(input, offset, scriptFields) ||
+        scriptFields != 2u) {
+      return false;
+    }
+    std::uint16_t identifier = 0u;
+    if (!ReadLongUnsignedValue(input, offset, identifier)) {
+      return false;
+    }
+    std::size_t actionCount = 0u;
+    if (!ReadExpectedTag(input, offset, kArrayTag) ||
+        !ReadAxdrLength(input, offset, actionCount)) {
+      return false;
+    }
+    std::vector<dlms::cosem::types::ActionSpecification> actions;
+    actions.reserve(actionCount);
+    for (std::size_t j = 0u; j < actionCount; ++j) {
+      dlms::cosem::types::ActionSpecification action;
+      if (!DecodeActionSpecification(input, offset, action)) {
+        return false;
+      }
+      actions.push_back(action);
+    }
+    dlms::cosem::types::ScriptEntry entry(identifier, actions);
+    // Constructor drops actions if any fail IsValid; reject here too.
+    if (entry.Actions().size() != actions.size()) {
+      return false;
+    }
+    decoded.push_back(entry);
+  }
+
+  // Whole-buffer check: no trailing bytes after the last script.
+  if (offset != input.size()) {
+    return false;
+  }
+  // Unique script_identifier across the collection.
+  for (std::size_t i = 0u; i < decoded.size(); ++i) {
+    for (std::size_t k = i + 1u; k < decoded.size(); ++k) {
+      if (decoded[i].Identifier() == decoded[k].Identifier()) {
+        return false;
+      }
+    }
+  }
+  outScripts.swap(decoded);
+  return true;
+}
+
 } // namespace
 
 const std::uint8_t CosemScriptTableObject::MaxSupportedVersion;
 
 CosemScriptTableObject::CosemScriptTableObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& scripts,
+  const std::vector<types::ScriptEntry>& scripts,
   AttributeAccessMode scriptsAccess)
   : CosemScriptTableObject(
       logicalName,
@@ -2719,7 +2923,7 @@ CosemScriptTableObject::CosemScriptTableObject(
 
 CosemScriptTableObject::CosemScriptTableObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& scripts,
+  const std::vector<types::ScriptEntry>& scripts,
   AttributeAccessMode scriptsAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -2728,7 +2932,7 @@ CosemScriptTableObject::CosemScriptTableObject(
         version,
         CosemScriptTableObject::MaxSupportedVersion),
       logicalName))
-  , scripts_(scripts)
+  , scripts_()
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
@@ -2736,6 +2940,11 @@ CosemScriptTableObject::CosemScriptTableObject(
   rights_.SetAttributeAccess(
     kScriptTableScriptsAttributeId,
     scriptsAccess);
+  // Safe-fallback construction: hold an empty scripts collection when
+  // the caller passes a malformed one (duplicate ids, invalid actions).
+  if (IsValidScripts(scripts)) {
+    scripts_ = scripts;
+  }
 }
 
 CosemObjectDescriptor CosemScriptTableObject::Descriptor() const
@@ -2757,7 +2966,8 @@ CosemStatus CosemScriptTableObject::ReadAttribute(
     return CosemStatus::Ok;
   }
   if (attributeId == kScriptTableScriptsAttributeId) {
-    output = scripts_;
+    output.clear();
+    AppendScripts(output, scripts_);
     return CosemStatus::Ok;
   }
   output.clear();
@@ -2775,7 +2985,16 @@ CosemStatus CosemScriptTableObject::WriteAttribute(
         || mode == AttributeAccessMode::ReadAndWrite
         || mode == AttributeAccessMode::AuthenticatedWriteOnly
         || mode == AttributeAccessMode::AuthenticatedReadAndWrite) {
-      scripts_ = input;
+      std::vector<types::ScriptEntry> decoded;
+      if (!DecodeScripts(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      // DecodeScripts already enforces uniqueness + per-action IsValid;
+      // call the public validator for symmetry / future-proofing.
+      if (!IsValidScripts(decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      scripts_.swap(decoded);
       return CosemStatus::Ok;
     }
     return CosemStatus::AccessDenied;
@@ -2803,14 +3022,36 @@ CosemStatus CosemScriptTableObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemScriptTableObject::Scripts() const
+const std::vector<types::ScriptEntry>&
+CosemScriptTableObject::Scripts() const
 {
   return scripts_;
 }
 
-void CosemScriptTableObject::SetScripts(const CosemByteBuffer& scripts)
+bool CosemScriptTableObject::SetScripts(
+  const std::vector<types::ScriptEntry>& scripts)
 {
+  if (!IsValidScripts(scripts)) {
+    return false;
+  }
   scripts_ = scripts;
+  return true;
+}
+
+bool CosemScriptTableObject::IsValidScripts(
+  const std::vector<types::ScriptEntry>& scripts)
+{
+  for (std::size_t i = 0u; i < scripts.size(); ++i) {
+    if (!types::ScriptEntry::IsValid(scripts[i])) {
+      return false;
+    }
+    for (std::size_t k = i + 1u; k < scripts.size(); ++k) {
+      if (scripts[i].Identifier() == scripts[k].Identifier()) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
 namespace {

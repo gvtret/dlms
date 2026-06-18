@@ -2,12 +2,14 @@
 
 #include "dlms/cosem/certificate_store.hpp"
 #include "dlms/cosem/logical_device.hpp"
+#include "dlms/cosem/types/action_specification.hpp"
 #include "dlms/cosem/types/date.hpp"
 #include "dlms/cosem/types/date_time.hpp"
 #include "dlms/cosem/types/day_profile.hpp"
 #include "dlms/cosem/types/day_profile_action.hpp"
 #include "dlms/cosem/types/schedule_table_entry.hpp"
 #include "dlms/cosem/types/script.hpp"
+#include "dlms/cosem/types/script_entry.hpp"
 #include "dlms/cosem/types/season_profile.hpp"
 #include "dlms/cosem/types/single_action_schedule_type.hpp"
 #include "dlms/cosem/types/special_day_entry.hpp"
@@ -327,11 +329,11 @@ public:
 
   CosemScriptTableObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& scripts,
+    const std::vector<types::ScriptEntry>& scripts,
     AttributeAccessMode scriptsAccess);
   CosemScriptTableObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& scripts,
+    const std::vector<types::ScriptEntry>& scripts,
     AttributeAccessMode scriptsAccess,
     std::uint8_t version);
 
@@ -348,12 +350,18 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Scripts() const;
-  void SetScripts(const CosemByteBuffer& scripts);
+  const std::vector<types::ScriptEntry>& Scripts() const;
+  // Returns false (no mutation) when any script_identifier is
+  // duplicated or any action_specification fails IsValid.
+  bool SetScripts(const std::vector<types::ScriptEntry>& scripts);
+
+  // True iff every entry is internally valid AND script_identifier
+  // values are unique across the collection.
+  static bool IsValidScripts(const std::vector<types::ScriptEntry>& scripts);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer scripts_;
+  std::vector<types::ScriptEntry> scripts_;
   CosemAccessRights rights_;
 };
 

@@ -2676,19 +2676,33 @@ class CosemPrimePlcMacNetworkAdminDataObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // IEC 62056-6-2 ED4 (2021) §4.12.9 / DLMS UA Blue Book Ed. 12.1
+  // §4.12.9 "PRIME NB OFDM PLC MAC network administration data"
+  // (class_id = 85, version = 0). Five dynamic array attributes
+  // exposing the PRIME MAC network administration tables; values
+  // are opaque encoded DLMS Data buffers prepared by the caller.
+  //   2 mac_list_multicast_entries  array  PIB 0x0052
+  //   3 mac_list_switch_table       array  PIB 0x0053
+  //   4 mac_list_direct_table       array  PIB 0x0055
+  //   5 mac_list_available_switches array  PIB 0x0056
+  //   6 mac_list_phy_comm           array  PIB 0x0057
+  // Specific methods:
+  //   1 reset(data)                 optional
   CosemPrimePlcMacNetworkAdminDataObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& nodeRegistrations,
-    const CosemByteBuffer& nodeUnregistrations,
-    const CosemByteBuffer& processedAliveMsgs,
-    const CosemByteBuffer& handledPromotions,
+    const CosemByteBuffer& macListMulticastEntries,
+    const CosemByteBuffer& macListSwitchTable,
+    const CosemByteBuffer& macListDirectTable,
+    const CosemByteBuffer& macListAvailableSwitches,
+    const CosemByteBuffer& macListPhyComm,
     AttributeAccessMode mutableAccess);
   CosemPrimePlcMacNetworkAdminDataObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& nodeRegistrations,
-    const CosemByteBuffer& nodeUnregistrations,
-    const CosemByteBuffer& processedAliveMsgs,
-    const CosemByteBuffer& handledPromotions,
+    const CosemByteBuffer& macListMulticastEntries,
+    const CosemByteBuffer& macListSwitchTable,
+    const CosemByteBuffer& macListDirectTable,
+    const CosemByteBuffer& macListAvailableSwitches,
+    const CosemByteBuffer& macListPhyComm,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -2705,17 +2719,19 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& NodeRegistrations() const;
-  const CosemByteBuffer& NodeUnregistrations() const;
-  const CosemByteBuffer& ProcessedAliveMsgs() const;
-  const CosemByteBuffer& HandledPromotions() const;
+  const CosemByteBuffer& MacListMulticastEntries() const;
+  const CosemByteBuffer& MacListSwitchTable() const;
+  const CosemByteBuffer& MacListDirectTable() const;
+  const CosemByteBuffer& MacListAvailableSwitches() const;
+  const CosemByteBuffer& MacListPhyComm() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer nodeRegistrations_;
-  CosemByteBuffer nodeUnregistrations_;
-  CosemByteBuffer processedAliveMsgs_;
-  CosemByteBuffer handledPromotions_;
+  CosemByteBuffer macListMulticastEntries_;
+  CosemByteBuffer macListSwitchTable_;
+  CosemByteBuffer macListDirectTable_;
+  CosemByteBuffer macListAvailableSwitches_;
+  CosemByteBuffer macListPhyComm_;
   CosemAccessRights rights_;
 };
 

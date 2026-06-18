@@ -10599,11 +10599,11 @@ CosemPrimePlcMacCountersObject::CsmaChBusyCount() const
 
 namespace {
 constexpr std::uint16_t kPrimePlcMacNetworkAdminDataClassId = 85u;
-constexpr std::uint8_t kPrimePlcMacNetworkAdminDataNodeRegistrationsId = 2u;
-constexpr std::uint8_t kPrimePlcMacNetworkAdminDataNodeUnregistrationsId =
-  3u;
-constexpr std::uint8_t kPrimePlcMacNetworkAdminDataProcessedAliveMsgsId = 4u;
-constexpr std::uint8_t kPrimePlcMacNetworkAdminDataHandledPromotionsId = 5u;
+constexpr std::uint8_t kPrimePlcMacNetworkAdminDataMulticastEntriesId = 2u;
+constexpr std::uint8_t kPrimePlcMacNetworkAdminDataSwitchTableId = 3u;
+constexpr std::uint8_t kPrimePlcMacNetworkAdminDataDirectTableId = 4u;
+constexpr std::uint8_t kPrimePlcMacNetworkAdminDataAvailableSwitchesId = 5u;
+constexpr std::uint8_t kPrimePlcMacNetworkAdminDataPhyCommId = 6u;
 constexpr std::uint8_t kPrimePlcMacNetworkAdminDataResetMethodId = 1u;
 } // namespace
 
@@ -10613,14 +10613,16 @@ const std::uint8_t
 CosemPrimePlcMacNetworkAdminDataObject::
   CosemPrimePlcMacNetworkAdminDataObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& nodeRegistrations,
-    const CosemByteBuffer& nodeUnregistrations,
-    const CosemByteBuffer& processedAliveMsgs,
-    const CosemByteBuffer& handledPromotions,
+    const CosemByteBuffer& macListMulticastEntries,
+    const CosemByteBuffer& macListSwitchTable,
+    const CosemByteBuffer& macListDirectTable,
+    const CosemByteBuffer& macListAvailableSwitches,
+    const CosemByteBuffer& macListPhyComm,
     AttributeAccessMode mutableAccess)
   : CosemPrimePlcMacNetworkAdminDataObject(
-      logicalName, nodeRegistrations, nodeUnregistrations,
-      processedAliveMsgs, handledPromotions, mutableAccess,
+      logicalName, macListMulticastEntries, macListSwitchTable,
+      macListDirectTable, macListAvailableSwitches,
+      macListPhyComm, mutableAccess,
       CosemPrimePlcMacNetworkAdminDataObject::MaxSupportedVersion)
 {
 }
@@ -10628,10 +10630,11 @@ CosemPrimePlcMacNetworkAdminDataObject::
 CosemPrimePlcMacNetworkAdminDataObject::
   CosemPrimePlcMacNetworkAdminDataObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& nodeRegistrations,
-    const CosemByteBuffer& nodeUnregistrations,
-    const CosemByteBuffer& processedAliveMsgs,
-    const CosemByteBuffer& handledPromotions,
+    const CosemByteBuffer& macListMulticastEntries,
+    const CosemByteBuffer& macListSwitchTable,
+    const CosemByteBuffer& macListDirectTable,
+    const CosemByteBuffer& macListAvailableSwitches,
+    const CosemByteBuffer& macListPhyComm,
     AttributeAccessMode mutableAccess,
     std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -10641,18 +10644,20 @@ CosemPrimePlcMacNetworkAdminDataObject::
         CosemPrimePlcMacNetworkAdminDataObject::
           MaxSupportedVersion),
       logicalName))
-  , nodeRegistrations_(nodeRegistrations)
-  , nodeUnregistrations_(nodeUnregistrations)
-  , processedAliveMsgs_(processedAliveMsgs)
-  , handledPromotions_(handledPromotions)
+  , macListMulticastEntries_(macListMulticastEntries)
+  , macListSwitchTable_(macListSwitchTable)
+  , macListDirectTable_(macListDirectTable)
+  , macListAvailableSwitches_(macListAvailableSwitches)
+  , macListPhyComm_(macListPhyComm)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
   for (std::uint8_t attr :
-       {kPrimePlcMacNetworkAdminDataNodeRegistrationsId,
-        kPrimePlcMacNetworkAdminDataNodeUnregistrationsId,
-        kPrimePlcMacNetworkAdminDataProcessedAliveMsgsId,
-        kPrimePlcMacNetworkAdminDataHandledPromotionsId}) {
+       {kPrimePlcMacNetworkAdminDataMulticastEntriesId,
+        kPrimePlcMacNetworkAdminDataSwitchTableId,
+        kPrimePlcMacNetworkAdminDataDirectTableId,
+        kPrimePlcMacNetworkAdminDataAvailableSwitchesId,
+        kPrimePlcMacNetworkAdminDataPhyCommId}) {
     rights_.SetAttributeAccess(attr, mutableAccess);
   }
 }
@@ -10678,17 +10683,20 @@ CosemPrimePlcMacNetworkAdminDataObject::ReadAttribute(
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case kPrimePlcMacNetworkAdminDataNodeRegistrationsId:
-      output = nodeRegistrations_;
+    case kPrimePlcMacNetworkAdminDataMulticastEntriesId:
+      output = macListMulticastEntries_;
       return CosemStatus::Ok;
-    case kPrimePlcMacNetworkAdminDataNodeUnregistrationsId:
-      output = nodeUnregistrations_;
+    case kPrimePlcMacNetworkAdminDataSwitchTableId:
+      output = macListSwitchTable_;
       return CosemStatus::Ok;
-    case kPrimePlcMacNetworkAdminDataProcessedAliveMsgsId:
-      output = processedAliveMsgs_;
+    case kPrimePlcMacNetworkAdminDataDirectTableId:
+      output = macListDirectTable_;
       return CosemStatus::Ok;
-    case kPrimePlcMacNetworkAdminDataHandledPromotionsId:
-      output = handledPromotions_;
+    case kPrimePlcMacNetworkAdminDataAvailableSwitchesId:
+      output = macListAvailableSwitches_;
+      return CosemStatus::Ok;
+    case kPrimePlcMacNetworkAdminDataPhyCommId:
+      output = macListPhyComm_;
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -10703,17 +10711,20 @@ CosemPrimePlcMacNetworkAdminDataObject::WriteAttribute(
 {
   CosemByteBuffer* target = nullptr;
   switch (attributeId) {
-    case kPrimePlcMacNetworkAdminDataNodeRegistrationsId:
-      target = &nodeRegistrations_;
+    case kPrimePlcMacNetworkAdminDataMulticastEntriesId:
+      target = &macListMulticastEntries_;
       break;
-    case kPrimePlcMacNetworkAdminDataNodeUnregistrationsId:
-      target = &nodeUnregistrations_;
+    case kPrimePlcMacNetworkAdminDataSwitchTableId:
+      target = &macListSwitchTable_;
       break;
-    case kPrimePlcMacNetworkAdminDataProcessedAliveMsgsId:
-      target = &processedAliveMsgs_;
+    case kPrimePlcMacNetworkAdminDataDirectTableId:
+      target = &macListDirectTable_;
       break;
-    case kPrimePlcMacNetworkAdminDataHandledPromotionsId:
-      target = &handledPromotions_;
+    case kPrimePlcMacNetworkAdminDataAvailableSwitchesId:
+      target = &macListAvailableSwitches_;
+      break;
+    case kPrimePlcMacNetworkAdminDataPhyCommId:
+      target = &macListPhyComm_;
       break;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
@@ -10740,27 +10751,33 @@ CosemPrimePlcMacNetworkAdminDataObject::InvokeMethod(
 }
 
 const CosemByteBuffer&
-CosemPrimePlcMacNetworkAdminDataObject::NodeRegistrations() const
+CosemPrimePlcMacNetworkAdminDataObject::MacListMulticastEntries() const
 {
-  return nodeRegistrations_;
+  return macListMulticastEntries_;
 }
 
 const CosemByteBuffer&
-CosemPrimePlcMacNetworkAdminDataObject::NodeUnregistrations() const
+CosemPrimePlcMacNetworkAdminDataObject::MacListSwitchTable() const
 {
-  return nodeUnregistrations_;
+  return macListSwitchTable_;
 }
 
 const CosemByteBuffer&
-CosemPrimePlcMacNetworkAdminDataObject::ProcessedAliveMsgs() const
+CosemPrimePlcMacNetworkAdminDataObject::MacListDirectTable() const
 {
-  return processedAliveMsgs_;
+  return macListDirectTable_;
 }
 
 const CosemByteBuffer&
-CosemPrimePlcMacNetworkAdminDataObject::HandledPromotions() const
+CosemPrimePlcMacNetworkAdminDataObject::MacListAvailableSwitches() const
 {
-  return handledPromotions_;
+  return macListAvailableSwitches_;
+}
+
+const CosemByteBuffer&
+CosemPrimePlcMacNetworkAdminDataObject::MacListPhyComm() const
+{
+  return macListPhyComm_;
 }
 
 namespace {

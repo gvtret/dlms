@@ -9810,29 +9810,45 @@ TEST(CosemPrimePlcMacCountersObject, NormalizesVersionAboveMax)
 
 namespace {
 
+// IEC 62056-6-2 ED4 (2021) §4.12.9 / DLMS UA Blue Book Ed. 12.1
+// §4.12.9 "PRIME NB OFDM PLC MAC network administration data"
+// (class_id = 85, version = 0): five dynamic array attributes
+// exposing the PRIME MAC network administration tables and the
+// optional reset() method.
 struct PrimePlcMacNetworkAdminDataBuffers
 {
-  dlms::cosem::CosemByteBuffer nodeRegistrations;
-  dlms::cosem::CosemByteBuffer nodeUnregistrations;
-  dlms::cosem::CosemByteBuffer processedAliveMsgs;
-  dlms::cosem::CosemByteBuffer handledPromotions;
+  dlms::cosem::CosemByteBuffer macListMulticastEntries;
+  dlms::cosem::CosemByteBuffer macListSwitchTable;
+  dlms::cosem::CosemByteBuffer macListDirectTable;
+  dlms::cosem::CosemByteBuffer macListAvailableSwitches;
+  dlms::cosem::CosemByteBuffer macListPhyComm;
 };
 
-PrimePlcMacNetworkAdminDataBuffers MakeSamplePrimePlcMacNetworkAdminData()
+// Helper producing distinct sample DLMS-encoded arrays for the
+// five attributes. Each value is an opaque encoded array buffer
+// (`A-XDR` style) that exercises the read/write/store path; the
+// contents are kept short and obviously distinct so a per-attribute
+// mix-up is trivial to spot when an assertion fails.
+PrimePlcMacNetworkAdminDataBuffers
+MakeSamplePrimePlcMacNetworkAdminData()
 {
   PrimePlcMacNetworkAdminDataBuffers b;
-  // double-long-unsigned 0x00000011
-  b.nodeRegistrations =
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x11u});
-  // double-long-unsigned 0x00000022
-  b.nodeUnregistrations =
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x22u});
-  // double-long-unsigned 0x00000033
-  b.processedAliveMsgs =
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x33u});
-  // double-long-unsigned 0x00000044
-  b.handledPromotions =
-    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x44u});
+  // array (1) of multicast switch entry { integer LCID, long members }
+  b.macListMulticastEntries = BytesFromList({
+    0x01u, 0x01u,
+    0x02u, 0x02u, 0x0Fu, 0x01u, 0x10u, 0x00u, 0x05u});
+  // array (2) of switch SIDs (long-unsigned-ish placeholder)
+  b.macListSwitchTable = BytesFromList({
+    0x01u, 0x02u, 0x10u, 0x00u, 0x11u, 0x10u, 0x00u, 0x12u});
+  // array (1) of direct table entry placeholder
+  b.macListDirectTable = BytesFromList({
+    0x01u, 0x01u, 0x10u, 0x00u, 0x20u});
+  // array (1) of available switch placeholder
+  b.macListAvailableSwitches = BytesFromList({
+    0x01u, 0x01u, 0x10u, 0x00u, 0x30u});
+  // array (1) of PHY communication element placeholder
+  b.macListPhyComm = BytesFromList({
+    0x01u, 0x01u, 0x10u, 0x00u, 0x40u});
   return b;
 }
 
@@ -9843,8 +9859,9 @@ MakePrimePlcMacNetworkAdminDataObject(
   dlms::cosem::AttributeAccessMode access)
 {
   return dlms::cosem::CosemPrimePlcMacNetworkAdminDataObject(
-    name, b.nodeRegistrations, b.nodeUnregistrations,
-    b.processedAliveMsgs, b.handledPromotions, access);
+    name, b.macListMulticastEntries, b.macListSwitchTable,
+    b.macListDirectTable, b.macListAvailableSwitches,
+    b.macListPhyComm, access);
 }
 
 } // namespace
@@ -9871,8 +9888,9 @@ TEST(CosemPrimePlcMacNetworkAdminDataObject, ExposesAllAttributes)
             object.ReadAttribute(1u, out));
   EXPECT_EQ(EncodedLogicalName(name), out);
   const dlms::cosem::CosemByteBuffer* expected[] = {
-    &b.nodeRegistrations, &b.nodeUnregistrations,
-    &b.processedAliveMsgs, &b.handledPromotions};
+    &b.macListMulticastEntries, &b.macListSwitchTable,
+    &b.macListDirectTable, &b.macListAvailableSwitches,
+    &b.macListPhyComm};
   std::uint8_t attrId = 2u;
   for (const auto* exp : expected) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
@@ -9882,8 +9900,14 @@ TEST(CosemPrimePlcMacNetworkAdminDataObject, ExposesAllAttributes)
       << "attr " << static_cast<unsigned>(attrId);
     ++attrId;
   }
+  EXPECT_EQ(b.macListMulticastEntries, object.MacListMulticastEntries());
+  EXPECT_EQ(b.macListSwitchTable, object.MacListSwitchTable());
+  EXPECT_EQ(b.macListDirectTable, object.MacListDirectTable());
+  EXPECT_EQ(b.macListAvailableSwitches,
+            object.MacListAvailableSwitches());
+  EXPECT_EQ(b.macListPhyComm, object.MacListPhyComm());
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(6u, out));
+            object.ReadAttribute(7u, out));
 }
 
 TEST(CosemPrimePlcMacNetworkAdminDataObject,
@@ -9893,21 +9917,22 @@ TEST(CosemPrimePlcMacNetworkAdminDataObject,
     dlms::cosem::CosemLogicalName(0u, 0u, 28u, 4u, 0u, 255u);
   const PrimePlcMacNetworkAdminDataBuffers b =
     MakeSamplePrimePlcMacNetworkAdminData();
-  const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x06u, 0xCAu, 0xFEu, 0xBAu, 0xBEu});
+  const dlms::cosem::CosemByteBuffer replacement = BytesFromList({
+    0x01u, 0x01u, 0x10u, 0xFFu, 0xEEu});
 
   dlms::cosem::CosemPrimePlcMacNetworkAdminDataObject writable =
     MakePrimePlcMacNetworkAdminDataObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t attr : {2u, 3u, 4u, 5u}) {
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u}) {
     EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
               writable.WriteAttribute(attr, replacement))
       << "attr " << static_cast<unsigned>(attr);
   }
-  EXPECT_EQ(replacement, writable.NodeRegistrations());
-  EXPECT_EQ(replacement, writable.NodeUnregistrations());
-  EXPECT_EQ(replacement, writable.ProcessedAliveMsgs());
-  EXPECT_EQ(replacement, writable.HandledPromotions());
+  EXPECT_EQ(replacement, writable.MacListMulticastEntries());
+  EXPECT_EQ(replacement, writable.MacListSwitchTable());
+  EXPECT_EQ(replacement, writable.MacListDirectTable());
+  EXPECT_EQ(replacement, writable.MacListAvailableSwitches());
+  EXPECT_EQ(replacement, writable.MacListPhyComm());
   EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
             writable.WriteAttribute(1u, replacement));
   EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
@@ -9916,9 +9941,17 @@ TEST(CosemPrimePlcMacNetworkAdminDataObject,
   dlms::cosem::CosemPrimePlcMacNetworkAdminDataObject readOnly =
     MakePrimePlcMacNetworkAdminDataObject(
       name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            readOnly.WriteAttribute(2u, replacement));
-  EXPECT_EQ(b.nodeRegistrations, readOnly.NodeRegistrations());
+  for (std::uint8_t attr : {2u, 3u, 4u, 5u, 6u}) {
+    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
+              readOnly.WriteAttribute(attr, replacement))
+      << "attr " << static_cast<unsigned>(attr);
+  }
+  EXPECT_EQ(b.macListMulticastEntries, readOnly.MacListMulticastEntries());
+  EXPECT_EQ(b.macListSwitchTable, readOnly.MacListSwitchTable());
+  EXPECT_EQ(b.macListDirectTable, readOnly.MacListDirectTable());
+  EXPECT_EQ(b.macListAvailableSwitches,
+            readOnly.MacListAvailableSwitches());
+  EXPECT_EQ(b.macListPhyComm, readOnly.MacListPhyComm());
 }
 
 TEST(CosemPrimePlcMacNetworkAdminDataObject,
@@ -9953,8 +9986,9 @@ TEST(CosemPrimePlcMacNetworkAdminDataObject, NormalizesVersionAboveMax)
   const PrimePlcMacNetworkAdminDataBuffers b =
     MakeSamplePrimePlcMacNetworkAdminData();
   dlms::cosem::CosemPrimePlcMacNetworkAdminDataObject object(
-    name, b.nodeRegistrations, b.nodeUnregistrations,
-    b.processedAliveMsgs, b.handledPromotions,
+    name, b.macListMulticastEntries, b.macListSwitchTable,
+    b.macListDirectTable, b.macListAvailableSwitches,
+    b.macListPhyComm,
     dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
   EXPECT_EQ(
     dlms::cosem::CosemPrimePlcMacNetworkAdminDataObject::

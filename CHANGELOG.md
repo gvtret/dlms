@@ -1,5 +1,54 @@
 # Changelog
 
+## 0.108.0 - 2026-06-17
+
+### Breaking changes
+
+- **`CosemPrimePlcMacNetworkAdminDataObject`** (`class_id=85`,
+  `version=0`) realigned with IEC 62056-6-2 ED4 (2021) §4.12.9 /
+  DLMS UA Blue Book Ed. 12.1 §4.12.9. The previous implementation
+  exposed four invented counter-shaped attributes
+  (`node_registrations`, `node_unregistrations`,
+  `processed_alive_msgs`, `handled_promotions`) on attribute ids
+  `2`-`5`, which never matched the published IC layout.
+  The class now exposes the five spec-defined dynamic array
+  attributes:
+    - `2 mac_list_multicast_entries`  (array, PIB attribute `0x0052`)
+    - `3 mac_list_switch_table`       (array, PIB attribute `0x0053`)
+    - `4 mac_list_direct_table`       (array, PIB attribute `0x0055`)
+    - `5 mac_list_available_switches` (array, PIB attribute `0x0056`)
+    - `6 mac_list_phy_comm`           (array, PIB attribute `0x0057`)
+  Both constructors gained `macListMulticastEntries`,
+  `macListSwitchTable`, `macListDirectTable`,
+  `macListAvailableSwitches` and `macListPhyComm` parameters
+  instead of the four old counter buffers. The
+  `NodeRegistrations()` / `NodeUnregistrations()` /
+  `ProcessedAliveMsgs()` / `HandledPromotions()` accessors are
+  replaced with `MacListMulticastEntries()`,
+  `MacListSwitchTable()`, `MacListDirectTable()`,
+  `MacListAvailableSwitches()` and `MacListPhyComm()`. Attributes
+  `2`-`6` share a caller-selected `AttributeAccessMode` so the
+  management backend can republish refreshed PRIME MAC network
+  state; `logical_name` (`1`) stays hard-coded read-only.
+  Specific method `1 reset(data)` (optional per spec) keeps
+  returning `UnsupportedFeature` because the backend owns the
+  table snapshots; other method ids continue to report
+  `MethodNotFound`.
+  Callers that previously constructed the object with four
+  counter buffers must rebuild it from the five spec-defined
+  table buffers and switch to the new getters.
+
+### Misc
+
+- Existing 4 IC 85 gtests (`ExposesAllAttributes`,
+  `MutableAttributesHonorAccessMode`,
+  `MethodsReturnUnsupportedFeature`, `NormalizesVersionAboveMax`)
+  rewritten against the new attribute layout; no net test count
+  change. Full MinGW64 ctest: 1016/1016 passing.
+- `docs/ic_support_matrix.md` IC 85 row updated to describe the
+  five spec attributes, PIB mappings, RW policy and the optional
+  `reset(data)` method semantics.
+
 ## 0.107.0 - 2026-06-17
 
 ### Breaking changes

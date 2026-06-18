@@ -5502,7 +5502,7 @@ CosemRegisterTableObject::CosemRegisterTableObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& tableCellValues,
   const CosemByteBuffer& tableCellDefinition,
-  const CosemByteBuffer& scalerUnit,
+  const types::ScalerUnit& scalerUnit,
   AttributeAccessMode mutableAccess)
   : CosemRegisterTableObject(
       logicalName, tableCellValues, tableCellDefinition,
@@ -5514,7 +5514,7 @@ CosemRegisterTableObject::CosemRegisterTableObject(
   const CosemLogicalName& logicalName,
   const CosemByteBuffer& tableCellValues,
   const CosemByteBuffer& tableCellDefinition,
-  const CosemByteBuffer& scalerUnit,
+  const types::ScalerUnit& scalerUnit,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -5564,7 +5564,8 @@ CosemStatus CosemRegisterTableObject::ReadAttribute(
       output = tableCellDefinition_;
       return CosemStatus::Ok;
     case kRegisterTableScalerUnitAttributeId:
-      output = scalerUnit_;
+      output.clear();
+      AppendScalerUnit(output, scalerUnit_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -5582,11 +5583,17 @@ CosemStatus CosemRegisterTableObject::WriteAttribute(
         return CosemStatus::AccessDenied;
       tableCellDefinition_ = input;
       return CosemStatus::Ok;
-    case kRegisterTableScalerUnitAttributeId:
+    case kRegisterTableScalerUnitAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      scalerUnit_ = input;
+      std::size_t offset = 0u;
+      types::ScalerUnit decoded;
+      if (!DecodeScalerUnit(input, offset, decoded)
+          || offset != input.size())
+        return CosemStatus::InvalidArgument;
+      scalerUnit_ = decoded;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
     case kRegisterTableTableCellValuesAttributeId:
       return CosemStatus::AccessDenied;
@@ -5624,7 +5631,7 @@ CosemRegisterTableObject::TableCellDefinition() const
   return tableCellDefinition_;
 }
 
-const CosemByteBuffer& CosemRegisterTableObject::ScalerUnit() const
+const types::ScalerUnit& CosemRegisterTableObject::ScalerUnit() const
 {
   return scalerUnit_;
 }

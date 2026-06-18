@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.121.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemRegisterTableObject`** (`class_id=61`, `version=0`,
+  IEC 62056-6-2 ED4 §4.3.7 / DLMS UA Blue Book Ed. 12.1 §4.3.7)
+  `scaler_unit` (attribute `4`) switched from `CosemByteBuffer` to
+  the typed `dlms::cosem::types::ScalerUnit` (`structure { integer
+  scaler, enum unit }` per §4.3.2.2.3). Both ctors now take
+  `const types::ScalerUnit&` instead of `const CosemByteBuffer&`,
+  and the `ScalerUnit()` getter now returns
+  `const types::ScalerUnit&`. `ReadAttribute(4)` encodes the AXDR
+  wire form on every read via the shared `AppendScalerUnit`
+  helper; `WriteAttribute(4)` parses the AXDR structure with
+  `DecodeScalerUnit` and returns `InvalidArgument` for empty
+  payloads, wrong tags, wrong field counts or trailing garbage
+  (the stored value is preserved on rejection).
+
+### Unchanged on purpose
+
+- `table_cell_values` (attribute `2`) and `table_cell_definition`
+  (attribute `3`) remain opaque `CosemByteBuffer` payloads because
+  their column schema is meter-specific (it mirrors the wired
+  Register / Extended Register / Demand Register entries) and a
+  proper typed representation requires the discriminated-union
+  `value` infrastructure that is still pending on IC 3/4/5.
+  `table_cell_values` stays RO (refreshed via
+  `SetTableCellValues`); `table_cell_definition` honors the
+  caller-selected `AttributeAccessMode`.
+- Methods `1` `reset` and `2` `capture` continue to return
+  `UnsupportedFeature` (captured-payload lifecycle is owned by
+  the backend); other method ids return `MethodNotFound`.
+
+### Added
+
+- New per-IC test file (rule P2.4)
+  `lib/dlms-cosem/test/cosem/test_cosem_register_table_object.cpp`
+  with 8 focused tests covering:
+  `ExposesAllAttributesWithTypedScalerUnit`,
+  `WriteScalerUnitParsesAxdrStructure`,
+  `WriteScalerUnitRejectsMalformedInput`,
+  `WriteTableCellDefinitionAcceptedReadOnlyRejected`,
+  `WriteAttributeRejectsLogicalNameAndValues`,
+  `SetTableCellValuesUpdatesReadResult`,
+  `MethodsReturnUnsupportedFeatureOrNotFound`,
+  `NormalizesVersionAboveMax`. Helpers are self-contained.
+- Legacy IC 61 tests in `test_simple_objects.cpp` collapsed to a
+  `_MovedToPerIcFile` placeholder (rule P2.4).
+- `docs/ic_support_matrix.md` IC 61 row updated to reflect the
+  typed `scaler_unit` and to call out the remaining opaque fields
+  with their rationale.
+
+### Verified
+
+- Full ctest: `1223/1223` pass.
+- Focused
+  `dlms_cosem_tests.exe --gtest_filter='CosemRegisterTableObject.*'`:
+  `9/9` pass.
+
 ## 0.120.0 - 2026-06-22
 
 ### Changed

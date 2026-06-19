@@ -1481,14 +1481,15 @@ class CosemMacAddressSetupObject : public ICosemObject
 {
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
+  using MacAddressBytes = std::array<std::uint8_t, 6u>;
 
   CosemMacAddressSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& macAddress,
+    const MacAddressBytes& macAddress,
     AttributeAccessMode mutableAccess);
   CosemMacAddressSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& macAddress,
+    const MacAddressBytes& macAddress,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1505,11 +1506,11 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& MacAddress() const;
+  const MacAddressBytes& MacAddress() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer macAddress_;
+  MacAddressBytes macAddress_;
   CosemAccessRights rights_;
 };
 

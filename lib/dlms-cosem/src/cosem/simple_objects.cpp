@@ -7712,7 +7712,7 @@ const std::uint8_t CosemMacAddressSetupObject::MaxSupportedVersion;
 
 CosemMacAddressSetupObject::CosemMacAddressSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& macAddress,
+  const MacAddressBytes& macAddress,
   AttributeAccessMode mutableAccess)
   : CosemMacAddressSetupObject(
       logicalName, macAddress, mutableAccess, kVersion0)
@@ -7721,7 +7721,7 @@ CosemMacAddressSetupObject::CosemMacAddressSetupObject(
 
 CosemMacAddressSetupObject::CosemMacAddressSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& macAddress,
+  const MacAddressBytes& macAddress,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -7756,7 +7756,8 @@ CosemStatus CosemMacAddressSetupObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kMacAddressSetupMacAddressAttributeId:
-      output = macAddress_;
+      output.clear();
+      AppendOctetString(output, macAddress_.data(), macAddress_.size());
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -7769,11 +7770,22 @@ CosemStatus CosemMacAddressSetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kMacAddressSetupMacAddressAttributeId:
+    case kMacAddressSetupMacAddressAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      macAddress_ = input;
+      // Expect tag 0x09 (octet-string), length 0x06, six MAC bytes
+      // and nothing else.
+      if (input.size() != 8u
+          || input[0] != kDataOctetStringTag
+          || input[1] != 0x06u) {
+        return CosemStatus::InvalidArgument;
+      }
+      MacAddressBytes next{};
+      for (std::size_t i = 0u; i < next.size(); ++i)
+        next[i] = input[2u + i];
+      macAddress_ = next;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -7793,7 +7805,8 @@ CosemStatus CosemMacAddressSetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemMacAddressSetupObject::MacAddress() const
+const CosemMacAddressSetupObject::MacAddressBytes&
+CosemMacAddressSetupObject::MacAddress() const
 {
   return macAddress_;
 }

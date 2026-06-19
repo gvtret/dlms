@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.127.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemMacAddressSetupObject`** (`class_id=43`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.4.5 / DLMS UA Blue Book Ed. 12.1)
+  now exposes `mac_address` (attribute `2`) as a typed
+  `MacAddressBytes = std::array<std::uint8_t, 6>` value instead
+  of an opaque `CosemByteBuffer` payload.
+
+  The ctor takes `MacAddressBytes` directly. `MacAddress()`
+  returns `const MacAddressBytes&`. The class defines no
+  methods, so `InvokeMethod` continues to return
+  `CosemStatus::MethodNotFound` for every method id and clears
+  the output buffer.
+
+  `ReadAttribute` now emits the canonical AXDR encoding
+  (octet-string tag `0x09`, length `0x06`, six MAC bytes).
+  `WriteAttribute` validates both the tag and the trailing-byte
+  count: anything other than exactly
+  `[0x09, 0x06, b0, b1, b2, b3, b4, b5]` is rejected with
+  `CosemStatus::InvalidArgument` and the previously stored MAC
+  is preserved.
+
+### Tests
+
+- New per-IC test file
+  `lib/dlms-cosem/test/cosem/test_cosem_mac_address_setup_object.cpp`
+  (14 tests) covers descriptor/access rights, typed AXDR
+  encoding, typed getter, write decoding with wrong-tag /
+  wrong-length / truncated / trailing-garbage / empty inputs,
+  `WriteAttribute` access enforcement (`logical_name` always
+  denied, `ReadOnly` mode denies attribute 2), unknown attribute
+  ids, `InvokeMethod` always returning `MethodNotFound` with
+  cleared output, and version normalization above max.
+- Legacy `CosemMacAddressSetupObject` tests in
+  `test_simple_objects.cpp` are collapsed to the
+  `_MovedToPerIcFile` placeholder per rule P2.4.
+
+### Docs
+
+- `docs/ic_support_matrix.md`: IC 43 row promoted from
+  `Partial` to `Supported`.
+
 ## 0.126.0 - 2026-06-22
 
 ### Breaking changes

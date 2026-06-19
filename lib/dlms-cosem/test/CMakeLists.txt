@@ -25,6 +25,7 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_disconnect_control_object.cpp
   cosem/test_cosem_compact_data_object.cpp
   cosem/test_cosem_iec_hdlc_setup_object.cpp
+  cosem/test_cosem_mac_address_setup_object.cpp
   cosem/test_cosem_parameter_monitor_object.cpp
   cosem/test_cosem_tcp_udp_setup_object.cpp
   cosem/test_cosem_profile_generic_object.cpp

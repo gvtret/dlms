@@ -22,6 +22,7 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_extended_register_object.cpp
   cosem/test_cosem_register_object.cpp
   cosem/test_cosem_register_table_object.cpp
+  cosem/test_cosem_sap_assignment_object.cpp
   cosem/test_cosem_disconnect_control_object.cpp
   cosem/test_cosem_compact_data_object.cpp
   cosem/test_cosem_gprs_modem_setup_object.cpp

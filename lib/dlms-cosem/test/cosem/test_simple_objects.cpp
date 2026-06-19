@@ -1653,71 +1653,11 @@ TEST(LogicalDeviceNameObject, BuildsReadOnlyDataObject)
             rights.AttributeAccess(2u));
 }
 
-TEST(CosemSapAssignmentObject, ExposesDescriptorAndAssignments)
+// Legacy IC 17 (SAP Assignment) opaque-buffer tests moved to
+// test_cosem_sap_assignment_object.cpp after the typed migration.
+TEST(CosemSapAssignmentObject, _MovedToPerIcFile)
 {
-  std::vector<dlms::cosem::SapAssignment> assignments;
-  dlms::cosem::SapAssignment first;
-  first.sap = 1u;
-  first.logicalDeviceName = "ld-1";
-  assignments.push_back(first);
-  dlms::cosem::SapAssignment second;
-  second.sap = 16u;
-  second.logicalDeviceName = "public";
-  assignments.push_back(second);
-
-  dlms::cosem::CosemSapAssignmentObject object(
-    dlms::cosem::SapAssignmentName(),
-    assignments);
-
-  const dlms::cosem::CosemObjectDescriptor descriptor =
-    object.Descriptor();
-  EXPECT_EQ(17u, descriptor.key.classId);
-  EXPECT_EQ(0u, descriptor.key.version);
-  EXPECT_EQ(dlms::cosem::SapAssignmentName(), descriptor.key.logicalName);
-
-  dlms::cosem::CosemByteBuffer output;
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(1u, output));
-  EXPECT_EQ(EncodedLogicalName(dlms::cosem::SapAssignmentName()), output);
-
-  ASSERT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(2u, output));
-  dlms::cosem::CosemByteBuffer expected;
-  expected.push_back(0x01u);
-  expected.push_back(0x02u);
-  expected.push_back(0x02u);
-  expected.push_back(0x02u);
-  AppendLongUnsigned(expected, 1u);
-  expected.push_back(0x09u);
-  expected.push_back(0x04u);
-  expected.push_back('l');
-  expected.push_back('d');
-  expected.push_back('-');
-  expected.push_back('1');
-  expected.push_back(0x02u);
-  expected.push_back(0x02u);
-  AppendLongUnsigned(expected, 16u);
-  expected.push_back(0x09u);
-  expected.push_back(0x06u);
-  expected.push_back('p');
-  expected.push_back('u');
-  expected.push_back('b');
-  expected.push_back('l');
-  expected.push_back('i');
-  expected.push_back('c');
-  EXPECT_EQ(expected, output);
-}
-
-TEST(CosemSapAssignmentObject, NormalizesRequestedVersion)
-{
-  std::vector<dlms::cosem::SapAssignment> assignments;
-  dlms::cosem::CosemSapAssignmentObject object(
-    dlms::cosem::SapAssignmentName(),
-    assignments,
-    7u);
-
-  EXPECT_EQ(dlms::cosem::CosemSapAssignmentObject::MaxSupportedVersion,
-            object.Descriptor().key.version);
+  SUCCEED();
 }
 
 TEST(DiscoveryObjects, RejectUnsupportedAttributesWritesAndMethods)

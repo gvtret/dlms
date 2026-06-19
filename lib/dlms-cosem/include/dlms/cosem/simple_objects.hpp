@@ -3918,6 +3918,15 @@ public:
   CosemSapAssignmentObject(
     const CosemLogicalName& logicalName,
     const std::vector<SapAssignment>& assignments,
+    AttributeAccessMode listAccess);
+  CosemSapAssignmentObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<SapAssignment>& assignments,
+    std::uint8_t version);
+  CosemSapAssignmentObject(
+    const CosemLogicalName& logicalName,
+    const std::vector<SapAssignment>& assignments,
+    AttributeAccessMode listAccess,
     std::uint8_t version);
 
   CosemObjectDescriptor Descriptor() const;
@@ -3934,6 +3943,10 @@ public:
     CosemByteBuffer& output);
 
   std::vector<SapAssignment> Assignments() const;
+  // Backend-only setter for callers that wire SAP table updates
+  // out-of-band (e.g. cold provisioning). Bypasses access-rights
+  // checks; protocol writes go through WriteAttribute(2, ...).
+  void SetAssignments(const std::vector<SapAssignment>& assignments);
 
 private:
   CosemObjectDescriptor descriptor_;

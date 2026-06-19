@@ -1,5 +1,71 @@
 # Changelog
 
+## 0.134.0 - 2026-06-22
+
+### Changes
+
+- **`CosemSapAssignmentObject`** (`class_id=17`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.4.5 / DLMS UA Blue Book
+  Ed. 12.1 §4.4.5) gains a writable `sap_assignment_list`
+  decoder and a backend `SetAssignments` setter. The
+  attribute already exposed a typed
+  `std::vector<SapAssignment>` (each entry is
+  `{ sap: long-unsigned, logical_device_name: octet-string }`),
+  but `WriteAttribute` previously returned a blanket
+  `AccessDenied`. It now:
+
+  - Returns `AccessDenied` for `logical_name` (attr 1) and
+    whenever the configured access mode for attr 2 is
+    read-only (the default, matching the strict spec
+    reading of §4.4.5.4).
+  - When constructed with the new
+    `(logicalName, assignments, AttributeAccessMode listAccess)`
+    overload (or its `+ version` sibling) and `listAccess`
+    permits writes, decodes the spec A-XDR encoding
+    `array of structure { long-unsigned sap, octet-string ldn }`
+    with strict validation: wrong outer tag, missing entry
+    fields, wrong scalar tag, truncated octet-string,
+    trailing garbage and empty input all yield
+    `CosemStatus::InvalidArgument` and the previously
+    stored list is preserved.
+  - `SetAssignments` is a backend-only escape hatch that
+    bypasses access checks for cold-provisioning callers
+    (it does not go through the protocol surface).
+
+  Unknown attribute ids continue to return
+  `AttributeNotFound`. `InvokeMethod` still surfaces
+  method `1` "connect_logical_device" as
+  `UnsupportedFeature` (the built-in object does not own
+  the SAP-mutation dispatch policy) and any other id as
+  `MethodNotFound`.
+
+### Tests
+
+- New per-IC suite `test_cosem_sap_assignment_object.cpp`
+  (10 tests + placeholder) covers descriptor + default
+  access rights, typed getter, A-XDR round-trip for the
+  sample list and for the empty-array edge case,
+  `AccessDenied` for the default read-only ctor,
+  end-to-end round-trip when constructed writable
+  (including clearing the list via an empty array), strict
+  rejection of malformed payloads (wrong outer tag, empty
+  input, truncated array, 3-field struct, SAP encoded as
+  `unsigned`, oversized octet-string length, trailing
+  garbage) with preservation of the previous value,
+  `SetAssignments` bypassing access checks,
+  `InvokeMethod(1)` returning `UnsupportedFeature` while
+  other ids report `MethodNotFound`, and version
+  normalization above `MaxSupportedVersion`. The two
+  legacy IC 17 tests in `test_simple_objects.cpp`
+  collapse to a `_MovedToPerIcFile` placeholder.
+
+### Documentation
+
+- `docs/ic_support_matrix.md` promotes IC 17
+  (SAP Assignment) to **Supported** with a note about the
+  default read-only access mode and the optional writable
+  ctor overload.
+
 ## 0.133.0 - 2026-06-22
 
 ### Breaking changes

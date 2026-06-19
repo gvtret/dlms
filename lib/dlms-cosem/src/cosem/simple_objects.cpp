@@ -15570,13 +15570,42 @@ const std::uint8_t CosemSapAssignmentObject::MaxSupportedVersion;
 CosemSapAssignmentObject::CosemSapAssignmentObject(
   const CosemLogicalName& logicalName,
   const std::vector<SapAssignment>& assignments)
-  : CosemSapAssignmentObject(logicalName, assignments, kVersion0)
+  : CosemSapAssignmentObject(
+      logicalName,
+      assignments,
+      AttributeAccessMode::ReadOnly,
+      kVersion0)
 {
 }
 
 CosemSapAssignmentObject::CosemSapAssignmentObject(
   const CosemLogicalName& logicalName,
   const std::vector<SapAssignment>& assignments,
+  AttributeAccessMode listAccess)
+  : CosemSapAssignmentObject(
+      logicalName,
+      assignments,
+      listAccess,
+      kVersion0)
+{
+}
+
+CosemSapAssignmentObject::CosemSapAssignmentObject(
+  const CosemLogicalName& logicalName,
+  const std::vector<SapAssignment>& assignments,
+  std::uint8_t version)
+  : CosemSapAssignmentObject(
+      logicalName,
+      assignments,
+      AttributeAccessMode::ReadOnly,
+      version)
+{
+}
+
+CosemSapAssignmentObject::CosemSapAssignmentObject(
+  const CosemLogicalName& logicalName,
+  const std::vector<SapAssignment>& assignments,
+  AttributeAccessMode listAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
       kSapAssignmentClassId,
@@ -15587,7 +15616,7 @@ CosemSapAssignmentObject::CosemSapAssignmentObject(
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId,
     AttributeAccessMode::ReadOnly);
-  rights_.SetAttributeAccess(kValueAttributeId, AttributeAccessMode::ReadOnly);
+  rights_.SetAttributeAccess(kValueAttributeId, listAccess);
 }
 
 CosemObjectDescriptor CosemSapAssignmentObject::Descriptor() const
@@ -15626,9 +15655,63 @@ CosemStatus CosemSapAssignmentObject::WriteAttribute(
   std::uint8_t attributeId,
   const CosemByteBuffer& input)
 {
-  (void)attributeId;
-  (void)input;
-  return CosemStatus::AccessDenied;
+  if (attributeId == kLogicalNameAttributeId)
+    return CosemStatus::AccessDenied;
+  if (attributeId != kValueAttributeId)
+    return CosemStatus::AttributeNotFound;
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+
+  // sap_assignment_list ::= array of structure {
+  //     long-unsigned sap,
+  //     octet-string  logical_device_name }
+  // per IEC 62056-6-2 ED4 (2021) §4.4.5.2.2 / DLMS UA Blue Book
+  // Ed. 12.1 §4.4.5.2.2.
+  std::size_t offset = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag))
+    return CosemStatus::InvalidArgument;
+  std::size_t count = 0u;
+  if (!ReadAxdrLength(input, offset, count))
+    return CosemStatus::InvalidArgument;
+
+  std::vector<SapAssignment> decoded;
+  decoded.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    if (!ReadExpectedTag(input, offset, kStructureTag))
+      return CosemStatus::InvalidArgument;
+    std::size_t fieldCount = 0u;
+    if (!ReadAxdrLength(input, offset, fieldCount) || fieldCount != 2u)
+      return CosemStatus::InvalidArgument;
+
+    std::uint16_t sap = 0u;
+    if (!ReadLongUnsignedValue(input, offset, sap))
+      return CosemStatus::InvalidArgument;
+
+    if (!ReadExpectedTag(input, offset, kDataOctetStringTag))
+      return CosemStatus::InvalidArgument;
+    std::size_t ldnLen = 0u;
+    if (!ReadAxdrLength(input, offset, ldnLen))
+      return CosemStatus::InvalidArgument;
+    if (offset + ldnLen > input.size())
+      return CosemStatus::InvalidArgument;
+    SapAssignment entry;
+    entry.sap = sap;
+    entry.logicalDeviceName.assign(
+      reinterpret_cast<const char*>(input.data() + offset), ldnLen);
+    offset += ldnLen;
+    decoded.push_back(entry);
+  }
+  if (offset != input.size())
+    return CosemStatus::InvalidArgument;
+
+  assignments_.swap(decoded);
+  return CosemStatus::Ok;
+}
+
+void CosemSapAssignmentObject::SetAssignments(
+  const std::vector<SapAssignment>& assignments)
+{
+  assignments_ = assignments;
 }
 
 CosemStatus CosemSapAssignmentObject::InvokeMethod(

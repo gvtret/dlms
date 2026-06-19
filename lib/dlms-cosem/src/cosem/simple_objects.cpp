@@ -14073,7 +14073,7 @@ const std::uint8_t CosemIso8802LlcType1SetupObject::MaxSupportedVersion;
 
 CosemIso8802LlcType1SetupObject::CosemIso8802LlcType1SetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& maxOctetsUiPdu,
+  std::uint16_t maxOctetsUiPdu,
   AttributeAccessMode mutableAccess)
   : CosemIso8802LlcType1SetupObject(
       logicalName,
@@ -14085,7 +14085,7 @@ CosemIso8802LlcType1SetupObject::CosemIso8802LlcType1SetupObject(
 
 CosemIso8802LlcType1SetupObject::CosemIso8802LlcType1SetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& maxOctetsUiPdu,
+  std::uint16_t maxOctetsUiPdu,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -14120,7 +14120,8 @@ CosemStatus CosemIso8802LlcType1SetupObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kIso8802LlcType1SetupMaxOctetsUiPduAttributeId:
-      output = maxOctetsUiPdu_;
+      output.clear();
+      AppendLongUnsigned(output, maxOctetsUiPdu_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -14133,11 +14134,18 @@ CosemStatus CosemIso8802LlcType1SetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kIso8802LlcType1SetupMaxOctetsUiPduAttributeId:
+    case kIso8802LlcType1SetupMaxOctetsUiPduAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      maxOctetsUiPdu_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t decoded = 0u;
+      if (!ReadLongUnsignedValue(input, offset, decoded))
+        return CosemStatus::InvalidArgument;
+      if (offset != input.size())
+        return CosemStatus::InvalidArgument;
+      maxOctetsUiPdu_ = decoded;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -14158,7 +14166,7 @@ CosemStatus CosemIso8802LlcType1SetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemIso8802LlcType1SetupObject::MaxOctetsUiPdu() const
 {
   return maxOctetsUiPdu_;

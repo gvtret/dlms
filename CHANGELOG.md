@@ -1,5 +1,56 @@
 # Changelog
 
+## 0.129.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemIso8802LlcType1SetupObject`** (`class_id=57`,
+  `version=0`, IEC 62056-6-2 ED4 (2021) §4.11.2 / DLMS UA Blue
+  Book Ed. 12.1 §4.11.2) now exposes its single dynamic
+  attribute `max_octets_ui_pdu` (attr 2) as a typed
+  `std::uint16_t` long-unsigned value instead of an opaque
+  `CosemByteBuffer` payload. Both constructors take
+  `std::uint16_t maxOctetsUiPdu`, and `MaxOctetsUiPdu()` returns
+  `std::uint16_t` by value. The class defines no specific
+  methods, so `InvokeMethod` continues to return
+  `CosemStatus::MethodNotFound` for every method id and clears
+  the output buffer.
+
+  `ReadAttribute` emits the canonical AXDR encoding
+  (long-unsigned tag `0x12` + 2 bytes network order) for
+  attribute 2. `WriteAttribute` decodes long-unsigned strictly:
+  anything other than exactly `[0x12, hi, lo]` is rejected with
+  `CosemStatus::InvalidArgument` and the previously stored value
+  is preserved (wrong tag, truncated input, trailing garbage and
+  empty input are all rejected). The spec imposes no min/max
+  bound (ISO/IEC 8802-2:1998 §6.8.1 only mandates that all MACs
+  must accommodate at least 128-octet UI PDUs for
+  interoperability), so the full uint16 range is accepted on
+  write; `0` is allowed.
+
+  `logical_name` (attr 1) remains read-only and any attempt to
+  write it returns `CosemStatus::AccessDenied`.
+
+### Tests
+
+- Added `test_cosem_iso8802_llc_type1_setup_object.cpp` with
+  comprehensive per-IC coverage (descriptor + access rights,
+  typed getter, AXDR round-trips at boundary values 0 / 1500 /
+  0xFFFF, strict write validation including wrong tag /
+  truncation / trailing garbage / empty input, read-only access
+  mode, logical-name write denial, unknown-attribute response,
+  every `InvokeMethod` id returning `MethodNotFound`, and
+  version-above-max normalization).
+- Collapsed legacy IC 57 cases in `test_simple_objects.cpp` to a
+  single `_MovedToPerIcFile` placeholder per the per-IC test
+  organization rule (P2.4).
+- Full ctest: 1319/1319 passing.
+
+### Documentation
+
+- `docs/ic_support_matrix.md`: IC 57 promoted from `Partial` to
+  `Supported` to reflect the typed surface.
+
 ## 0.128.0 - 2026-06-22
 
 ### Breaking changes

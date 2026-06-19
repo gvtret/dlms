@@ -3405,11 +3405,11 @@ public:
   // length. The class defines no specific methods.
   CosemIso8802LlcType1SetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& maxOctetsUiPdu,
+    std::uint16_t maxOctetsUiPdu,
     AttributeAccessMode mutableAccess);
   CosemIso8802LlcType1SetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& maxOctetsUiPdu,
+    std::uint16_t maxOctetsUiPdu,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -3426,11 +3426,11 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& MaxOctetsUiPdu() const;
+  std::uint16_t MaxOctetsUiPdu() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer maxOctetsUiPdu_;
+  std::uint16_t maxOctetsUiPdu_;
   CosemAccessRights rights_;
 };
 

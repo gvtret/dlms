@@ -9825,108 +9825,15 @@ TEST(CosemSFskReportingSystemListObject, NormalizesVersionAboveMax)
 
 namespace {
 
-// IEC 62056-6-2 ED4 (2021) S4.11.2 / DLMS UA Blue Book Ed. 12.1
-// S4.11.2: max_octets_ui_pdu is long-unsigned (default 128). Pe
-// ISO/IEC 8802-2:1998 S6.8.1 "Maximum number of octets in a UI
-// PDU", the LLC sublayer imposes no restriction, but fo
-// interoperability all MACs must accommodate UI PDUs with
-// information fields up to and including 128 octets in length.
-
-dlms::cosem::CosemIso8802LlcType1SetupObject
-MakeIso8802LlcType1SetupObject(
-  const dlms::cosem::CosemLogicalName& name,
-  dlms::cosem::AttributeAccessMode access)
-{
-  return dlms::cosem::CosemIso8802LlcType1SetupObject(
-    name,
-    LongUnsigned(128u),
-    access);
-}
+// IC 57 tests moved to test_cosem_iso8802_llc_type1_setup_object.cpp;
+// legacy `MakeIso8802LlcType1SetupObject` helper deleted with them.
 
 } // namespace
 
-TEST(CosemIso8802LlcType1SetupObject, ExposesAllAttributes)
+TEST(CosemIso8802LlcType1SetupObject, _MovedToPerIcFile)
 {
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 7u, 0u, 255u);
-  dlms::cosem::CosemIso8802LlcType1SetupObject object =
-    MakeIso8802LlcType1SetupObject(
-      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  EXPECT_EQ(57u, object.Descriptor().key.classId);
-  EXPECT_EQ(0u, object.Descriptor().key.version);
-  EXPECT_EQ(
-    dlms::cosem::CosemIso8802LlcType1SetupObject::MaxSupportedVersion,
-    object.Descriptor().key.version);
-
-  dlms::cosem::CosemByteBuffer out;
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(1u, out));
-  EXPECT_EQ(EncodedLogicalName(name), out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(2u, out));
-  EXPECT_EQ(LongUnsigned(128u), out);
-  EXPECT_EQ(LongUnsigned(128u), object.MaxOctetsUiPdu());
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(3u, out));
-}
-
-TEST(CosemIso8802LlcType1SetupObject, MutableAttributeHonorsAccessMode)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 7u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer updated = LongUnsigned(1500u);
-
-  dlms::cosem::CosemIso8802LlcType1SetupObject writable =
-    MakeIso8802LlcType1SetupObject(
-      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            writable.WriteAttribute(2u, updated));
-  EXPECT_EQ(updated, writable.MaxOctetsUiPdu());
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(1u, updated));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            writable.WriteAttribute(99u, updated));
-
-  dlms::cosem::CosemIso8802LlcType1SetupObject readOnly =
-    MakeIso8802LlcType1SetupObject(
-      name, dlms::cosem::AttributeAccessMode::ReadOnly);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            readOnly.WriteAttribute(2u, updated));
-  EXPECT_EQ(LongUnsigned(128u), readOnly.MaxOctetsUiPdu());
-}
-
-TEST(CosemIso8802LlcType1SetupObject, MethodsReturnMethodNotFound)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 7u, 0u, 255u);
-  dlms::cosem::CosemIso8802LlcType1SetupObject object =
-    MakeIso8802LlcType1SetupObject(
-      name, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
-    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-              object.InvokeMethod(
-                static_cast<std::uint8_t>(method), in, out))
-      << "method id " << static_cast<unsigned>(method);
-    EXPECT_TRUE(out.empty());
-  }
-}
-
-TEST(CosemIso8802LlcType1SetupObject, NormalizesVersionAboveMax)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 26u, 7u, 0u, 255u);
-  dlms::cosem::CosemIso8802LlcType1SetupObject object(
-    name,
-    LongUnsigned(128u),
-    dlms::cosem::AttributeAccessMode::ReadAndWrite,
-    99u);
-  EXPECT_EQ(
-    dlms::cosem::CosemIso8802LlcType1SetupObject::MaxSupportedVersion,
-    object.Descriptor().key.version);
+  // See test_cosem_iso8802_llc_type1_setup_object.cpp
+  SUCCEED();
 }
 
 

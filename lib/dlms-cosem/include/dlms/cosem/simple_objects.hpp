@@ -3527,19 +3527,19 @@ public:
   // the same clause set. The class defines no specific methods.
   CosemIso8802LlcType3SetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& maxOctetsAcnPduN3,
-    const CosemByteBuffer& maxNumberTransmissionsN4,
-    const CosemByteBuffer& acknowledgementTimeT1,
-    const CosemByteBuffer& receiveLifetimeVarT2,
-    const CosemByteBuffer& transmitLifetimeVarT3,
+    std::uint16_t maxOctetsAcnPduN3,
+    std::uint8_t maxNumberTransmissionsN4,
+    std::uint16_t acknowledgementTimeT1,
+    std::uint16_t receiveLifetimeVarT2,
+    std::uint16_t transmitLifetimeVarT3,
     AttributeAccessMode mutableAccess);
   CosemIso8802LlcType3SetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& maxOctetsAcnPduN3,
-    const CosemByteBuffer& maxNumberTransmissionsN4,
-    const CosemByteBuffer& acknowledgementTimeT1,
-    const CosemByteBuffer& receiveLifetimeVarT2,
-    const CosemByteBuffer& transmitLifetimeVarT3,
+    std::uint16_t maxOctetsAcnPduN3,
+    std::uint8_t maxNumberTransmissionsN4,
+    std::uint16_t acknowledgementTimeT1,
+    std::uint16_t receiveLifetimeVarT2,
+    std::uint16_t transmitLifetimeVarT3,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -3556,19 +3556,19 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& MaxOctetsAcnPduN3() const;
-  const CosemByteBuffer& MaxNumberTransmissionsN4() const;
-  const CosemByteBuffer& AcknowledgementTimeT1() const;
-  const CosemByteBuffer& ReceiveLifetimeVarT2() const;
-  const CosemByteBuffer& TransmitLifetimeVarT3() const;
+  std::uint16_t MaxOctetsAcnPduN3() const;
+  std::uint8_t MaxNumberTransmissionsN4() const;
+  std::uint16_t AcknowledgementTimeT1() const;
+  std::uint16_t ReceiveLifetimeVarT2() const;
+  std::uint16_t TransmitLifetimeVarT3() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer maxOctetsAcnPduN3_;
-  CosemByteBuffer maxNumberTransmissionsN4_;
-  CosemByteBuffer acknowledgementTimeT1_;
-  CosemByteBuffer receiveLifetimeVarT2_;
-  CosemByteBuffer transmitLifetimeVarT3_;
+  std::uint16_t maxOctetsAcnPduN3_;
+  std::uint8_t maxNumberTransmissionsN4_;
+  std::uint16_t acknowledgementTimeT1_;
+  std::uint16_t receiveLifetimeVarT2_;
+  std::uint16_t transmitLifetimeVarT3_;
   CosemAccessRights rights_;
 };
 

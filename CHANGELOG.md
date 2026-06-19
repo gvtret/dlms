@@ -1,5 +1,69 @@
 # Changelog
 
+## 0.130.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemIso8802LlcType3SetupObject`** (`class_id=59`,
+  `version=0`, IEC 62056-6-2 ED4 (2021) §4.11.4 / DLMS UA Blue
+  Book Ed. 12.1 §4.11.4) now exposes all five dynamic
+  attributes as typed values instead of opaque
+  `CosemByteBuffer` payloads:
+
+  - `max_octets_acn_pdu_n3` (attr 2, `std::uint16_t`,
+    long-unsigned)
+  - `max_number_transmissions_n4` (attr 3, `std::uint8_t`,
+    unsigned)
+  - `acknowledgement_time_t1` (attr 4, `std::uint16_t`,
+    long-unsigned)
+  - `receive_lifetime_var_t2` (attr 5, `std::uint16_t`,
+    long-unsigned)
+  - `transmit_lifetime_var_t3` (attr 6, `std::uint16_t`,
+    long-unsigned)
+
+  Both constructors take the typed values directly and the
+  getters return them by value. The class defines no specific
+  methods, so `InvokeMethod` continues to return
+  `CosemStatus::MethodNotFound` for every method id and clears
+  the output buffer.
+
+  `ReadAttribute` emits canonical AXDR (`[0x12, hi, lo]` for
+  long-unsigned, `[0x11, value]` for unsigned). `WriteAttribute`
+  decodes strictly per the spec-mandated type: any deviation
+  from the expected tag, length, or trailing-garbage / empty
+  input is rejected with `CosemStatus::InvalidArgument` and the
+  previously stored value is preserved. Parameter semantics
+  per ISO/IEC 8802-2:1998 §8.6.1 / §8.6.2 and the
+  acknowledged-connectionless timer descriptions in the same
+  clause set impose no specified upper bound; the full numeric
+  range of each typed attribute is accepted on write (including
+  `0`).
+
+  `logical_name` (attr 1) remains read-only and any attempt to
+  write it returns `CosemStatus::AccessDenied`.
+
+### Tests
+
+- Added `test_cosem_iso8802_llc_type3_setup_object.cpp` with
+  thirteen per-IC cases: descriptor + access rights, typed
+  getters, AXDR round-trips for both long-unsigned and unsigned
+  attributes at boundary values (0 / mid / 0xFFFF / 0xFF),
+  strict write validation per attribute (wrong tag, truncated
+  input, trailing garbage, empty input), read-only access mode
+  across all five mutable attributes, logical-name write denial,
+  unknown-attribute response, every `InvokeMethod` id returning
+  `MethodNotFound`, and version-above-max normalization.
+- Collapsed legacy IC 59 cases in `test_simple_objects.cpp` to
+  a single `_MovedToPerIcFile` placeholder per the per-IC test
+  organization rule (P2.4); the local `UnsignedIc59` /
+  `LongUnsignedIc59` helpers were deleted with them.
+- Full ctest: 1329/1329 passing.
+
+### Documentation
+
+- `docs/ic_support_matrix.md`: IC 59 promoted from `Partial`
+  to `Supported` to reflect the typed surface.
+
 ## 0.129.0 - 2026-06-22
 
 ### Breaking changes

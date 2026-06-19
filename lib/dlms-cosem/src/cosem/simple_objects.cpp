@@ -14374,11 +14374,11 @@ const std::uint8_t CosemIso8802LlcType3SetupObject::MaxSupportedVersion;
 
 CosemIso8802LlcType3SetupObject::CosemIso8802LlcType3SetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& maxOctetsAcnPduN3,
-  const CosemByteBuffer& maxNumberTransmissionsN4,
-  const CosemByteBuffer& acknowledgementTimeT1,
-  const CosemByteBuffer& receiveLifetimeVarT2,
-  const CosemByteBuffer& transmitLifetimeVarT3,
+  std::uint16_t maxOctetsAcnPduN3,
+  std::uint8_t maxNumberTransmissionsN4,
+  std::uint16_t acknowledgementTimeT1,
+  std::uint16_t receiveLifetimeVarT2,
+  std::uint16_t transmitLifetimeVarT3,
   AttributeAccessMode mutableAccess)
   : CosemIso8802LlcType3SetupObject(
       logicalName,
@@ -14394,11 +14394,11 @@ CosemIso8802LlcType3SetupObject::CosemIso8802LlcType3SetupObject(
 
 CosemIso8802LlcType3SetupObject::CosemIso8802LlcType3SetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& maxOctetsAcnPduN3,
-  const CosemByteBuffer& maxNumberTransmissionsN4,
-  const CosemByteBuffer& acknowledgementTimeT1,
-  const CosemByteBuffer& receiveLifetimeVarT2,
-  const CosemByteBuffer& transmitLifetimeVarT3,
+  std::uint16_t maxOctetsAcnPduN3,
+  std::uint8_t maxNumberTransmissionsN4,
+  std::uint16_t acknowledgementTimeT1,
+  std::uint16_t receiveLifetimeVarT2,
+  std::uint16_t transmitLifetimeVarT3,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -14436,11 +14436,26 @@ CosemStatus CosemIso8802LlcType3SetupObject::ReadAttribute(
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case 2u: output = maxOctetsAcnPduN3_; return CosemStatus::Ok;
-    case 3u: output = maxNumberTransmissionsN4_; return CosemStatus::Ok;
-    case 4u: output = acknowledgementTimeT1_; return CosemStatus::Ok;
-    case 5u: output = receiveLifetimeVarT2_; return CosemStatus::Ok;
-    case 6u: output = transmitLifetimeVarT3_; return CosemStatus::Ok;
+    case 2u:
+      output.clear();
+      AppendLongUnsigned(output, maxOctetsAcnPduN3_);
+      return CosemStatus::Ok;
+    case 3u:
+      output.clear();
+      AppendUnsigned(output, maxNumberTransmissionsN4_);
+      return CosemStatus::Ok;
+    case 4u:
+      output.clear();
+      AppendLongUnsigned(output, acknowledgementTimeT1_);
+      return CosemStatus::Ok;
+    case 5u:
+      output.clear();
+      AppendLongUnsigned(output, receiveLifetimeVarT2_);
+      return CosemStatus::Ok;
+    case 6u:
+      output.clear();
+      AppendLongUnsigned(output, transmitLifetimeVarT3_);
+      return CosemStatus::Ok;
     default:
       output.clear();
       return CosemStatus::AttributeNotFound;
@@ -14457,12 +14472,26 @@ CosemStatus CosemIso8802LlcType3SetupObject::WriteAttribute(
     return CosemStatus::AttributeNotFound;
   if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
     return CosemStatus::AccessDenied;
+  std::size_t offset = 0u;
+  if (attributeId == 3u) {
+    std::uint8_t decoded = 0u;
+    if (!ReadUnsignedValue(input, offset, decoded))
+      return CosemStatus::InvalidArgument;
+    if (offset != input.size())
+      return CosemStatus::InvalidArgument;
+    maxNumberTransmissionsN4_ = decoded;
+    return CosemStatus::Ok;
+  }
+  std::uint16_t decoded = 0u;
+  if (!ReadLongUnsignedValue(input, offset, decoded))
+    return CosemStatus::InvalidArgument;
+  if (offset != input.size())
+    return CosemStatus::InvalidArgument;
   switch (attributeId) {
-    case 2u: maxOctetsAcnPduN3_ = input; break;
-    case 3u: maxNumberTransmissionsN4_ = input; break;
-    case 4u: acknowledgementTimeT1_ = input; break;
-    case 5u: receiveLifetimeVarT2_ = input; break;
-    case 6u: transmitLifetimeVarT3_ = input; break;
+    case 2u: maxOctetsAcnPduN3_ = decoded; break;
+    case 4u: acknowledgementTimeT1_ = decoded; break;
+    case 5u: receiveLifetimeVarT2_ = decoded; break;
+    case 6u: transmitLifetimeVarT3_ = decoded; break;
   }
   return CosemStatus::Ok;
 }
@@ -14480,31 +14509,31 @@ CosemStatus CosemIso8802LlcType3SetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemIso8802LlcType3SetupObject::MaxOctetsAcnPduN3() const
 {
   return maxOctetsAcnPduN3_;
 }
 
-const CosemByteBuffer&
+std::uint8_t
 CosemIso8802LlcType3SetupObject::MaxNumberTransmissionsN4() const
 {
   return maxNumberTransmissionsN4_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemIso8802LlcType3SetupObject::AcknowledgementTimeT1() const
 {
   return acknowledgementTimeT1_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemIso8802LlcType3SetupObject::ReceiveLifetimeVarT2() const
 {
   return receiveLifetimeVarT2_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemIso8802LlcType3SetupObject::TransmitLifetimeVarT3() const
 {
   return transmitLifetimeVarT3_;

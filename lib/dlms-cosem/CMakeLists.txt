@@ -34,7 +34,8 @@ add_library(dlms_cosem
   src/cosem/types/action_set.cpp
   src/cosem/types/scaler_unit.cpp
   src/cosem/types/object_definition.cpp
-  src/cosem/types/register_mask.cpp)
+  src/cosem/types/register_mask.cpp
+  src/cosem/types/quality_of_service.cpp)
 
 if(NOT TARGET dlms_security AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security/CMakeLists.txt")
   add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../dlms-security" "${CMAKE_CURRENT_BINARY_DIR}/_deps/dlms-security")

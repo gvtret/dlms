@@ -24,6 +24,7 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_register_table_object.cpp
   cosem/test_cosem_disconnect_control_object.cpp
   cosem/test_cosem_compact_data_object.cpp
+  cosem/test_cosem_gprs_modem_setup_object.cpp
   cosem/test_cosem_iec_hdlc_setup_object.cpp
   cosem/test_cosem_iso8802_llc_type1_setup_object.cpp
   cosem/test_cosem_iso8802_llc_type2_setup_object.cpp

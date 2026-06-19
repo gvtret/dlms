@@ -1,5 +1,59 @@
 # Changelog
 
+## 0.132.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemGprsModemSetupObject`** (`class_id=45`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.7.7 / DLMS UA Blue Book Ed. 12.1
+  §4.7.7) now exposes all three dynamic attributes as typed
+  values instead of opaque `CosemByteBuffer` payloads:
+
+  - `apn`                 (attr 2, `std::vector<std::uint8_t>`, octet-string)
+  - `pin_code`            (attr 3, `std::uint16_t`, long-unsigned)
+  - `quality_of_service`  (attr 4, `dlms::cosem::types::QualityOfService`,
+                           structure of two `qos_element` substructures,
+                           each carrying five unsigned bytes —
+                           precedence, delay, reliability, peak throughput,
+                           mean throughput)
+
+  Both constructors take the typed values directly and the
+  getters return them by const-reference / by value. The new
+  `dlms::cosem::types::QualityOfService` value type lives in
+  `dlms/cosem/types/quality_of_service.hpp`.
+
+  `ReadAttribute` emits the spec-conformant A-XDR encoding for
+  each attribute (octet-string, long-unsigned, structure of
+  qos_element substructures). `WriteAttribute` performs strict
+  validation — wrong tag, truncated payload, trailing garbage
+  or empty input is rejected with
+  `CosemStatus::InvalidArgument` and the previously stored
+  value is preserved. Writes to the logical name (attr 1) are
+  denied; unknown attribute ids return
+  `CosemStatus::AttributeNotFound`. The class defines no
+  specific methods, so `InvokeMethod` returns
+  `CosemStatus::MethodNotFound` for every method id and clears
+  the output buffer.
+
+### Tests
+
+- New per-IC suite `test_cosem_gprs_modem_setup_object.cpp`
+  (15 tests) covers descriptor + access rights, typed getters,
+  A-XDR round-trips for all three attributes, strict
+  validation of malformed writes (wrong tag, truncation,
+  trailing bytes, empty input, malformed quality_of_service
+  structures and elements), logical-name write denial,
+  unknown attribute handling, read-only enforcement,
+  `InvokeMethod` returning `MethodNotFound`, and version
+  normalization above `MaxSupportedVersion`. The legacy
+  opaque-buffer block in `test_simple_objects.cpp` has been
+  collapsed to a `_MovedToPerIcFile` placeholder.
+
+### Documentation
+
+- `docs/ic_support_matrix.md` promotes IC 45 (GPRS Modem
+  Setup) to **Supported** with a typed-attribute note.
+
 ## 0.131.0 - 2026-06-22
 
 ### Breaking changes

@@ -9,6 +9,7 @@
 #include "dlms/cosem/types/day_profile.hpp"
 #include "dlms/cosem/types/day_profile_action.hpp"
 #include "dlms/cosem/types/monitored_value.hpp"
+#include "dlms/cosem/types/quality_of_service.hpp"
 #include "dlms/cosem/types/schedule_table_entry.hpp"
 #include "dlms/cosem/types/scaler_unit.hpp"
 #include "dlms/cosem/types/object_definition.hpp"
@@ -1314,15 +1315,15 @@ public:
 
   CosemGprsModemSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& apn,
-    const CosemByteBuffer& pinCode,
-    const CosemByteBuffer& qualityOfService,
+    const std::vector<std::uint8_t>& apn,
+    std::uint16_t pinCode,
+    const types::QualityOfService& qualityOfService,
     AttributeAccessMode mutableAccess);
   CosemGprsModemSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& apn,
-    const CosemByteBuffer& pinCode,
-    const CosemByteBuffer& qualityOfService,
+    const std::vector<std::uint8_t>& apn,
+    std::uint16_t pinCode,
+    const types::QualityOfService& qualityOfService,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1339,15 +1340,15 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Apn() const;
-  const CosemByteBuffer& PinCode() const;
-  const CosemByteBuffer& QualityOfService() const;
+  const std::vector<std::uint8_t>& Apn() const { return apn_; }
+  std::uint16_t PinCode() const { return pinCode_; }
+  const types::QualityOfService& QualityOfService() const { return qualityOfService_; }
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer apn_;
-  CosemByteBuffer pinCode_;
-  CosemByteBuffer qualityOfService_;
+  std::vector<std::uint8_t> apn_;
+  std::uint16_t pinCode_;
+  types::QualityOfService qualityOfService_;
   CosemAccessRights rights_;
 };
 

@@ -7124,11 +7124,111 @@ constexpr std::uint8_t kGprsModemSetupQualityOfServiceAttributeId = 4u;
 
 const std::uint8_t CosemGprsModemSetupObject::MaxSupportedVersion;
 
+namespace {
+
+void AppendQosElement(
+  CosemByteBuffer& output, const types::QosElement& element)
+{
+  AppendStructureHeader(output, 5u);
+  AppendUnsigned(output, element.Precedence());
+  AppendUnsigned(output, element.Delay());
+  AppendUnsigned(output, element.Reliability());
+  AppendUnsigned(output, element.PeakThroughput());
+  AppendUnsigned(output, element.MeanThroughput());
+}
+
+void AppendQualityOfService(
+  CosemByteBuffer& output, const types::QualityOfService& qos)
+{
+  AppendStructureHeader(output, 2u);
+  AppendQosElement(output, qos.Default());
+  AppendQosElement(output, qos.Requested());
+}
+
+bool DecodeQosElement(
+  const CosemByteBuffer& input, std::size_t& offset,
+  types::QosElement& element)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 5u) {
+    return false;
+  }
+  std::uint8_t precedence = 0u;
+  std::uint8_t delay = 0u;
+  std::uint8_t reliability = 0u;
+  std::uint8_t peak = 0u;
+  std::uint8_t mean = 0u;
+  if (!ReadUnsignedValue(input, offset, precedence) ||
+      !ReadUnsignedValue(input, offset, delay) ||
+      !ReadUnsignedValue(input, offset, reliability) ||
+      !ReadUnsignedValue(input, offset, peak) ||
+      !ReadUnsignedValue(input, offset, mean)) {
+    return false;
+  }
+  element = types::QosElement(precedence, delay, reliability, peak, mean);
+  return true;
+}
+
+bool DecodeQualityOfService(
+  const CosemByteBuffer& input, types::QualityOfService& qos)
+{
+  std::size_t offset = 0u;
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag) ||
+      !ReadAxdrLength(input, offset, fieldCount) ||
+      fieldCount != 2u) {
+    return false;
+  }
+  types::QosElement dflt;
+  types::QosElement requested;
+  if (!DecodeQosElement(input, offset, dflt) ||
+      !DecodeQosElement(input, offset, requested)) {
+    return false;
+  }
+  if (offset != input.size()) {
+    return false;
+  }
+  qos = types::QualityOfService(dflt, requested);
+  return true;
+}
+
+bool DecodeApn(
+  const CosemByteBuffer& input, std::vector<std::uint8_t>& apn)
+{
+  std::size_t offset = 0u;
+  std::size_t length = 0u;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, length)) {
+    return false;
+  }
+  if (input.size() - offset != length) {
+    return false;
+  }
+  apn.assign(
+    input.begin() + static_cast<std::ptrdiff_t>(offset),
+    input.begin() + static_cast<std::ptrdiff_t>(offset + length));
+  return true;
+}
+
+bool DecodePinCode(
+  const CosemByteBuffer& input, std::uint16_t& pin)
+{
+  std::size_t offset = 0u;
+  if (!ReadLongUnsignedValue(input, offset, pin)) {
+    return false;
+  }
+  return offset == input.size();
+}
+
+}  // namespace
+
 CosemGprsModemSetupObject::CosemGprsModemSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& apn,
-  const CosemByteBuffer& pinCode,
-  const CosemByteBuffer& qualityOfService,
+  const std::vector<std::uint8_t>& apn,
+  std::uint16_t pinCode,
+  const types::QualityOfService& qualityOfService,
   AttributeAccessMode mutableAccess)
   : CosemGprsModemSetupObject(
       logicalName, apn, pinCode, qualityOfService, mutableAccess, kVersion0)
@@ -7137,9 +7237,9 @@ CosemGprsModemSetupObject::CosemGprsModemSetupObject(
 
 CosemGprsModemSetupObject::CosemGprsModemSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& apn,
-  const CosemByteBuffer& pinCode,
-  const CosemByteBuffer& qualityOfService,
+  const std::vector<std::uint8_t>& apn,
+  std::uint16_t pinCode,
+  const types::QualityOfService& qualityOfService,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -7180,13 +7280,16 @@ CosemStatus CosemGprsModemSetupObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kGprsModemSetupApnAttributeId:
-      output = apn_;
+      output.clear();
+      AppendOctetString(output, apn_.data(), apn_.size());
       return CosemStatus::Ok;
     case kGprsModemSetupPinCodeAttributeId:
-      output = pinCode_;
+      output.clear();
+      AppendLongUnsigned(output, pinCode_);
       return CosemStatus::Ok;
     case kGprsModemSetupQualityOfServiceAttributeId:
-      output = qualityOfService_;
+      output.clear();
+      AppendQualityOfService(output, qualityOfService_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -7199,21 +7302,33 @@ CosemStatus CosemGprsModemSetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kGprsModemSetupApnAttributeId:
+    case kGprsModemSetupApnAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      apn_ = input;
+      std::vector<std::uint8_t> decoded;
+      if (!DecodeApn(input, decoded))
+        return CosemStatus::InvalidArgument;
+      apn_ = std::move(decoded);
       return CosemStatus::Ok;
-    case kGprsModemSetupPinCodeAttributeId:
+    }
+    case kGprsModemSetupPinCodeAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      pinCode_ = input;
+      std::uint16_t value = 0u;
+      if (!DecodePinCode(input, value))
+        return CosemStatus::InvalidArgument;
+      pinCode_ = value;
       return CosemStatus::Ok;
-    case kGprsModemSetupQualityOfServiceAttributeId:
+    }
+    case kGprsModemSetupQualityOfServiceAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      qualityOfService_ = input;
+      types::QualityOfService decoded;
+      if (!DecodeQualityOfService(input, decoded))
+        return CosemStatus::InvalidArgument;
+      qualityOfService_ = decoded;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -7231,21 +7346,6 @@ CosemStatus CosemGprsModemSetupObject::InvokeMethod(
   output.clear();
   // GPRS Modem Setup IC defines no methods.
   return CosemStatus::MethodNotFound;
-}
-
-const CosemByteBuffer& CosemGprsModemSetupObject::Apn() const
-{
-  return apn_;
-}
-
-const CosemByteBuffer& CosemGprsModemSetupObject::PinCode() const
-{
-  return pinCode_;
-}
-
-const CosemByteBuffer& CosemGprsModemSetupObject::QualityOfService() const
-{
-  return qualityOfService_;
 }
 
 namespace {

@@ -3076,15 +3076,15 @@ public:
   // No specific methods.
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& firmwareVersion,
-    const CosemByteBuffer& vendorId,
-    const CosemByteBuffer& productId,
+    const std::vector<std::uint8_t>& firmwareVersion,
+    std::uint16_t vendorId,
+    std::uint16_t productId,
     AttributeAccessMode mutableAccess);
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& firmwareVersion,
-    const CosemByteBuffer& vendorId,
-    const CosemByteBuffer& productId,
+    const std::vector<std::uint8_t>& firmwareVersion,
+    std::uint16_t vendorId,
+    std::uint16_t productId,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -3101,15 +3101,15 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& FirmwareVersion() const;
-  const CosemByteBuffer& VendorId() const;
-  const CosemByteBuffer& ProductId() const;
+  const std::vector<std::uint8_t>& FirmwareVersion() const;
+  std::uint16_t VendorId() const;
+  std::uint16_t ProductId() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer firmwareVersion_;
-  CosemByteBuffer vendorId_;
-  CosemByteBuffer productId_;
+  std::vector<std::uint8_t> firmwareVersion_;
+  std::uint16_t vendorId_;
+  std::uint16_t productId_;
   CosemAccessRights rights_;
 };
 

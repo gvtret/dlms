@@ -13541,9 +13541,9 @@ const std::uint8_t
 CosemPrimePlcApplicationIdentificationObject::
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& firmwareVersion,
-    const CosemByteBuffer& vendorId,
-    const CosemByteBuffer& productId,
+    const std::vector<std::uint8_t>& firmwareVersion,
+    std::uint16_t vendorId,
+    std::uint16_t productId,
     AttributeAccessMode mutableAccess)
   : CosemPrimePlcApplicationIdentificationObject(
       logicalName, firmwareVersion, vendorId, productId,
@@ -13556,9 +13556,9 @@ CosemPrimePlcApplicationIdentificationObject::
 CosemPrimePlcApplicationIdentificationObject::
   CosemPrimePlcApplicationIdentificationObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& firmwareVersion,
-    const CosemByteBuffer& vendorId,
-    const CosemByteBuffer& productId,
+    const std::vector<std::uint8_t>& firmwareVersion,
+    std::uint16_t vendorId,
+    std::uint16_t productId,
     AttributeAccessMode mutableAccess,
     std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -13604,13 +13604,17 @@ CosemPrimePlcApplicationIdentificationObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kPrimePlcApplicationIdentificationFirmwareVersionId:
-      output = firmwareVersion_;
+      output.clear();
+      AppendOctetString(
+        output, firmwareVersion_.data(), firmwareVersion_.size());
       return CosemStatus::Ok;
     case kPrimePlcApplicationIdentificationVendorIdId:
-      output = vendorId_;
+      output.clear();
+      AppendLongUnsigned(output, vendorId_);
       return CosemStatus::Ok;
     case kPrimePlcApplicationIdentificationProductIdId:
-      output = productId_;
+      output.clear();
+      AppendLongUnsigned(output, productId_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -13623,25 +13627,48 @@ CosemPrimePlcApplicationIdentificationObject::WriteAttribute(
   std::uint8_t attributeId,
   const CosemByteBuffer& input)
 {
-  CosemByteBuffer* target = nullptr;
   switch (attributeId) {
-    case kPrimePlcApplicationIdentificationFirmwareVersionId:
-      target = &firmwareVersion_;
-      break;
-    case kPrimePlcApplicationIdentificationVendorIdId:
-      target = &vendorId_;
-      break;
-    case kPrimePlcApplicationIdentificationProductIdId:
-      target = &productId_;
-      break;
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
+    case kPrimePlcApplicationIdentificationFirmwareVersionId:
+    case kPrimePlcApplicationIdentificationVendorIdId:
+    case kPrimePlcApplicationIdentificationProductIdId:
+      break;
     default:
       return CosemStatus::AttributeNotFound;
   }
   if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
     return CosemStatus::AccessDenied;
-  *target = input;
+  if (input.empty()) return CosemStatus::InvalidArgument;
+
+  std::size_t offset = 0u;
+  if (attributeId
+      == kPrimePlcApplicationIdentificationFirmwareVersionId) {
+    if (!ReadExpectedTag(input, offset, kDataOctetStringTag))
+      return CosemStatus::InvalidArgument;
+    std::size_t length = 0u;
+    if (!ReadAxdrLength(input, offset, length))
+      return CosemStatus::InvalidArgument;
+    if (input.size() - offset < length)
+      return CosemStatus::InvalidArgument;
+    std::vector<std::uint8_t> decoded(
+      input.begin() + offset, input.begin() + offset + length);
+    offset += length;
+    if (offset != input.size())
+      return CosemStatus::InvalidArgument;
+    firmwareVersion_ = std::move(decoded);
+    return CosemStatus::Ok;
+  }
+
+  std::uint16_t value = 0u;
+  if (!ReadLongUnsignedValue(input, offset, value))
+    return CosemStatus::InvalidArgument;
+  if (offset != input.size())
+    return CosemStatus::InvalidArgument;
+  if (attributeId == kPrimePlcApplicationIdentificationVendorIdId)
+    vendorId_ = value;
+  else
+    productId_ = value;
   return CosemStatus::Ok;
 }
 
@@ -13658,19 +13685,19 @@ CosemPrimePlcApplicationIdentificationObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer&
+const std::vector<std::uint8_t>&
 CosemPrimePlcApplicationIdentificationObject::FirmwareVersion() const
 {
   return firmwareVersion_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemPrimePlcApplicationIdentificationObject::VendorId() const
 {
   return vendorId_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemPrimePlcApplicationIdentificationObject::ProductId() const
 {
   return productId_;

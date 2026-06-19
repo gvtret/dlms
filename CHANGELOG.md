@@ -1,5 +1,67 @@
 # Changelog
 
+## 0.138.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemPrimePlcApplicationIdentificationObject`**
+  (`class_id=86`, `version=0`, IEC 62056-6-2 ED4 (2021)
+  §4.12.11 / DLMS UA Blue Book Ed. 12.1 §4.12.11)
+  migrates from opaque `CosemByteBuffer` attribute
+  storage to typed scalars.
+
+  - Constructors now take
+    `const std::vector<std::uint8_t>& firmwareVersion`
+    (octet-string content, up to 128 bytes per spec),
+    `std::uint16_t vendorId` and `std::uint16_t productId`
+    instead of three `CosemByteBuffer` payloads.
+  - Getters `FirmwareVersion()`, `VendorId()` and
+    `ProductId()` now return typed values
+    (`const std::vector<std::uint8_t>&` and
+    `std::uint16_t`).
+  - `ReadAttribute` emits canonical A-XDR encodings
+    (`octet-string` tag `0x09` for attribute `2`,
+    `long-unsigned` tag `0x12` for attributes `3`-`4`)
+    instead of returning the raw stored bytes verbatim.
+  - `WriteAttribute` strictly decodes incoming payloads:
+    attribute `2` requires an `octet-string`
+    (tag `0x09`); attributes `3`-`4` require a
+    `long-unsigned` (tag `0x12`). Wrong tag, truncation,
+    trailing bytes or empty input yield
+    `InvalidArgument`. Writes against the read-only
+    `logical_name` (attribute `1`) still return
+    `AccessDenied`, and writes against unknown
+    attribute ids return `AttributeNotFound`.
+  - `InvokeMethod` returns `MethodNotFound` for every
+    method id (the class defines no specific methods).
+  - `MaxSupportedVersion` is unchanged (`0`); explicit
+    versions above the maximum continue to be clamped
+    to `MaxSupportedVersion`.
+
+  Callers that previously constructed the object with
+  pre-encoded A-XDR buffers (e.g. an `octet-string`
+  with leading tag/length for `firmwareVersion`, or a
+  three-byte `long-unsigned` encoding for
+  `vendorId`/`productId`) must strip the encoding and
+  pass the decoded values instead.
+
+### IC support matrix
+
+- IC 86 (PRIME NB OFDM PLC Application Identification
+  Setup): `Partial` → `Supported`.
+
+### Tests
+
+- New per-IC test file
+  `lib/dlms-cosem/test/cosem/test_cosem_prime_plc_application_identification_object.cpp`
+  with 8 tests covering attribute reads, mutable-write
+  enforcement, malformed-payload rejection, method
+  routing, version normalisation and access-rights
+  layout.
+- Legacy IC 86 block in
+  `test/cosem/test_simple_objects.cpp` collapsed to a
+  `_MovedToPerIcFile` placeholder.
+
 ## 0.137.0 - 2026-06-22
 
 ### Breaking changes

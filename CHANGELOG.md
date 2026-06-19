@@ -1,5 +1,74 @@
 # Changelog
 
+## 0.133.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemAutoConnectObject`** (`class_id=29`, `version=2`,
+  IEC 62056-6-2 ED4 (2021) §4.4.6.2.5 / DLMS UA Blue Book
+  Ed. 12.1 §4.4.6.2.5) now exposes all five dynamic
+  attributes as typed values instead of opaque
+  `CosemByteBuffer` payloads:
+
+  - `mode`             (attr 2, `std::uint8_t`, enum)
+  - `repetitions`      (attr 3, `std::uint8_t`, unsigned)
+  - `repetition_delay` (attr 4, `std::uint16_t`, long-unsigned)
+  - `calling_window`   (attr 5,
+        `std::vector<CallingWindowEntry>` where each entry is a
+        `{start: types::DateTime, end: types::DateTime}`
+        structure)
+  - `destination_list` (attr 6,
+        `std::vector<std::vector<std::uint8_t>>`, array of
+        octet-string)
+
+  Both constructors take the typed values directly; getters
+  return them by value / const-reference. The
+  `CallingWindowEntry` POD is nested in
+  `CosemAutoConnectObject` and provides `operator==` /
+  `operator!=` for test ergonomics.
+
+  `ReadAttribute` emits the spec-conformant A-XDR encoding
+  for each attribute (enum, unsigned, long-unsigned, array of
+  `{date-time, date-time}` structures, array of
+  octet-string). `WriteAttribute` performs strict validation
+  — wrong tag, truncated payload, trailing garbage,
+  malformed `calling_window` element, wrong date-time length
+  or empty input is rejected with
+  `CosemStatus::InvalidArgument` and the previously stored
+  value is preserved. Writes to the logical name (attr 1)
+  are denied; unknown attribute ids return
+  `CosemStatus::AttributeNotFound`.
+
+  `InvokeMethod` keeps the previous semantics: method `1`
+  "connect" (defined from class version 2 onward) returns
+  `CosemStatus::UnsupportedFeature` because the built-in
+  object does not own the dialler / radio stack; every other
+  method id (and every id when the class version is `0`)
+  returns `CosemStatus::MethodNotFound` and clears the
+  output buffer.
+
+### Tests
+
+- New per-IC suite `test_cosem_auto_connect_object.cpp`
+  (11 tests + placeholder) covers descriptor + access
+  rights, typed getters, A-XDR round-trips for all five
+  attributes, strict validation of malformed writes (wrong
+  tag, truncation, trailing bytes, empty input, malformed
+  `calling_window` structure / date-time element, partial
+  `destination_list` payload), logical-name write denial,
+  unknown attribute handling, read-only enforcement,
+  `InvokeMethod` returning `UnsupportedFeature` for method
+  `1` at version 2 and `MethodNotFound` everywhere else,
+  and version normalization above `MaxSupportedVersion`.
+  The legacy opaque-buffer IC 29 block in
+  `test_simple_objects.cpp` has been collapsed to a
+  `_MovedToPerIcFile` placeholder.
+
+### Documentation
+
+- `docs/ic_support_matrix.md` promotes IC 29 (Auto connect)
+  to **Supported** with a typed-attribute note.
+
 ## 0.132.0 - 2026-06-22
 
 ### Breaking changes

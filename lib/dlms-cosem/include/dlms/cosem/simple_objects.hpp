@@ -1261,21 +1261,38 @@ class CosemAutoConnectObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 2u;
 
+  // calling_window element ::= structure { start_time: octet-string
+  // (date-time), end_time: octet-string (date-time) }, per IEC 62056-6-2
+  // ED4 (2021) §4.4.6.2.5 / DLMS UA Blue Book Ed. 12.1 §4.4.6.2.5.
+  struct CallingWindowEntry {
+    types::DateTime start;
+    types::DateTime end;
+
+    bool operator==(const CallingWindowEntry& other) const
+    {
+      return start == other.start && end == other.end;
+    }
+    bool operator!=(const CallingWindowEntry& other) const
+    {
+      return !(*this == other);
+    }
+  };
+
   CosemAutoConnectObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& mode,
-    const CosemByteBuffer& repetitions,
-    const CosemByteBuffer& repetitionDelay,
-    const CosemByteBuffer& callingWindow,
-    const CosemByteBuffer& destinationList,
+    std::uint8_t mode,
+    std::uint8_t repetitions,
+    std::uint16_t repetitionDelay,
+    const std::vector<CallingWindowEntry>& callingWindow,
+    const std::vector<std::vector<std::uint8_t>>& destinationList,
     AttributeAccessMode mutableAccess);
   CosemAutoConnectObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& mode,
-    const CosemByteBuffer& repetitions,
-    const CosemByteBuffer& repetitionDelay,
-    const CosemByteBuffer& callingWindow,
-    const CosemByteBuffer& destinationList,
+    std::uint8_t mode,
+    std::uint8_t repetitions,
+    std::uint16_t repetitionDelay,
+    const std::vector<CallingWindowEntry>& callingWindow,
+    const std::vector<std::vector<std::uint8_t>>& destinationList,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1292,19 +1309,25 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Mode() const;
-  const CosemByteBuffer& Repetitions() const;
-  const CosemByteBuffer& RepetitionDelay() const;
-  const CosemByteBuffer& CallingWindow() const;
-  const CosemByteBuffer& DestinationList() const;
+  std::uint8_t Mode() const { return mode_; }
+  std::uint8_t Repetitions() const { return repetitions_; }
+  std::uint16_t RepetitionDelay() const { return repetitionDelay_; }
+  const std::vector<CallingWindowEntry>& CallingWindow() const
+  {
+    return callingWindow_;
+  }
+  const std::vector<std::vector<std::uint8_t>>& DestinationList() const
+  {
+    return destinationList_;
+  }
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer mode_;
-  CosemByteBuffer repetitions_;
-  CosemByteBuffer repetitionDelay_;
-  CosemByteBuffer callingWindow_;
-  CosemByteBuffer destinationList_;
+  std::uint8_t mode_;
+  std::uint8_t repetitions_;
+  std::uint16_t repetitionDelay_;
+  std::vector<CallingWindowEntry> callingWindow_;
+  std::vector<std::vector<std::uint8_t>> destinationList_;
   CosemAccessRights rights_;
 };
 

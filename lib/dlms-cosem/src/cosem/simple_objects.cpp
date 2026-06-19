@@ -6943,15 +6943,121 @@ constexpr std::uint8_t kAutoConnectDestinationListAttributeId = 6u;
 constexpr std::uint8_t kAutoConnectConnectMethodId = 1u;
 } // namespace
 
+namespace {
+
+void AppendCallingWindowEntry(
+  CosemByteBuffer& output,
+  const CosemAutoConnectObject::CallingWindowEntry& entry)
+{
+  AppendStructureHeader(output, 2u);
+  AppendDateTimeOctetString(output, entry.start);
+  AppendDateTimeOctetString(output, entry.end);
+}
+
+bool ReadStreamingDateTime(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  dlms::cosem::types::DateTime& out)
+{
+  std::size_t length = 0u;
+  const std::uint8_t* data = 0;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag)
+      || !ReadAxdrLength(input, offset, length)
+      || length != dlms::cosem::types::DateTime::WireSize
+      || !ReadFixedBytes(input, offset, length, data)) {
+    return false;
+  }
+  return dlms::cosem::types::DateTime::TryFromBytes(data, length, out);
+}
+
+bool DecodeCallingWindowEntry(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemAutoConnectObject::CallingWindowEntry& out)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag)
+      || !ReadAxdrLength(input, offset, fieldCount)
+      || fieldCount != 2u) {
+    return false;
+  }
+  return ReadStreamingDateTime(input, offset, out.start)
+    && ReadStreamingDateTime(input, offset, out.end);
+}
+
+bool DecodeCallingWindowPayload(
+  const CosemByteBuffer& input,
+  std::vector<CosemAutoConnectObject::CallingWindowEntry>& out)
+{
+  out.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  out.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    CosemAutoConnectObject::CallingWindowEntry entry;
+    if (!DecodeCallingWindowEntry(input, offset, entry)) {
+      return false;
+    }
+    out.push_back(entry);
+  }
+  return offset == input.size();
+}
+
+void AppendDestinationList(
+  CosemByteBuffer& output,
+  const std::vector<std::vector<std::uint8_t>>& list)
+{
+  AppendArrayHeader(output, list.size());
+  for (std::size_t i = 0u; i < list.size(); ++i) {
+    const std::vector<std::uint8_t>& entry = list[i];
+    static const std::uint8_t kEmpty = 0u;
+    AppendOctetString(
+      output,
+      entry.empty() ? &kEmpty : &entry[0],
+      entry.size());
+  }
+}
+
+bool DecodeDestinationList(
+  const CosemByteBuffer& input,
+  std::vector<std::vector<std::uint8_t>>& out)
+{
+  out.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  out.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    std::size_t length = 0u;
+    const std::uint8_t* data = 0;
+    if (!ReadExpectedTag(input, offset, kDataOctetStringTag)
+        || !ReadAxdrLength(input, offset, length)
+        || !ReadFixedBytes(input, offset, length, data)) {
+      return false;
+    }
+    out.push_back(std::vector<std::uint8_t>(data, data + length));
+  }
+  return offset == input.size();
+}
+
+} // namespace
+
 const std::uint8_t CosemAutoConnectObject::MaxSupportedVersion;
 
 CosemAutoConnectObject::CosemAutoConnectObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& mode,
-  const CosemByteBuffer& repetitions,
-  const CosemByteBuffer& repetitionDelay,
-  const CosemByteBuffer& callingWindow,
-  const CosemByteBuffer& destinationList,
+  std::uint8_t mode,
+  std::uint8_t repetitions,
+  std::uint16_t repetitionDelay,
+  const std::vector<CallingWindowEntry>& callingWindow,
+  const std::vector<std::vector<std::uint8_t>>& destinationList,
   AttributeAccessMode mutableAccess)
   : CosemAutoConnectObject(
       logicalName, mode, repetitions, repetitionDelay,
@@ -6962,11 +7068,11 @@ CosemAutoConnectObject::CosemAutoConnectObject(
 
 CosemAutoConnectObject::CosemAutoConnectObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& mode,
-  const CosemByteBuffer& repetitions,
-  const CosemByteBuffer& repetitionDelay,
-  const CosemByteBuffer& callingWindow,
-  const CosemByteBuffer& destinationList,
+  std::uint8_t mode,
+  std::uint8_t repetitions,
+  std::uint16_t repetitionDelay,
+  const std::vector<CallingWindowEntry>& callingWindow,
+  const std::vector<std::vector<std::uint8_t>>& destinationList,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -7008,27 +7114,30 @@ CosemStatus CosemAutoConnectObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
 {
+  output.clear();
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kAutoConnectModeAttributeId:
-      output = mode_;
+      AppendEnum(output, mode_);
       return CosemStatus::Ok;
     case kAutoConnectRepetitionsAttributeId:
-      output = repetitions_;
+      AppendUnsigned(output, repetitions_);
       return CosemStatus::Ok;
     case kAutoConnectRepetitionDelayAttributeId:
-      output = repetitionDelay_;
+      AppendLongUnsigned(output, repetitionDelay_);
       return CosemStatus::Ok;
     case kAutoConnectCallingWindowAttributeId:
-      output = callingWindow_;
+      AppendArrayHeader(output, callingWindow_.size());
+      for (std::size_t i = 0u; i < callingWindow_.size(); ++i) {
+        AppendCallingWindowEntry(output, callingWindow_[i]);
+      }
       return CosemStatus::Ok;
     case kAutoConnectDestinationListAttributeId:
-      output = destinationList_;
+      AppendDestinationList(output, destinationList_);
       return CosemStatus::Ok;
     default:
-      output.clear();
       return CosemStatus::AttributeNotFound;
   }
 }
@@ -7038,31 +7147,54 @@ CosemStatus CosemAutoConnectObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kAutoConnectModeAttributeId:
+    case kAutoConnectModeAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      mode_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t value = 0u;
+      if (!ReadEnumValue(input, offset, value) || offset != input.size())
+        return CosemStatus::InvalidArgument;
+      mode_ = value;
       return CosemStatus::Ok;
-    case kAutoConnectRepetitionsAttributeId:
+    }
+    case kAutoConnectRepetitionsAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      repetitions_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t value = 0u;
+      if (!ReadUnsignedValue(input, offset, value) || offset != input.size())
+        return CosemStatus::InvalidArgument;
+      repetitions_ = value;
       return CosemStatus::Ok;
-    case kAutoConnectRepetitionDelayAttributeId:
+    }
+    case kAutoConnectRepetitionDelayAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      repetitionDelay_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t value = 0u;
+      if (!ReadLongUnsignedValue(input, offset, value) || offset != input.size())
+        return CosemStatus::InvalidArgument;
+      repetitionDelay_ = value;
       return CosemStatus::Ok;
-    case kAutoConnectCallingWindowAttributeId:
+    }
+    case kAutoConnectCallingWindowAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      callingWindow_ = input;
+      std::vector<CallingWindowEntry> next;
+      if (!DecodeCallingWindowPayload(input, next))
+        return CosemStatus::InvalidArgument;
+      callingWindow_ = next;
       return CosemStatus::Ok;
-    case kAutoConnectDestinationListAttributeId:
+    }
+    case kAutoConnectDestinationListAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      destinationList_ = input;
+      std::vector<std::vector<std::uint8_t>> next;
+      if (!DecodeDestinationList(input, next))
+        return CosemStatus::InvalidArgument;
+      destinationList_ = next;
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -7088,31 +7220,6 @@ CosemStatus CosemAutoConnectObject::InvokeMethod(
     return CosemStatus::UnsupportedFeature;
   }
   return CosemStatus::MethodNotFound;
-}
-
-const CosemByteBuffer& CosemAutoConnectObject::Mode() const
-{
-  return mode_;
-}
-
-const CosemByteBuffer& CosemAutoConnectObject::Repetitions() const
-{
-  return repetitions_;
-}
-
-const CosemByteBuffer& CosemAutoConnectObject::RepetitionDelay() const
-{
-  return repetitionDelay_;
-}
-
-const CosemByteBuffer& CosemAutoConnectObject::CallingWindow() const
-{
-  return callingWindow_;
-}
-
-const CosemByteBuffer& CosemAutoConnectObject::DestinationList() const
-{
-  return destinationList_;
 }
 
 namespace {

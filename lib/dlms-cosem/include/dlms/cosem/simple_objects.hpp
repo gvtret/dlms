@@ -1611,6 +1611,15 @@ private:
   CosemAccessRights rights_;
 };
 
+// SMTP setup (class_id = 46, version = 0) per IEC 62056-6-2 ED4 (2021)
+// §4.9.6 and DLMS UA Blue Book Ed. 12.1 §4.4.7:
+//   1 logical_name      octet-string(6) (RO)
+//   2 server_port       long-unsigned   (default 25, IANA SMTP)
+//   3 user_name         octet-string
+//   4 login_password    octet-string    (empty = no auth)
+//   5 server_address    octet-string    (DNS name or dotted IP)
+//   6 sender_address    octet-string
+// No specific methods are defined.
 class CosemSmtpSetupObject : public ICosemObject
 {
 public:
@@ -1618,19 +1627,19 @@ public:
 
   CosemSmtpSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& serverPort,
-    const CosemByteBuffer& userName,
-    const CosemByteBuffer& loginPassword,
-    const CosemByteBuffer& serverAddress,
-    const CosemByteBuffer& senderAddress,
+    std::uint16_t serverPort,
+    const std::vector<std::uint8_t>& userName,
+    const std::vector<std::uint8_t>& loginPassword,
+    const std::vector<std::uint8_t>& serverAddress,
+    const std::vector<std::uint8_t>& senderAddress,
     AttributeAccessMode mutableAccess);
   CosemSmtpSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& serverPort,
-    const CosemByteBuffer& userName,
-    const CosemByteBuffer& loginPassword,
-    const CosemByteBuffer& serverAddress,
-    const CosemByteBuffer& senderAddress,
+    std::uint16_t serverPort,
+    const std::vector<std::uint8_t>& userName,
+    const std::vector<std::uint8_t>& loginPassword,
+    const std::vector<std::uint8_t>& serverAddress,
+    const std::vector<std::uint8_t>& senderAddress,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1647,19 +1656,19 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& ServerPort() const;
-  const CosemByteBuffer& UserName() const;
-  const CosemByteBuffer& LoginPassword() const;
-  const CosemByteBuffer& ServerAddress() const;
-  const CosemByteBuffer& SenderAddress() const;
+  std::uint16_t ServerPort() const;
+  const std::vector<std::uint8_t>& UserName() const;
+  const std::vector<std::uint8_t>& LoginPassword() const;
+  const std::vector<std::uint8_t>& ServerAddress() const;
+  const std::vector<std::uint8_t>& SenderAddress() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer serverPort_;
-  CosemByteBuffer userName_;
-  CosemByteBuffer loginPassword_;
-  CosemByteBuffer serverAddress_;
-  CosemByteBuffer senderAddress_;
+  std::uint16_t serverPort_;
+  std::vector<std::uint8_t> userName_;
+  std::vector<std::uint8_t> loginPassword_;
+  std::vector<std::uint8_t> serverAddress_;
+  std::vector<std::uint8_t> senderAddress_;
   CosemAccessRights rights_;
 };
 

@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.137.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemSmtpSetupObject`** (`class_id=46`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.9.6 / DLMS UA Blue Book
+  Ed. 12.1 §4.4.7) migrates from opaque `CosemByteBuffer`
+  attribute storage to typed scalars.
+
+  - Constructors now take `std::uint16_t serverPort`
+    (IANA SMTP default 25), `std::vector<std::uint8_t>`
+    `userName`, `loginPassword`, `serverAddress` and
+    `senderAddress` instead of five `CosemByteBuffer`
+    payloads.
+  - Getters `ServerPort()`, `UserName()`,
+    `LoginPassword()`, `ServerAddress()` and
+    `SenderAddress()` now return typed values
+    (`std::uint16_t` and `const std::vector<std::uint8_t>&`).
+  - `ReadAttribute` produces canonical A-XDR encodings
+    (`long-unsigned` for attribute `2`, `octet-string`
+    for attributes `3`-`6`) instead of returning the
+    raw stored bytes verbatim.
+  - `WriteAttribute` strictly decodes incoming payloads:
+    attribute `2` requires a `long-unsigned` (tag
+    `0x12`); attributes `3`-`6` require an `octet-string`
+    (tag `0x09`). Wrong tag, truncation, trailing bytes
+    or empty input yield `InvalidArgument`. Writes
+    against the read-only `logical_name` (attribute `1`)
+    return `AccessDenied`; unknown ids return
+    `AttributeNotFound`.
+  - The SMTP Setup IC defines no specific methods;
+    `InvokeMethod` returns `MethodNotFound` for every
+    method id, regardless of payload.
+  - Class version is normalised to
+    `MaxSupportedVersion = 0` when callers pass a higher
+    value (matching the constructor contract used
+    elsewhere).
+
+### Tests
+
+- Adds per-IC suite
+  `test/cosem/test_cosem_smtp_setup_object.cpp` covering
+  descriptor/version, full-attribute read encoding,
+  empty-octet-string round-trip, write/read-only access
+  enforcement, immutable `logical_name`, strict A-XDR
+  rejection on `server_port` and the four octet-string
+  attributes, `MethodNotFound` for arbitrary method ids,
+  version clamping and `AccessRights` reflection of the
+  mutable flag (`12` new tests).
+- Collapses the legacy IC 46 block in
+  `test/cosem/test_simple_objects.cpp` to a single
+  `_MovedToPerIcFile` placeholder per project rule P2.4.
+
+### Documentation
+
+- `docs/ic_support_matrix.md`: IC 46 (SMTP Setup) promoted
+  Partial → Supported with the typed-attribute contract
+  and strict A-XDR validation rules documented inline.
+
 ## 0.136.0 - 2026-06-22
 
 ### Breaking changes

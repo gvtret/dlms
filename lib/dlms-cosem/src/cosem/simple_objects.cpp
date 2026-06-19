@@ -8331,22 +8331,45 @@ constexpr std::uint8_t kSmtpSetupUserNameAttributeId = 3u;
 constexpr std::uint8_t kSmtpSetupLoginPasswordAttributeId = 4u;
 constexpr std::uint8_t kSmtpSetupServerAddressAttributeId = 5u;
 constexpr std::uint8_t kSmtpSetupSenderAddressAttributeId = 6u;
-// IEC 62056-6-2 ED4 (2021) §4.9.6 / DLMS UA Blue Book Ed. 12.1 §4.9.6
+// IEC 62056-6-2 ED4 (2021) §4.9.6 / DLMS UA Blue Book Ed. 12.1 §4.4.7
 // define class_id=46, version=0 with six attributes:
-//   1 logical_name, 2 server_port, 3 user_name,
-//   4 login_password, 5 server_address, 6 sender_address.
+//   1 logical_name      octet-string(6)  (RO)
+//   2 server_port       long-unsigned    (default 25, IANA SMTP)
+//   3 user_name         octet-string
+//   4 login_password    octet-string     (empty = no auth)
+//   5 server_address    octet-string     (DNS name or dotted IP)
+//   6 sender_address    octet-string
 // No specific methods are defined.
+
+bool DecodeSmtpOctetString(
+  const CosemByteBuffer& input,
+  std::vector<std::uint8_t>& value)
+{
+  std::size_t offset = 0u;
+  std::size_t length = 0u;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, length) ||
+      input.size() - offset < length) {
+    return false;
+  }
+  value.assign(input.begin() + offset, input.begin() + offset + length);
+  offset += length;
+  if (offset != input.size()) {
+    return false;
+  }
+  return true;
+}
 } // namespace
 
 const std::uint8_t CosemSmtpSetupObject::MaxSupportedVersion;
 
 CosemSmtpSetupObject::CosemSmtpSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& serverPort,
-  const CosemByteBuffer& userName,
-  const CosemByteBuffer& loginPassword,
-  const CosemByteBuffer& serverAddress,
-  const CosemByteBuffer& senderAddress,
+  std::uint16_t serverPort,
+  const std::vector<std::uint8_t>& userName,
+  const std::vector<std::uint8_t>& loginPassword,
+  const std::vector<std::uint8_t>& serverAddress,
+  const std::vector<std::uint8_t>& senderAddress,
   AttributeAccessMode mutableAccess)
   : CosemSmtpSetupObject(
       logicalName, serverPort, userName, loginPassword,
@@ -8356,11 +8379,11 @@ CosemSmtpSetupObject::CosemSmtpSetupObject(
 
 CosemSmtpSetupObject::CosemSmtpSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& serverPort,
-  const CosemByteBuffer& userName,
-  const CosemByteBuffer& loginPassword,
-  const CosemByteBuffer& serverAddress,
-  const CosemByteBuffer& senderAddress,
+  std::uint16_t serverPort,
+  const std::vector<std::uint8_t>& userName,
+  const std::vector<std::uint8_t>& loginPassword,
+  const std::vector<std::uint8_t>& serverAddress,
+  const std::vector<std::uint8_t>& senderAddress,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -8402,27 +8425,47 @@ CosemStatus CosemSmtpSetupObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
 {
+  output.clear();
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kSmtpSetupServerPortAttributeId:
-      output = serverPort_;
+      AppendLongUnsigned(output, serverPort_);
       return CosemStatus::Ok;
-    case kSmtpSetupUserNameAttributeId:
-      output = userName_;
+    case kSmtpSetupUserNameAttributeId: {
+      static const std::uint8_t kEmpty = 0u;
+      AppendOctetString(
+        output,
+        userName_.empty() ? &kEmpty : &userName_[0],
+        userName_.size());
       return CosemStatus::Ok;
-    case kSmtpSetupLoginPasswordAttributeId:
-      output = loginPassword_;
+    }
+    case kSmtpSetupLoginPasswordAttributeId: {
+      static const std::uint8_t kEmpty = 0u;
+      AppendOctetString(
+        output,
+        loginPassword_.empty() ? &kEmpty : &loginPassword_[0],
+        loginPassword_.size());
       return CosemStatus::Ok;
-    case kSmtpSetupServerAddressAttributeId:
-      output = serverAddress_;
+    }
+    case kSmtpSetupServerAddressAttributeId: {
+      static const std::uint8_t kEmpty = 0u;
+      AppendOctetString(
+        output,
+        serverAddress_.empty() ? &kEmpty : &serverAddress_[0],
+        serverAddress_.size());
       return CosemStatus::Ok;
-    case kSmtpSetupSenderAddressAttributeId:
-      output = senderAddress_;
+    }
+    case kSmtpSetupSenderAddressAttributeId: {
+      static const std::uint8_t kEmpty = 0u;
+      AppendOctetString(
+        output,
+        senderAddress_.empty() ? &kEmpty : &senderAddress_[0],
+        senderAddress_.size());
       return CosemStatus::Ok;
+    }
     default:
-      output.clear();
       return CosemStatus::AttributeNotFound;
   }
 }
@@ -8432,31 +8475,53 @@ CosemStatus CosemSmtpSetupObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kSmtpSetupServerPortAttributeId:
+    case kSmtpSetupServerPortAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      serverPort_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t value = 0u;
+      if (!ReadLongUnsignedValue(input, offset, value) ||
+          offset != input.size())
+        return CosemStatus::InvalidArgument;
+      serverPort_ = value;
       return CosemStatus::Ok;
-    case kSmtpSetupUserNameAttributeId:
+    }
+    case kSmtpSetupUserNameAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      userName_ = input;
+      std::vector<std::uint8_t> decoded;
+      if (!DecodeSmtpOctetString(input, decoded))
+        return CosemStatus::InvalidArgument;
+      userName_.swap(decoded);
       return CosemStatus::Ok;
-    case kSmtpSetupLoginPasswordAttributeId:
+    }
+    case kSmtpSetupLoginPasswordAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      loginPassword_ = input;
+      std::vector<std::uint8_t> decoded;
+      if (!DecodeSmtpOctetString(input, decoded))
+        return CosemStatus::InvalidArgument;
+      loginPassword_.swap(decoded);
       return CosemStatus::Ok;
-    case kSmtpSetupServerAddressAttributeId:
+    }
+    case kSmtpSetupServerAddressAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      serverAddress_ = input;
+      std::vector<std::uint8_t> decoded;
+      if (!DecodeSmtpOctetString(input, decoded))
+        return CosemStatus::InvalidArgument;
+      serverAddress_.swap(decoded);
       return CosemStatus::Ok;
-    case kSmtpSetupSenderAddressAttributeId:
+    }
+    case kSmtpSetupSenderAddressAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      senderAddress_ = input;
+      std::vector<std::uint8_t> decoded;
+      if (!DecodeSmtpOctetString(input, decoded))
+        return CosemStatus::InvalidArgument;
+      senderAddress_.swap(decoded);
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -8476,27 +8541,27 @@ CosemStatus CosemSmtpSetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::ServerPort() const
+std::uint16_t CosemSmtpSetupObject::ServerPort() const
 {
   return serverPort_;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::UserName() const
+const std::vector<std::uint8_t>& CosemSmtpSetupObject::UserName() const
 {
   return userName_;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::LoginPassword() const
+const std::vector<std::uint8_t>& CosemSmtpSetupObject::LoginPassword() const
 {
   return loginPassword_;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::ServerAddress() const
+const std::vector<std::uint8_t>& CosemSmtpSetupObject::ServerAddress() const
 {
   return serverAddress_;
 }
 
-const CosemByteBuffer& CosemSmtpSetupObject::SenderAddress() const
+const std::vector<std::uint8_t>& CosemSmtpSetupObject::SenderAddress() const
 {
   return senderAddress_;
 }

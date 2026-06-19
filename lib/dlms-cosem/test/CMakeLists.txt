@@ -32,6 +32,7 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_prime_plc_application_identification_object.cpp
   cosem/test_cosem_smtp_setup_object.cpp
   cosem/test_cosem_m_bus_master_port_setup_object.cpp
+  cosem/test_cosem_m_bus_slave_port_setup_object.cpp
   cosem/test_cosem_wireless_mode_q_channel_object.cpp
   cosem/test_cosem_iec_hdlc_setup_object.cpp
   cosem/test_cosem_iso8802_llc_type1_setup_object.cpp

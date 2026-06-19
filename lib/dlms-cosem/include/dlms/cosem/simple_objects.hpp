@@ -1793,19 +1793,46 @@ class CosemMBusSlavePortSetupObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // IEC 62056-6-2 ED4 (2021) §4.8.3 / DLMS UA Blue Book Ed. 12.1
+  // §4.8.2 define class_id 25, version 0 with five attributes:
+  // 1 logical_name, 2 default_baud (enum 0..7),
+  // 3 avail_baud (enum 0..7), 4 addr_state (enum 0..1),
+  // 5 bus_address (unsigned, primary M-Bus address, 0 if not assigned).
+  // The class defines no specific methods.
+  enum class Baud : std::uint8_t
+  {
+    Baud300 = 0u,
+    Baud600 = 1u,
+    Baud1200 = 2u,
+    Baud2400 = 3u,
+    Baud4800 = 4u,
+    Baud9600 = 5u,
+    Baud19200 = 6u,
+    Baud38400 = 7u,
+  };
+
+  enum class AddrState : std::uint8_t
+  {
+    NotAssigned = 0u,
+    Assigned = 1u,
+  };
+
+  static bool IsValidBaud(std::uint8_t raw);
+  static bool IsValidAddrState(std::uint8_t raw);
+
   CosemMBusSlavePortSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& defaultBaud,
-    const CosemByteBuffer& availBaud,
-    const CosemByteBuffer& addrState,
-    const CosemByteBuffer& busAddress,
+    Baud defaultBaud,
+    Baud availBaud,
+    AddrState addrState,
+    std::uint8_t busAddress,
     AttributeAccessMode mutableAccess);
   CosemMBusSlavePortSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& defaultBaud,
-    const CosemByteBuffer& availBaud,
-    const CosemByteBuffer& addrState,
-    const CosemByteBuffer& busAddress,
+    Baud defaultBaud,
+    Baud availBaud,
+    AddrState addrState,
+    std::uint8_t busAddress,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1822,17 +1849,17 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& DefaultBaud() const;
-  const CosemByteBuffer& AvailBaud() const;
-  const CosemByteBuffer& AddrState() const;
-  const CosemByteBuffer& BusAddress() const;
+  Baud GetDefaultBaud() const;
+  Baud GetAvailBaud() const;
+  AddrState GetAddrState() const;
+  std::uint8_t BusAddress() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer defaultBaud_;
-  CosemByteBuffer availBaud_;
-  CosemByteBuffer addrState_;
-  CosemByteBuffer busAddress_;
+  Baud defaultBaud_;
+  Baud availBaud_;
+  AddrState addrState_;
+  std::uint8_t busAddress_;
   CosemAccessRights rights_;
 };
 

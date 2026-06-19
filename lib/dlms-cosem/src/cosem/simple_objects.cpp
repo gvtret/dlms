@@ -8957,14 +8957,24 @@ constexpr std::uint8_t kMBusSlavePortSetupAddrStateAttributeId = 4u;
 constexpr std::uint8_t kMBusSlavePortSetupBusAddressAttributeId = 5u;
 } // namespace
 
+bool CosemMBusSlavePortSetupObject::IsValidBaud(std::uint8_t raw)
+{
+  return raw <= 7u;
+}
+
+bool CosemMBusSlavePortSetupObject::IsValidAddrState(std::uint8_t raw)
+{
+  return raw <= 1u;
+}
+
 const std::uint8_t CosemMBusSlavePortSetupObject::MaxSupportedVersion;
 
 CosemMBusSlavePortSetupObject::CosemMBusSlavePortSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& defaultBaud,
-  const CosemByteBuffer& availBaud,
-  const CosemByteBuffer& addrState,
-  const CosemByteBuffer& busAddress,
+  Baud defaultBaud,
+  Baud availBaud,
+  AddrState addrState,
+  std::uint8_t busAddress,
   AttributeAccessMode mutableAccess)
   : CosemMBusSlavePortSetupObject(
       logicalName, defaultBaud, availBaud, addrState,
@@ -8974,10 +8984,10 @@ CosemMBusSlavePortSetupObject::CosemMBusSlavePortSetupObject(
 
 CosemMBusSlavePortSetupObject::CosemMBusSlavePortSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& defaultBaud,
-  const CosemByteBuffer& availBaud,
-  const CosemByteBuffer& addrState,
-  const CosemByteBuffer& busAddress,
+  Baud defaultBaud,
+  Baud availBaud,
+  AddrState addrState,
+  std::uint8_t busAddress,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -8985,9 +8995,15 @@ CosemMBusSlavePortSetupObject::CosemMBusSlavePortSetupObject(
       NormalizeVersion(
         version, CosemMBusSlavePortSetupObject::MaxSupportedVersion),
       logicalName))
-  , defaultBaud_(defaultBaud)
-  , availBaud_(availBaud)
-  , addrState_(addrState)
+  , defaultBaud_(IsValidBaud(static_cast<std::uint8_t>(defaultBaud))
+                   ? defaultBaud
+                   : Baud::Baud300)
+  , availBaud_(IsValidBaud(static_cast<std::uint8_t>(availBaud))
+                 ? availBaud
+                 : Baud::Baud300)
+  , addrState_(IsValidAddrState(static_cast<std::uint8_t>(addrState))
+                 ? addrState
+                 : AddrState::NotAssigned)
   , busAddress_(busAddress)
 {
   rights_.SetAttributeAccess(
@@ -9016,24 +9032,24 @@ CosemStatus CosemMBusSlavePortSetupObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
 {
+  output.clear();
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kMBusSlavePortSetupDefaultBaudAttributeId:
-      output = defaultBaud_;
+      AppendEnum(output, static_cast<std::uint8_t>(defaultBaud_));
       return CosemStatus::Ok;
     case kMBusSlavePortSetupAvailBaudAttributeId:
-      output = availBaud_;
+      AppendEnum(output, static_cast<std::uint8_t>(availBaud_));
       return CosemStatus::Ok;
     case kMBusSlavePortSetupAddrStateAttributeId:
-      output = addrState_;
+      AppendEnum(output, static_cast<std::uint8_t>(addrState_));
       return CosemStatus::Ok;
     case kMBusSlavePortSetupBusAddressAttributeId:
-      output = busAddress_;
+      AppendUnsigned(output, busAddress_);
       return CosemStatus::Ok;
     default:
-      output.clear();
       return CosemStatus::AttributeNotFound;
   }
 }
@@ -9042,32 +9058,55 @@ CosemStatus CosemMBusSlavePortSetupObject::WriteAttribute(
   std::uint8_t attributeId,
   const CosemByteBuffer& input)
 {
+  if (attributeId == kLogicalNameAttributeId)
+    return CosemStatus::AccessDenied;
+  if (attributeId < 2u || attributeId > 5u)
+    return CosemStatus::AttributeNotFound;
+  if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+    return CosemStatus::AccessDenied;
+  if (input.empty())
+    return CosemStatus::InvalidArgument;
+
+  std::size_t offset = 0u;
   switch (attributeId) {
-    case kMBusSlavePortSetupDefaultBaudAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      defaultBaud_ = input;
+    case kMBusSlavePortSetupDefaultBaudAttributeId: {
+      std::uint8_t raw = 0u;
+      if (!ReadEnumValue(input, offset, raw))
+        return CosemStatus::InvalidArgument;
+      if (offset != input.size() || !IsValidBaud(raw))
+        return CosemStatus::InvalidArgument;
+      defaultBaud_ = static_cast<Baud>(raw);
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupAvailBaudAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      availBaud_ = input;
+    }
+    case kMBusSlavePortSetupAvailBaudAttributeId: {
+      std::uint8_t raw = 0u;
+      if (!ReadEnumValue(input, offset, raw))
+        return CosemStatus::InvalidArgument;
+      if (offset != input.size() || !IsValidBaud(raw))
+        return CosemStatus::InvalidArgument;
+      availBaud_ = static_cast<Baud>(raw);
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupAddrStateAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      addrState_ = input;
+    }
+    case kMBusSlavePortSetupAddrStateAttributeId: {
+      std::uint8_t raw = 0u;
+      if (!ReadEnumValue(input, offset, raw))
+        return CosemStatus::InvalidArgument;
+      if (offset != input.size() || !IsValidAddrState(raw))
+        return CosemStatus::InvalidArgument;
+      addrState_ = static_cast<AddrState>(raw);
       return CosemStatus::Ok;
-    case kMBusSlavePortSetupBusAddressAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      busAddress_ = input;
+    }
+    case kMBusSlavePortSetupBusAddressAttributeId: {
+      std::uint8_t raw = 0u;
+      if (!ReadUnsignedValue(input, offset, raw))
+        return CosemStatus::InvalidArgument;
+      if (offset != input.size())
+        return CosemStatus::InvalidArgument;
+      busAddress_ = raw;
       return CosemStatus::Ok;
-    case kLogicalNameAttributeId:
-      return CosemStatus::AccessDenied;
-    default:
-      return CosemStatus::AttributeNotFound;
+    }
   }
+  return CosemStatus::AttributeNotFound;
 }
 
 CosemStatus CosemMBusSlavePortSetupObject::InvokeMethod(
@@ -9087,25 +9126,25 @@ CosemStatus CosemMBusSlavePortSetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer&
-CosemMBusSlavePortSetupObject::DefaultBaud() const
+CosemMBusSlavePortSetupObject::Baud
+CosemMBusSlavePortSetupObject::GetDefaultBaud() const
 {
   return defaultBaud_;
 }
 
-const CosemByteBuffer&
-CosemMBusSlavePortSetupObject::AvailBaud() const
+CosemMBusSlavePortSetupObject::Baud
+CosemMBusSlavePortSetupObject::GetAvailBaud() const
 {
   return availBaud_;
 }
 
-const CosemByteBuffer& CosemMBusSlavePortSetupObject::AddrState() const
+CosemMBusSlavePortSetupObject::AddrState
+CosemMBusSlavePortSetupObject::GetAddrState() const
 {
   return addrState_;
 }
 
-const CosemByteBuffer&
-CosemMBusSlavePortSetupObject::BusAddress() const
+std::uint8_t CosemMBusSlavePortSetupObject::BusAddress() const
 {
   return busAddress_;
 }

@@ -1,5 +1,79 @@
 # Changelog
 
+## 0.141.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemMBusSlavePortSetupObject`**
+  (`class_id=25`, `version=0`, IEC 62056-6-2 ED4 (2021)
+  §4.8.3 / DLMS UA Blue Book Ed. 12.1 §4.8.2)
+  migrates from opaque `CosemByteBuffer` attribute
+  storage to a typed enum + unsigned surface.
+
+  - New nested `enum class Baud : std::uint8_t`
+    with values `Baud300` (0) through `Baud38400`
+    (7) mirroring the spec's `default_baud` /
+    `avail_baud` enums.
+  - New nested `enum class AddrState : std::uint8_t`
+    with values `NotAssigned` (0) and `Assigned`
+    (1) mirroring the spec's `addr_state` enum.
+  - Constructors now take `Baud defaultBaud`,
+    `Baud availBaud`, `AddrState addrState`, and
+    `std::uint8_t busAddress` instead of four
+    `const CosemByteBuffer&` parameters. Raw enum
+    values outside the valid range collapse to
+    `Baud::Baud300` / `AddrState::NotAssigned`.
+  - The previous `DefaultBaud()`, `AvailBaud()`,
+    `AddrState()`, `BusAddress()` accessors that
+    returned `const CosemByteBuffer&` are replaced
+    by `Baud GetDefaultBaud()`,
+    `Baud GetAvailBaud()`, `AddrState GetAddrState()`,
+    and `std::uint8_t BusAddress()`.
+  - New static helpers
+    `bool IsValidBaud(std::uint8_t raw)` and
+    `bool IsValidAddrState(std::uint8_t raw)`.
+  - `ReadAttribute` emits canonical A-XDR: enum
+    tag `0x16` for `default_baud`, `avail_baud`
+    and `addr_state`; unsigned tag `0x11` for
+    `bus_address`.
+  - `WriteAttribute` strictly decodes. Wrong
+    tags, truncated buffers, trailing bytes,
+    out-of-range enum raws, and empty input are
+    rejected with `InvalidArgument`.
+    `logical_name` stays read-only.
+  - `InvokeMethod` continues to return
+    `MethodNotFound` for every method id (the
+    spec defines none).
+
+  Callers that previously constructed instances
+  with A-XDR-encoded `CosemByteBuffer` payloads
+  must now pass typed values.
+
+### Tests
+
+- Per-IC test file
+  `test/cosem/test_cosem_m_bus_slave_port_setup_object.cpp`
+  (rule P2.4) covers descriptor/version,
+  access-rights layout, round-trip read of all
+  attributes, constructor clamping of
+  out-of-range raws, happy-path writes for every
+  attribute (including the full 0..7 baud sweep
+  on `default_baud`), all rejection cases
+  (wrong tag, truncated, trailing bytes, empty,
+  out-of-range enum), read-only enforcement,
+  `logical_name` write denial, unknown attribute
+  handling, `MethodNotFound` for every method
+  id, and `IsValidBaud` / `IsValidAddrState`
+  helpers. The legacy block in
+  `test_simple_objects.cpp` is collapsed to a
+  single `_MovedToPerIcFile` placeholder.
+
+### Docs
+
+- `docs/ic_support_matrix.md`: IC 25 (M-Bus
+  slave port setup) promoted from **Partial** to
+  **Supported**.
+
 ## 0.140.0 - 2026-06-22
 
 ### Breaking changes

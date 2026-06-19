@@ -1,5 +1,77 @@
 # Changelog
 
+## 0.131.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemIso8802LlcType2SetupObject`** (`class_id=58`,
+  `version=0`, IEC 62056-6-2 ED4 (2021) §4.11.3 / DLMS UA Blue
+  Book Ed. 12.1 §4.11.3) now exposes all eight dynamic
+  attributes as typed values instead of opaque
+  `CosemByteBuffer` payloads:
+
+  - `transmit_window_size_k`       (attr 2, `std::uint8_t`, unsigned, 1..127)
+  - `receive_window_size_rw`       (attr 3, `std::uint8_t`, unsigned, 1..127)
+  - `max_octets_i_pdu_n1`          (attr 4, `std::uint16_t`, long-unsigned)
+  - `max_number_transmissions_n2`  (attr 5, `std::uint8_t`, unsigned)
+  - `acknowledgement_timer`        (attr 6, `std::uint16_t`, long-unsigned, seconds)
+  - `p_bit_timer`                  (attr 7, `std::uint16_t`, long-unsigned, seconds)
+  - `reject_timer`                 (attr 8, `std::uint16_t`, long-unsigned, seconds)
+  - `busy_state_timer`             (attr 9, `std::uint16_t`, long-unsigned, seconds)
+
+  Both constructors take the typed values directly and the
+  getters return them by value. The class defines no specific
+  methods, so `InvokeMethod` continues to return
+  `CosemStatus::MethodNotFound` for every method id and clears
+  the output buffer.
+
+  Per ISO/IEC 8802-2:1998 §7.8.1..7.8.4 the LLC Type 2 window
+  sizes `k` and `Rw` are confined to the closed range `1..127`.
+  The new static helper
+  `CosemIso8802LlcType2SetupObject::IsValidWindowSize(value)`
+  exposes that predicate. The constructor normalizes any
+  invalid window-size argument (`0` or `>= 128`) to the
+  spec default of `1` so the object never holds an invalid
+  state, and `WriteAttribute` rejects out-of-range writes to
+  attributes 2 and 3 with `CosemStatus::InvalidArgument` while
+  preserving the previously stored value. The remaining
+  attributes (n1, n2, ack, P-bit, reject, busy timers) accept
+  the full numeric range (including `0`).
+
+  `ReadAttribute` emits canonical AXDR (`[0x12, hi, lo]` for
+  long-unsigned, `[0x11, value]` for unsigned). `WriteAttribute`
+  decodes strictly per the spec-mandated type: wrong tag,
+  truncated input, trailing garbage, or empty input is
+  rejected with `CosemStatus::InvalidArgument` and the
+  previously stored value is preserved.
+
+  `logical_name` (attr 1) remains read-only and any attempt to
+  write it returns `CosemStatus::AccessDenied`.
+
+### Tests
+
+- Added `test_cosem_iso8802_llc_type2_setup_object.cpp` with
+  sixteen per-IC cases: descriptor + access rights, typed
+  getters, `IsValidWindowSize` boundaries, ctor normalization
+  of invalid window sizes, AXDR round-trips at boundary values
+  (1 / 127 / 0xFF / 0xFFFF / 0), strict write validation per
+  attribute (window-size range, wrong tag, truncated input,
+  trailing garbage, empty input), read-only access mode
+  across all eight mutable attributes, logical-name write
+  denial, unknown-attribute response, every `InvokeMethod` id
+  returning `MethodNotFound`, and version-above-max
+  normalization.
+- Collapsed legacy IC 58 cases in `test_simple_objects.cpp` to
+  a single `_MovedToPerIcFile` placeholder per the per-IC test
+  organization rule (P2.4); the local `Unsigned` /
+  `LongUnsignedIc58` helpers were deleted with them.
+- Full ctest: 1341/1341 passing.
+
+### Documentation
+
+- `docs/ic_support_matrix.md`: IC 58 promoted from `Partial`
+  to `Supported` to reflect the typed surface.
+
 ## 0.130.0 - 2026-06-22
 
 ### Breaking changes

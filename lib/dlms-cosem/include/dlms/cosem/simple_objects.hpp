@@ -3451,27 +3451,28 @@ public:
   // 9 busy_state_timer (long-unsigned, seconds).
   // See ISO/IEC 8802-2:1998 §7.8.1..7.8.4 for parameter
   // definitions. The class defines no specific methods.
+  static bool IsValidWindowSize(std::uint8_t value);
   CosemIso8802LlcType2SetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& transmitWindowSizeK,
-    const CosemByteBuffer& receiveWindowSizeRw,
-    const CosemByteBuffer& maxOctetsIPduN1,
-    const CosemByteBuffer& maxNumberTransmissionsN2,
-    const CosemByteBuffer& acknowledgementTimer,
-    const CosemByteBuffer& pBitTimer,
-    const CosemByteBuffer& rejectTimer,
-    const CosemByteBuffer& busyStateTimer,
+    std::uint8_t transmitWindowSizeK,
+    std::uint8_t receiveWindowSizeRw,
+    std::uint16_t maxOctetsIPduN1,
+    std::uint8_t maxNumberTransmissionsN2,
+    std::uint16_t acknowledgementTimer,
+    std::uint16_t pBitTimer,
+    std::uint16_t rejectTimer,
+    std::uint16_t busyStateTimer,
     AttributeAccessMode mutableAccess);
   CosemIso8802LlcType2SetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& transmitWindowSizeK,
-    const CosemByteBuffer& receiveWindowSizeRw,
-    const CosemByteBuffer& maxOctetsIPduN1,
-    const CosemByteBuffer& maxNumberTransmissionsN2,
-    const CosemByteBuffer& acknowledgementTimer,
-    const CosemByteBuffer& pBitTimer,
-    const CosemByteBuffer& rejectTimer,
-    const CosemByteBuffer& busyStateTimer,
+    std::uint8_t transmitWindowSizeK,
+    std::uint8_t receiveWindowSizeRw,
+    std::uint16_t maxOctetsIPduN1,
+    std::uint8_t maxNumberTransmissionsN2,
+    std::uint16_t acknowledgementTimer,
+    std::uint16_t pBitTimer,
+    std::uint16_t rejectTimer,
+    std::uint16_t busyStateTimer,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -3488,25 +3489,25 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& TransmitWindowSizeK() const;
-  const CosemByteBuffer& ReceiveWindowSizeRw() const;
-  const CosemByteBuffer& MaxOctetsIPduN1() const;
-  const CosemByteBuffer& MaxNumberTransmissionsN2() const;
-  const CosemByteBuffer& AcknowledgementTimer() const;
-  const CosemByteBuffer& PBitTimer() const;
-  const CosemByteBuffer& RejectTimer() const;
-  const CosemByteBuffer& BusyStateTimer() const;
+  std::uint8_t TransmitWindowSizeK() const;
+  std::uint8_t ReceiveWindowSizeRw() const;
+  std::uint16_t MaxOctetsIPduN1() const;
+  std::uint8_t MaxNumberTransmissionsN2() const;
+  std::uint16_t AcknowledgementTimer() const;
+  std::uint16_t PBitTimer() const;
+  std::uint16_t RejectTimer() const;
+  std::uint16_t BusyStateTimer() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer transmitWindowSizeK_;
-  CosemByteBuffer receiveWindowSizeRw_;
-  CosemByteBuffer maxOctetsIPduN1_;
-  CosemByteBuffer maxNumberTransmissionsN2_;
-  CosemByteBuffer acknowledgementTimer_;
-  CosemByteBuffer pBitTimer_;
-  CosemByteBuffer rejectTimer_;
-  CosemByteBuffer busyStateTimer_;
+  std::uint8_t transmitWindowSizeK_;
+  std::uint8_t receiveWindowSizeRw_;
+  std::uint16_t maxOctetsIPduN1_;
+  std::uint8_t maxNumberTransmissionsN2_;
+  std::uint16_t acknowledgementTimer_;
+  std::uint16_t pBitTimer_;
+  std::uint16_t rejectTimer_;
+  std::uint16_t busyStateTimer_;
   CosemAccessRights rights_;
 };
 

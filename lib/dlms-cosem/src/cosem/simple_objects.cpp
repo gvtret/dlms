@@ -11878,13 +11878,19 @@ const CosemByteBuffer& CosemWirelessModeQChannelObject::AddressMask() const
 namespace {
 constexpr std::uint16_t kMBusMasterPortSetupClassId = 74u;
 constexpr std::uint8_t kMBusMasterPortSetupCommSpeedAttributeId = 2u;
+constexpr std::uint8_t kMBusMasterPortSetupCommSpeedMax = 7u;
 } // namespace
 
 const std::uint8_t CosemMBusMasterPortSetupObject::MaxSupportedVersion;
 
+bool CosemMBusMasterPortSetupObject::IsValidCommSpeed(std::uint8_t raw)
+{
+  return raw <= kMBusMasterPortSetupCommSpeedMax;
+}
+
 CosemMBusMasterPortSetupObject::CosemMBusMasterPortSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& commSpeed,
+  CommSpeed commSpeed,
   AttributeAccessMode mutableAccess)
   : CosemMBusMasterPortSetupObject(
       logicalName, commSpeed, mutableAccess,
@@ -11894,7 +11900,7 @@ CosemMBusMasterPortSetupObject::CosemMBusMasterPortSetupObject(
 
 CosemMBusMasterPortSetupObject::CosemMBusMasterPortSetupObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& commSpeed,
+  CommSpeed commSpeed,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -11903,7 +11909,10 @@ CosemMBusMasterPortSetupObject::CosemMBusMasterPortSetupObject(
         version,
         CosemMBusMasterPortSetupObject::MaxSupportedVersion),
       logicalName))
-  , commSpeed_(commSpeed)
+  , commSpeed_(
+      IsValidCommSpeed(static_cast<std::uint8_t>(commSpeed))
+        ? commSpeed
+        : CommSpeed::Baud2400)
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
@@ -11932,7 +11941,8 @@ CosemStatus CosemMBusMasterPortSetupObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kMBusMasterPortSetupCommSpeedAttributeId:
-      output = commSpeed_;
+      output.clear();
+      AppendEnum(output, static_cast<std::uint8_t>(commSpeed_));
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -11950,7 +11960,15 @@ CosemStatus CosemMBusMasterPortSetupObject::WriteAttribute(
     return CosemStatus::AttributeNotFound;
   if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
     return CosemStatus::AccessDenied;
-  commSpeed_ = input;
+  std::size_t offset = 0;
+  std::uint8_t raw = 0;
+  if (!ReadEnumValue(input, offset, raw))
+    return CosemStatus::InvalidArgument;
+  if (offset != input.size())
+    return CosemStatus::InvalidArgument;
+  if (!IsValidCommSpeed(raw))
+    return CosemStatus::InvalidArgument;
+  commSpeed_ = static_cast<CommSpeed>(raw);
   return CosemStatus::Ok;
 }
 
@@ -11966,8 +11984,8 @@ CosemStatus CosemMBusMasterPortSetupObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer&
-CosemMBusMasterPortSetupObject::CommSpeed() const
+CosemMBusMasterPortSetupObject::CommSpeed
+CosemMBusMasterPortSetupObject::GetCommSpeed() const
 {
   return commSpeed_;
 }

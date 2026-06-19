@@ -1,5 +1,73 @@
 # Changelog
 
+## 0.139.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemMBusMasterPortSetupObject`**
+  (`class_id=74`, `version=0`, IEC 62056-6-2 ED4 (2021)
+  §4.8.5 / DLMS UA Blue Book Ed. 12.1 §4.8.4)
+  migrates from opaque `CosemByteBuffer` attribute
+  storage to a typed enum surface.
+
+  - New nested `enum class CommSpeed : std::uint8_t`
+    with values `Baud300` (0) … `Baud38400` (7)
+    mirroring the spec's `comm_speed` enum.
+  - Constructors now take `CommSpeed commSpeed`
+    instead of `const CosemByteBuffer& commSpeed`.
+    Raw values outside `0..7` collapse to the spec
+    default `Baud2400` (3).
+  - The previous `const CosemByteBuffer& CommSpeed()`
+    accessor is replaced by `CommSpeed GetCommSpeed()`
+    returning the typed enum.
+  - New static helper
+    `bool IsValidCommSpeed(std::uint8_t raw)`.
+  - `ReadAttribute` emits canonical A-XDR for
+    attribute `2` (`enum` tag `0x16` + raw byte)
+    instead of returning stored bytes verbatim.
+  - `WriteAttribute` strictly decodes incoming
+    payloads: attribute `2` requires an `enum`
+    (tag `0x16`) with raw value in `0..7`. Wrong
+    tag, truncation, trailing bytes, empty input or
+    out-of-range value yield
+    `CosemStatus::InvalidArgument`. Writes to the
+    `logical_name` attribute (`1`) yield
+    `AccessDenied`; unknown attribute ids yield
+    `AttributeNotFound`; the mutable attribute
+    honours `AttributeAccessMode` (read-only
+    instances reject writes with `AccessDenied`).
+  - `InvokeMethod` returns `MethodNotFound` for every
+    method id, matching the spec (no specific
+    methods defined in version 0).
+  - Version above `MaxSupportedVersion` (0) is
+    normalised to 0.
+
+  Callers must construct instances with the typed
+  enum and update reads/writes to use canonical A-XDR
+  encodings.
+
+### Tests
+
+- New per-IC test file
+  `test/cosem/test_cosem_m_bus_master_port_setup_object.cpp`
+  (18 tests) covering descriptor/version,
+  access-rights layout, read round-trip, constructor
+  clamping, write happy paths for all valid speeds,
+  rejection of wrong tag / truncation / trailing
+  bytes / empty input / out-of-range values,
+  read-only enforcement, `MethodNotFound` for every
+  method id and the new `IsValidCommSpeed` helper.
+  The legacy IC 74 block in
+  `test/cosem/test_simple_objects.cpp` collapses to a
+  `_MovedToPerIcFile` placeholder per project rule
+  P2.4.
+
+### Documentation
+
+- `docs/ic_support_matrix.md` promotes IC 74
+  (M-Bus Master Port Setup) from **Partial** to
+  **Supported**.
+
 ## 0.138.0 - 2026-06-22
 
 ### Breaking changes

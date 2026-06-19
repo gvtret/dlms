@@ -7072,112 +7072,12 @@ TEST(CosemMBusClientObject,
 
 namespace {
 
-dlms::cosem::CosemByteBuffer SampleMBusMasterCommSpeed()
-{
-  // enum 5
-  return BytesFromList({0x16u, 0x05u});
-}
-
-dlms::cosem::CosemMBusMasterPortSetupObject
-MakeMBusMasterPortSetupObject(
-  const dlms::cosem::CosemLogicalName& name,
-  const dlms::cosem::CosemByteBuffer& commSpeed,
-  dlms::cosem::AttributeAccessMode access)
-{
-  return dlms::cosem::CosemMBusMasterPortSetupObject(
-    name, commSpeed, access);
-}
+// IC 74 (M-Bus Master Port Setup) tests moved to
+// test/cosem/test_cosem_m_bus_master_port_setup_object.cpp
+// after migration to the typed `CommSpeed` enum surface.
+TEST(CosemMBusMasterPortSetupObject, _MovedToPerIcFile) { SUCCEED(); }
 
 } // namespace
-
-TEST(CosemMBusMasterPortSetupObject, ExposesAllAttributes)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 6u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer commSpeed =
-    SampleMBusMasterCommSpeed();
-  dlms::cosem::CosemMBusMasterPortSetupObject object =
-    MakeMBusMasterPortSetupObject(
-      name, commSpeed,
-      dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  EXPECT_EQ(74u, object.Descriptor().key.classId);
-  EXPECT_EQ(0u, object.Descriptor().key.version);
-  EXPECT_EQ(
-    dlms::cosem::CosemMBusMasterPortSetupObject::MaxSupportedVersion,
-    object.Descriptor().key.version);
-
-  dlms::cosem::CosemByteBuffer out;
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(1u, out));
-  EXPECT_EQ(EncodedLogicalName(name), out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            object.ReadAttribute(2u, out));
-  EXPECT_EQ(commSpeed, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(3u, out));
-}
-
-TEST(CosemMBusMasterPortSetupObject, MutableAttributesHonorAccessMode)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 6u, 0u, 255u);
-  const dlms::cosem::CosemByteBuffer commSpeed =
-    SampleMBusMasterCommSpeed();
-  const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x16u, 0x06u});
-
-  dlms::cosem::CosemMBusMasterPortSetupObject writable =
-    MakeMBusMasterPortSetupObject(
-      name, commSpeed,
-      dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-            writable.WriteAttribute(2u, replacement));
-  EXPECT_EQ(replacement, writable.CommSpeed());
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(1u, replacement));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            writable.WriteAttribute(99u, replacement));
-
-  dlms::cosem::CosemMBusMasterPortSetupObject readOnly =
-    MakeMBusMasterPortSetupObject(
-      name, commSpeed, dlms::cosem::AttributeAccessMode::ReadOnly);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            readOnly.WriteAttribute(2u, replacement));
-  EXPECT_EQ(commSpeed, readOnly.CommSpeed());
-}
-
-TEST(CosemMBusMasterPortSetupObject, NoMethodsDefined)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 6u, 0u, 255u);
-  dlms::cosem::CosemMBusMasterPortSetupObject object =
-    MakeMBusMasterPortSetupObject(
-      name, SampleMBusMasterCommSpeed(),
-      dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  for (std::uint8_t method : {0u, 1u, 2u, 99u, 255u}) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
-    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-              object.InvokeMethod(
-                static_cast<std::uint8_t>(method), in, out))
-      << "method id " << static_cast<unsigned>(method);
-    EXPECT_TRUE(out.empty());
-  }
-}
-
-TEST(CosemMBusMasterPortSetupObject, NormalizesVersionAboveMax)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 24u, 6u, 0u, 255u);
-  dlms::cosem::CosemMBusMasterPortSetupObject object(
-    name, SampleMBusMasterCommSpeed(),
-    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
-  EXPECT_EQ(
-    dlms::cosem::CosemMBusMasterPortSetupObject::MaxSupportedVersion,
-    object.Descriptor().key.version);
-}
 
 namespace {
 

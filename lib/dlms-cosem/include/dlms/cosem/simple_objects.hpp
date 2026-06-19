@@ -2575,13 +2575,30 @@ class CosemMBusMasterPortSetupObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // Per IEC 62056-6-2 ED4 (2021) §4.8.5 / DLMS UA Blue Book
+  // Ed. 12.1 §4.8.4: comm_speed is an enum 0..7. Default per spec
+  // table is 3 (2400 baud).
+  enum class CommSpeed : std::uint8_t
+  {
+    Baud300 = 0u,
+    Baud600 = 1u,
+    Baud1200 = 2u,
+    Baud2400 = 3u,
+    Baud4800 = 4u,
+    Baud9600 = 5u,
+    Baud19200 = 6u,
+    Baud38400 = 7u
+  };
+
+  static bool IsValidCommSpeed(std::uint8_t raw);
+
   CosemMBusMasterPortSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& commSpeed,
+    CommSpeed commSpeed,
     AttributeAccessMode mutableAccess);
   CosemMBusMasterPortSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& commSpeed,
+    CommSpeed commSpeed,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
   CosemObjectDescriptor Descriptor() const;
@@ -2597,11 +2614,11 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& CommSpeed() const;
+  CommSpeed GetCommSpeed() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer commSpeed_;
+  CommSpeed commSpeed_;
   CosemAccessRights rights_;
 };
 

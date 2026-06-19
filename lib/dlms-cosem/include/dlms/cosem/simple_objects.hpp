@@ -1877,15 +1877,15 @@ public:
 
   CosemUtilityTablesObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& tableId,
-    const CosemByteBuffer& length,
-    const CosemByteBuffer& buffer,
+    std::uint16_t tableId,
+    std::uint32_t length,
+    const std::vector<std::uint8_t>& buffer,
     AttributeAccessMode mutableAccess);
   CosemUtilityTablesObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& tableId,
-    const CosemByteBuffer& length,
-    const CosemByteBuffer& buffer,
+    std::uint16_t tableId,
+    std::uint32_t length,
+    const std::vector<std::uint8_t>& buffer,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1902,15 +1902,15 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& TableId() const;
-  const CosemByteBuffer& Length() const;
-  const CosemByteBuffer& Buffer() const;
+  std::uint16_t TableId() const;
+  std::uint32_t Length() const;
+  const std::vector<std::uint8_t>& Buffer() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer tableId_;
-  CosemByteBuffer length_;
-  CosemByteBuffer buffer_;
+  std::uint16_t tableId_;
+  std::uint32_t length_;
+  std::vector<std::uint8_t> buffer_;
   CosemAccessRights rights_;
 };
 

@@ -1,5 +1,77 @@
 # Changelog
 
+## 0.135.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemUtilityTablesObject`** (`class_id=26`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.6.5 / DLMS UA Blue Book
+  Ed. 12.1 §4.6.5) migrates from opaque `CosemByteBuffer`
+  attribute storage to typed scalars/containers.
+
+  - Constructors now take `std::uint16_t tableId`,
+    `std::uint32_t length` and
+    `std::vector<std::uint8_t> buffer` instead of three
+    `CosemByteBuffer` payloads.
+  - Getters `TableId()`, `Length()`, `Buffer()` now return
+    `std::uint16_t`, `std::uint32_t` and
+    `const std::vector<std::uint8_t>&` respectively.
+  - `ReadAttribute` produces canonical A-XDR encodings
+    (`long-unsigned`, `double-long-unsigned`,
+    `octet-string`) instead of returning the raw stored
+    bytes verbatim.
+  - `WriteAttribute` decodes the same A-XDR forms with
+    strict validation: wrong tag, truncation, trailing
+    garbage and empty input all yield
+    `CosemStatus::InvalidArgument` and the previously
+    stored value is preserved. `logical_name` (attr 1)
+    remains read-only; unknown attribute IDs return
+    `AttributeNotFound`; access-denied for attrs 2–4
+    when the configured access mode is read-only.
+  - `InvokeMethod` continues to return
+    `MethodNotFound` for all method IDs (IC 26 defines
+    no methods).
+
+  Callers that previously passed pre-encoded byte buffers
+  must construct typed values instead, e.g.:
+
+  ```cpp
+  // before:
+  CosemUtilityTablesObject obj(
+    name,
+    BytesFromList({0x12u, 0x00u, 0x10u}),       // tableId
+    BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x20u}),
+    BytesFromList({0x09u, 0x04u, 0xDEu, 0xADu, 0xBEu, 0xEFu}),
+    AttributeAccessMode::ReadAndWrite);
+
+  // after:
+  CosemUtilityTablesObject obj(
+    name,
+    /*tableId=*/0x0010u,
+    /*length=*/0x00000020u,
+    /*buffer=*/std::vector<std::uint8_t>{0xDEu, 0xADu, 0xBEu, 0xEFu},
+    AttributeAccessMode::ReadAndWrite);
+  ```
+
+  Tests: new
+  `lib/dlms-cosem/test/cosem/test_cosem_utility_tables_object.cpp`
+  (18 tests, all green). The IC 26 block in
+  `test_simple_objects.cpp` is collapsed to a single
+  `_MovedToPerIcFile` placeholder. Full suite: 1383/1383
+  green.
+
+  IC support matrix: `26` promoted from `Partial` to
+  `Supported`.
+
+  BREAKING CHANGE: `CosemUtilityTablesObject` constructors
+  and getters changed signatures (opaque buffers →
+  typed scalars). `ReadAttribute` now emits canonical
+  A-XDR encodings rather than echoing stored bytes.
+  `WriteAttribute` now validates A-XDR shape strictly
+  and rejects malformed input with
+  `CosemStatus::InvalidArgument` instead of accepting
+  arbitrary bytes.
+
 ## 0.134.0 - 2026-06-22
 
 ### Changes

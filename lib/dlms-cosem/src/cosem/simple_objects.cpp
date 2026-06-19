@@ -9156,15 +9156,34 @@ constexpr std::uint16_t kUtilityTablesClassId = 26u;
 constexpr std::uint8_t kUtilityTablesTableIdAttributeId = 2u;
 constexpr std::uint8_t kUtilityTablesLengthAttributeId = 3u;
 constexpr std::uint8_t kUtilityTablesBufferAttributeId = 4u;
+
+bool DecodeUtilityTablesBuffer(
+  const CosemByteBuffer& input,
+  std::vector<std::uint8_t>& value)
+{
+  std::size_t offset = 0u;
+  std::size_t length = 0u;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, length) ||
+      input.size() - offset < length) {
+    return false;
+  }
+  value.assign(input.begin() + offset, input.begin() + offset + length);
+  offset += length;
+  if (offset != input.size()) {
+    return false;
+  }
+  return true;
+}
 } // namespace
 
 const std::uint8_t CosemUtilityTablesObject::MaxSupportedVersion;
 
 CosemUtilityTablesObject::CosemUtilityTablesObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& tableId,
-  const CosemByteBuffer& length,
-  const CosemByteBuffer& buffer,
+  std::uint16_t tableId,
+  std::uint32_t length,
+  const std::vector<std::uint8_t>& buffer,
   AttributeAccessMode mutableAccess)
   : CosemUtilityTablesObject(
       logicalName, tableId, length, buffer, mutableAccess, kVersion0)
@@ -9173,9 +9192,9 @@ CosemUtilityTablesObject::CosemUtilityTablesObject(
 
 CosemUtilityTablesObject::CosemUtilityTablesObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& tableId,
-  const CosemByteBuffer& length,
-  const CosemByteBuffer& buffer,
+  std::uint16_t tableId,
+  std::uint32_t length,
+  const std::vector<std::uint8_t>& buffer,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -9211,21 +9230,21 @@ CosemStatus CosemUtilityTablesObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
 {
+  output.clear();
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kUtilityTablesTableIdAttributeId:
-      output = tableId_;
+      AppendLongUnsigned(output, tableId_);
       return CosemStatus::Ok;
     case kUtilityTablesLengthAttributeId:
-      output = length_;
+      AppendDoubleLongUnsigned(output, length_);
       return CosemStatus::Ok;
     case kUtilityTablesBufferAttributeId:
-      output = buffer_;
+      AppendOctetString(output, buffer_.data(), buffer_.size());
       return CosemStatus::Ok;
     default:
-      output.clear();
       return CosemStatus::AttributeNotFound;
   }
 }
@@ -9235,21 +9254,40 @@ CosemStatus CosemUtilityTablesObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kUtilityTablesTableIdAttributeId:
+    case kUtilityTablesTableIdAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      tableId_ = input;
+      std::size_t offset = 0u;
+      std::uint16_t value = 0u;
+      if (!ReadLongUnsignedValue(input, offset, value) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      tableId_ = value;
       return CosemStatus::Ok;
-    case kUtilityTablesLengthAttributeId:
+    }
+    case kUtilityTablesLengthAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      length_ = input;
+      std::size_t offset = 0u;
+      std::uint32_t value = 0u;
+      if (!ReadDoubleLongUnsignedValue(input, offset, value) ||
+          offset != input.size()) {
+        return CosemStatus::InvalidArgument;
+      }
+      length_ = value;
       return CosemStatus::Ok;
-    case kUtilityTablesBufferAttributeId:
+    }
+    case kUtilityTablesBufferAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      buffer_ = input;
+      std::vector<std::uint8_t> decoded;
+      if (!DecodeUtilityTablesBuffer(input, decoded)) {
+        return CosemStatus::InvalidArgument;
+      }
+      buffer_ = std::move(decoded);
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -9269,17 +9307,17 @@ CosemStatus CosemUtilityTablesObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemUtilityTablesObject::TableId() const
+std::uint16_t CosemUtilityTablesObject::TableId() const
 {
   return tableId_;
 }
 
-const CosemByteBuffer& CosemUtilityTablesObject::Length() const
+std::uint32_t CosemUtilityTablesObject::Length() const
 {
   return length_;
 }
 
-const CosemByteBuffer& CosemUtilityTablesObject::Buffer() const
+const std::vector<std::uint8_t>& CosemUtilityTablesObject::Buffer() const
 {
   return buffer_;
 }

@@ -5936,136 +5936,14 @@ TEST(CosemIpv6SetupObject, NormalizesVersionAboveMax)
 
 namespace {
 
-struct UtilityTablesBuffers
-{
-  dlms::cosem::CosemByteBuffer tableId;
-  dlms::cosem::CosemByteBuffer length;
-  dlms::cosem::CosemByteBuffer buffer;
-};
-
-UtilityTablesBuffers MakeSampleUtilityTables()
-{
-  UtilityTablesBuffers b;
-  // long-unsigned 0x0010 (table id 16)
-  b.tableId = BytesFromList({0x12u, 0x00u, 0x10u});
-  // double-long-unsigned 0x00000020 (length 32 bytes)
-  b.length = BytesFromList({0x06u, 0x00u, 0x00u, 0x00u, 0x20u});
-  // octet-string(4) sample table payload
-  b.buffer = BytesFromList({
-    0x09u, 0x04u,
-      0xDEu, 0xADu, 0xBEu, 0xEFu});
-  return b;
-}
-
-dlms::cosem::CosemUtilityTablesObject MakeUtilityTablesObject(
-  const dlms::cosem::CosemLogicalName& name,
-  const UtilityTablesBuffers& b,
-  dlms::cosem::AttributeAccessMode access)
-{
-  return dlms::cosem::CosemUtilityTablesObject(
-    name, b.tableId, b.length, b.buffer, access);
-}
+// IC 26 (Utility Tables) tests moved to test_cosem_utility_tables_object.cpp
+// after the typed-attribute migration.
 
 } // namespace
 
-TEST(CosemUtilityTablesObject, ExposesAllAttributes)
+TEST(CosemUtilityTablesObject, _MovedToPerIcFile)
 {
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 65u, 1u, 0u, 255u);
-  const UtilityTablesBuffers b = MakeSampleUtilityTables();
-  dlms::cosem::CosemUtilityTablesObject object =
-    MakeUtilityTablesObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  EXPECT_EQ(26u, object.Descriptor().key.classId);
-  EXPECT_EQ(0u, object.Descriptor().key.version);
-  EXPECT_EQ(
-    dlms::cosem::CosemUtilityTablesObject::MaxSupportedVersion,
-    object.Descriptor().key.version);
-
-  dlms::cosem::CosemByteBuffer out;
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(1u, out));
-  EXPECT_EQ(EncodedLogicalName(name), out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(2u, out));
-  EXPECT_EQ(b.tableId, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(3u, out));
-  EXPECT_EQ(b.length, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::Ok, object.ReadAttribute(4u, out));
-  EXPECT_EQ(b.buffer, out);
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            object.ReadAttribute(5u, out));
-}
-
-TEST(CosemUtilityTablesObject, MutableAttributesHonorAccessMode)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 65u, 1u, 0u, 255u);
-  const UtilityTablesBuffers b = MakeSampleUtilityTables();
-  const dlms::cosem::CosemByteBuffer replacement =
-    BytesFromList({0x11u, 0x2Au});
-
-  dlms::cosem::CosemUtilityTablesObject writable =
-    MakeUtilityTablesObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-  for (std::uint8_t id : {2u, 3u, 4u}) {
-    EXPECT_EQ(dlms::cosem::CosemStatus::Ok,
-              writable.WriteAttribute(
-                static_cast<std::uint8_t>(id), replacement))
-      << "attribute id " << static_cast<unsigned>(id);
-  }
-  EXPECT_EQ(replacement, writable.TableId());
-  EXPECT_EQ(replacement, writable.Length());
-  EXPECT_EQ(replacement, writable.Buffer());
-  EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-            writable.WriteAttribute(1u, replacement));
-  EXPECT_EQ(dlms::cosem::CosemStatus::AttributeNotFound,
-            writable.WriteAttribute(99u, replacement));
-
-  dlms::cosem::CosemUtilityTablesObject readOnly =
-    MakeUtilityTablesObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadOnly);
-  for (std::uint8_t id : {2u, 3u, 4u}) {
-    EXPECT_EQ(dlms::cosem::CosemStatus::AccessDenied,
-              readOnly.WriteAttribute(
-                static_cast<std::uint8_t>(id), replacement))
-      << "attribute id " << static_cast<unsigned>(id);
-  }
-  EXPECT_EQ(b.tableId, readOnly.TableId());
-  EXPECT_EQ(b.length, readOnly.Length());
-  EXPECT_EQ(b.buffer, readOnly.Buffer());
-}
-
-TEST(CosemUtilityTablesObject, NoMethodsDefined)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 65u, 1u, 0u, 255u);
-  const UtilityTablesBuffers b = MakeSampleUtilityTables();
-  dlms::cosem::CosemUtilityTablesObject object =
-    MakeUtilityTablesObject(
-      name, b, dlms::cosem::AttributeAccessMode::ReadAndWrite);
-
-  const dlms::cosem::CosemByteBuffer in = BytesFromList({0x0Fu, 0x00u});
-  for (std::uint8_t method : {1u, 2u, 3u, 99u}) {
-    dlms::cosem::CosemByteBuffer out = BytesFromList({0xAAu});
-    EXPECT_EQ(dlms::cosem::CosemStatus::MethodNotFound,
-              object.InvokeMethod(
-                static_cast<std::uint8_t>(method), in, out))
-      << "method id " << static_cast<unsigned>(method);
-    EXPECT_TRUE(out.empty());
-  }
-}
-
-TEST(CosemUtilityTablesObject, NormalizesVersionAboveMax)
-{
-  const dlms::cosem::CosemLogicalName name =
-    dlms::cosem::CosemLogicalName(0u, 0u, 65u, 1u, 0u, 255u);
-  const UtilityTablesBuffers b = MakeSampleUtilityTables();
-  dlms::cosem::CosemUtilityTablesObject object(
-    name, b.tableId, b.length, b.buffer,
-    dlms::cosem::AttributeAccessMode::ReadAndWrite, 99u);
-  EXPECT_EQ(
-    dlms::cosem::CosemUtilityTablesObject::MaxSupportedVersion,
-    object.Descriptor().key.version);
+  SUCCEED();
 }
 
 namespace {

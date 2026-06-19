@@ -1,5 +1,78 @@
 # Changelog
 
+## 0.126.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemTcpUdpSetupObject`** (`class_id=41`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.9.1 / DLMS UA Blue Book
+  Ed. 12.1 §4.9.1) now exposes all five dynamic attributes
+  as typed values instead of opaque `CosemByteBuffer`
+  payloads:
+  - `tcp_udp_port` (attribute `2`) → `std::uint16_t`
+    (full `0..65535` range; default port `4059` is the IANA
+    registration for `dlms/cosem`)
+  - `ip_reference` (attribute `3`) → `CosemLogicalName`
+    (octet-string of length 6, references the IP setup IC
+    instance bound to this transport)
+  - `mss` (attribute `4`) → `std::uint16_t`, range
+    `40..65535` per §4.9.1.2.4; default `576`. Out-of-range
+    values supplied to the ctor are normalized to the
+    default; `WriteAttribute` rejects them with
+    `CosemStatus::InvalidArgument`
+  - `nb_of_sim_conn` (attribute `5`) → `std::uint8_t`,
+    range `1..255` per §4.9.1.2.5. Ctor normalizes `0` to
+    the minimum `1`; `WriteAttribute` rejects `0` with
+    `CosemStatus::InvalidArgument`
+  - `inactivity_time_out` (attribute `6`) → `std::uint16_t`
+    seconds; `0` disables the timer per §4.9.1.2.6
+    (default `180`)
+
+  The ctor takes the five scalar/typed members above plus
+  the standard `AttributeAccessMode` for mutable attributes
+  (`logical_name` is always read-only). All read-only
+  getters now return their typed values rather than
+  `CosemByteBuffer`. Static validators `IsValidMss` and
+  `IsValidNbOfSimConn` are exposed for callers that need
+  to gate user input before construction. The class
+  defines no methods, so `InvokeMethod` continues to
+  return `CosemStatus::MethodNotFound` for every method id
+  and clears the output buffer.
+
+  `ReadAttribute` now emits the canonical AXDR encoding
+  for each typed attribute (`long-unsigned` tag `0x12`,
+  `unsigned` tag `0x11`, `octet-string` tag `0x09` length
+  `0x06` for `ip_reference`). `WriteAttribute` validates
+  both the tag and the trailing-byte count; malformed or
+  trailing-garbage input is rejected with
+  `CosemStatus::InvalidArgument` and the existing value is
+  preserved.
+
+### Tests
+
+- New per-IC test file
+  `lib/dlms-cosem/test/cosem/test_cosem_tcp_udp_setup_object.cpp`
+  (16 tests) covers descriptor/access rights, typed AXDR
+  encoding for every attribute, ctor normalization of
+  out-of-range `mss`/`nb_of_sim_conn`, boundary acceptance
+  (`mss=40`, `mss=65535`, `nb_of_sim_conn=255`,
+  `inactivity_time_out=0`), per-attribute decode/validate
+  on `WriteAttribute` (wrong tag, truncated, trailing
+  garbage, range), `WriteAttribute` access enforcement
+  (`logical_name` always denied, `ReadOnly` access mode
+  denies all mutable attributes), `InvokeMethod` always
+  returns `MethodNotFound` and clears the output buffer,
+  version normalization above max, and the static
+  validators.
+- Legacy `CosemTcpUdpSetupObject` tests in
+  `test_simple_objects.cpp` are collapsed to the
+  `_MovedToPerIcFile` placeholder per rule P2.4.
+
+### Docs
+
+- `docs/ic_support_matrix.md`: IC 41 row promoted from
+  `Partial` to `Supported`.
+
 ## 0.125.0 - 2026-06-22
 
 ### Breaking changes

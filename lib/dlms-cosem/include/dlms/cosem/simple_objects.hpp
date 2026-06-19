@@ -947,26 +947,42 @@ private:
   CosemAccessRights rights_;
 };
 
+// IC 41 "TCP-UDP setup" — class_id=41, version=0,
+// IEC 62056-6-2 ED4 (2021) §4.9.1 / DLMS UA Blue Book Ed. 12.1
+// §4.9.1. All five dynamic attributes are typed (no CHOICE):
+//   2 tcp_udp_port        long-unsigned  -> std::uint16_t (0..65535)
+//   3 ip_reference        octet-string(6) -> CosemLogicalName
+//                         (logical name of an IP setup IC)
+//   4 mss                 long-unsigned  -> std::uint16_t,
+//                         range [40, 65535], default 576
+//   5 nb_of_sim_conn      unsigned       -> std::uint8_t (min 1)
+//   6 inactivity_time_out long-unsigned  -> std::uint16_t seconds,
+//                         default 180 (0 disables the timer)
+// The class defines no methods; InvokeMethod always returns
+// MethodNotFound.
 class CosemTcpUdpSetupObject : public ICosemObject
 {
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  static bool IsValidMss(std::uint16_t value);
+  static bool IsValidNbOfSimConn(std::uint8_t value);
+
   CosemTcpUdpSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& tcpUdpPort,
-    const CosemByteBuffer& ipReference,
-    const CosemByteBuffer& mss,
-    const CosemByteBuffer& nbOfSimConn,
-    const CosemByteBuffer& inactivityTimeOut,
+    std::uint16_t tcpUdpPort,
+    const CosemLogicalName& ipReference,
+    std::uint16_t mss,
+    std::uint8_t nbOfSimConn,
+    std::uint16_t inactivityTimeOut,
     AttributeAccessMode mutableAccess);
   CosemTcpUdpSetupObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& tcpUdpPort,
-    const CosemByteBuffer& ipReference,
-    const CosemByteBuffer& mss,
-    const CosemByteBuffer& nbOfSimConn,
-    const CosemByteBuffer& inactivityTimeOut,
+    std::uint16_t tcpUdpPort,
+    const CosemLogicalName& ipReference,
+    std::uint16_t mss,
+    std::uint8_t nbOfSimConn,
+    std::uint16_t inactivityTimeOut,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -983,19 +999,19 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& TcpUdpPort() const;
-  const CosemByteBuffer& IpReference() const;
-  const CosemByteBuffer& Mss() const;
-  const CosemByteBuffer& NbOfSimConn() const;
-  const CosemByteBuffer& InactivityTimeOut() const;
+  std::uint16_t TcpUdpPort() const;
+  const CosemLogicalName& IpReference() const;
+  std::uint16_t Mss() const;
+  std::uint8_t NbOfSimConn() const;
+  std::uint16_t InactivityTimeOut() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer tcpUdpPort_;
-  CosemByteBuffer ipReference_;
-  CosemByteBuffer mss_;
-  CosemByteBuffer nbOfSimConn_;
-  CosemByteBuffer inactivityTimeOut_;
+  std::uint16_t tcpUdpPort_;
+  CosemLogicalName ipReference_;
+  std::uint16_t mss_;
+  std::uint8_t nbOfSimConn_;
+  std::uint16_t inactivityTimeOut_;
   CosemAccessRights rights_;
 };
 

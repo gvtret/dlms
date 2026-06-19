@@ -1,5 +1,66 @@
 # Changelog
 
+## 0.128.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemSFskMacSyncTimeoutsObject`** (`class_id=52`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.10.5 / DLMS UA Blue Book Ed. 12.1)
+  now exposes all four timer attributes as typed `std::uint16_t`
+  long-unsigned values instead of opaque `CosemByteBuffer`
+  payloads:
+
+  - `search_initiator_timeout` (attr 2, seconds)
+  - `synchronization_confirmation_timeout` (attr 3, seconds)
+  - `time_out_not_addressed` (attr 4, minutes)
+  - `time_out_frame_not_OK` (attr 5, minutes)
+
+  The ctor takes `std::uint16_t` for each timer and the getters
+  return `std::uint16_t` by value. The class defines no specific
+  methods, so `InvokeMethod` continues to return
+  `CosemStatus::MethodNotFound` for every method id and clears
+  the output buffer.
+
+  `ReadAttribute` emits the canonical AXDR encoding
+  (long-unsigned tag `0x12` + 2 bytes network order) for
+  attributes 2..5. `WriteAttribute` decodes long-unsigned
+  strictly: anything other than exactly `[0x12, hi, lo]` is
+  rejected with `CosemStatus::InvalidArgument` and the
+  previously stored timer value is preserved (wrong tag,
+  truncated input, trailing garbage and empty input are all
+  rejected). Per the referenced MIB variables
+  (IEC 61334-4-512:2001 §5.3 and IEC 61334-5-1:2001 §4.3.7.6)
+  there is no specified upper bound; the full uint16 range is
+  accepted on write and `0` is allowed where it disables the
+  corresponding timer.
+
+  `logical_name` (attr 1) remains read-only and any attempt to
+  write it returns `CosemStatus::AccessDenied`.
+
+### Tests
+
+- New per-IC test file
+  `lib/dlms-cosem/test/cosem/test_cosem_sfsk_mac_sync_timeouts_object.cpp`
+  (16 tests) covers descriptor/access rights, typed getters,
+  typed AXDR encoding for all attributes, write decoding per
+  attribute, wrong-tag, truncated, trailing-garbage and empty
+  input rejection with value preservation,
+  `WriteAttribute` access enforcement (`logical_name` always
+  denied, `ReadOnly` mode denies attributes 2..5), unknown
+  attribute ids, `InvokeMethod` always returning
+  `MethodNotFound` with cleared output, and version
+  normalization above max.
+- Legacy `CosemSFskMacSyncTimeoutsObject` tests in
+  `test_simple_objects.cpp` are collapsed to the
+  `_MovedToPerIcFile` placeholder per rule P2.4; the shared
+  `LongUnsigned` helper is kept because IC 23 / IC 86 tests in
+  the same file still depend on it.
+
+### Docs
+
+- `docs/ic_support_matrix.md`: IC 52 row promoted from
+  `Partial` to `Supported`.
+
 ## 0.127.0 - 2026-06-22
 
 ### Breaking changes

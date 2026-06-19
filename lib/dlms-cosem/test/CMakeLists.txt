@@ -30,6 +30,7 @@ add_executable(dlms_cosem_tests
   cosem/test_cosem_tcp_udp_setup_object.cpp
   cosem/test_cosem_profile_generic_object.cpp
   cosem/test_cosem_script_table_object.cpp
+  cosem/test_cosem_sfsk_mac_sync_timeouts_object.cpp
   cosem/types/test_date_time.cpp
   cosem/types/test_date.cpp
   cosem/types/test_time.cpp

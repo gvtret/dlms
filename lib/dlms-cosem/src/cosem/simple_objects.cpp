@@ -13452,10 +13452,10 @@ const std::uint8_t
 
 CosemSFskMacSyncTimeoutsObject::CosemSFskMacSyncTimeoutsObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& searchInitiatorTimeout,
-  const CosemByteBuffer& synchronizationConfirmationTimeout,
-  const CosemByteBuffer& timeOutNotAddressed,
-  const CosemByteBuffer& timeOutFrameNotOk,
+  std::uint16_t searchInitiatorTimeout,
+  std::uint16_t synchronizationConfirmationTimeout,
+  std::uint16_t timeOutNotAddressed,
+  std::uint16_t timeOutFrameNotOk,
   AttributeAccessMode mutableAccess)
   : CosemSFskMacSyncTimeoutsObject(
       logicalName,
@@ -13470,10 +13470,10 @@ CosemSFskMacSyncTimeoutsObject::CosemSFskMacSyncTimeoutsObject(
 
 CosemSFskMacSyncTimeoutsObject::CosemSFskMacSyncTimeoutsObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& searchInitiatorTimeout,
-  const CosemByteBuffer& synchronizationConfirmationTimeout,
-  const CosemByteBuffer& timeOutNotAddressed,
-  const CosemByteBuffer& timeOutFrameNotOk,
+  std::uint16_t searchInitiatorTimeout,
+  std::uint16_t synchronizationConfirmationTimeout,
+  std::uint16_t timeOutNotAddressed,
+  std::uint16_t timeOutFrameNotOk,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -13523,16 +13523,20 @@ CosemStatus CosemSFskMacSyncTimeoutsObject::ReadAttribute(
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kSFskMacSyncTimeoutsSearchInitiatorTimeoutAttributeId:
-      output = searchInitiatorTimeout_;
+      output.clear();
+      AppendLongUnsigned(output, searchInitiatorTimeout_);
       return CosemStatus::Ok;
     case kSFskMacSyncTimeoutsSyncConfirmationTimeoutAttributeId:
-      output = synchronizationConfirmationTimeout_;
+      output.clear();
+      AppendLongUnsigned(output, synchronizationConfirmationTimeout_);
       return CosemStatus::Ok;
     case kSFskMacSyncTimeoutsTimeOutNotAddressedAttributeId:
-      output = timeOutNotAddressed_;
+      output.clear();
+      AppendLongUnsigned(output, timeOutNotAddressed_);
       return CosemStatus::Ok;
     case kSFskMacSyncTimeoutsTimeOutFrameNotOkAttributeId:
-      output = timeOutFrameNotOk_;
+      output.clear();
+      AppendLongUnsigned(output, timeOutFrameNotOk_);
       return CosemStatus::Ok;
     default:
       output.clear();
@@ -13544,27 +13548,27 @@ CosemStatus CosemSFskMacSyncTimeoutsObject::WriteAttribute(
   std::uint8_t attributeId,
   const CosemByteBuffer& input)
 {
+  auto decodeLU = [&](std::uint16_t& target) -> CosemStatus {
+    if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
+      return CosemStatus::AccessDenied;
+    std::size_t offset = 0u;
+    std::uint16_t value = 0u;
+    if (!ReadLongUnsignedValue(input, offset, value))
+      return CosemStatus::InvalidArgument;
+    if (offset != input.size())
+      return CosemStatus::InvalidArgument;
+    target = value;
+    return CosemStatus::Ok;
+  };
   switch (attributeId) {
     case kSFskMacSyncTimeoutsSearchInitiatorTimeoutAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      searchInitiatorTimeout_ = input;
-      return CosemStatus::Ok;
+      return decodeLU(searchInitiatorTimeout_);
     case kSFskMacSyncTimeoutsSyncConfirmationTimeoutAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      synchronizationConfirmationTimeout_ = input;
-      return CosemStatus::Ok;
+      return decodeLU(synchronizationConfirmationTimeout_);
     case kSFskMacSyncTimeoutsTimeOutNotAddressedAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      timeOutNotAddressed_ = input;
-      return CosemStatus::Ok;
+      return decodeLU(timeOutNotAddressed_);
     case kSFskMacSyncTimeoutsTimeOutFrameNotOkAttributeId:
-      if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
-        return CosemStatus::AccessDenied;
-      timeOutFrameNotOk_ = input;
-      return CosemStatus::Ok;
+      return decodeLU(timeOutFrameNotOk_);
     case kLogicalNameAttributeId:
       return CosemStatus::AccessDenied;
     default:
@@ -13585,25 +13589,25 @@ CosemStatus CosemSFskMacSyncTimeoutsObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemSFskMacSyncTimeoutsObject::SearchInitiatorTimeout() const
 {
   return searchInitiatorTimeout_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemSFskMacSyncTimeoutsObject::SynchronizationConfirmationTimeout() const
 {
   return synchronizationConfirmationTimeout_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemSFskMacSyncTimeoutsObject::TimeOutNotAddressed() const
 {
   return timeOutNotAddressed_;
 }
 
-const CosemByteBuffer&
+std::uint16_t
 CosemSFskMacSyncTimeoutsObject::TimeOutFrameNotOk() const
 {
   return timeOutFrameNotOk_;

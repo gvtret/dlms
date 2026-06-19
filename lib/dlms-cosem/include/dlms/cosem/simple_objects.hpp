@@ -3171,24 +3171,27 @@ public:
 
   // IEC 62056-6-2 ED4 (2021) §4.10.5 and DLMS UA Blue Book Ed. 12.1
   // §4.10.5 define class_id 52, version 0 with five attributes:
-  // 1 logical_name, 2 search_initiator_timeout,
-  // 3 synchronization_confirmation_timeout, 4 time_out_not_addressed,
-  // 5 time_out_frame_not_OK. Attributes 2..5 are static long-unsigned
-  // timers (per IEC 61334-4-512 / IEC 61334-5-1 MIB variables). The
-  // class defines no specific methods.
+  // 1 logical_name, 2 search_initiator_timeout (long-unsigned,
+  // seconds), 3 synchronization_confirmation_timeout (long-unsigned,
+  // seconds), 4 time_out_not_addressed (long-unsigned, minutes),
+  // 5 time_out_frame_not_OK (long-unsigned, minutes). Per the
+  // referenced MIB variables (IEC 61334-4-512:2001 §5.3 and
+  // IEC 61334-5-1:2001 §4.3.7.6) the timers are 16-bit unsigned
+  // and have no specified upper bound; 0 disables the timer where
+  // applicable. The class defines no specific methods.
   CosemSFskMacSyncTimeoutsObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& searchInitiatorTimeout,
-    const CosemByteBuffer& synchronizationConfirmationTimeout,
-    const CosemByteBuffer& timeOutNotAddressed,
-    const CosemByteBuffer& timeOutFrameNotOk,
+    std::uint16_t searchInitiatorTimeout,
+    std::uint16_t synchronizationConfirmationTimeout,
+    std::uint16_t timeOutNotAddressed,
+    std::uint16_t timeOutFrameNotOk,
     AttributeAccessMode mutableAccess);
   CosemSFskMacSyncTimeoutsObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& searchInitiatorTimeout,
-    const CosemByteBuffer& synchronizationConfirmationTimeout,
-    const CosemByteBuffer& timeOutNotAddressed,
-    const CosemByteBuffer& timeOutFrameNotOk,
+    std::uint16_t searchInitiatorTimeout,
+    std::uint16_t synchronizationConfirmationTimeout,
+    std::uint16_t timeOutNotAddressed,
+    std::uint16_t timeOutFrameNotOk,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -3205,17 +3208,17 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& SearchInitiatorTimeout() const;
-  const CosemByteBuffer& SynchronizationConfirmationTimeout() const;
-  const CosemByteBuffer& TimeOutNotAddressed() const;
-  const CosemByteBuffer& TimeOutFrameNotOk() const;
+  std::uint16_t SearchInitiatorTimeout() const;
+  std::uint16_t SynchronizationConfirmationTimeout() const;
+  std::uint16_t TimeOutNotAddressed() const;
+  std::uint16_t TimeOutFrameNotOk() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer searchInitiatorTimeout_;
-  CosemByteBuffer synchronizationConfirmationTimeout_;
-  CosemByteBuffer timeOutNotAddressed_;
-  CosemByteBuffer timeOutFrameNotOk_;
+  std::uint16_t searchInitiatorTimeout_;
+  std::uint16_t synchronizationConfirmationTimeout_;
+  std::uint16_t timeOutNotAddressed_;
+  std::uint16_t timeOutFrameNotOk_;
   CosemAccessRights rights_;
 };
 

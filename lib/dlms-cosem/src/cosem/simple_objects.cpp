@@ -7465,16 +7465,138 @@ constexpr std::uint8_t kAutoAnswerNumberOfRingsAttributeId = 6u;
 constexpr std::uint8_t kAutoAnswerListOfAllowedCallersAttributeId = 7u;
 } // namespace
 
+namespace {
+
+void AppendListeningWindowEntry(
+  CosemByteBuffer& output,
+  const CosemAutoAnswerObject::ListeningWindowEntry& entry)
+{
+  AppendStructureHeader(output, 2u);
+  AppendDateTimeOctetString(output, entry.start);
+  AppendDateTimeOctetString(output, entry.end);
+}
+
+bool DecodeListeningWindowEntry(
+  const CosemByteBuffer& input,
+  std::size_t& offset,
+  CosemAutoAnswerObject::ListeningWindowEntry& out)
+{
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag)
+      || !ReadAxdrLength(input, offset, fieldCount)
+      || fieldCount != 2u) {
+    return false;
+  }
+  return ReadStreamingDateTime(input, offset, out.start)
+    && ReadStreamingDateTime(input, offset, out.end);
+}
+
+bool DecodeListeningWindowPayload(
+  const CosemByteBuffer& input,
+  std::vector<CosemAutoAnswerObject::ListeningWindowEntry>& out)
+{
+  out.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  out.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    CosemAutoAnswerObject::ListeningWindowEntry entry;
+    if (!DecodeListeningWindowEntry(input, offset, entry)) {
+      return false;
+    }
+    out.push_back(entry);
+  }
+  return offset == input.size();
+}
+
+void AppendNumberOfRings(
+  CosemByteBuffer& output,
+  const CosemAutoAnswerObject::NumberOfRings& value)
+{
+  AppendStructureHeader(output, 2u);
+  AppendUnsigned(output, value.inWindow);
+  AppendUnsigned(output, value.outOfWindow);
+}
+
+bool DecodeNumberOfRings(
+  const CosemByteBuffer& input,
+  CosemAutoAnswerObject::NumberOfRings& out)
+{
+  std::size_t offset = 0u;
+  std::size_t fieldCount = 0u;
+  if (!ReadExpectedTag(input, offset, kStructureTag)
+      || !ReadAxdrLength(input, offset, fieldCount)
+      || fieldCount != 2u
+      || !ReadUnsignedValue(input, offset, out.inWindow)
+      || !ReadUnsignedValue(input, offset, out.outOfWindow)) {
+    return false;
+  }
+  return offset == input.size();
+}
+
+void AppendAllowedCaller(
+  CosemByteBuffer& output,
+  const CosemAutoAnswerObject::AllowedCaller& caller)
+{
+  AppendStructureHeader(output, 2u);
+  static const std::uint8_t kEmpty = 0u;
+  AppendOctetString(
+    output,
+    caller.callerId.empty() ? &kEmpty : &caller.callerId[0],
+    caller.callerId.size());
+  AppendEnum(output, caller.callType);
+}
+
+bool DecodeAllowedCallersPayload(
+  const CosemByteBuffer& input,
+  std::vector<CosemAutoAnswerObject::AllowedCaller>& out)
+{
+  out.clear();
+  std::size_t offset = 0u;
+  std::size_t count = 0u;
+  if (!ReadExpectedTag(input, offset, kArrayTag)
+      || !ReadAxdrLength(input, offset, count)) {
+    return false;
+  }
+  out.reserve(count);
+  for (std::size_t i = 0u; i < count; ++i) {
+    std::size_t fieldCount = 0u;
+    if (!ReadExpectedTag(input, offset, kStructureTag)
+        || !ReadAxdrLength(input, offset, fieldCount)
+        || fieldCount != 2u) {
+      return false;
+    }
+    CosemAutoAnswerObject::AllowedCaller caller;
+    std::size_t length = 0u;
+    const std::uint8_t* data = 0;
+    if (!ReadExpectedTag(input, offset, kDataOctetStringTag)
+        || !ReadAxdrLength(input, offset, length)
+        || !ReadFixedBytes(input, offset, length, data)
+        || !ReadEnumValue(input, offset, caller.callType)) {
+      return false;
+    }
+    caller.callerId.assign(data, data + length);
+    out.push_back(caller);
+  }
+  return offset == input.size();
+}
+
+} // namespace
+
 const std::uint8_t CosemAutoAnswerObject::MaxSupportedVersion;
 
 CosemAutoAnswerObject::CosemAutoAnswerObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& mode,
-  const CosemByteBuffer& listeningWindow,
-  const CosemByteBuffer& status,
-  const CosemByteBuffer& numberOfCalls,
-  const CosemByteBuffer& numberOfRings,
-  const CosemByteBuffer& listOfAllowedCallers,
+  std::uint8_t mode,
+  const std::vector<ListeningWindowEntry>& listeningWindow,
+  std::uint8_t status,
+  std::uint8_t numberOfCalls,
+  NumberOfRings numberOfRings,
+  const std::vector<AllowedCaller>& listOfAllowedCallers,
   AttributeAccessMode mutableAccess)
   : CosemAutoAnswerObject(
       logicalName, mode, listeningWindow, status, numberOfCalls,
@@ -7484,12 +7606,12 @@ CosemAutoAnswerObject::CosemAutoAnswerObject(
 
 CosemAutoAnswerObject::CosemAutoAnswerObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& mode,
-  const CosemByteBuffer& listeningWindow,
-  const CosemByteBuffer& status,
-  const CosemByteBuffer& numberOfCalls,
-  const CosemByteBuffer& numberOfRings,
-  const CosemByteBuffer& listOfAllowedCallers,
+  std::uint8_t mode,
+  const std::vector<ListeningWindowEntry>& listeningWindow,
+  std::uint8_t status,
+  std::uint8_t numberOfCalls,
+  NumberOfRings numberOfRings,
+  const std::vector<AllowedCaller>& listOfAllowedCallers,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -7534,30 +7656,36 @@ CosemStatus CosemAutoAnswerObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
 {
+  output.clear();
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
     case kAutoAnswerModeAttributeId:
-      output = mode_;
+      AppendEnum(output, mode_);
       return CosemStatus::Ok;
     case kAutoAnswerListeningWindowAttributeId:
-      output = listeningWindow_;
+      AppendArrayHeader(output, listeningWindow_.size());
+      for (std::size_t i = 0u; i < listeningWindow_.size(); ++i) {
+        AppendListeningWindowEntry(output, listeningWindow_[i]);
+      }
       return CosemStatus::Ok;
     case kAutoAnswerStatusAttributeId:
-      output = status_;
+      AppendEnum(output, status_);
       return CosemStatus::Ok;
     case kAutoAnswerNumberOfCallsAttributeId:
-      output = numberOfCalls_;
+      AppendUnsigned(output, numberOfCalls_);
       return CosemStatus::Ok;
     case kAutoAnswerNumberOfRingsAttributeId:
-      output = numberOfRings_;
+      AppendNumberOfRings(output, numberOfRings_);
       return CosemStatus::Ok;
     case kAutoAnswerListOfAllowedCallersAttributeId:
-      output = listOfAllowedCallers_;
+      AppendArrayHeader(output, listOfAllowedCallers_.size());
+      for (std::size_t i = 0u; i < listOfAllowedCallers_.size(); ++i) {
+        AppendAllowedCaller(output, listOfAllowedCallers_[i]);
+      }
       return CosemStatus::Ok;
     default:
-      output.clear();
       return CosemStatus::AttributeNotFound;
   }
 }
@@ -7567,31 +7695,53 @@ CosemStatus CosemAutoAnswerObject::WriteAttribute(
   const CosemByteBuffer& input)
 {
   switch (attributeId) {
-    case kAutoAnswerModeAttributeId:
+    case kAutoAnswerModeAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      mode_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t value = 0u;
+      if (!ReadEnumValue(input, offset, value) || offset != input.size())
+        return CosemStatus::InvalidArgument;
+      mode_ = value;
       return CosemStatus::Ok;
-    case kAutoAnswerListeningWindowAttributeId:
+    }
+    case kAutoAnswerListeningWindowAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      listeningWindow_ = input;
+      std::vector<ListeningWindowEntry> next;
+      if (!DecodeListeningWindowPayload(input, next))
+        return CosemStatus::InvalidArgument;
+      listeningWindow_.swap(next);
       return CosemStatus::Ok;
-    case kAutoAnswerNumberOfCallsAttributeId:
+    }
+    case kAutoAnswerNumberOfCallsAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      numberOfCalls_ = input;
+      std::size_t offset = 0u;
+      std::uint8_t value = 0u;
+      if (!ReadUnsignedValue(input, offset, value) || offset != input.size())
+        return CosemStatus::InvalidArgument;
+      numberOfCalls_ = value;
       return CosemStatus::Ok;
-    case kAutoAnswerNumberOfRingsAttributeId:
+    }
+    case kAutoAnswerNumberOfRingsAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      numberOfRings_ = input;
+      NumberOfRings next{0u, 0u};
+      if (!DecodeNumberOfRings(input, next))
+        return CosemStatus::InvalidArgument;
+      numberOfRings_ = next;
       return CosemStatus::Ok;
-    case kAutoAnswerListOfAllowedCallersAttributeId:
+    }
+    case kAutoAnswerListOfAllowedCallersAttributeId: {
       if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
         return CosemStatus::AccessDenied;
-      listOfAllowedCallers_ = input;
+      std::vector<AllowedCaller> next;
+      if (!DecodeAllowedCallersPayload(input, next))
+        return CosemStatus::InvalidArgument;
+      listOfAllowedCallers_.swap(next);
       return CosemStatus::Ok;
+    }
     case kLogicalNameAttributeId:
     case kAutoAnswerStatusAttributeId:
       return CosemStatus::AccessDenied;
@@ -7612,37 +7762,40 @@ CosemStatus CosemAutoAnswerObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemAutoAnswerObject::Mode() const
+std::uint8_t CosemAutoAnswerObject::Mode() const
 {
   return mode_;
 }
 
-const CosemByteBuffer& CosemAutoAnswerObject::ListeningWindow() const
+const std::vector<CosemAutoAnswerObject::ListeningWindowEntry>&
+CosemAutoAnswerObject::ListeningWindow() const
 {
   return listeningWindow_;
 }
 
-const CosemByteBuffer& CosemAutoAnswerObject::Status() const
+std::uint8_t CosemAutoAnswerObject::Status() const
 {
   return status_;
 }
 
-const CosemByteBuffer& CosemAutoAnswerObject::NumberOfCalls() const
+std::uint8_t CosemAutoAnswerObject::NumberOfCalls() const
 {
   return numberOfCalls_;
 }
 
-const CosemByteBuffer& CosemAutoAnswerObject::NumberOfRings() const
+CosemAutoAnswerObject::NumberOfRings
+CosemAutoAnswerObject::GetNumberOfRings() const
 {
   return numberOfRings_;
 }
 
-const CosemByteBuffer& CosemAutoAnswerObject::ListOfAllowedCallers() const
+const std::vector<CosemAutoAnswerObject::AllowedCaller>&
+CosemAutoAnswerObject::ListOfAllowedCallers() const
 {
   return listOfAllowedCallers_;
 }
 
-void CosemAutoAnswerObject::SetStatus(const CosemByteBuffer& status)
+void CosemAutoAnswerObject::SetStatus(std::uint8_t status)
 {
   status_ = status;
 }

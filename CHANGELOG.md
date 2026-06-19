@@ -1,5 +1,52 @@
 # Changelog
 
+## 0.136.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemAutoAnswerObject`** (`class_id=28`, `version=0`,
+  IEC 62056-6-2 ED4 (2021) §4.4.5 / DLMS UA Blue Book
+  Ed. 12.1 §4.4.5) migrates from opaque `CosemByteBuffer`
+  attribute storage to typed scalars and structured
+  containers.
+
+  - Constructors now take `std::uint8_t mode`,
+    `std::vector<ListeningWindowEntry> listeningWindow`
+    (each entry: `{start: types::DateTime,
+    end: types::DateTime}`), `std::uint8_t status`,
+    `std::uint8_t numberOfCalls`,
+    `NumberOfRings numberOfRings` (`{inWindow,
+    outOfWindow}` unsigned) and
+    `std::vector<AllowedCaller> listOfAllowedCallers`
+    (each entry: `{callerId: octet-string,
+    callType: enum}`) instead of six `CosemByteBuffer`
+    payloads.
+  - Getters `Mode()`, `ListeningWindow()`, `Status()`,
+    `NumberOfCalls()`, `GetNumberOfRings()`,
+    `ListOfAllowedCallers()` now return typed values.
+  - `ReadAttribute` produces canonical A-XDR encodings
+    (`enum`, `array of structure`, `unsigned`,
+    `structure`, `octet-string`) instead of returning
+    the raw stored bytes verbatim.
+  - `WriteAttribute` decodes the same A-XDR forms with
+    strict validation: wrong tag, truncation, trailing
+    garbage, malformed structure field counts, malformed
+    date-time length, and empty input all yield
+    `CosemStatus::InvalidArgument` and the previously
+    stored value is preserved. `logical_name` (attr 1)
+    and `status` (attr 4) remain read-only;
+    `status` continues to support backend-driven
+    refresh via `SetStatus()`. Unknown attribute IDs
+    return `AttributeNotFound`; access-denied for
+    attrs 2/3/5/6/7 when the configured access mode is
+    read-only.
+  - `InvokeMethod` continues to return
+    `MethodNotFound` for all method IDs (IC 28 defines
+    no methods).
+
+  Callers that previously passed pre-encoded byte
+  buffers must construct typed values instead.
+
 ## 0.135.0 - 2026-06-22
 
 ### Breaking changes

@@ -1380,23 +1380,47 @@ class CosemAutoAnswerObject : public ICosemObject
 public:
   static const std::uint8_t MaxSupportedVersion = 0u;
 
+  // window_element ::= structure { start_time: octet-string(date_time),
+  //                                end_time:   octet-string(date_time) }
+  struct ListeningWindowEntry
+  {
+    dlms::cosem::types::DateTime start;
+    dlms::cosem::types::DateTime end;
+  };
+
+  // nr_rings_type ::= structure { nr_rings_in_window:     unsigned,
+  //                               nr_rings_out_of_window: unsigned }
+  struct NumberOfRings
+  {
+    std::uint8_t inWindow;
+    std::uint8_t outOfWindow;
+  };
+
+  // list_of_allowed_callers_element ::= structure { caller_id: octet-string,
+  //                                                 call_type: enum }
+  struct AllowedCaller
+  {
+    std::vector<std::uint8_t> callerId;
+    std::uint8_t callType;
+  };
+
   CosemAutoAnswerObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& mode,
-    const CosemByteBuffer& listeningWindow,
-    const CosemByteBuffer& status,
-    const CosemByteBuffer& numberOfCalls,
-    const CosemByteBuffer& numberOfRings,
-    const CosemByteBuffer& listOfAllowedCallers,
+    std::uint8_t mode,
+    const std::vector<ListeningWindowEntry>& listeningWindow,
+    std::uint8_t status,
+    std::uint8_t numberOfCalls,
+    NumberOfRings numberOfRings,
+    const std::vector<AllowedCaller>& listOfAllowedCallers,
     AttributeAccessMode mutableAccess);
   CosemAutoAnswerObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& mode,
-    const CosemByteBuffer& listeningWindow,
-    const CosemByteBuffer& status,
-    const CosemByteBuffer& numberOfCalls,
-    const CosemByteBuffer& numberOfRings,
-    const CosemByteBuffer& listOfAllowedCallers,
+    std::uint8_t mode,
+    const std::vector<ListeningWindowEntry>& listeningWindow,
+    std::uint8_t status,
+    std::uint8_t numberOfCalls,
+    NumberOfRings numberOfRings,
+    const std::vector<AllowedCaller>& listOfAllowedCallers,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -1413,23 +1437,24 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& Mode() const;
-  const CosemByteBuffer& ListeningWindow() const;
-  const CosemByteBuffer& Status() const;
-  const CosemByteBuffer& NumberOfCalls() const;
-  const CosemByteBuffer& NumberOfRings() const;
-  const CosemByteBuffer& ListOfAllowedCallers() const;
+  std::uint8_t Mode() const;
+  const std::vector<ListeningWindowEntry>& ListeningWindow() const;
+  std::uint8_t Status() const;
+  std::uint8_t NumberOfCalls() const;
+  NumberOfRings GetNumberOfRings() const;
+  const std::vector<AllowedCaller>& ListOfAllowedCallers() const;
 
-  void SetStatus(const CosemByteBuffer& status);
+  // Backend-only refresh of the dynamic `status` attribute.
+  void SetStatus(std::uint8_t status);
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer mode_;
-  CosemByteBuffer listeningWindow_;
-  CosemByteBuffer status_;
-  CosemByteBuffer numberOfCalls_;
-  CosemByteBuffer numberOfRings_;
-  CosemByteBuffer listOfAllowedCallers_;
+  std::uint8_t mode_;
+  std::vector<ListeningWindowEntry> listeningWindow_;
+  std::uint8_t status_;
+  std::uint8_t numberOfCalls_;
+  NumberOfRings numberOfRings_;
+  std::vector<AllowedCaller> listOfAllowedCallers_;
   CosemAccessRights rights_;
 };
 

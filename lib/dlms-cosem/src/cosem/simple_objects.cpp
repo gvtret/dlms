@@ -11760,21 +11760,53 @@ CosemMBusClientObject::EncryptionKeyStatus() const
 
 namespace {
 constexpr std::uint16_t kWirelessModeQChannelClassId = 73u;
+
+// IEC 62056-6-2 ED4 (2021) §4.8.4 / DLMS UA Blue Book Ed. 12.1
+// §4.8.3 — Wireless Mode Q channel (class_id 73, version 1).
+// Attributes:
+//   2 addr_state       enum (0 = not assigned, 1 = assigned)
+//   3 device_address   octet-string
+//   4 address_mask     octet-string
+// No specific methods are defined.
+
+bool DecodeWirelessModeQOctetString(
+  const CosemByteBuffer& input,
+  std::vector<std::uint8_t>& value)
+{
+  std::size_t offset = 0u;
+  std::size_t length = 0u;
+  if (!ReadExpectedTag(input, offset, kDataOctetStringTag) ||
+      !ReadAxdrLength(input, offset, length) ||
+      input.size() - offset < length) {
+    return false;
+  }
+  value.assign(input.begin() + offset, input.begin() + offset + length);
+  offset += length;
+  if (offset != input.size()) {
+    return false;
+  }
+  return true;
+}
 } // namespace
+
+bool CosemWirelessModeQChannelObject::IsValidAddrState(std::uint8_t raw)
+{
+  return raw <= 1u;
+}
 
 const std::uint8_t CosemWirelessModeQChannelObject::MaxSupportedVersion;
 
 CosemWirelessModeQChannelObject::CosemWirelessModeQChannelObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& addrState,
-  const CosemByteBuffer& deviceAddress,
-  const CosemByteBuffer& addressMask,
+  AddrState addrState,
+  std::vector<std::uint8_t> deviceAddress,
+  std::vector<std::uint8_t> addressMask,
   AttributeAccessMode mutableAccess)
   : CosemWirelessModeQChannelObject(
       logicalName,
       addrState,
-      deviceAddress,
-      addressMask,
+      std::move(deviceAddress),
+      std::move(addressMask),
       mutableAccess,
       CosemWirelessModeQChannelObject::MaxSupportedVersion)
 {
@@ -11782,9 +11814,9 @@ CosemWirelessModeQChannelObject::CosemWirelessModeQChannelObject(
 
 CosemWirelessModeQChannelObject::CosemWirelessModeQChannelObject(
   const CosemLogicalName& logicalName,
-  const CosemByteBuffer& addrState,
-  const CosemByteBuffer& deviceAddress,
-  const CosemByteBuffer& addressMask,
+  AddrState addrState,
+  std::vector<std::uint8_t> deviceAddress,
+  std::vector<std::uint8_t> addressMask,
   AttributeAccessMode mutableAccess,
   std::uint8_t version)
   : descriptor_(MakeDescriptor(
@@ -11792,9 +11824,11 @@ CosemWirelessModeQChannelObject::CosemWirelessModeQChannelObject(
       NormalizeVersion(
         version, CosemWirelessModeQChannelObject::MaxSupportedVersion),
       logicalName))
-  , addrState_(addrState)
-  , deviceAddress_(deviceAddress)
-  , addressMask_(addressMask)
+  , addrState_(IsValidAddrState(static_cast<std::uint8_t>(addrState))
+                 ? addrState
+                 : AddrState::NotAssigned)
+  , deviceAddress_(std::move(deviceAddress))
+  , addressMask_(std::move(addressMask))
 {
   rights_.SetAttributeAccess(
     kLogicalNameAttributeId, AttributeAccessMode::ReadOnly);
@@ -11816,15 +11850,31 @@ CosemStatus CosemWirelessModeQChannelObject::ReadAttribute(
   std::uint8_t attributeId,
   CosemByteBuffer& output) const
 {
+  output.clear();
   switch (attributeId) {
     case kLogicalNameAttributeId:
       output = EncodeLogicalName(descriptor_.key.logicalName);
       return CosemStatus::Ok;
-    case 2u: output = addrState_; return CosemStatus::Ok;
-    case 3u: output = deviceAddress_; return CosemStatus::Ok;
-    case 4u: output = addressMask_; return CosemStatus::Ok;
+    case 2u:
+      AppendEnum(output, static_cast<std::uint8_t>(addrState_));
+      return CosemStatus::Ok;
+    case 3u: {
+      static const std::uint8_t kEmpty = 0u;
+      AppendOctetString(
+        output,
+        deviceAddress_.empty() ? &kEmpty : deviceAddress_.data(),
+        deviceAddress_.size());
+      return CosemStatus::Ok;
+    }
+    case 4u: {
+      static const std::uint8_t kEmpty = 0u;
+      AppendOctetString(
+        output,
+        addressMask_.empty() ? &kEmpty : addressMask_.data(),
+        addressMask_.size());
+      return CosemStatus::Ok;
+    }
     default:
-      output.clear();
       return CosemStatus::AttributeNotFound;
   }
 }
@@ -11839,12 +11889,37 @@ CosemStatus CosemWirelessModeQChannelObject::WriteAttribute(
     return CosemStatus::AttributeNotFound;
   if (!IsAccessWritable(rights_.AttributeAccess(attributeId)))
     return CosemStatus::AccessDenied;
+  if (input.empty())
+    return CosemStatus::InvalidArgument;
   switch (attributeId) {
-    case 2u: addrState_ = input; break;
-    case 3u: deviceAddress_ = input; break;
-    case 4u: addressMask_ = input; break;
+    case 2u: {
+      std::size_t offset = 0u;
+      std::uint8_t raw = 0u;
+      if (!ReadEnumValue(input, offset, raw))
+        return CosemStatus::InvalidArgument;
+      if (offset != input.size())
+        return CosemStatus::InvalidArgument;
+      if (!IsValidAddrState(raw))
+        return CosemStatus::InvalidArgument;
+      addrState_ = static_cast<AddrState>(raw);
+      return CosemStatus::Ok;
+    }
+    case 3u: {
+      std::vector<std::uint8_t> value;
+      if (!DecodeWirelessModeQOctetString(input, value))
+        return CosemStatus::InvalidArgument;
+      deviceAddress_ = std::move(value);
+      return CosemStatus::Ok;
+    }
+    case 4u: {
+      std::vector<std::uint8_t> value;
+      if (!DecodeWirelessModeQOctetString(input, value))
+        return CosemStatus::InvalidArgument;
+      addressMask_ = std::move(value);
+      return CosemStatus::Ok;
+    }
   }
-  return CosemStatus::Ok;
+  return CosemStatus::AttributeNotFound;
 }
 
 CosemStatus CosemWirelessModeQChannelObject::InvokeMethod(
@@ -11860,17 +11935,20 @@ CosemStatus CosemWirelessModeQChannelObject::InvokeMethod(
   return CosemStatus::MethodNotFound;
 }
 
-const CosemByteBuffer& CosemWirelessModeQChannelObject::AddrState() const
+CosemWirelessModeQChannelObject::AddrState
+CosemWirelessModeQChannelObject::GetAddrState() const
 {
   return addrState_;
 }
 
-const CosemByteBuffer& CosemWirelessModeQChannelObject::DeviceAddress() const
+const std::vector<std::uint8_t>&
+CosemWirelessModeQChannelObject::DeviceAddress() const
 {
   return deviceAddress_;
 }
 
-const CosemByteBuffer& CosemWirelessModeQChannelObject::AddressMask() const
+const std::vector<std::uint8_t>&
+CosemWirelessModeQChannelObject::AddressMask() const
 {
   return addressMask_;
 }

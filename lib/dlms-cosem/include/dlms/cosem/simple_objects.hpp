@@ -2527,21 +2527,29 @@ public:
 
   // IEC 62056-6-2 ED4 (2021) §4.8.4 and DLMS UA Blue Book Ed. 12.1
   // §4.8.3 define class_id 73, version 1 with four attributes:
-  // 1 logical_name, 2 addr_state (enum), 3 device_address
-  // (octet-string), 4 address_mask (octet-string).
+  // 1 logical_name, 2 addr_state (enum 0..1),
+  // 3 device_address (octet-string), 4 address_mask (octet-string).
   // See also EN 13757-5:2015. The class defines no specific
   // methods.
+  enum class AddrState : std::uint8_t
+  {
+    NotAssigned = 0u,
+    Assigned = 1u,
+  };
+
+  static bool IsValidAddrState(std::uint8_t raw);
+
   CosemWirelessModeQChannelObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& addrState,
-    const CosemByteBuffer& deviceAddress,
-    const CosemByteBuffer& addressMask,
+    AddrState addrState,
+    std::vector<std::uint8_t> deviceAddress,
+    std::vector<std::uint8_t> addressMask,
     AttributeAccessMode mutableAccess);
   CosemWirelessModeQChannelObject(
     const CosemLogicalName& logicalName,
-    const CosemByteBuffer& addrState,
-    const CosemByteBuffer& deviceAddress,
-    const CosemByteBuffer& addressMask,
+    AddrState addrState,
+    std::vector<std::uint8_t> deviceAddress,
+    std::vector<std::uint8_t> addressMask,
     AttributeAccessMode mutableAccess,
     std::uint8_t version);
 
@@ -2558,15 +2566,15 @@ public:
     const CosemByteBuffer& input,
     CosemByteBuffer& output);
 
-  const CosemByteBuffer& AddrState() const;
-  const CosemByteBuffer& DeviceAddress() const;
-  const CosemByteBuffer& AddressMask() const;
+  AddrState GetAddrState() const;
+  const std::vector<std::uint8_t>& DeviceAddress() const;
+  const std::vector<std::uint8_t>& AddressMask() const;
 
 private:
   CosemObjectDescriptor descriptor_;
-  CosemByteBuffer addrState_;
-  CosemByteBuffer deviceAddress_;
-  CosemByteBuffer addressMask_;
+  AddrState addrState_;
+  std::vector<std::uint8_t> deviceAddress_;
+  std::vector<std::uint8_t> addressMask_;
   CosemAccessRights rights_;
 };
 

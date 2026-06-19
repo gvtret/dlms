@@ -1,5 +1,78 @@
 # Changelog
 
+## 0.140.0 - 2026-06-22
+
+### Breaking changes
+
+- **`CosemWirelessModeQChannelObject`**
+  (`class_id=73`, `version=1`, IEC 62056-6-2 ED4 (2021)
+  §4.8.4 / DLMS UA Blue Book Ed. 12.1 §4.8.3)
+  migrates from opaque `CosemByteBuffer` attribute
+  storage to a typed enum + octet-string surface.
+
+  - New nested `enum class AddrState : std::uint8_t`
+    with values `NotAssigned` (0) and `Assigned` (1)
+    mirroring the spec's `addr_state` enum.
+  - Constructors now take `AddrState addrState`,
+    `std::vector<std::uint8_t> deviceAddress`, and
+    `std::vector<std::uint8_t> addressMask` instead
+    of three `const CosemByteBuffer&` parameters.
+    Raw `addr_state` values outside `0..1` collapse to
+    `NotAssigned`.
+  - The previous `AddrState()`, `DeviceAddress()`,
+    `AddressMask()` accessors that returned
+    `const CosemByteBuffer&` are replaced by
+    `AddrState GetAddrState()`,
+    `const std::vector<std::uint8_t>& DeviceAddress()`,
+    and
+    `const std::vector<std::uint8_t>& AddressMask()`.
+  - New static helper
+    `bool IsValidAddrState(std::uint8_t raw)`.
+  - `ReadAttribute` emits canonical A-XDR for all
+    three dynamic attributes (`addr_state` as
+    `enum` tag `0x16`; `device_address` and
+    `address_mask` as `octet-string` tag `0x09`
+    with explicit length) instead of returning
+    stored bytes verbatim.
+  - `WriteAttribute` strictly decodes incoming
+    payloads. Wrong tags, truncated buffers,
+    trailing bytes, out-of-range `addr_state`
+    raws, and empty input are rejected with
+    `InvalidArgument`. `logical_name` stays
+    read-only.
+  - `InvokeMethod` continues to return
+    `MethodNotFound` for every method id (the
+    spec defines none).
+
+  Callers that previously constructed instances
+  with A-XDR-encoded `CosemByteBuffer` payloads
+  must now pass typed values and decoded
+  octet-string contents.
+
+### Tests
+
+- Per-IC test file
+  `test/cosem/test_cosem_wireless_mode_q_channel_object.cpp`
+  (rule P2.4) covers descriptor/version,
+  access-rights layout, round-trip read of all
+  attributes (including empty octet-strings),
+  constructor clamping of out-of-range
+  `addr_state`, happy-path writes for every
+  attribute, all rejection cases
+  (wrong tag, truncated, trailing bytes, empty,
+  out-of-range enum), read-only enforcement,
+  `logical_name` write denial, unknown attribute
+  handling, and `MethodNotFound` for every
+  method id. The legacy block in
+  `test_simple_objects.cpp` is collapsed to a
+  single `_MovedToPerIcFile` placeholder.
+
+### Docs
+
+- `docs/ic_support_matrix.md`: IC 73 (Wireless
+  Mode Q channel) promoted from **Partial** to
+  **Supported**.
+
 ## 0.139.0 - 2026-06-22
 
 ### Breaking changes
